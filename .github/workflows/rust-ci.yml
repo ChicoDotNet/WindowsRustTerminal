@@ -1,0 +1,69 @@
+name: Rust CI
+
+on:
+  push:
+    branches:
+      - "rust/**"
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rust/**"
+      - "tools/rust/**"
+      - ".github/workflows/rust-ci.yml"
+  pull_request:
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rust/**"
+      - "tools/rust/**"
+      - ".github/workflows/rust-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-2025-vs2026
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: rustup show
+      - name: Check
+        run: cargo check --workspace --all-targets --locked
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+
+  contract-harness:
+    name: TAEF harness self-test
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate TAEF result parser
+        shell: pwsh
+        run: ./tools/rust/Test-TaefContract.ps1
