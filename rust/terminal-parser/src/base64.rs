@@ -239,9 +239,6 @@ mod tests {
     }
 
     fn encode_reference(input: &[u8]) -> String {
-        const ALPHABET: &[u8; 64] =
-            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
         let mut encoded = String::with_capacity(input.len().div_ceil(3) * 4);
         let mut chunks = input.chunks_exact(3);
 
