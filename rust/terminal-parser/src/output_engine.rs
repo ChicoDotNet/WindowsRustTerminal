@@ -2,7 +2,7 @@
 //!
 //! The parser owns VT grammar and incremental state. This module translates the
 //! parser's actions into typed terminal-dispatch operations without depending on
-//! conhost, WinRT, COM, or C++.
+//! conhost, `WinRT`, COM, or C++.
 
 use crate::base64;
 use crate::state_machine::{Parameters, StateMachineEngine, VtId};
@@ -384,6 +384,10 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         self.clear_last_char();
     }
 
+    #[expect(
+        clippy::too_many_lines,
+        reason = "CSI dispatch is kept as a contiguous protocol table for Microsoft parity review"
+    )]
     fn action_csi(&mut self, id: VtId, parameters: &Parameters) {
         if has_sub_params(parameters) && !can_accept_sub_params(id, parameters) {
             self.clear_last_char();
@@ -443,19 +447,19 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
             self.emit(OutputAction::DeleteLine(numeric(parameters, 0)));
         } else if id_is(id, "J") {
             for_each_parameter(parameters, |value| {
-                self.emit(OutputAction::EraseInDisplay(value))
+                self.emit(OutputAction::EraseInDisplay(value));
             });
         } else if id_is(id, "?J") {
             for_each_parameter(parameters, |value| {
-                self.emit(OutputAction::SelectiveEraseInDisplay(value))
+                self.emit(OutputAction::SelectiveEraseInDisplay(value));
             });
         } else if id_is(id, "K") {
             for_each_parameter(parameters, |value| {
-                self.emit(OutputAction::EraseInLine(value))
+                self.emit(OutputAction::EraseInLine(value));
             });
         } else if id_is(id, "?K") {
             for_each_parameter(parameters, |value| {
-                self.emit(OutputAction::SelectiveEraseInLine(value))
+                self.emit(OutputAction::SelectiveEraseInLine(value));
             });
         } else if id_is(id, "h") || id_is(id, "?h") || id_is(id, "l") || id_is(id, "?l") {
             let private = id_is(id, "?h") || id_is(id, "?l");
@@ -689,12 +693,11 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
             None
         };
         self.clear_last_char();
-        match action {
-            Some(action) => self.dispatch.begin_dcs(action),
-            None => {
-                self.emit(OutputAction::UnknownSequence);
-                false
-            }
+        if let Some(action) = action {
+            self.dispatch.begin_dcs(action)
+        } else {
+            self.emit(OutputAction::UnknownSequence);
+            false
         }
     }
 }
