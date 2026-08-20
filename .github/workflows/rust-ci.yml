@@ -31,7 +31,7 @@ concurrency:
 jobs:
   r01d-repair:
     name: R01d parser integration
-    if: github.event_name == 'push' && github.ref == 'refs/heads/rust/r01-input-engine' && github.actor != 'github-actions[bot]'
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r01-input-engine' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
