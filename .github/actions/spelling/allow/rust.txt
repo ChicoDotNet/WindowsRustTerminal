@@ -2,3 +2,4 @@ clippy
 ffi
 psobject
 rustup
+usize
