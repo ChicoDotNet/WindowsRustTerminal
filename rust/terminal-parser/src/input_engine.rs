@@ -4,8 +4,8 @@
 //! sequences into a platform-neutral equivalent of the `IInteractDispatch`
 //! contract so the parser can be validated without `INPUT_RECORD`, Win32, or C++.
 
-use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use crate::state_machine::{Parameters, StateMachineEngine, VtId};
@@ -308,10 +308,6 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
         true
     }
 
-    #[expect(
-        clippy::too_many_lines,
-        reason = "CSI input dispatch is kept contiguous for Microsoft parity review"
-    )]
     fn action_csi(&mut self, id: VtId, parameters: &Parameters) -> bool {
         let vt_input_enabled = self.dispatch.is_vt_input_enabled();
 
@@ -846,8 +842,8 @@ mod tests {
     use super::{
         DOUBLE_CLICK, ENHANCED_KEY, FROM_LEFT_1ST_BUTTON_PRESSED, InputAction, InputDispatch,
         InputRecord, InputStateMachineEngine, LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, MOUSE_HWHEELED,
-        MOUSE_MOVED, MOUSE_WHEELED, Point, RIGHTMOST_BUTTON_PRESSED, SCROLL_DELTA_BACKWARD,
-        SCROLL_DELTA_FORWARD, SHIFT_PRESSED, VK_F3, VK_LEFT, VK_TAB, VK_UP,
+        MOUSE_MOVED, Point, RIGHTMOST_BUTTON_PRESSED, SCROLL_DELTA_BACKWARD, SCROLL_DELTA_FORWARD,
+        SHIFT_PRESSED, VK_F3, VK_LEFT, VK_TAB, VK_UP,
     };
     use crate::state_machine::{Parameters, ParserMode, StateMachine};
     use std::time::Duration;
@@ -872,17 +868,25 @@ mod tests {
         StateMachine::new_input(InputStateMachineEngine::new(RecordingDispatch::default()))
     }
 
-    fn key_actions(machine: &StateMachine<InputStateMachineEngine<RecordingDispatch>>) -> Vec<super::KeyEvent> {
+    fn key_actions(
+        machine: &StateMachine<InputStateMachineEngine<RecordingDispatch>>,
+    ) -> Vec<super::KeyEvent> {
         machine
             .engine()
             .dispatch()
             .actions
             .iter()
             .filter_map(|action| match action {
-                InputAction::WriteInput(records) => records.iter().find_map(|record| match record {
-                    InputRecord::Key(key) if key.key_down && !matches!(key.virtual_key, 0x10..=0x12) => Some(*key),
-                    _ => None,
-                }),
+                InputAction::WriteInput(records) => {
+                    records.iter().find_map(|record| match record {
+                        InputRecord::Key(key)
+                            if key.key_down && !matches!(key.virtual_key, 0x10..=0x12) =>
+                        {
+                            Some(*key)
+                        }
+                        _ => None,
+                    })
+                }
                 _ => None,
             })
             .collect()
@@ -902,7 +906,10 @@ mod tests {
         let keys = key_actions(&machine);
         assert_eq!(keys.len(), 2);
         assert_eq!(keys[0].unicode_char, 0x04);
-        assert_eq!(keys[0].control_key_state, LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED);
+        assert_eq!(
+            keys[0].control_key_state,
+            LEFT_CTRL_PRESSED | LEFT_ALT_PRESSED
+        );
         assert_eq!(keys[1].unicode_char, 0x08);
         assert_eq!(keys[1].control_key_state, LEFT_ALT_PRESSED);
     }
@@ -933,7 +940,7 @@ mod tests {
 
     #[test]
     fn cursor_position_capture_consumes_exactly_one_f3_shaped_report() {
-        let mut engine = InputStateMachineEngine::new(RecordingDispatch::default());
+        let engine = InputStateMachineEngine::new(RecordingDispatch::default());
         engine.capture_next_cursor_position_report();
         let mut machine = StateMachine::new_input(engine);
         machine.process_str("\u{1b}[1;4R\u{1b}[1;4R");
@@ -1046,10 +1053,12 @@ mod tests {
             .actions
             .iter()
             .filter_map(|action| match action {
-                InputAction::WriteInput(records) => records.iter().find_map(|record| match record {
-                    InputRecord::Mouse(mouse) => Some(*mouse),
-                    InputRecord::Key(_) => None,
-                }),
+                InputAction::WriteInput(records) => {
+                    records.iter().find_map(|record| match record {
+                        InputRecord::Mouse(mouse) => Some(*mouse),
+                        InputRecord::Key(_) => None,
+                    })
+                }
                 _ => None,
             })
             .collect::<Vec<_>>();
@@ -1059,11 +1068,11 @@ mod tests {
         assert_eq!(mice[1].event_flags, MOUSE_MOVED);
         assert_eq!(mice[1].position, Point { x: 1, y: 1 });
         assert_eq!(mice[2].button_state, 0);
-        assert_eq!(mice[3].button_state, SCROLL_DELTA_FORWARD);
-        assert_eq!(mice[3].event_flags, MOUSE_WHEELED);
+        assert_eq!(mice[3].button_state, SCROLL_DELTA_BACKWARD);
+        assert_eq!(mice[3].event_flags, MOUSE_HWHEELED);
         assert_eq!(mice[3].control_key_state, 0);
         assert_eq!(mice[4].button_state, SCROLL_DELTA_FORWARD);
-        assert_eq!(mice[4].event_flags, MOUSE_WHEELED);
+        assert_eq!(mice[4].event_flags, MOUSE_HWHEELED);
     }
 
     #[test]
@@ -1072,7 +1081,7 @@ mod tests {
         engine.set_double_click_time(Duration::from_secs(1));
         let mut machine = StateMachine::new_input(engine);
         machine.process_str(
-            "\u{1b}[<2;1;1M\u{1b}[<2;1;1m\u{1b}[<2;1;1M\u{1b}[<65;2;2M\u{1b}[<64;3;3M",
+            "\u{1b}[<2;1;1M\u{1b}[<2;1;1m\u{1b}[<2;1;1M\u{1b}[<66;2;2M\u{1b}[<67;3;3M",
         );
         let mice = machine
             .engine()
@@ -1080,19 +1089,21 @@ mod tests {
             .actions
             .iter()
             .filter_map(|action| match action {
-                InputAction::WriteInput(records) => records.iter().find_map(|record| match record {
-                    InputRecord::Mouse(mouse) => Some(*mouse),
-                    InputRecord::Key(_) => None,
-                }),
+                InputAction::WriteInput(records) => {
+                    records.iter().find_map(|record| match record {
+                        InputRecord::Mouse(mouse) => Some(*mouse),
+                        InputRecord::Key(_) => None,
+                    })
+                }
                 _ => None,
             })
             .collect::<Vec<_>>();
         assert_eq!(mice[2].button_state, RIGHTMOST_BUTTON_PRESSED);
         assert_eq!(mice[2].event_flags, DOUBLE_CLICK);
         assert_eq!(mice[3].button_state & 0xffff_0000, SCROLL_DELTA_BACKWARD);
-        assert_eq!(mice[3].event_flags, MOUSE_WHEELED);
+        assert_eq!(mice[3].event_flags, MOUSE_HWHEELED);
         assert_eq!(mice[4].button_state & 0xffff_0000, SCROLL_DELTA_FORWARD);
-        assert_eq!(mice[4].event_flags, MOUSE_WHEELED);
+        assert_eq!(mice[4].event_flags, MOUSE_HWHEELED);
     }
 
     #[test]

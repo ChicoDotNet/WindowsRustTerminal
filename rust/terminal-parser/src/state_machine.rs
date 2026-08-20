@@ -361,8 +361,14 @@ impl<E: StateMachineEngine> StateMachine<E> {
         }
 
         if code_unit == ESC && !matches!(self.state, State::OscString | State::OscParam) {
+            let preserve_sequence =
+                self.state == State::DcsIgnore && !self.sequence_buffer.is_empty();
             self.action_interrupt();
-            self.enter_escape();
+            if preserve_sequence {
+                self.enter_escape_preserving_sequence();
+            } else {
+                self.enter_escape();
+            }
             return;
         }
 
@@ -535,10 +541,10 @@ impl<E: StateMachineEngine> StateMachine<E> {
         self.runtime.dcs_handler_active = self.engine.action_dcs_dispatch(id, &parameters);
         if self.runtime.dcs_handler_active {
             self.state = State::DcsPassThrough;
+            self.sequence_buffer.clear();
         } else {
             self.state = State::DcsIgnore;
         }
-        self.sequence_buffer.clear();
     }
 
     fn action_interrupt(&mut self) {
@@ -557,6 +563,12 @@ impl<E: StateMachineEngine> StateMachine<E> {
         self.state = State::Escape;
         self.action_clear();
         self.sequence_buffer.clear();
+        self.sequence_buffer.push(ESC);
+    }
+
+    fn enter_escape_preserving_sequence(&mut self) {
+        self.state = State::Escape;
+        self.action_clear();
         self.sequence_buffer.push(ESC);
     }
 
@@ -580,14 +592,20 @@ impl<E: StateMachineEngine> StateMachine<E> {
     }
 
     fn event_escape(&mut self, code_unit: u16) {
-        if is_c0(code_unit) {
+        if is_c0(code_unit) || (self.config.input_engine && matches!(code_unit, CAN | SUB)) {
             if self.config.input_engine {
-                let _ = self.engine.action_execute_from_escape(code_unit);
+                if !self.engine.action_execute_from_escape(code_unit) {
+                    let _ = self.flush_to_terminal();
+                }
                 self.enter_ground();
             } else {
                 let _ = self.engine.action_execute(code_unit);
             }
         } else if code_unit == DEL {
+            if self.config.input_engine {
+                self.action_esc_dispatch(code_unit);
+                self.enter_ground();
+            }
         } else if is_intermediate(code_unit) {
             if self.config.input_engine {
                 self.action_esc_dispatch(code_unit);
