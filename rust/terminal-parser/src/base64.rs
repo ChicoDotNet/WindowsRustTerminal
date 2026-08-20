@@ -77,9 +77,9 @@ fn decode_bytes_utf16(input: &[u16]) -> Result<Vec<u8>, DecodeError> {
             remainder = (remainder << 6) | u32::from(value);
         }
 
-        output.push((remainder >> 16) as u8);
-        output.push((remainder >> 8) as u8);
-        output.push(remainder as u8);
+        output.push(shifted_byte(remainder, 16));
+        output.push(shifted_byte(remainder, 8));
+        output.push(shifted_byte(remainder, 0));
     }
 
     let mut remainder = 0u32;
@@ -102,15 +102,15 @@ fn decode_bytes_utf16(input: &[u16]) -> Result<Vec<u8>, DecodeError> {
 
     match tail_count {
         0 => {}
-        2 => output.push((remainder >> 4) as u8),
+        2 => output.push(shifted_byte(remainder, 4)),
         3 => {
-            output.push((remainder >> 10) as u8);
-            output.push((remainder >> 2) as u8);
+            output.push(shifted_byte(remainder, 10));
+            output.push(shifted_byte(remainder, 2));
         }
         4 => {
-            output.push((remainder >> 16) as u8);
-            output.push((remainder >> 8) as u8);
-            output.push(remainder as u8);
+            output.push(shifted_byte(remainder, 16));
+            output.push(shifted_byte(remainder, 8));
+            output.push(shifted_byte(remainder, 0));
         }
         _ => return Err(DecodeError::InvalidBase64),
     }
@@ -118,19 +118,19 @@ fn decode_bytes_utf16(input: &[u16]) -> Result<Vec<u8>, DecodeError> {
     Ok(output)
 }
 
+fn shifted_byte(value: u32, shift: u32) -> u8 {
+    (value >> shift).to_le_bytes()[0]
+}
+
 fn decode_value(code_unit: u16) -> Result<u8, DecodeError> {
-    let value = match code_unit {
-        value if value == u16::from(b'+') || value == u16::from(b'-') => 62,
-        value if value == u16::from(b'/') || value == u16::from(b'_') => 63,
-        value if (u16::from(b'A')..=u16::from(b'Z')).contains(&value) => {
-            (value - u16::from(b'A')) as u8
-        }
-        value if (u16::from(b'a')..=u16::from(b'z')).contains(&value) => {
-            (value - u16::from(b'a') + 26) as u8
-        }
-        value if (u16::from(b'0')..=u16::from(b'9')).contains(&value) => {
-            (value - u16::from(b'0') + 52) as u8
-        }
+    let byte = u8::try_from(code_unit).map_err(|_| DecodeError::InvalidBase64)?;
+
+    let value = match byte {
+        b'+' | b'-' => 62,
+        b'/' | b'_' => 63,
+        b'A'..=b'Z' => byte - b'A',
+        b'a'..=b'z' => byte - b'a' + 26,
+        b'0'..=b'9' => byte - b'0' + 52,
         _ => return Err(DecodeError::InvalidBase64),
     };
 
@@ -197,7 +197,11 @@ mod tests {
     #[test]
     fn rejects_invalid_base64_input() {
         for invalid in ["A", "abcde", "YW Jj", "YWJj\n", "YWJj?", "é"] {
-            assert_eq!(decode(invalid), Err(DecodeError::InvalidBase64), "{invalid:?}");
+            assert_eq!(
+                decode(invalid),
+                Err(DecodeError::InvalidBase64),
+                "{invalid:?}"
+            );
         }
 
         assert_eq!(decode_utf16(&[0xd800]), Err(DecodeError::InvalidBase64));
@@ -218,7 +222,7 @@ mod tests {
                 state ^= state << 13;
                 state ^= state >> 7;
                 state ^= state << 17;
-                *byte = (state as u8) & 0x7f;
+                *byte = state.to_le_bytes()[0] & 0x7f;
             }
 
             let encoded = encode_reference(&reference);
@@ -242,34 +246,40 @@ mod tests {
         let mut chunks = input.chunks_exact(3);
 
         for chunk in &mut chunks {
-            let value = (u32::from(chunk[0]) << 16)
-                | (u32::from(chunk[1]) << 8)
-                | u32::from(chunk[2]);
-            encoded.push(ALPHABET[((value >> 18) & 0x3f) as usize] as char);
-            encoded.push(ALPHABET[((value >> 12) & 0x3f) as usize] as char);
-            encoded.push(ALPHABET[((value >> 6) & 0x3f) as usize] as char);
-            encoded.push(ALPHABET[(value & 0x3f) as usize] as char);
+            let value =
+                (u32::from(chunk[0]) << 16) | (u32::from(chunk[1]) << 8) | u32::from(chunk[2]);
+            push_alphabet(&mut encoded, value >> 18);
+            push_alphabet(&mut encoded, value >> 12);
+            push_alphabet(&mut encoded, value >> 6);
+            push_alphabet(&mut encoded, value);
         }
 
         match chunks.remainder() {
             [] => {}
             [first] => {
                 let value = u32::from(*first) << 16;
-                encoded.push(ALPHABET[((value >> 18) & 0x3f) as usize] as char);
-                encoded.push(ALPHABET[((value >> 12) & 0x3f) as usize] as char);
+                push_alphabet(&mut encoded, value >> 18);
+                push_alphabet(&mut encoded, value >> 12);
                 encoded.push('=');
                 encoded.push('=');
             }
             [first, second] => {
                 let value = (u32::from(*first) << 16) | (u32::from(*second) << 8);
-                encoded.push(ALPHABET[((value >> 18) & 0x3f) as usize] as char);
-                encoded.push(ALPHABET[((value >> 12) & 0x3f) as usize] as char);
-                encoded.push(ALPHABET[((value >> 6) & 0x3f) as usize] as char);
+                push_alphabet(&mut encoded, value >> 18);
+                push_alphabet(&mut encoded, value >> 12);
+                push_alphabet(&mut encoded, value >> 6);
                 encoded.push('=');
             }
             _ => unreachable!("chunks_exact(3) remainder is shorter than three bytes"),
         }
 
         encoded
+    }
+
+    fn push_alphabet(encoded: &mut String, index: u32) {
+        const ALPHABET: &[u8; 64] =
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let index = usize::try_from(index & 0x3f).expect("six-bit Base64 index fits usize");
+        encoded.push(char::from(ALPHABET[index]));
     }
 }
