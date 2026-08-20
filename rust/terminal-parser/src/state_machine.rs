@@ -195,8 +195,7 @@ impl VtIdBuilder {
 
     fn finalize(self, final_code_unit: u16) -> VtId {
         VtId(
-            (self.accumulator + (u64::from(final_code_unit) << self.shift))
-                & 0x00ff_ffff_ffff_ffff,
+            (self.accumulator + (u64::from(final_code_unit) << self.shift)) & 0x00ff_ffff_ffff_ffff,
         )
     }
 }
