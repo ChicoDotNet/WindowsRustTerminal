@@ -86,8 +86,14 @@ pub enum OutputAction {
     SetLineRendition(LineRendition),
     ScreenAlignmentPattern,
     DesignateCodingSystem(u64),
-    Designate94Charset { slot: u8, charset: u64 },
-    Designate96Charset { slot: u8, charset: u64 },
+    Designate94Charset {
+        slot: u8,
+        charset: u64,
+    },
+    Designate96Charset {
+        slot: u8,
+        charset: u64,
+    },
     HardReset,
     CursorUp(i32),
     CursorDown(i32),
@@ -98,9 +104,18 @@ pub enum OutputAction {
     VerticalLinePositionAbsolute(i32),
     HorizontalPositionRelative(i32),
     VerticalPositionRelative(i32),
-    CursorPosition { line: i32, column: i32 },
-    SetTopBottomScrollingMargins { top: i32, bottom: i32 },
-    SetLeftRightScrollingMargins { left: i32, right: i32 },
+    CursorPosition {
+        line: i32,
+        column: i32,
+    },
+    SetTopBottomScrollingMargins {
+        top: i32,
+        bottom: i32,
+    },
+    SetLeftRightScrollingMargins {
+        left: i32,
+        right: i32,
+    },
     InsertCharacter(i32),
     DeleteCharacter(i32),
     InsertLine(i32),
@@ -110,9 +125,17 @@ pub enum OutputAction {
     EraseInLine(i32),
     SelectiveEraseInLine(i32),
     EraseCharacters(i32),
-    SetMode { private: bool, enabled: bool, mode: i32 },
+    SetMode {
+        private: bool,
+        enabled: bool,
+        mode: i32,
+    },
     SetGraphicsRendition(Parameters),
-    DeviceStatusReport { private: bool, status: i32, id: Option<i32> },
+    DeviceStatusReport {
+        private: bool,
+        status: i32,
+        id: Option<i32>,
+    },
     DeviceAttributes(DeviceAttributesKind),
     RequestTerminalParameters(i32),
     ScrollUp(i32),
@@ -121,7 +144,11 @@ pub enum OutputAction {
     PrecedingPage(i32),
     TabClear(i32),
     TabSet(i32),
-    WindowManipulation { function: i32, parameter1: i32, parameter2: i32 },
+    WindowManipulation {
+        function: i32,
+        parameter1: i32,
+        parameter2: i32,
+    },
     PagePositionAbsolute(i32),
     PagePositionRelative(i32),
     PagePositionBack(i32),
@@ -131,18 +158,33 @@ pub enum OutputAction {
     RequestDisplayedExtent,
     PushGraphicsRendition(Parameters),
     PopGraphicsRendition,
-    RequestMode { private: bool, mode: i32 },
-    AdvancedCsi { id: VtId, parameters: Parameters },
+    RequestMode {
+        private: bool,
+        mode: i32,
+    },
+    AdvancedCsi {
+        id: VtId,
+        parameters: Parameters,
+    },
     SetWindowTitle(String),
     SetCurrentWorkingDirectory(String),
     SetClipboard(String),
-    AddHyperlink { uri: String, custom_id: String },
+    AddHyperlink {
+        uri: String,
+        custom_id: String,
+    },
     EndHyperlink,
-    SetColorTableEntry { index: usize, color: u32 },
+    SetColorTableEntry {
+        index: usize,
+        color: u32,
+    },
     RequestColorTableEntry(usize),
     ResetColorTable,
     ResetColorTableEntry(usize),
-    SetXtermColorResource { resource: usize, color: u32 },
+    SetXtermColorResource {
+        resource: usize,
+        color: u32,
+    },
     RequestXtermColorResource(usize),
     ResetXtermColorResource(usize),
     ConEmuAction(String),
@@ -237,7 +279,9 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "O") {
             Some(OutputAction::SingleShift(3))
         } else if id_is(id, "Z") {
-            Some(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary))
+            Some(OutputAction::DeviceAttributes(
+                DeviceAttributesKind::Primary,
+            ))
         } else if id_is(id, "c") {
             Some(OutputAction::HardReset)
         } else if id_is(id, "n") {
@@ -263,9 +307,13 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, " N") {
             Some(OutputAction::AnnounceCodeStructure(3))
         } else if id_is(id, "#3") {
-            Some(OutputAction::SetLineRendition(LineRendition::DoubleHeightTop))
+            Some(OutputAction::SetLineRendition(
+                LineRendition::DoubleHeightTop,
+            ))
         } else if id_is(id, "#4") {
-            Some(OutputAction::SetLineRendition(LineRendition::DoubleHeightBottom))
+            Some(OutputAction::SetLineRendition(
+                LineRendition::DoubleHeightBottom,
+            ))
         } else if id_is(id, "#5") {
             Some(OutputAction::SetLineRendition(LineRendition::SingleWidth))
         } else if id_is(id, "#6") {
@@ -292,9 +340,15 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "D") {
             Some(OutputAction::CursorBackward(1))
         } else if id_is(id, "F") {
-            Some(OutputAction::Designate94Charset { slot: 0, charset: u64::from(b'0') })
+            Some(OutputAction::Designate94Charset {
+                slot: 0,
+                charset: u64::from(b'0'),
+            })
         } else if id_is(id, "G") {
-            Some(OutputAction::Designate94Charset { slot: 0, charset: u64::from(b'B') })
+            Some(OutputAction::Designate94Charset {
+                slot: 0,
+                charset: u64::from(b'B'),
+            })
         } else if id_is(id, "H") {
             Some(OutputAction::CursorPosition { line: 1, column: 1 })
         } else if id_is(id, "I") {
@@ -315,7 +369,11 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, ">") {
             Some(OutputAction::SetKeypadMode(false))
         } else if id_is(id, "<") {
-            Some(OutputAction::SetMode { private: true, enabled: true, mode: 2 })
+            Some(OutputAction::SetMode {
+                private: true,
+                enabled: true,
+                mode: 2,
+            })
         } else {
             None
         };
@@ -345,13 +403,21 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "F") {
             self.emit(OutputAction::CursorPreviousLine(numeric(parameters, 0)));
         } else if id_is(id, "G") || id_is(id, "`") {
-            self.emit(OutputAction::CursorHorizontalPositionAbsolute(numeric(parameters, 0)));
+            self.emit(OutputAction::CursorHorizontalPositionAbsolute(numeric(
+                parameters, 0,
+            )));
         } else if id_is(id, "d") {
-            self.emit(OutputAction::VerticalLinePositionAbsolute(numeric(parameters, 0)));
+            self.emit(OutputAction::VerticalLinePositionAbsolute(numeric(
+                parameters, 0,
+            )));
         } else if id_is(id, "a") {
-            self.emit(OutputAction::HorizontalPositionRelative(numeric(parameters, 0)));
+            self.emit(OutputAction::HorizontalPositionRelative(numeric(
+                parameters, 0,
+            )));
         } else if id_is(id, "e") {
-            self.emit(OutputAction::VerticalPositionRelative(numeric(parameters, 0)));
+            self.emit(OutputAction::VerticalPositionRelative(numeric(
+                parameters, 0,
+            )));
         } else if id_is(id, "H") || id_is(id, "f") {
             self.emit(OutputAction::CursorPosition {
                 line: numeric(parameters, 0),
@@ -376,18 +442,30 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "M") {
             self.emit(OutputAction::DeleteLine(numeric(parameters, 0)));
         } else if id_is(id, "J") {
-            for_each_parameter(parameters, |value| self.emit(OutputAction::EraseInDisplay(value)));
+            for_each_parameter(parameters, |value| {
+                self.emit(OutputAction::EraseInDisplay(value))
+            });
         } else if id_is(id, "?J") {
-            for_each_parameter(parameters, |value| self.emit(OutputAction::SelectiveEraseInDisplay(value)));
+            for_each_parameter(parameters, |value| {
+                self.emit(OutputAction::SelectiveEraseInDisplay(value))
+            });
         } else if id_is(id, "K") {
-            for_each_parameter(parameters, |value| self.emit(OutputAction::EraseInLine(value)));
+            for_each_parameter(parameters, |value| {
+                self.emit(OutputAction::EraseInLine(value))
+            });
         } else if id_is(id, "?K") {
-            for_each_parameter(parameters, |value| self.emit(OutputAction::SelectiveEraseInLine(value)));
+            for_each_parameter(parameters, |value| {
+                self.emit(OutputAction::SelectiveEraseInLine(value))
+            });
         } else if id_is(id, "h") || id_is(id, "?h") || id_is(id, "l") || id_is(id, "?l") {
             let private = id_is(id, "?h") || id_is(id, "?l");
             let enabled = id_is(id, "h") || id_is(id, "?h");
             for_each_parameter(parameters, |mode| {
-                self.emit(OutputAction::SetMode { private, enabled, mode });
+                self.emit(OutputAction::SetMode {
+                    private,
+                    enabled,
+                    mode,
+                });
             });
         } else if id_is(id, "m") {
             self.emit(OutputAction::SetGraphicsRendition(parameters.clone()));
@@ -409,7 +487,9 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
                 self.emit(OutputAction::DeviceAttributes(kind));
             }
         } else if id_is(id, "x") {
-            self.emit(OutputAction::RequestTerminalParameters(raw_or(parameters, 0, 0)));
+            self.emit(OutputAction::RequestTerminalParameters(raw_or(
+                parameters, 0, 0,
+            )));
         } else if id_is(id, "S") {
             self.emit(OutputAction::ScrollUp(numeric(parameters, 0)));
         } else if id_is(id, "T") {
@@ -437,7 +517,10 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "b") {
             if self.last_printed_char != NUL {
                 let count = usize::try_from(numeric(parameters, 0)).unwrap_or_default();
-                self.emit(OutputAction::PrintString(vec![self.last_printed_char; count]));
+                self.emit(OutputAction::PrintString(vec![
+                    self.last_printed_char;
+                    count
+                ]));
             }
         } else if id_is(id, "u") {
             self.emit(OutputAction::CursorRestoreState);
@@ -452,7 +535,9 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
         } else if id_is(id, "!p") {
             self.emit(OutputAction::SoftReset);
         } else if id_is(id, "\"q") {
-            self.emit(OutputAction::SetCharacterProtectionAttribute(parameters.clone()));
+            self.emit(OutputAction::SetCharacterProtectionAttribute(
+                parameters.clone(),
+            ));
         } else if id_is(id, "\"v") {
             self.emit(OutputAction::RequestDisplayedExtent);
         } else if id_is(id, "#{") || id_is(id, "#p") {
@@ -531,7 +616,10 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
     }
 
     fn osc_clipboard(&mut self, text: &[u16]) {
-        let Some(delimiter) = text.iter().position(|code_unit| *code_unit == u16::from(b';')) else {
+        let Some(delimiter) = text
+            .iter()
+            .position(|code_unit| *code_unit == u16::from(b';'))
+        else {
             return;
         };
         let payload = &text[delimiter + 1..];
@@ -566,7 +654,10 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
             return;
         };
         let parameters = &source[..delimiter];
-        let uri = source[delimiter + 1..].chars().take(MAX_URL_LENGTH).collect::<String>();
+        let uri = source[delimiter + 1..]
+            .chars()
+            .take(MAX_URL_LENGTH)
+            .collect::<String>();
         if uri.is_empty() {
             self.emit(OutputAction::EndHyperlink);
             return;
@@ -742,8 +833,8 @@ fn charset_action(id: VtId) -> Option<OutputAction> {
 
 fn is_recognized_advanced_csi(id: VtId) -> bool {
     [
-        "$r", "$t", "$u", "$v", "$w", "$x", "$z", "${", "$|", "&u", "'}", "'~", "*x",
-        "*y", "*z", ",|", ",~", "=u", "?u", ">u", "<u",
+        "$r", "$t", "$u", "$v", "$w", "$x", "$z", "${", "$|", "&u", "'}", "'~", "*x", "*y", "*z",
+        ",|", ",~", "=u", "?u", ">u", "<u",
     ]
     .iter()
     .any(|candidate| id_is(id, candidate))
@@ -799,7 +890,11 @@ fn parse_xterm_color(specification: &str) -> Option<u32> {
         }
     };
 
-    Some(u32::from(components[0]) | (u32::from(components[1]) << 8) | (u32::from(components[2]) << 16))
+    Some(
+        u32::from(components[0])
+            | (u32::from(components[1]) << 8)
+            | (u32::from(components[2]) << 16),
+    )
 }
 
 fn parse_scaled_hex(component: &str) -> Option<u8> {
@@ -819,7 +914,7 @@ mod tests {
         DcsAction, DeviceAttributesKind, LineFeedType, OutputAction, OutputStateMachineEngine,
         TermDispatch, parse_xterm_color,
     };
-    use crate::state_machine::{ParserMode, Parameters, StateMachine, StateMachineEngine, VtId};
+    use crate::state_machine::{Parameters, ParserMode, StateMachine, StateMachineEngine, VtId};
 
     #[derive(Debug, Default)]
     struct RecordingDispatch {
@@ -842,14 +937,18 @@ mod tests {
         StateMachine::new(OutputStateMachineEngine::new(RecordingDispatch::default()))
     }
 
-    fn actions(machine: &StateMachine<OutputStateMachineEngine<RecordingDispatch>>) -> &[OutputAction] {
+    fn actions(
+        machine: &StateMachine<OutputStateMachineEngine<RecordingDispatch>>,
+    ) -> &[OutputAction] {
         &machine.engine().dispatch().actions
     }
 
     #[test]
     fn output_controls_match_the_cpp_dispatch_contract() {
         let mut engine = OutputStateMachineEngine::new(RecordingDispatch::default());
-        for code_unit in [0x05, 0x07, 0x08, 0x09, 0x0d, 0x0a, 0x0b, 0x0c, 0x0f, 0x0e, 0x1a, 0x7f] {
+        for code_unit in [
+            0x05, 0x07, 0x08, 0x09, 0x0d, 0x0a, 0x0b, 0x0c, 0x0f, 0x0e, 0x1a, 0x7f,
+        ] {
             assert!(engine.action_execute(code_unit));
         }
         assert_eq!(
@@ -893,9 +992,21 @@ mod tests {
         assert_eq!(
             actions(&machine),
             [
-                OutputAction::SetMode { private: true, enabled: true, mode: 5 },
-                OutputAction::SetMode { private: true, enabled: true, mode: 1 },
-                OutputAction::SetMode { private: true, enabled: true, mode: 6 },
+                OutputAction::SetMode {
+                    private: true,
+                    enabled: true,
+                    mode: 5
+                },
+                OutputAction::SetMode {
+                    private: true,
+                    enabled: true,
+                    mode: 1
+                },
+                OutputAction::SetMode {
+                    private: true,
+                    enabled: true,
+                    mode: 6
+                },
                 OutputAction::EraseInDisplay(3),
                 OutputAction::EraseInDisplay(2),
                 OutputAction::EraseInLine(0),
@@ -910,7 +1021,10 @@ mod tests {
         machine.process_str("x\u{1b}[3b");
         assert_eq!(
             actions(&machine),
-            [OutputAction::PrintString(vec![u16::from(b'x')]), OutputAction::PrintString(vec![u16::from(b'x'); 3])]
+            [
+                OutputAction::PrintString(vec![u16::from(b'x')]),
+                OutputAction::PrintString(vec![u16::from(b'x'); 3])
+            ]
         );
 
         machine.process_str("\u{1b}[2b");
@@ -939,13 +1053,21 @@ mod tests {
     #[test]
     fn osc_color_commands_parse_xterm_specs_and_queries() {
         let mut machine = machine();
-        machine.process_str("\u{1b}]4;3;rgb:ff/00/80;4;?\u{7}\u{1b}]10;#0f0;?\u{7}\u{1b}]104;3;4\u{7}");
+        machine.process_str(
+            "\u{1b}]4;3;rgb:ff/00/80;4;?\u{7}\u{1b}]10;#0f0;?\u{7}\u{1b}]104;3;4\u{7}",
+        );
         assert_eq!(
             actions(&machine),
             [
-                OutputAction::SetColorTableEntry { index: 3, color: 0x0080_00ff },
+                OutputAction::SetColorTableEntry {
+                    index: 3,
+                    color: 0x0080_00ff
+                },
                 OutputAction::RequestColorTableEntry(4),
-                OutputAction::SetXtermColorResource { resource: 10, color: 0x0000_ff00 },
+                OutputAction::SetXtermColorResource {
+                    resource: 10,
+                    color: 0x0000_ff00
+                },
                 OutputAction::RequestXtermColorResource(11),
                 OutputAction::ResetColorTableEntry(3),
                 OutputAction::ResetColorTableEntry(4),
@@ -971,13 +1093,23 @@ mod tests {
 
     #[test]
     fn dcs_support_is_negotiated_by_the_rust_dispatch_boundary() {
-        let dispatch = RecordingDispatch { accept_dcs: true, ..RecordingDispatch::default() };
+        let dispatch = RecordingDispatch {
+            accept_dcs: true,
+            ..RecordingDispatch::default()
+        };
         let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
         machine.process_str("\u{1b}P1;2;3qabc\u{1b}\\");
+        let recorded = actions(&machine);
+        let OutputAction::DcsBegin(DcsAction::DefineSixelImage(parameters)) = &recorded[0] else {
+            panic!("expected SIXEL DCS begin action");
+        };
+        assert_eq!(parameters.values(), &[Some(1), Some(2), Some(3)]);
+        assert!(parameters.sub_params_for(0).is_empty());
+        assert!(parameters.sub_params_for(1).is_empty());
+        assert!(parameters.sub_params_for(2).is_empty());
         assert_eq!(
-            actions(&machine),
+            &recorded[1..],
             [
-                OutputAction::DcsBegin(DcsAction::DefineSixelImage(Parameters::from_values(vec![Some(1), Some(2), Some(3)]))),
                 OutputAction::DcsPut(u16::from(b'a')),
                 OutputAction::DcsPut(u16::from(b'b')),
                 OutputAction::DcsPut(u16::from(b'c')),
@@ -1001,9 +1133,15 @@ mod tests {
     fn subparameters_are_accepted_only_for_the_cpp_compatible_sequences() {
         let mut machine = machine();
         machine.process_str("\u{1b}[1:2A\u{1b}[38:2:1:2:3m");
+        let recorded = actions(&machine);
+        assert_eq!(recorded.len(), 1);
+        let OutputAction::SetGraphicsRendition(parameters) = &recorded[0] else {
+            panic!("expected SGR dispatch");
+        };
+        assert_eq!(parameters.values(), &[Some(38)]);
         assert_eq!(
-            actions(&machine),
-            [OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(38)]))]
+            parameters.sub_params_for(0),
+            &[Some(2), Some(1), Some(2), Some(3)]
         );
     }
 }
