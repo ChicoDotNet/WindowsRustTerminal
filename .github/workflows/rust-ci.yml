@@ -31,7 +31,7 @@ concurrency:
 jobs:
   r02a-repair:
     name: R02a canonical repair
-    if: github.event_name == 'push' && github.ref == 'refs/heads/rust/r02-terminal-input' && github.actor != 'github-actions[bot]'
+    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
