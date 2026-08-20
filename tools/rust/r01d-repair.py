@@ -115,6 +115,28 @@ input_text = input_path.read_text()
 
 input_text = replace_once(
     input_text,
+    """    #[expect(
+        clippy::too_many_lines,
+        reason = "CSI input dispatch is kept contiguous for Microsoft parity review"
+    )]
+    fn action_csi(&mut self, id: VtId, parameters: &Parameters) -> bool {""",
+    """    fn action_csi(&mut self, id: VtId, parameters: &Parameters) -> bool {""",
+    "remove unneeded CSI length expectation",
+)
+input_text = replace_once(
+    input_text,
+    "MOUSE_MOVED, MOUSE_WHEELED, Point, RIGHTMOST_BUTTON_PRESSED, SCROLL_DELTA_BACKWARD,",
+    "MOUSE_MOVED, Point, RIGHTMOST_BUTTON_PRESSED, SCROLL_DELTA_BACKWARD,",
+    "unused mouse wheel import",
+)
+input_text = replace_once(
+    input_text,
+    "let mut engine = InputStateMachineEngine::new(RecordingDispatch::default());",
+    "let engine = InputStateMachineEngine::new(RecordingDispatch::default());",
+    "unneeded mutable cursor capture engine",
+)
+input_text = replace_once(
+    input_text,
     """        assert_eq!(mice[3].button_state, SCROLL_DELTA_FORWARD);
         assert_eq!(mice[3].event_flags, MOUSE_WHEELED);""",
     """        assert_eq!(mice[3].button_state, SCROLL_DELTA_BACKWARD);
