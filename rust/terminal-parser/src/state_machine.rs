@@ -172,6 +172,25 @@ pub enum State {
     SosPmApcString,
 }
 
+#[derive(Debug, Clone, Copy)]
+struct ParserConfig {
+    input_engine: bool,
+    accept_c1: bool,
+    ansi: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct OverflowState {
+    parameter_limit: bool,
+    sub_parameter_limit: bool,
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+struct RuntimeState {
+    dcs_handler_active: bool,
+    processing_last_character: bool,
+}
+
 #[derive(Debug, Clone, Copy, Default)]
 struct VtIdBuilder {
     accumulator: u64,
@@ -202,22 +221,18 @@ impl VtIdBuilder {
 
 pub struct StateMachine<E: StateMachineEngine> {
     engine: E,
-    is_engine_for_input: bool,
+    config: ParserConfig,
     state: State,
-    accept_c1: bool,
-    ansi: bool,
     identifier: VtIdBuilder,
     parameters: Vec<Option<i32>>,
-    parameter_limit_overflowed: bool,
+    overflow: OverflowState,
     sub_parameters: Vec<Option<i32>>,
     sub_parameter_ranges: Vec<(u8, u8)>,
-    sub_parameter_limit_overflowed: bool,
     sub_parameter_counter: usize,
     osc_string: Vec<u16>,
     osc_parameter: i32,
-    dcs_handler_active: bool,
+    runtime: RuntimeState,
     sequence_buffer: Vec<u16>,
-    processing_last_character: bool,
     on_csi_complete: Option<Box<dyn FnMut()>>,
 }
 
@@ -235,22 +250,22 @@ impl<E: StateMachineEngine> StateMachine<E> {
     fn with_input_engine(engine: E, is_engine_for_input: bool) -> Self {
         let mut machine = Self {
             engine,
-            is_engine_for_input,
+            config: ParserConfig {
+                input_engine: is_engine_for_input,
+                accept_c1: is_engine_for_input,
+                ansi: true,
+            },
             state: State::Ground,
-            accept_c1: is_engine_for_input,
-            ansi: true,
             identifier: VtIdBuilder::default(),
             parameters: Vec::new(),
-            parameter_limit_overflowed: false,
+            overflow: OverflowState::default(),
             sub_parameters: Vec::new(),
             sub_parameter_ranges: Vec::new(),
-            sub_parameter_limit_overflowed: false,
             sub_parameter_counter: 0,
             osc_string: Vec::new(),
             osc_parameter: 0,
-            dcs_handler_active: false,
+            runtime: RuntimeState::default(),
             sequence_buffer: Vec::new(),
-            processing_last_character: false,
             on_csi_complete: None,
         };
         machine.action_clear();
@@ -264,7 +279,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
 
     #[must_use]
     pub const fn is_processing_last_character(&self) -> bool {
-        self.processing_last_character
+        self.runtime.processing_last_character
     }
 
     #[must_use]
@@ -278,16 +293,16 @@ impl<E: StateMachineEngine> StateMachine<E> {
 
     pub fn set_parser_mode(&mut self, mode: ParserMode, enabled: bool) {
         match mode {
-            ParserMode::AcceptC1 => self.accept_c1 = enabled,
-            ParserMode::Ansi => self.ansi = enabled,
+            ParserMode::AcceptC1 => self.config.accept_c1 = enabled,
+            ParserMode::Ansi => self.config.ansi = enabled,
         }
     }
 
     #[must_use]
     pub const fn get_parser_mode(&self, mode: ParserMode) -> bool {
         match mode {
-            ParserMode::AcceptC1 => self.accept_c1,
-            ParserMode::Ansi => self.ansi,
+            ParserMode::AcceptC1 => self.config.accept_c1,
+            ParserMode::Ansi => self.config.ansi,
         }
     }
 
@@ -321,7 +336,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
                 }
             }
 
-            self.processing_last_character = index + 1 >= text.len();
+            self.runtime.processing_last_character = index + 1 >= text.len();
             self.process_code_unit(text[index]);
             index += 1;
         }
@@ -330,7 +345,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
     pub fn process_code_unit(&mut self, code_unit: u16) {
         let from_anywhere = code_unit == CAN || code_unit == SUB;
 
-        if from_anywhere && !(self.state == State::Escape && self.is_engine_for_input) {
+        if from_anywhere && !(self.state == State::Escape && self.config.input_engine) {
             self.action_interrupt();
             let _ = self.engine.action_execute(code_unit);
             self.enter_ground();
@@ -338,7 +353,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
         }
 
         if is_c1_control(code_unit) {
-            if self.accept_c1 {
+            if self.config.accept_c1 {
                 self.process_code_unit(ESC);
                 self.process_code_unit(code_unit - 0x40);
             }
@@ -370,12 +385,11 @@ impl<E: StateMachineEngine> StateMachine<E> {
             State::Ss3Entry => self.event_ss3_entry(code_unit),
             State::Ss3Param => self.event_ss3_param(code_unit),
             State::Vt52Param => self.event_vt52_param(code_unit),
+            State::DcsIgnore | State::SosPmApcString => {}
             State::DcsEntry => self.event_dcs_entry(code_unit),
-            State::DcsIgnore => {}
             State::DcsIntermediate => self.event_dcs_intermediate(code_unit),
             State::DcsParam => self.event_dcs_param(code_unit),
             State::DcsPassThrough => self.event_dcs_pass_through(code_unit),
-            State::SosPmApcString => {}
         }
     }
 
@@ -398,14 +412,14 @@ impl<E: StateMachineEngine> StateMachine<E> {
     fn action_clear(&mut self) {
         self.identifier.clear();
         self.parameters.clear();
-        self.parameter_limit_overflowed = false;
+        self.overflow.parameter_limit = false;
         self.sub_parameters.clear();
         self.sub_parameter_ranges.clear();
         self.sub_parameter_counter = 0;
-        self.sub_parameter_limit_overflowed = false;
+        self.overflow.sub_parameter_limit = false;
         self.osc_string.clear();
         self.osc_parameter = 0;
-        self.dcs_handler_active = false;
+        self.runtime.dcs_handler_active = false;
     }
 
     fn action_collect(&mut self, code_unit: u16) {
@@ -413,7 +427,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
     }
 
     fn action_param(&mut self, code_unit: u16) {
-        if self.parameter_limit_overflowed {
+        if self.overflow.parameter_limit {
             return;
         }
 
@@ -425,11 +439,11 @@ impl<E: StateMachineEngine> StateMachine<E> {
 
         if code_unit == u16::from(b';') {
             if self.parameters.len() >= MAX_PARAMETER_COUNT {
-                self.parameter_limit_overflowed = true;
+                self.overflow.parameter_limit = true;
             } else {
                 self.parameters.push(None);
                 self.sub_parameter_counter = 0;
-                self.sub_parameter_limit_overflowed = false;
+                self.overflow.sub_parameter_limit = false;
                 let start = u8::try_from(self.sub_parameters.len()).unwrap_or(u8::MAX);
                 self.sub_parameter_ranges.push((start, start));
             }
@@ -442,7 +456,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
     }
 
     fn action_sub_param(&mut self, code_unit: u16) {
-        if self.sub_parameter_limit_overflowed {
+        if self.overflow.sub_parameter_limit {
             return;
         }
 
@@ -454,7 +468,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
 
         if code_unit == u16::from(b':') {
             if self.sub_parameter_counter >= MAX_SUBPARAMETER_COUNT {
-                self.sub_parameter_limit_overflowed = true;
+                self.overflow.sub_parameter_limit = true;
             } else {
                 self.sub_parameters.push(None);
                 if let Some((_, end)) = self.sub_parameter_ranges.last_mut() {
@@ -518,8 +532,8 @@ impl<E: StateMachineEngine> StateMachine<E> {
     fn action_dcs_dispatch(&mut self, code_unit: u16) {
         let id = self.identifier.finalize(code_unit);
         let parameters = self.snapshot_parameters();
-        self.dcs_handler_active = self.engine.action_dcs_dispatch(id, &parameters);
-        if self.dcs_handler_active {
+        self.runtime.dcs_handler_active = self.engine.action_dcs_dispatch(id, &parameters);
+        if self.runtime.dcs_handler_active {
             self.state = State::DcsPassThrough;
         } else {
             self.state = State::DcsIgnore;
@@ -528,9 +542,9 @@ impl<E: StateMachineEngine> StateMachine<E> {
     }
 
     fn action_interrupt(&mut self) {
-        if self.state == State::DcsPassThrough && self.dcs_handler_active {
+        if self.state == State::DcsPassThrough && self.runtime.dcs_handler_active {
             let _ = self.engine.action_dcs_put(ESC);
-            self.dcs_handler_active = false;
+            self.runtime.dcs_handler_active = false;
         }
     }
 
@@ -567,7 +581,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
 
     fn event_escape(&mut self, code_unit: u16) {
         if is_c0(code_unit) {
-            if self.is_engine_for_input {
+            if self.config.input_engine {
                 let _ = self.engine.action_execute_from_escape(code_unit);
                 self.enter_ground();
             } else {
@@ -575,18 +589,18 @@ impl<E: StateMachineEngine> StateMachine<E> {
             }
         } else if code_unit == DEL {
         } else if is_intermediate(code_unit) {
-            if self.is_engine_for_input {
+            if self.config.input_engine {
                 self.action_esc_dispatch(code_unit);
                 self.enter_ground();
             } else {
                 self.action_collect(code_unit);
                 self.state = State::EscapeIntermediate;
             }
-        } else if self.ansi {
+        } else if self.config.ansi {
             match code_unit {
                 value if value == u16::from(b'[') => self.enter_csi_entry(),
                 value if value == u16::from(b']') => self.state = State::OscParam,
-                value if value == u16::from(b'O') && self.is_engine_for_input => {
+                value if value == u16::from(b'O') && self.config.input_engine => {
                     self.state = State::Ss3Entry;
                     self.action_clear();
                 }
@@ -622,7 +636,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
         } else if is_intermediate(code_unit) {
             self.action_collect(code_unit);
         } else if code_unit == DEL {
-        } else if self.ansi {
+        } else if self.config.ansi {
             self.action_esc_dispatch(code_unit);
             self.enter_ground();
         } else if code_unit == u16::from(b'Y') {
@@ -849,7 +863,7 @@ impl<E: StateMachineEngine> StateMachine<E> {
             && !self.engine.action_dcs_put(code_unit)
         {
             self.state = State::DcsIgnore;
-            self.dcs_handler_active = false;
+            self.runtime.dcs_handler_active = false;
         }
     }
 }
@@ -996,8 +1010,10 @@ mod tests {
 
     #[test]
     fn unhandled_csi_is_passed_through_without_losing_prior_text() {
-        let mut engine = TestEngine::default();
-        engine.passthrough_dispatches = true;
+        let engine = TestEngine {
+            passthrough_dispatches: true,
+            ..TestEngine::default()
+        };
         let mut machine = StateMachine::new(engine);
 
         machine.process_str("12345 Hello World\u{1b}[?999h");
@@ -1008,8 +1024,10 @@ mod tests {
 
     #[test]
     fn unhandled_sequences_survive_split_writes() {
-        let mut engine = TestEngine::default();
-        engine.passthrough_dispatches = true;
+        let engine = TestEngine {
+            passthrough_dispatches: true,
+            ..TestEngine::default()
+        };
         let mut machine = StateMachine::new(engine);
 
         machine.process_str("\u{1b}[?12");
