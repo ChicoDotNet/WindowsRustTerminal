@@ -22,39 +22,13 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  r02a-repair:
-    name: R02a canonical repair
-    if: github.event_name == 'pull_request' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: rust/r02-terminal-input
-      - name: Apply contract fixes
-        run: python tools/rust/r02a-repair.py
-      - name: Format
-        run: cargo fmt --all
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Test
-        run: cargo test --workspace --all-targets --locked
-      - name: Commit canonical R02a source
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add rust/terminal-input/src/lib.rs
-          git diff --cached --quiet && exit 0
-          git commit -m "fix(rust): align TerminalInput contract and formatting"
-          git push origin HEAD:rust/r02-terminal-input
-
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
