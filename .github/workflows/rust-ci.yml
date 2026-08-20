@@ -1,65 +1,69 @@
 name: Rust CI
 
 on:
+  push:
+    branches:
+      - "rust/**"
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rust/**"
+      - "tools/rust/**"
+      - ".github/workflows/rust-ci.yml"
   pull_request:
     paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
       - "rust/**"
+      - "tools/rust/**"
       - ".github/workflows/rust-ci.yml"
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
-  group: rust-ci-r01c-repair-${{ github.ref }}
+  group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  r01c-clippy-repair:
-    name: R01c Clippy repair
-    if: github.head_ref == 'rust/r01-output-engine' && github.actor != 'github-actions[bot]'
+  quality:
+    name: fmt + clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-        with:
-          ref: rust/r01-output-engine
-      - name: Apply Clippy findings
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("rust/terminal-parser/src/output_engine.rs")
-          text = path.read_text()
-
-          replacements = {
-              "//! conhost, WinRT, COM, or C++.": "//! conhost, `WinRT`, COM, or C++.",
-              "    fn action_csi(&mut self, id: VtId, parameters: &Parameters) {": "    #[expect(\n        clippy::too_many_lines,\n        reason = \"CSI dispatch is kept as a contiguous protocol table for Microsoft parity review\"\n    )]\n    fn action_csi(&mut self, id: VtId, parameters: &Parameters) {",
-              "                self.emit(OutputAction::EraseInDisplay(value))\n": "                self.emit(OutputAction::EraseInDisplay(value));\n",
-              "                self.emit(OutputAction::SelectiveEraseInDisplay(value))\n": "                self.emit(OutputAction::SelectiveEraseInDisplay(value));\n",
-              "                self.emit(OutputAction::EraseInLine(value))\n": "                self.emit(OutputAction::EraseInLine(value));\n",
-              "                self.emit(OutputAction::SelectiveEraseInLine(value))\n": "                self.emit(OutputAction::SelectiveEraseInLine(value));\n",
-              "        match action {\n            Some(action) => self.dispatch.begin_dcs(action),\n            None => {\n                self.emit(OutputAction::UnknownSequence);\n                false\n            }\n        }": "        if let Some(action) = action {\n            self.dispatch.begin_dcs(action)\n        } else {\n            self.emit(OutputAction::UnknownSequence);\n            false\n        }",
-          }
-
-          for old, new in replacements.items():
-              if old not in text:
-                  raise SystemExit(f"expected Clippy target not found: {old[:80]!r}")
-              text = text.replace(old, new, 1)
-
-          path.write_text(text)
-          PY
-      - name: Canonical rustfmt
-        run: cargo fmt --all
+      - name: Toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --all --check
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-2025-vs2026
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: rustup show
+      - name: Check
+        run: cargo check --workspace --all-targets --locked
       - name: Test
         run: cargo test --workspace --all-targets --locked
-      - name: Commit repaired source
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add rust/terminal-parser/src/output_engine.rs
-          git diff --cached --quiet && exit 0
-          git commit -m "refactor(rust): satisfy R01c Clippy contract"
-          git push origin HEAD:rust/r01-output-engine
+
+  contract-harness:
+    name: TAEF harness self-test
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate TAEF result parser
+        shell: pwsh
+        run: ./tools/rust/Test-TaefContract.ps1
