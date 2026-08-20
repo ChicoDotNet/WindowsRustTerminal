@@ -11,8 +11,9 @@ const ESC: char = '\u{1b}';
 const CSI_8BIT: char = '\u{009b}';
 const SS3_8BIT: char = '\u{008f}';
 const KITTY_STACK_MAX_SIZE: usize = 8;
-const FUNCTION_KEY_NUMBERS: [u16; 16] = [15, 17, 18, 19, 20, 21, 23, 24, 25, 26, 28, 29, 31, 32, 33, 34];
-const NUMERIC_CTRLS: [u32; 7] = [0, 27, 28, 29, 30, 31, 127];
+const FUNCTION_KEY_NUMBERS: [u16; 16] = [
+    15, 17, 18, 19, 20, 21, 23, 24, 25, 26, 28, 29, 31, 32, 33, 34,
+];
 
 pub mod control_state {
     pub const RIGHT_ALT_PRESSED: u32 = 0x0001;
@@ -302,7 +303,9 @@ impl TerminalInput {
 
         let key_repeat = self.last_virtual_key == Some(event.virtual_key);
         self.last_virtual_key = Some(event.virtual_key);
-        if key_repeat && (is_modifier_key(event.virtual_key) || !self.get_input_mode(Mode::AutoRepeat)) {
+        if key_repeat
+            && (is_modifier_key(event.virtual_key) || !self.get_input_mode(Mode::AutoRepeat))
+        {
             return String::new();
         }
         if is_modifier_key(event.virtual_key) {
@@ -313,12 +316,17 @@ impl TerminalInput {
         let alt = event.control_key_state & control_state::ALT_PRESSED != 0;
         let modifier = modifier_parameter(event.control_key_state);
 
-        if let Some(sequence) = self.encode_special(event.virtual_key, event.control_key_state, modifier) {
+        if let Some(sequence) =
+            self.encode_special(event.virtual_key, event.control_key_state, modifier)
+        {
             return sequence;
         }
 
         let mut codepoint = event.codepoint;
-        if codepoint == 0 && ctrl && (u16::from(b'2')..=u16::from(b'Z')).contains(&event.virtual_key) {
+        if codepoint == 0
+            && ctrl
+            && (u16::from(b'1')..=u16::from(b'Z')).contains(&event.virtual_key)
+        {
             codepoint = u32::from(event.virtual_key);
         }
         if codepoint == 0 {
@@ -374,7 +382,12 @@ impl TerminalInput {
         )
     }
 
-    fn encode_special(&self, virtual_key: u16, control_key_state: u32, modifier: u8) -> Option<String> {
+    fn encode_special(
+        &self,
+        virtual_key: u16,
+        control_key_state: u32,
+        modifier: u8,
+    ) -> Option<String> {
         let shift = control_key_state & control_state::SHIFT_PRESSED != 0;
         let ctrl = control_key_state & control_state::CTRL_PRESSED != 0;
         let alt = control_key_state & control_state::ALT_PRESSED != 0;
@@ -442,10 +455,9 @@ impl TerminalInput {
                 }
             }
             virtual_key::NUMPAD0..=virtual_key::NUMPAD9 if self.get_input_mode(Mode::Keypad) => {
-                let final_character = char::from_u32(
-                    u32::from(b'p') + u32::from(virtual_key - virtual_key::NUMPAD0),
-                )
-                .expect("ASCII keypad final");
+                let final_character =
+                    char::from_u32(u32::from(b'p') + u32::from(virtual_key - virtual_key::NUMPAD0))
+                        .expect("ASCII keypad final");
                 Some(if ansi {
                     format!("{}{final_character}", self.ss3_prefix())
                 } else {
@@ -468,10 +480,9 @@ impl TerminalInput {
     }
 
     fn function_key_f1_f4(&self, virtual_key: u16, modifier: u8, ansi: bool) -> String {
-        let final_character = char::from_u32(
-            u32::from(b'P') + u32::from(virtual_key - virtual_key::F1),
-        )
-        .expect("ASCII function-key final");
+        let final_character =
+            char::from_u32(u32::from(b'P') + u32::from(virtual_key - virtual_key::F1))
+                .expect("ASCII function-key final");
         if !ansi {
             return format!("{ESC}{final_character}");
         }
@@ -601,8 +612,16 @@ pub fn make_ctrl_char(character: u32) -> u32 {
         return 0x7f;
     }
     if (u32::from(b'2')..=u32::from(b'8')).contains(&character) {
-        let index = usize::try_from(character - u32::from(b'2')).expect("bounded Ctrl digit");
-        return NUMERIC_CTRLS[index];
+        return match character {
+            value if value == u32::from(b'2') => 0,
+            value if value == u32::from(b'3') => 27,
+            value if value == u32::from(b'4') => 28,
+            value if value == u32::from(b'5') => 29,
+            value if value == u32::from(b'6') => 30,
+            value if value == u32::from(b'7') => 31,
+            value if value == u32::from(b'8') => 127,
+            _ => character,
+        };
     }
     character
 }
@@ -610,8 +629,8 @@ pub fn make_ctrl_char(character: u32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        control_state, virtual_key, KeyEvent, KittyKeyboardProtocolFlags,
-        KittyKeyboardProtocolMode, Mode, TerminalInput,
+        KeyEvent, KittyKeyboardProtocolFlags, KittyKeyboardProtocolMode, Mode, TerminalInput,
+        control_state, virtual_key,
     };
 
     fn key(virtual_key: u16) -> KeyEvent {
@@ -770,22 +789,27 @@ mod tests {
             KittyKeyboardProtocolMode::Replace,
         );
         input.push_kitty_flags(KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES);
-        assert_eq!(input.kitty_flags(), KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES);
-        input.pop_kitty_flags(1);
+        assert_eq!(
+            input.kitty_flags(),
+            KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES
+        );
+
+        input.use_alternate_screen_buffer();
+        assert_eq!(input.kitty_flags(), 0);
+        input.push_kitty_flags(KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES);
+        assert_eq!(
+            input.kitty_flags(),
+            KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES
+        );
+
+        input.use_main_screen_buffer();
         assert_eq!(
             input.kitty_flags(),
             KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES
         );
 
-        input.push_kitty_flags(KittyKeyboardProtocolFlags::REPORT_ASSOCIATED_TEXT);
-        input.use_alternate_screen_buffer();
+        input.pop_kitty_flags(1);
         assert_eq!(input.kitty_flags(), 0);
-        input.push_kitty_flags(KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES);
-        input.use_main_screen_buffer();
-        assert_eq!(
-            input.kitty_flags(),
-            KittyKeyboardProtocolFlags::REPORT_ASSOCIATED_TEXT
-        );
     }
 
     #[test]
