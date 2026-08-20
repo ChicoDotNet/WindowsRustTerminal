@@ -1,0 +1,95 @@
+name: R01c format fix
+
+on:
+  push:
+    branches:
+      - "rust/r01-output-engine"
+    paths:
+      - ".github/workflows/r01c-format-fix.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r01-output-engine
+
+      - name: Update contract assertions
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("rust/terminal-parser/src/output_engine.rs")
+          text = path.read_text()
+
+          old_dcs = '''        assert_eq!(
+              actions(&machine),
+              [
+                  OutputAction::DcsBegin(DcsAction::DefineSixelImage(Parameters::from_values(vec![Some(1), Some(2), Some(3)]))),
+                  OutputAction::DcsPut(u16::from(b'a')),
+                  OutputAction::DcsPut(u16::from(b'b')),
+                  OutputAction::DcsPut(u16::from(b'c')),
+                  OutputAction::DcsPut(0x1b),
+              ]
+          );'''
+          new_dcs = '''        let recorded = actions(&machine);
+          let OutputAction::DcsBegin(DcsAction::DefineSixelImage(parameters)) = &recorded[0] else {
+              panic!("expected SIXEL DCS begin action");
+          };
+          assert_eq!(parameters.values(), &[Some(1), Some(2), Some(3)]);
+          assert!(parameters.sub_params_for(0).is_empty());
+          assert!(parameters.sub_params_for(1).is_empty());
+          assert!(parameters.sub_params_for(2).is_empty());
+          assert_eq!(
+              &recorded[1..],
+              [
+                  OutputAction::DcsPut(u16::from(b'a')),
+                  OutputAction::DcsPut(u16::from(b'b')),
+                  OutputAction::DcsPut(u16::from(b'c')),
+                  OutputAction::DcsPut(0x1b),
+              ]
+          );'''
+
+          old_sgr = '''        assert_eq!(
+              actions(&machine),
+              [OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(38)]))]
+          );'''
+          new_sgr = '''        let recorded = actions(&machine);
+          assert_eq!(recorded.len(), 1);
+          let OutputAction::SetGraphicsRendition(parameters) = &recorded[0] else {
+              panic!("expected SGR dispatch");
+          };
+          assert_eq!(parameters.values(), &[Some(38)]);
+          assert_eq!(
+              parameters.sub_params_for(0),
+              &[Some(2), Some(1), Some(2), Some(3)]
+          );'''
+
+          if old_dcs not in text:
+              raise SystemExit("DCS assertion block not found")
+          if old_sgr not in text:
+              raise SystemExit("SGR assertion block not found")
+
+          text = text.replace(old_dcs, new_dcs, 1).replace(old_sgr, new_sgr, 1)
+          path.write_text(text)
+
+      - name: Format Rust workspace
+        run: cargo fmt --all
+
+      - name: Verify terminal-parser tests
+        run: cargo test -p terminal-parser --lib --locked
+
+      - name: Commit formatted R01c source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-parser/src/output_engine.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "style(rust): format and tighten R01c contract tests"
+          git push origin HEAD:rust/r01-output-engine
