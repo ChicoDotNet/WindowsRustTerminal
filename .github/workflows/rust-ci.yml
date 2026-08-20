@@ -46,55 +46,60 @@ jobs:
           path = Path("rust/terminal-parser/src/output_engine.rs")
           text = path.read_text()
 
-          old_dcs = '''        assert_eq!(
-              actions(&machine),
-              [
-                  OutputAction::DcsBegin(DcsAction::DefineSixelImage(Parameters::from_values(vec![Some(1), Some(2), Some(3)]))),
-                  OutputAction::DcsPut(u16::from(b'a')),
-                  OutputAction::DcsPut(u16::from(b'b')),
-                  OutputAction::DcsPut(u16::from(b'c')),
-                  OutputAction::DcsPut(0x1b),
-              ]
-          );'''
-          new_dcs = '''        let recorded = actions(&machine);
-          let OutputAction::DcsBegin(DcsAction::DefineSixelImage(parameters)) = &recorded[0] else {
-              panic!("expected SIXEL DCS begin action");
-          };
-          assert_eq!(parameters.values(), &[Some(1), Some(2), Some(3)]);
-          assert!(parameters.sub_params_for(0).is_empty());
-          assert!(parameters.sub_params_for(1).is_empty());
-          assert!(parameters.sub_params_for(2).is_empty());
-          assert_eq!(
-              &recorded[1..],
-              [
-                  OutputAction::DcsPut(u16::from(b'a')),
-                  OutputAction::DcsPut(u16::from(b'b')),
-                  OutputAction::DcsPut(u16::from(b'c')),
-                  OutputAction::DcsPut(0x1b),
-              ]
-          );'''
+          dcs_start = text.index("    #[test]\n    fn dcs_support_is_negotiated_by_the_rust_dispatch_boundary() {")
+          dcs_end = text.index("    #[test]\n    fn unsupported_sequences_report_unknown_without_panicking() {", dcs_start)
+          dcs_lines = [
+              "    #[test]",
+              "    fn dcs_support_is_negotiated_by_the_rust_dispatch_boundary() {",
+              "        let dispatch = RecordingDispatch {",
+              "            accept_dcs: true,",
+              "            ..RecordingDispatch::default()",
+              "        };",
+              "        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));",
+              "        machine.process_str(\"\\u{1b}P1;2;3qabc\\u{1b}\\\\\");",
+              "        let recorded = actions(&machine);",
+              "        let OutputAction::DcsBegin(DcsAction::DefineSixelImage(parameters)) = &recorded[0] else {",
+              "            panic!(\"expected SIXEL DCS begin action\");",
+              "        };",
+              "        assert_eq!(parameters.values(), &[Some(1), Some(2), Some(3)]);",
+              "        assert!(parameters.sub_params_for(0).is_empty());",
+              "        assert!(parameters.sub_params_for(1).is_empty());",
+              "        assert!(parameters.sub_params_for(2).is_empty());",
+              "        assert_eq!(",
+              "            &recorded[1..],",
+              "            [",
+              "                OutputAction::DcsPut(u16::from(b'a')),",
+              "                OutputAction::DcsPut(u16::from(b'b')),",
+              "                OutputAction::DcsPut(u16::from(b'c')),",
+              "                OutputAction::DcsPut(0x1b),",
+              "            ]",
+              "        );",
+              "    }",
+              "",
+          ]
+          text = text[:dcs_start] + "\n".join(dcs_lines) + "\n" + text[dcs_end:]
 
-          old_sgr = '''        assert_eq!(
-              actions(&machine),
-              [OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(38)]))]
-          );'''
-          new_sgr = '''        let recorded = actions(&machine);
-          assert_eq!(recorded.len(), 1);
-          let OutputAction::SetGraphicsRendition(parameters) = &recorded[0] else {
-              panic!("expected SGR dispatch");
-          };
-          assert_eq!(parameters.values(), &[Some(38)]);
-          assert_eq!(
-              parameters.sub_params_for(0),
-              &[Some(2), Some(1), Some(2), Some(3)]
-          );'''
-
-          if old_dcs not in text:
-              raise SystemExit("DCS assertion block not found")
-          if old_sgr not in text:
-              raise SystemExit("SGR assertion block not found")
-
-          path.write_text(text.replace(old_dcs, new_dcs, 1).replace(old_sgr, new_sgr, 1))
+          sgr_start = text.index("    #[test]\n    fn subparameters_are_accepted_only_for_the_cpp_compatible_sequences() {")
+          sgr_end = text.rfind("\n}")
+          sgr_lines = [
+              "    #[test]",
+              "    fn subparameters_are_accepted_only_for_the_cpp_compatible_sequences() {",
+              "        let mut machine = machine();",
+              "        machine.process_str(\"\\u{1b}[1:2A\\u{1b}[38:2:1:2:3m\");",
+              "        let recorded = actions(&machine);",
+              "        assert_eq!(recorded.len(), 1);",
+              "        let OutputAction::SetGraphicsRendition(parameters) = &recorded[0] else {",
+              "            panic!(\"expected SGR dispatch\");",
+              "        };",
+              "        assert_eq!(parameters.values(), &[Some(38)]);",
+              "        assert_eq!(",
+              "            parameters.sub_params_for(0),",
+              "            &[Some(2), Some(1), Some(2), Some(3)]",
+              "        );",
+              "    }",
+          ]
+          text = text[:sgr_start] + "\n".join(sgr_lines) + text[sgr_end:]
+          path.write_text(text)
           PY
       - name: Canonical rustfmt
         run: cargo fmt --all
