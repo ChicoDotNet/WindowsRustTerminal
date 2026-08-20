@@ -12,9 +12,39 @@ text = path.read_text()
 
 text = replace_once(
     text,
+    "const NUMERIC_CTRLS: [u32; 7] = [0, 27, 28, 29, 30, 31, 127];\n",
+    "",
+    "remove numeric Ctrl lookup table",
+)
+
+text = replace_once(
+    text,
     "(u16::from(b'2')..=u16::from(b'Z')).contains(&event.virtual_key)",
     "(u16::from(b'1')..=u16::from(b'Z')).contains(&event.virtual_key)",
     "Ctrl+1 fallback",
+)
+
+text = replace_once(
+    text,
+    '''    if (u32::from(b'2')..=u32::from(b'8')).contains(&character) {
+        let index = usize::try_from(character - u32::from(b'2')).expect("bounded Ctrl digit");
+        return NUMERIC_CTRLS[index];
+    }
+''',
+    '''    if (u32::from(b'2')..=u32::from(b'8')).contains(&character) {
+        return match character {
+            value if value == u32::from(b'2') => 0,
+            value if value == u32::from(b'3') => 27,
+            value if value == u32::from(b'4') => 28,
+            value if value == u32::from(b'5') => 29,
+            value if value == u32::from(b'6') => 30,
+            value if value == u32::from(b'7') => 31,
+            value if value == u32::from(b'8') => 127,
+            _ => character,
+        };
+    }
+''',
+    "non-panicking Ctrl digit mapping",
 )
 
 old_kitty_test = '''    #[test]
