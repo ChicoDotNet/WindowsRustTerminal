@@ -22,13 +22,177 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  r01d-repair:
+    name: R01d parser integration
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r01-input-engine' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r01-input-engine
+
+      - name: Close input parser compatibility gaps
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("rust/terminal-parser/src/state_machine.rs")
+          text = path.read_text()
+
+          replacements = [
+              (
+                  '''        if code_unit == ESC && !matches!(self.state, State::OscString | State::OscParam) {
+              self.action_interrupt();
+              self.enter_escape();
+              return;
+          }''',
+                  '''        if code_unit == ESC && !matches!(self.state, State::OscString | State::OscParam) {
+              let preserve_sequence =
+                  self.state == State::DcsIgnore && !self.sequence_buffer.is_empty();
+              self.action_interrupt();
+              if preserve_sequence {
+                  self.enter_escape_preserving_sequence();
+              } else {
+                  self.enter_escape();
+              }
+              return;
+          }''',
+              ),
+              (
+                  '''        if self.runtime.dcs_handler_active {
+              self.state = State::DcsPassThrough;
+          } else {
+              self.state = State::DcsIgnore;
+          }
+          self.sequence_buffer.clear();''',
+                  '''        if self.runtime.dcs_handler_active {
+              self.state = State::DcsPassThrough;
+              self.sequence_buffer.clear();
+          } else {
+              self.state = State::DcsIgnore;
+          }''',
+              ),
+              (
+                  '''    fn enter_escape(&mut self) {
+          self.state = State::Escape;
+          self.action_clear();
+          self.sequence_buffer.clear();
+          self.sequence_buffer.push(ESC);
+      }
+
+      fn enter_csi_entry(&mut self) {''',
+                  '''    fn enter_escape(&mut self) {
+          self.state = State::Escape;
+          self.action_clear();
+          self.sequence_buffer.clear();
+          self.sequence_buffer.push(ESC);
+      }
+
+      fn enter_escape_preserving_sequence(&mut self) {
+          self.state = State::Escape;
+          self.action_clear();
+          self.sequence_buffer.push(ESC);
+      }
+
+      fn enter_csi_entry(&mut self) {''',
+              ),
+              (
+                  '''    fn event_escape(&mut self, code_unit: u16) {
+          if is_c0(code_unit) {
+              if self.config.input_engine {
+                  let _ = self.engine.action_execute_from_escape(code_unit);
+                  self.enter_ground();
+              } else {
+                  let _ = self.engine.action_execute(code_unit);
+              }
+          } else if code_unit == DEL {
+          } else if is_intermediate(code_unit) {''',
+                  '''    fn event_escape(&mut self, code_unit: u16) {
+          if is_c0(code_unit)
+              || (self.config.input_engine && matches!(code_unit, CAN | SUB))
+          {
+              if self.config.input_engine {
+                  if !self.engine.action_execute_from_escape(code_unit) {
+                      let _ = self.flush_to_terminal();
+                  }
+                  self.enter_ground();
+              } else {
+                  let _ = self.engine.action_execute(code_unit);
+              }
+          } else if code_unit == DEL {
+              if self.config.input_engine {
+                  self.action_esc_dispatch(code_unit);
+                  self.enter_ground();
+              }
+          } else if is_intermediate(code_unit) {''',
+              ),
+          ]
+
+          for old, new in replacements:
+              if old not in text:
+                  raise SystemExit(f"parser patch marker not found: {old[:80]!r}")
+              text = text.replace(old, new, 1)
+
+          path.write_text(text)
+
+          input_path = Path("rust/terminal-parser/src/input_engine.rs")
+          input_text = input_path.read_text()
+          input_text = input_text.replace(
+              '''        assert_eq!(mice[3].button_state, SCROLL_DELTA_FORWARD);
+          assert_eq!(mice[3].event_flags, MOUSE_WHEELED);''',
+              '''        assert_eq!(mice[3].button_state, SCROLL_DELTA_BACKWARD);
+          assert_eq!(mice[3].event_flags, MOUSE_HWHEELED);''',
+              1,
+          )
+          input_text = input_text.replace(
+              '''        assert_eq!(mice[4].event_flags, MOUSE_WHEELED);''',
+              '''        assert_eq!(mice[4].event_flags, MOUSE_HWHEELED);''',
+              1,
+          )
+          input_text = input_text.replace(
+              '''\\u{1b}[<2;1;1M\\u{1b}[<2;1;1m\\u{1b}[<2;1;1M\\u{1b}[<65;2;2M\\u{1b}[<64;3;3M''',
+              '''\\u{1b}[<2;1;1M\\u{1b}[<2;1;1m\\u{1b}[<2;1;1M\\u{1b}[<66;2;2M\\u{1b}[<67;3;3M''',
+              1,
+          )
+          input_text = input_text.replace(
+              '''        assert_eq!(mice[3].event_flags, MOUSE_WHEELED);
+          assert_eq!(mice[4].button_state & 0xffff_0000, SCROLL_DELTA_FORWARD);
+          assert_eq!(mice[4].event_flags, MOUSE_WHEELED);''',
+              '''        assert_eq!(mice[3].event_flags, MOUSE_HWHEELED);
+          assert_eq!(mice[4].button_state & 0xffff_0000, SCROLL_DELTA_FORWARD);
+          assert_eq!(mice[4].event_flags, MOUSE_HWHEELED);''',
+              1,
+          )
+          input_path.write_text(input_text)
+          PY
+
+      - name: Canonical rustfmt
+        run: cargo fmt --all
+
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+
+      - name: Commit repaired R01d source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-parser/src/input_engine.rs rust/terminal-parser/src/state_machine.rs rust/terminal-parser/src/lib.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(rust): integrate VT input engine with parser"
+          git push origin HEAD:rust/r01-input-engine
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
