@@ -31,7 +31,7 @@ concurrency:
 jobs:
   r01c-format-fix:
     name: R01c canonical format
-    if: github.event_name == 'push' && github.ref_name == 'rust/r01-output-engine' && github.actor != 'github-actions[bot]'
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r01-output-engine' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
