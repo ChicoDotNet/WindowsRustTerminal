@@ -22,13 +22,39 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  r01d-repair:
+    name: R01d parser integration
+    if: github.event_name == 'push' && github.ref == 'refs/heads/rust/r01-input-engine' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r01-input-engine
+      - name: Apply R01d parser repair
+        run: python tools/rust/r01d-repair.py
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit repaired R01d source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-parser/src/input_engine.rs rust/terminal-parser/src/state_machine.rs rust/terminal-parser/src/lib.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(rust): integrate VT input engine with parser"
+          git push origin HEAD:rust/r01-input-engine
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
