@@ -194,7 +194,10 @@ impl VtIdBuilder {
     }
 
     fn finalize(self, final_code_unit: u16) -> VtId {
-        VtId((self.accumulator + (u64::from(final_code_unit) << self.shift)) & 0x00ff_ffff_ffff_ffff)
+        VtId(
+            (self.accumulator + (u64::from(final_code_unit) << self.shift))
+                & 0x00ff_ffff_ffff_ffff,
+        )
     }
 }
 
@@ -435,7 +438,8 @@ impl<E: StateMachineEngine> StateMachine<E> {
         }
 
         let current = self.parameters.last().copied().flatten().unwrap_or(0);
-        *self.parameters.last_mut().expect("parameter exists") = Some(accumulate(current, code_unit));
+        *self.parameters.last_mut().expect("parameter exists") =
+            Some(accumulate(current, code_unit));
     }
 
     fn action_sub_param(&mut self, code_unit: u16) {
@@ -469,7 +473,10 @@ impl<E: StateMachineEngine> StateMachine<E> {
             }
         }
         let current = self.sub_parameters.last().copied().flatten().unwrap_or(0);
-        *self.sub_parameters.last_mut().expect("sub parameter exists") = Some(accumulate(current, code_unit));
+        *self
+            .sub_parameters
+            .last_mut()
+            .expect("sub parameter exists") = Some(accumulate(current, code_unit));
     }
 
     fn action_csi_dispatch(&mut self, code_unit: u16) {
@@ -588,7 +595,11 @@ impl<E: StateMachineEngine> StateMachine<E> {
                     self.state = State::DcsEntry;
                     self.action_clear();
                 }
-                value if value == u16::from(b'X') || value == u16::from(b'^') || value == u16::from(b'_') => {
+                value
+                    if value == u16::from(b'X')
+                        || value == u16::from(b'^')
+                        || value == u16::from(b'_') =>
+                {
                     self.state = State::SosPmApcString;
                     self.sequence_buffer.clear();
                     self.engine.unknown_sequence();
@@ -664,7 +675,10 @@ impl<E: StateMachineEngine> StateMachine<E> {
     fn event_csi_ignore(&mut self, code_unit: u16) {
         if is_c0(code_unit) {
             let _ = self.engine.action_execute(code_unit);
-        } else if code_unit == DEL || is_intermediate(code_unit) || is_intermediate_invalid(code_unit) {
+        } else if code_unit == DEL
+            || is_intermediate(code_unit)
+            || is_intermediate_invalid(code_unit)
+        {
         } else {
             self.enter_ground();
         }
@@ -862,7 +876,10 @@ const fn is_private_marker(code_unit: u16) -> bool {
 }
 
 const fn is_intermediate_invalid(code_unit: u16) -> bool {
-    is_numeric(code_unit) || code_unit == b':' as u16 || code_unit == b';' as u16 || is_private_marker(code_unit)
+    is_numeric(code_unit)
+        || code_unit == b':' as u16
+        || code_unit == b';' as u16
+        || is_private_marker(code_unit)
 }
 
 const fn is_osc_invalid(code_unit: u16) -> bool {
@@ -1012,7 +1029,10 @@ mod tests {
         machine.process_str("\u{1b}]99;foo\u{1b}");
         assert!(machine.engine().passed_through.is_empty());
         machine.process_str("\\");
-        assert_eq!(to_string(&machine.engine().passed_through), "\u{1b}]99;foo\u{1b}\\");
+        assert_eq!(
+            to_string(&machine.engine().passed_through),
+            "\u{1b}]99;foo\u{1b}\\"
+        );
     }
 
     #[test]
