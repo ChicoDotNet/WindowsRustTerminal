@@ -506,10 +506,6 @@ impl AdaptDispatchCore {
 }
 
 impl TermDispatch for AdaptDispatchCore {
-    #[expect(
-        clippy::too_many_lines,
-        reason = "the contiguous protocol dispatch table is easier to audit against AdaptDispatch"
-    )]
     fn dispatch(&mut self, action: OutputAction) {
         match action {
             OutputAction::CursorUp(distance) => self.cursor_up(distance),
@@ -693,7 +689,10 @@ mod tests {
         assert!(!dispatch.set_left_right_margins(5, 10));
         assert!(dispatch.set_mode(true, 69, true));
         assert!(dispatch.set_left_right_margins(5, 10));
-        assert_eq!(dispatch.margins().horizontal(), Some(MarginRange::new(4, 9)));
+        assert_eq!(
+            dispatch.margins().horizontal(),
+            Some(MarginRange::new(4, 9))
+        );
         assert!(dispatch.set_mode(true, 69, false));
         assert_eq!(dispatch.margins().horizontal(), None);
     }
@@ -789,7 +788,10 @@ mod tests {
         let dispatch = parse("\u{1b}[5;10r\u{1b}[?69h\u{1b}[10;30s\u{1b}[?6h\u{1b}[2;3H");
         assert!(dispatch.origin_mode());
         assert_eq!(dispatch.margins().vertical(), Some(MarginRange::new(4, 9)));
-        assert_eq!(dispatch.margins().horizontal(), Some(MarginRange::new(9, 29)));
+        assert_eq!(
+            dispatch.margins().horizontal(),
+            Some(MarginRange::new(9, 29))
+        );
         assert_eq!(dispatch.cursor(), Point { x: 11, y: 25 });
     }
 
