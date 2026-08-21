@@ -1,0 +1,103 @@
+name: R03e format and validate
+
+on:
+  push:
+    branches:
+      - rust/r03-sixel-core
+    paths:
+      - .github/workflows/r03e-format.yml
+      - rust/terminal-adapter/**
+
+permissions:
+  contents: write
+
+jobs:
+  format-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r03-sixel-core
+          fetch-depth: 0
+      - name: Match C++ redraw ordering
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('rust/terminal-adapter/src/page_manager.rs')
+          text = path.read_text()
+          old = '''        let was_visible = old_active_page == old_visible_page;
+        let size = PageSize::from(self.visible_geometry);
+
+        if make_visible && self.visible_page_number != new_page_number {
+'''
+          new = '''        let was_visible = old_active_page == old_visible_page;
+        let size = PageSize::from(self.visible_geometry);
+        let mut redraw_required = false;
+
+        if make_visible && self.visible_page_number != new_page_number {
+'''
+          if old not in text:
+              raise SystemExit('redraw declaration anchor not found')
+          text = text.replace(old, new, 1)
+          old = '''            self.visible_page_number = new_page_number;
+            self.events.push(PageEvent::RedrawAll);
+        }
+'''
+          new = '''            self.visible_page_number = new_page_number;
+            redraw_required = true;
+        }
+'''
+          if old not in text:
+              raise SystemExit('redraw assignment anchor not found')
+          text = text.replace(old, new, 1)
+          old = '''        self.active_page_number = new_page_number;
+        let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
+'''
+          new = '''        self.active_page_number = new_page_number;
+        if redraw_required {
+            self.events.push(PageEvent::RedrawAll);
+        }
+        let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
+'''
+          if old not in text:
+              raise SystemExit('redraw flush anchor not found')
+          text = text.replace(old, new, 1)
+          # The recoupling test mirrors the C++ order: property transfer precedes redraw.
+          old = '''                PageEvent::RedrawAll,
+                PageEvent::CopyProperties {
+                    from: PageBufferRef::Background(4),
+                    to: PageBufferRef::Visible,
+                    old_top: 0,
+                    new_top: 20,
+                },
+'''
+          new = '''                PageEvent::CopyProperties {
+                    from: PageBufferRef::Background(4),
+                    to: PageBufferRef::Visible,
+                    old_top: 0,
+                    new_top: 20,
+                },
+                PageEvent::RedrawAll,
+'''
+          if old not in text:
+              raise SystemExit('recoupling expectation anchor not found')
+          text = text.replace(old, new, 1)
+          path.write_text(text)
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit validated formatting
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add rust/terminal-adapter/src/page_manager.rs rust/terminal-adapter/src/dcs_dispatch.rs
+          git commit -m "Format and validate R03e page manager"
+          git push origin HEAD:rust/r03-sixel-core
