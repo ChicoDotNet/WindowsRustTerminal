@@ -18,7 +18,7 @@ impl LineRendition {
     }
 
     const fn scale_shift(self) -> u32 {
-        u32::from(self.is_double_width())
+        if self.is_double_width() { 1 } else { 0 }
     }
 }
 
@@ -55,7 +55,7 @@ pub const fn buffer_to_screen_line_inclusive(
     rendition: LineRendition,
 ) -> InclusiveRect {
     let shift = rendition.scale_shift();
-    let scale = i32::try_from(shift).unwrap_or(0);
+    let scale = if shift == 0 { 0 } else { 1 };
     InclusiveRect::new(
         line.left << shift,
         line.top,
