@@ -26,11 +26,38 @@ struct SanitizedKeyEvent {
 }
 ''',
     '''#[derive(Debug, Clone, Copy, Default)]
-struct Modifiers {
-    alt_gr: bool,
-    ctrl: bool,
-    alt: bool,
-    shift: bool,
+struct Modifiers(u8);
+
+impl Modifiers {
+    const ALT_GR: u8 = 1 << 0;
+    const CTRL: u8 = 1 << 1;
+    const ALT: u8 = 1 << 2;
+    const SHIFT: u8 = 1 << 3;
+
+    fn from_flags(alt_gr: bool, ctrl: bool, alt: bool, shift: bool) -> Self {
+        Self(
+            u8::from(alt_gr) * Self::ALT_GR
+                | u8::from(ctrl) * Self::CTRL
+                | u8::from(alt) * Self::ALT
+                | u8::from(shift) * Self::SHIFT,
+        )
+    }
+
+    const fn alt_gr(self) -> bool {
+        self.0 & Self::ALT_GR != 0
+    }
+
+    const fn ctrl(self) -> bool {
+        self.0 & Self::CTRL != 0
+    }
+
+    const fn alt(self) -> bool {
+        self.0 & Self::ALT != 0
+    }
+
+    const fn shift(self) -> bool {
+        self.0 & Self::SHIFT != 0
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -41,7 +68,7 @@ struct SanitizedKeyEvent {
     modifiers: Modifiers,
 }
 ''',
-    "modifier grouping",
+    "modifier bitmask",
 )
 
 replace_once(
@@ -65,12 +92,7 @@ replace_once(
         raw: event,
         codepoint: event.codepoint,
         key_repeat,
-        modifiers: Modifiers {
-            alt_gr,
-            ctrl,
-            alt,
-            shift,
-        },
+        modifiers: Modifiers::from_flags(alt_gr, ctrl, alt, shift),
     };
 
     if input.kitty_flags != 0
@@ -124,16 +146,16 @@ replace_once(
 )
 
 for old, new in [
-    ("key.alt_gr", "key.modifiers.alt_gr"),
-    ("key.ctrl", "key.modifiers.ctrl"),
-    ("key.alt", "key.modifiers.alt"),
-    ("key.shift", "key.modifiers.shift"),
+    ("key.alt_gr", "key.modifiers.alt_gr()"),
+    ("key.ctrl", "key.modifiers.ctrl()"),
+    ("key.alt", "key.modifiers.alt()"),
+    ("key.shift", "key.modifiers.shift()"),
 ]:
     text = text.replace(old, new)
 
 replace_once(
     '''        } else if functional == KITTY_TEXT_SENTINEL {
-            if let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.modifiers.alt_gr) {
+            if let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.modifiers.alt_gr()) {
                 if codepoint < INVALID_CODEPOINT {
                     enc.unicode_key = codepoint;
                 }
@@ -141,7 +163,7 @@ replace_once(
         }
 ''',
     '''        } else if functional == KITTY_TEXT_SENTINEL
-            && let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.modifiers.alt_gr)
+            && let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.modifiers.alt_gr())
             && codepoint < INVALID_CODEPOINT
         {
             enc.unicode_key = codepoint;
@@ -151,8 +173,8 @@ replace_once(
 )
 
 replace_once(
-    '''        if functional == KITTY_TEXT_SENTINEL && key.modifiers.shift {
-            if let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.modifiers.alt_gr) {
+    '''        if functional == KITTY_TEXT_SENTINEL && key.modifiers.shift() {
+            if let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.modifiers.alt_gr()) {
                 if codepoint < INVALID_CODEPOINT {
                     enc.shifted_key = codepoint;
                 }
@@ -167,8 +189,8 @@ replace_once(
         }
 ''',
     '''        if functional == KITTY_TEXT_SENTINEL
-            && key.modifiers.shift
-            && let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.modifiers.alt_gr)
+            && key.modifiers.shift()
+            && let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.modifiers.alt_gr())
             && codepoint < INVALID_CODEPOINT
         {
             enc.shifted_key = codepoint;
@@ -231,13 +253,13 @@ replace_once(
 
 replace_once(
     '''fn modifier_bits(key: &SanitizedKeyEvent) -> u32 {
-    u32::from(key.modifiers.shift) | (u32::from(key.modifiers.alt) << 1) | (u32::from(key.modifiers.ctrl) << 2)
+    u32::from(key.modifiers.shift()) | (u32::from(key.modifiers.alt()) << 1) | (u32::from(key.modifiers.ctrl()) << 2)
 }
 ''',
     '''fn modifier_bits(key: &SanitizedKeyEvent) -> u32 {
-    u32::from(key.modifiers.shift)
-        | (u32::from(key.modifiers.alt) << 1)
-        | (u32::from(key.modifiers.ctrl) << 2)
+    u32::from(key.modifiers.shift())
+        | (u32::from(key.modifiers.alt()) << 1)
+        | (u32::from(key.modifiers.ctrl()) << 2)
 }
 ''',
     "modifier formatting",
