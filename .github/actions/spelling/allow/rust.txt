@@ -1,14 +1,11 @@
 altgr
-autowrap
 azerty
 backtab
 clippy
 condvar
 ffi
-hpr
 misrouted
 nuls
 psobject
 rustup
 usize
-vpr
