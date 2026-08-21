@@ -1,7 +1,9 @@
 //! Bulk row writes driven by safe `OutputCellView` values.
 
-use crate::output_cell::{OutputCellView, TextAttributeBehavior};
+use crate::output_cell::{OutputCellIterator, OutputCellView, TextAttributeBehavior};
 use crate::row::{DbcsAttribute, Row, RowError};
+use crate::text_attribute::TextAttribute;
+use crate::width_detector::CodepointWidthDetector;
 
 /// Writes output-cell views into one row and returns the first untouched column.
 ///
@@ -57,11 +59,48 @@ where
     Ok(column)
 }
 
+/// Replaces UTF-16 text using the deterministic Unicode width policy while
+/// preserving the row's existing attributes.
+///
+/// This is the safe Rust equivalent of the common C++ `ReplaceText` path: the
+/// caller supplies UTF-16 text, scalar width is resolved centrally, wide glyphs
+/// consume two cells, and the first untouched destination column is returned.
+///
+/// # Errors
+///
+/// Propagates row-storage errors if a glyph cannot be represented in the row.
+pub fn replace_text(row: &mut Row, start_column: i32, text: &[u16]) -> Result<u16, RowError> {
+    let detector = CodepointWidthDetector;
+    write_cells(
+        row,
+        start_column,
+        OutputCellIterator::text_only(text, &detector),
+    )
+}
+
+/// Replaces UTF-16 text and stores one attribute across the written cells.
+///
+/// # Errors
+///
+/// Propagates row-storage errors if a glyph cannot be represented in the row.
+pub fn replace_text_with_attribute(
+    row: &mut Row,
+    start_column: i32,
+    text: &[u16],
+    attribute: TextAttribute,
+) -> Result<u16, RowError> {
+    let detector = CodepointWidthDetector;
+    write_cells(
+        row,
+        start_column,
+        OutputCellIterator::text_with_attribute(text, attribute, &detector),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::output_cell::{GlyphWidthDetector, OutputCellIterator};
-    use crate::text_attribute::TextAttribute;
+    use crate::output_cell::GlyphWidthDetector;
 
     struct TestWidthDetector;
 
@@ -152,5 +191,46 @@ mod tests {
 
         assert_eq!(end, 3);
         assert_eq!(row.glyph_at(2), &[u16::from(b'A')]);
+    }
+
+    #[test]
+    fn replace_text_uses_concrete_unicode_width_detection() {
+        let mut row = row(6);
+        let text = [u16::from(b'A'), 0x754c, u16::from(b'B')];
+
+        let end = replace_text(&mut row, 1, &text).expect("replace text succeeds");
+
+        assert_eq!(end, 5);
+        assert_eq!(row.glyph_at(1), &[u16::from(b'A')]);
+        assert_eq!(row.glyph_at(2), &[0x754c]);
+        assert_eq!(row.dbcs_attribute_at(2), DbcsAttribute::Leading);
+        assert_eq!(row.dbcs_attribute_at(3), DbcsAttribute::Trailing);
+        assert_eq!(row.glyph_at(4), &[u16::from(b'B')]);
+    }
+
+    #[test]
+    fn replace_text_handles_supplementary_emoji_as_one_wide_glyph() {
+        let mut row = row(5);
+        let rocket = [0xd83d, 0xde80];
+
+        let end = replace_text(&mut row, 1, &rocket).expect("replace text succeeds");
+
+        assert_eq!(end, 3);
+        assert_eq!(row.glyph_at(1), &rocket);
+        assert_eq!(row.dbcs_attribute_at(1), DbcsAttribute::Leading);
+        assert_eq!(row.dbcs_attribute_at(2), DbcsAttribute::Trailing);
+    }
+
+    #[test]
+    fn replace_text_with_attribute_updates_both_cells_of_wide_glyph() {
+        let mut row = row(4);
+        let mut highlighted = TextAttribute::default();
+        highlighted.set_intense(true);
+
+        replace_text_with_attribute(&mut row, 1, &[0x754c], highlighted)
+            .expect("replace text succeeds");
+
+        assert!(row.attribute_at(1).is_intense());
+        assert!(row.attribute_at(2).is_intense());
     }
 }
