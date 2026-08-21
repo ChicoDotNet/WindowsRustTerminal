@@ -1,10 +1,13 @@
 altgr
+autowrap
 azerty
 backtab
 clippy
 condvar
 ffi
+hpr
 nuls
 psobject
 rustup
 usize
+vpr
