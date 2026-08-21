@@ -20,13 +20,15 @@ jobs:
         with:
           ref: rust/r03-sixel-core
           fetch-depth: 0
+      - name: Match C++ redraw ordering
+        run: python .github/scripts/r03e-redraw.py
       - name: Format
         run: cargo fmt --all
       - name: Clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Test
         run: cargo test --workspace --all-targets --locked
-      - name: Commit validated formatting
+      - name: Commit validated R03e changes
         shell: bash
         run: |
           if git diff --quiet -- rust/terminal-adapter/src/page_manager.rs rust/terminal-adapter/src/dcs_dispatch.rs; then
@@ -35,5 +37,5 @@ jobs:
           git config user.name github-actions[bot]
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add rust/terminal-adapter/src/page_manager.rs rust/terminal-adapter/src/dcs_dispatch.rs
-          git commit -m "Format and validate R03e page manager"
+          git commit -m "Match C++ R03e redraw ordering"
           git push origin HEAD:rust/r03-sixel-core
