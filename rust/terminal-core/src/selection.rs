@@ -265,10 +265,7 @@ fn word_start(buffer: &TextBuffer, point: BufferPoint, delimiters: &[u16]) -> Bu
     let mut point = normalize_to_glyph_start(buffer, point);
     let class = delimiter_class(buffer, point, delimiters);
 
-    loop {
-        let Some(previous) = previous_glyph(buffer, point) else {
-            break;
-        };
+    while let Some(previous) = previous_glyph(buffer, point) {
         if delimiter_class(buffer, previous, delimiters) != class {
             break;
         }
