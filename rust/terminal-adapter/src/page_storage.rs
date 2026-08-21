@@ -5,7 +5,10 @@
 //! C++ integration outside this crate.
 
 use crate::page_manager::{MAX_PAGES, PageBufferRef, PageEvent, PageSize};
-use terminal_buffer::{text_attribute::TextAttribute, text_buffer::{TextBuffer, TextBufferError}};
+use terminal_buffer::{
+    text_attribute::TextAttribute,
+    text_buffer::{TextBuffer, TextBufferError},
+};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PageStorageError {
@@ -39,7 +42,9 @@ impl PageStorage {
     pub fn new(visible: TextBuffer) -> Self {
         Self {
             visible,
-            visible_properties: PageProperties { cursor_visible: true },
+            visible_properties: PageProperties {
+                cursor_visible: true,
+            },
             backgrounds: core::array::from_fn(|_| None),
             background_properties: [PageProperties::default(); MAX_PAGES as usize],
             redraw_requested: false,
@@ -113,10 +118,18 @@ impl PageStorage {
                 buffer.resize_width_reflow(width, fill_attribute)?;
                 buffer.resize_height(height, fill_attribute)?;
             }
-            PageEvent::SaveVisibleRows { page, visible_top, size } => {
+            PageEvent::SaveVisibleRows {
+                page,
+                visible_top,
+                size,
+            } => {
                 self.copy_visible_to_background(page, visible_top, size, fill_attribute)?;
             }
-            PageEvent::LoadVisibleRows { page, visible_top, size } => {
+            PageEvent::LoadVisibleRows {
+                page,
+                visible_top,
+                size,
+            } => {
                 self.copy_background_to_visible(page, visible_top, size)?;
             }
             PageEvent::CopyProperties { from, to, .. } => {
@@ -147,7 +160,8 @@ impl PageStorage {
             .as_mut()
             .ok_or(PageStorageError::MissingBackground(page))?;
         for y in 0..height {
-            *background.row_mut(i32::from(y)) = self.visible.row(visible_top + i32::from(y)).clone();
+            *background.row_mut(i32::from(y)) =
+                self.visible.row(visible_top + i32::from(y)).clone();
         }
         Ok(())
     }
@@ -164,7 +178,8 @@ impl PageStorage {
             .ok_or(PageStorageError::MissingBackground(page))?;
         let (_, height) = Self::dimensions(size)?;
         for y in 0..height {
-            *self.visible.row_mut(visible_top + i32::from(y)) = background.row(i32::from(y)).clone();
+            *self.visible.row_mut(visible_top + i32::from(y)) =
+                background.row(i32::from(y)).clone();
         }
         Ok(())
     }
@@ -235,8 +250,14 @@ mod tests {
     #[test]
     fn save_and_load_materialize_page_rows() {
         let mut visible = TextBuffer::new(4, 4, attribute()).unwrap();
-        visible.row_mut(2).replace_glyph(0, 1, &[u16::from(b'A')]).unwrap();
-        visible.row_mut(3).replace_glyph(0, 1, &[u16::from(b'B')]).unwrap();
+        visible
+            .row_mut(2)
+            .replace_glyph(0, 1, &[u16::from(b'A')])
+            .unwrap();
+        visible
+            .row_mut(3)
+            .replace_glyph(0, 1, &[u16::from(b'B')])
+            .unwrap();
         let mut storage = PageStorage::new(visible);
         let size = PageSize::new(4, 2);
 
@@ -244,7 +265,11 @@ mod tests {
             .apply_events(
                 &[
                     PageEvent::CreateBackgroundBuffer { page: 2, size },
-                    PageEvent::SaveVisibleRows { page: 2, visible_top: 2, size },
+                    PageEvent::SaveVisibleRows {
+                        page: 2,
+                        visible_top: 2,
+                        size,
+                    },
                 ],
                 attribute(),
             )
@@ -254,7 +279,11 @@ mod tests {
         storage.visible_mut().row_mut(3).reset(attribute());
         storage
             .apply_events(
-                &[PageEvent::LoadVisibleRows { page: 2, visible_top: 2, size }],
+                &[PageEvent::LoadVisibleRows {
+                    page: 2,
+                    visible_top: 2,
+                    size,
+                }],
                 attribute(),
             )
             .unwrap();
