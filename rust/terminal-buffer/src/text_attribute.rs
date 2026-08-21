@@ -346,7 +346,6 @@ impl TextAttribute {
     pub fn underline_style(self) -> UnderlineStyle {
         match (self.attrs & UNDERLINE_STYLE_MASK) >> UNDERLINE_STYLE_SHIFT {
             0 => UnderlineStyle::None,
-            1 => UnderlineStyle::Single,
             2 => UnderlineStyle::Double,
             3 => UnderlineStyle::Curly,
             4 => UnderlineStyle::Dotted,
