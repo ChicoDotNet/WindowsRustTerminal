@@ -1,18 +1,19 @@
-//! DCS integration for the safe Rust Adapter migration.
+//! Composite dispatch integration for the safe Rust Adapter migration.
 //!
 //! R03a-R03c deliberately kept Sixel, DECDMAC macro storage, and the
-//! `AdaptDispatch` geometry core independent. This module composes those pieces
-//! behind the parser's `TermDispatch` boundary so DCS payloads can now travel
-//! from `StateMachine` through `OutputStateMachineEngine` into real Adapter
-//! protocol handlers without C++ or FFI.
+//! `AdaptDispatch` geometry core independent. R03d composed DCS handlers here;
+//! R03e adds the VT page-management control plane without pulling the concrete
+//! C++ `TextBuffer` or renderer into Rust yet.
 
 use crate::adapt_dispatch::{AdaptDispatchCore, MarginRange, PageGeometry};
 use crate::macro_buffer::{MacroBuffer, MacroDeleteControl, MacroEncoding};
+use crate::page_manager::{PageEvent, PageManager, PageTransition};
 use crate::sixel::{Background, Config as SixelConfig, Parser as SixelParser, Size as SixelSize};
 use terminal_parser::output_engine::{DcsAction, OutputAction, TermDispatch};
 use terminal_parser::state_machine::Parameters;
 
 const ESC: u16 = 0x1b;
+const PAGE_CURSOR_COUPLING_MODE: i32 = 64;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DcsSessionKind {
@@ -24,11 +25,14 @@ pub enum DcsSessionKind {
 ///
 /// Regular terminal actions continue to be handled by [`AdaptDispatchCore`].
 /// DCS actions are negotiated here so only supported payloads enter the parser
-/// pass-through state. Unsupported DCS actions are preserved in the core's
-/// deferred-action queue for later Adapter slices instead of being discarded.
+/// pass-through state. R03e also owns [`PageManager`], preserving the C++ page
+/// control semantics while page-buffer and renderer mutations remain explicit
+/// typed events for later migration slices.
 #[derive(Debug, Clone)]
 pub struct AdapterDispatch {
     core: AdaptDispatchCore,
+    pages: PageManager,
+    saved_page: Option<i32>,
     macro_buffer: MacroBuffer,
     sixel_parser: Option<SixelParser>,
     active_dcs: Option<DcsSessionKind>,
@@ -37,8 +41,13 @@ pub struct AdapterDispatch {
 impl AdapterDispatch {
     #[must_use]
     pub fn new(geometry: PageGeometry) -> Self {
+        let mut core = AdaptDispatchCore::new(geometry);
+        // C++ AdaptDispatch initializes DECPCCM (page-cursor coupling) enabled.
+        core.set_mode(true, PAGE_CURSOR_COUPLING_MODE, true);
         Self {
-            core: AdaptDispatchCore::new(geometry),
+            core,
+            pages: PageManager::new(geometry),
+            saved_page: None,
             macro_buffer: MacroBuffer::default(),
             sixel_parser: None,
             active_dcs: None,
@@ -52,6 +61,15 @@ impl AdapterDispatch {
 
     pub const fn core_mut(&mut self) -> &mut AdaptDispatchCore {
         &mut self.core
+    }
+
+    #[must_use]
+    pub const fn page_manager(&self) -> &PageManager {
+        &self.pages
+    }
+
+    pub fn take_page_events(&mut self) -> Vec<PageEvent> {
+        self.pages.take_events()
     }
 
     #[must_use]
@@ -71,6 +89,53 @@ impl AdapterDispatch {
     #[must_use]
     pub const fn active_dcs(&self) -> Option<DcsSessionKind> {
         self.active_dcs
+    }
+
+    fn apply_page_transition(&mut self, transition: PageTransition) {
+        let delayed_eol_wrap = self.core.delayed_eol_wrap();
+        let adjusted = transition.adjust_point(self.core.cursor());
+        self.core.set_geometry(self.pages.active_geometry());
+        self.core.set_cursor(adjusted);
+        self.core.set_delayed_eol_wrap(delayed_eol_wrap);
+    }
+
+    fn move_page_to(&mut self, page: i32) {
+        let transition = self
+            .pages
+            .move_to(page, self.core.page_cursor_coupling_mode());
+        self.apply_page_transition(transition);
+    }
+
+    fn move_page_relative(&mut self, count: i32) {
+        let transition = self
+            .pages
+            .move_relative(count, self.core.page_cursor_coupling_mode());
+        self.apply_page_transition(transition);
+    }
+
+    fn make_active_page_visible(&mut self) {
+        if let Some(transition) = self.pages.make_active_page_visible() {
+            self.apply_page_transition(transition);
+        }
+    }
+
+    fn dispatch_regular(&mut self, action: OutputAction) {
+        let sixel_display_change = match &action {
+            OutputAction::SetMode {
+                private: true,
+                enabled,
+                mode: 80,
+            } => Some(*enabled),
+            _ => None,
+        };
+
+        self.core.dispatch(action);
+
+        if let Some(enabled) = sixel_display_change
+            && let Some(parser) = self.sixel_parser.as_mut()
+        {
+            parser.set_display_mode(enabled);
+        }
     }
 
     fn begin_sixel(&mut self, parameters: &Parameters) -> bool {
@@ -179,21 +244,43 @@ impl AdapterDispatch {
 
 impl TermDispatch for AdapterDispatch {
     fn dispatch(&mut self, action: OutputAction) {
-        let sixel_display_change = match &action {
+        match action {
+            OutputAction::PagePositionAbsolute(page) => self.move_page_to(page),
+            OutputAction::PagePositionRelative(count) => self.move_page_relative(count),
+            OutputAction::PagePositionBack(count) => {
+                self.move_page_relative(count.saturating_neg());
+            }
+            OutputAction::NextPage(count) => {
+                self.move_page_relative(count);
+                self.core.cursor_position(1, 1);
+            }
+            OutputAction::PrecedingPage(count) => {
+                self.move_page_relative(count.saturating_neg());
+                self.core.cursor_position(1, 1);
+            }
+            OutputAction::CursorSaveState => {
+                self.saved_page = Some(self.pages.active_page_number());
+                self.core.dispatch(OutputAction::CursorSaveState);
+            }
+            OutputAction::CursorRestoreState => {
+                self.move_page_to(self.saved_page.unwrap_or(1));
+                self.core.dispatch(OutputAction::CursorRestoreState);
+            }
             OutputAction::SetMode {
                 private: true,
                 enabled,
-                mode: 80,
-            } => Some(*enabled),
-            _ => None,
-        };
-
-        self.core.dispatch(action);
-
-        if let Some(enabled) = sixel_display_change
-            && let Some(parser) = self.sixel_parser.as_mut()
-        {
-            parser.set_display_mode(enabled);
+                mode: PAGE_CURSOR_COUPLING_MODE,
+            } => {
+                self.core.dispatch(OutputAction::SetMode {
+                    private: true,
+                    enabled,
+                    mode: PAGE_CURSOR_COUPLING_MODE,
+                });
+                if enabled {
+                    self.make_active_page_visible();
+                }
+            }
+            other => self.dispatch_regular(other),
         }
     }
 
@@ -249,11 +336,16 @@ fn selective(parameters: &Parameters, index: usize) -> i32 {
 mod tests {
     use super::*;
     use crate::adapt_dispatch::Point as TextPoint;
+    use crate::page_manager::{PageBufferRef, PageEvent};
     use terminal_parser::output_engine::OutputStateMachineEngine;
     use terminal_parser::state_machine::{State, StateMachine};
 
     fn geometry() -> PageGeometry {
         PageGeometry::new(0, 80, 24)
+    }
+
+    fn scrolled_geometry() -> PageGeometry {
+        PageGeometry::new(20, 80, 24)
     }
 
     fn machine() -> StateMachine<OutputStateMachineEngine<AdapterDispatch>> {
@@ -385,5 +477,125 @@ mod tests {
             TextPoint { x: 19, y: 9 }
         );
         assert!(dispatch(&machine).sixel_parser().is_some());
+    }
+
+    #[test]
+    fn composite_adapter_defaults_to_page_cursor_coupling() {
+        let mut adapter = AdapterDispatch::new(scrolled_geometry());
+        assert!(adapter.core().page_cursor_coupling_mode());
+        assert_eq!(adapter.page_manager().active_page_number(), 1);
+        assert_eq!(adapter.page_manager().visible_page_number(), 1);
+
+        adapter.dispatch(OutputAction::PagePositionAbsolute(3));
+        assert_eq!(adapter.page_manager().active_page_number(), 3);
+        assert_eq!(adapter.page_manager().visible_page_number(), 3);
+        assert_eq!(adapter.core().geometry(), scrolled_geometry());
+    }
+
+    #[test]
+    fn uncoupled_page_move_preserves_cursor_coordinates_relative_to_page() {
+        let mut adapter = AdapterDispatch::new(scrolled_geometry());
+        adapter.core_mut().set_cursor(TextPoint { x: 30, y: 35 });
+        adapter.core_mut().set_delayed_eol_wrap(true);
+        adapter.dispatch(OutputAction::SetMode {
+            private: true,
+            enabled: false,
+            mode: PAGE_CURSOR_COUPLING_MODE,
+        });
+        adapter.dispatch(OutputAction::PagePositionAbsolute(4));
+
+        assert_eq!(adapter.page_manager().active_page_number(), 4);
+        assert_eq!(adapter.page_manager().visible_page_number(), 1);
+        assert_eq!(adapter.core().geometry(), PageGeometry::new(0, 80, 24));
+        assert_eq!(adapter.core().cursor(), TextPoint { x: 30, y: 15 });
+        assert!(adapter.core().delayed_eol_wrap());
+        assert!(adapter.page_manager().pending_events().contains(
+            &PageEvent::CopyProperties {
+                from: PageBufferRef::Visible,
+                to: PageBufferRef::Background(4),
+                old_top: 20,
+                new_top: 0,
+            }
+        ));
+        assert!(adapter
+            .page_manager()
+            .pending_events()
+            .contains(&PageEvent::SetVisibleCursorVisible(false)));
+    }
+
+    #[test]
+    fn enabling_page_cursor_coupling_makes_active_page_visible() {
+        let mut adapter = AdapterDispatch::new(scrolled_geometry());
+        adapter.core_mut().set_cursor(TextPoint { x: 30, y: 35 });
+        adapter.dispatch(OutputAction::SetMode {
+            private: true,
+            enabled: false,
+            mode: PAGE_CURSOR_COUPLING_MODE,
+        });
+        adapter.dispatch(OutputAction::PagePositionAbsolute(4));
+        adapter.take_page_events();
+
+        adapter.dispatch(OutputAction::SetMode {
+            private: true,
+            enabled: true,
+            mode: PAGE_CURSOR_COUPLING_MODE,
+        });
+
+        assert_eq!(adapter.page_manager().active_page_number(), 4);
+        assert_eq!(adapter.page_manager().visible_page_number(), 4);
+        assert_eq!(adapter.core().geometry(), scrolled_geometry());
+        assert_eq!(adapter.core().cursor(), TextPoint { x: 30, y: 35 });
+        assert!(adapter
+            .page_manager()
+            .pending_events()
+            .contains(&PageEvent::RedrawAll));
+    }
+
+    #[test]
+    fn next_and_preceding_page_home_the_cursor() {
+        let mut adapter = AdapterDispatch::new(scrolled_geometry());
+        adapter.core_mut().set_cursor(TextPoint { x: 33, y: 35 });
+
+        adapter.dispatch(OutputAction::NextPage(2));
+        assert_eq!(adapter.page_manager().active_page_number(), 3);
+        assert_eq!(adapter.page_manager().visible_page_number(), 3);
+        assert_eq!(adapter.core().cursor(), TextPoint { x: 0, y: 20 });
+
+        adapter.core_mut().set_cursor(TextPoint { x: 22, y: 30 });
+        adapter.dispatch(OutputAction::PrecedingPage(1));
+        assert_eq!(adapter.page_manager().active_page_number(), 2);
+        assert_eq!(adapter.page_manager().visible_page_number(), 2);
+        assert_eq!(adapter.core().cursor(), TextPoint { x: 0, y: 20 });
+    }
+
+    #[test]
+    fn cursor_save_restore_includes_the_page_number() {
+        let mut adapter = AdapterDispatch::new(scrolled_geometry());
+        adapter.dispatch(OutputAction::PagePositionAbsolute(3));
+        adapter.core_mut().set_cursor(TextPoint { x: 12, y: 27 });
+        adapter.core_mut().set_delayed_eol_wrap(true);
+        adapter.dispatch(OutputAction::CursorSaveState);
+
+        adapter.dispatch(OutputAction::PagePositionAbsolute(5));
+        adapter.core_mut().set_cursor(TextPoint { x: 2, y: 22 });
+        adapter.core_mut().set_delayed_eol_wrap(false);
+        adapter.dispatch(OutputAction::CursorRestoreState);
+
+        assert_eq!(adapter.page_manager().active_page_number(), 3);
+        assert_eq!(adapter.page_manager().visible_page_number(), 3);
+        assert_eq!(adapter.core().cursor(), TextPoint { x: 12, y: 27 });
+        assert!(adapter.core().delayed_eol_wrap());
+    }
+
+    #[test]
+    fn parser_routes_ppa_ppr_and_ppb_through_page_manager() {
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(AdapterDispatch::new(
+            scrolled_geometry(),
+        )));
+        machine.process_str("\u{1b}[?64l\u{1b}[3 P\u{1b}[2 Q\u{1b}[ R");
+
+        assert_eq!(dispatch(&machine).page_manager().active_page_number(), 4);
+        assert_eq!(dispatch(&machine).page_manager().visible_page_number(), 1);
+        assert_eq!(dispatch(&machine).core().geometry(), PageGeometry::new(0, 80, 24));
     }
 }
