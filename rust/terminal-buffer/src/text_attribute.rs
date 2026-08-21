@@ -65,10 +65,10 @@ impl Default for LegacyColorDefaults {
 
 impl LegacyColorDefaults {
     #[must_use]
-    pub const fn from_legacy_attribute(attribute: u16) -> Self {
+    pub fn from_legacy_attribute(attribute: u16) -> Self {
         Self {
-            foreground: (attribute & FG_ATTRS) as u8,
-            background: ((attribute & BG_ATTRS) >> 4) as u8,
+            foreground: u8::try_from(attribute & FG_ATTRS).unwrap_or_default(),
+            background: u8::try_from((attribute & BG_ATTRS) >> 4).unwrap_or_default(),
         }
     }
 
@@ -123,7 +123,7 @@ impl TextAttribute {
     }
 
     #[must_use]
-    pub const fn from_rgb(foreground: Rgb, background: Rgb) -> Self {
+    pub fn from_rgb(foreground: Rgb, background: Rgb) -> Self {
         Self {
             attrs: 0,
             hyperlink_id: 0,
@@ -285,10 +285,7 @@ impl TextAttribute {
     #[must_use]
     pub const fn is_any_gridline_enabled(self) -> bool {
         self.attrs
-            & (ATTR_TOP_GRIDLINE
-                | ATTR_BOTTOM_GRIDLINE
-                | ATTR_LEFT_GRIDLINE
-                | ATTR_RIGHT_GRIDLINE)
+            & (ATTR_TOP_GRIDLINE | ATTR_BOTTOM_GRIDLINE | ATTR_LEFT_GRIDLINE | ATTR_RIGHT_GRIDLINE)
             != 0
     }
 
@@ -364,7 +361,8 @@ impl TextAttribute {
     }
 
     pub fn set_underline_style(&mut self, style: UnderlineStyle) {
-        self.attrs = (self.attrs & !UNDERLINE_STYLE_MASK) | ((style as u16) << UNDERLINE_STYLE_SHIFT);
+        self.attrs =
+            (self.attrs & !UNDERLINE_STYLE_MASK) | ((style as u16) << UNDERLINE_STYLE_SHIFT);
     }
 
     pub fn set_default_rendition_attributes(&mut self) {
