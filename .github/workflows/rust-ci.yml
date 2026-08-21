@@ -22,13 +22,39 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  r02c-integrate:
+    name: R02c canonical integration
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r02-mouse-input' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r02-mouse-input
+      - name: Integrate R02c module
+        run: python tools/rust/r02c-integrate.py
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit canonical R02c source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-input/src/lib.rs rust/terminal-input/src/mouse.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(rust): integrate TerminalInput mouse encoding"
+          git push origin HEAD:rust/r02-mouse-input
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
