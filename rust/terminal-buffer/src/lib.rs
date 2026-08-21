@@ -10,4 +10,5 @@ pub mod line_rendition;
 pub mod rle;
 pub mod row;
 pub mod text_attribute;
+pub mod text_buffer;
 pub mod text_color;
