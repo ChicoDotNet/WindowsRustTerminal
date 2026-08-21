@@ -6,7 +6,7 @@
 
 /// A cell position in the terminal text buffer.
 ///
-/// Ordering is row-major, matching `til::point` comparisons used by TerminalCore:
+/// Ordering is row-major, matching `til::point` comparisons used by `TerminalCore`:
 /// rows compare first, then columns within a row.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct BufferPoint {
@@ -60,7 +60,7 @@ pub enum SelectionInteractionMode {
     Mark,
 }
 
-/// Mutable TerminalCore selection state.
+/// Mutable `TerminalCore` selection state.
 #[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct SelectionInfo {
     pub start: BufferPoint,
