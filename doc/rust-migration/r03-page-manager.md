@@ -30,11 +30,11 @@ R03e does not invent a second text-buffer implementation. Operations that requir
 - hide the visible cursor;
 - redraw the complete visible surface.
 
-R04 can consume those events with the Rust `TextBuffer` implementation without changing the page-number or transition semantics established here.
+This completes the deterministic page-management control plane. R04 can consume those events with the Rust `TextBuffer` implementation without changing the page-number or transition semantics established here.
 
 ## Deferred to later surfaces
 
-The following behavior still depends on state that is intentionally outside the R03e control plane:
+The following behavior depends on state intentionally outside the R03e control plane:
 
 - concrete row copies and backing-buffer ownership;
 - renderer invalidation side effects;
