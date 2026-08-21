@@ -286,7 +286,10 @@ mod tests {
         let smile = iterator.next().expect("surrogate glyph");
         assert_eq!(smile.chars(), &[0xd83d, 0xde00]);
         assert_eq!(iterator.position(), 2);
-        assert_eq!(iterator.next().expect("punctuation").chars(), &[u16::from(b'!')]);
+        assert_eq!(
+            iterator.next().expect("punctuation").chars(),
+            &[u16::from(b'!')]
+        );
     }
 
     #[test]
@@ -299,7 +302,10 @@ mod tests {
             .next()
             .expect("cell");
 
-        assert_eq!(view.text_attribute_behavior(), TextAttributeBehavior::Stored);
+        assert_eq!(
+            view.text_attribute_behavior(),
+            TextAttributeBehavior::Stored
+        );
         assert_eq!(view.text_attribute(), attribute);
     }
 
