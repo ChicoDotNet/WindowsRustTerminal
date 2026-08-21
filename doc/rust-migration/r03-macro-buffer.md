@@ -28,7 +28,7 @@ not couple `terminal-adapter` back to the parser runtime. Instead,
 `InvocationContext`. Nested invocations consume that returned context.
 
 This preserves the observable depth and sequence-length limits while avoiding a
-mutable re-entrant borrow or hidden RAII state in the Rust core. Actual dispatch
+mutable reentrant borrow or hidden RAII state in the Rust core. Actual dispatch
 back into the VT state machine remains an Adapter integration concern for a
 later R03 slice.
 
