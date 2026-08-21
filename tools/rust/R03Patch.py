@@ -10,4 +10,8 @@ text = text.replace(
     """#[expect(\n    clippy::cast_possible_truncation,\n    reason = \"DEC HLS conversion intentionally matches the C++ f32-to-byte rounding path\"\n)]\n""",
     """#[expect(\n    clippy::cast_possible_truncation,\n    clippy::cast_sign_loss,\n    reason = \"DEC HLS conversion intentionally matches the C++ f32-to-byte rounding path\"\n)]\n""",
 )
+text = text.replace(
+    """        assert_eq!(parser.image_width(), 3);\n        assert_eq!(parser.image_cursor().x, 0);\n""",
+    """        // Raster attributes perform a carriage return after the first two sixels,\n        // so the final sixel overprints from column zero instead of extending the width.\n        assert_eq!(parser.image_width(), 2);\n        assert_eq!(parser.image_cursor().x, 0);\n""",
+)
 path.write_text(text, encoding="utf-8")
