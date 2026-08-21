@@ -39,5 +39,6 @@ mouse = mouse.replace(
     1,
 )
 mouse = mouse.replace("        MouseMessage::Move => 0,\n", "", 1)
-mouse = mouse.replace("i16::MAX as i32", "i32::from(i16::MAX)")
+mouse = mouse.replace("i16::MAX as i32 - 33", "32_734")
+mouse = mouse.replace("i16::MAX as i32 - 32", "32_735")
 mouse_path.write_text(mouse)
