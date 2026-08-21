@@ -41,12 +41,25 @@ The fourth slice ports `Terminal::ConvertKeyEventToUpdateSelectionParams` as a s
 
 Tests cover every mapped direction/expansion family, Alt suppression, Mark Mode behavior, unsupported keys, and the important rule that Ctrl does not fall through to non-Ctrl commands.
 
+## R05e — deterministic UpdateSelection movement
+
+The fifth slice ports `Terminal::UpdateSelection` and the deterministic movement helpers used by keyboard selection.
+
+- Mark Mode without Shift moves start, end, and pivot together while no endpoint has been explicitly anchored.
+- Shift/Quick Edit movement targets the non-pivot endpoint and re-pivots safely when the moving endpoint crosses the immutable pivot.
+- Character movement preserves right-exclusive row endpoints, saturates at the buffer origin/mutable bottom, and respects migrated glyph boundaries.
+- Word movement uses the R04 delimiter classification and mirrors the "already at boundary, move to previous/next word" behavior.
+- Viewport movement implements Home/End and PageUp/PageDown semantics with explicit viewport height and mutable-bottom geometry.
+- Buffer movement implements Ctrl+Home/Ctrl+End semantics against the mutable viewport bottom.
+
+The movement layer remains platform-neutral and requires no C++, Win32 headers, or FFI.
+
 ## Safety
 
 `terminal-core` uses `#![forbid(unsafe_code)]`.
 
-R05a–R05d add no product C++, no FFI, and no platform-specific dependency. The ordinary blocking gate is therefore workspace fmt, Clippy with `-D warnings`, Linux and Windows check/test, repository quality gates, and the TAEF harness self-test.
+R05a–R05e add no product C++, no FFI, and no platform-specific dependency. The ordinary blocking gate is therefore workspace fmt, Clippy with `-D warnings`, Linux and Windows check/test, repository quality gates, and the TAEF harness self-test.
 
 ## Next slices
 
-Continue from command mapping into the deterministic `UpdateSelection` movement semantics, reusing the R04 buffer geometry and existing R05 endpoint state. A C++ compatibility facade is deferred until a concrete boundary is required and then becomes subject to the relevant Microsoft C++ contract tests.
+Continue with the remaining deterministic TerminalCore selection operations and copy/selection geometry that can reuse R04 directly. A C++ compatibility facade is deferred until a concrete boundary is required and then becomes subject to the relevant Microsoft C++ contract tests.
