@@ -68,10 +68,10 @@ impl<'a> PreparedMacro<'a> {
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 enum ParseState {
     #[default]
-    ExpectingText,
-    ExpectingHexDigit,
-    ExpectingSecondHexDigit,
-    ExpectingRepeatCount,
+    Text,
+    HexDigit,
+    SecondHexDigit,
+    RepeatCount,
 }
 
 #[derive(Debug, Clone)]
@@ -186,8 +186,8 @@ impl MacroBuffer {
         self.decoded_char = 0;
         self.repeat_pending = false;
         self.parse_state = match encoding {
-            MacroEncoding::HexPair => ParseState::ExpectingHexDigit,
-            MacroEncoding::Text => ParseState::ExpectingText,
+            MacroEncoding::HexPair => ParseState::HexDigit,
+            MacroEncoding::Text => ParseState::Text,
         };
 
         match delete_control {
@@ -218,13 +218,13 @@ impl MacroBuffer {
         }
 
         let success = match self.parse_state {
-            ParseState::ExpectingText => self.append_to_active_macro(ch),
-            ParseState::ExpectingHexDigit => {
+            ParseState::Text => self.append_to_active_macro(ch),
+            ParseState::HexDigit => {
                 if self.decode_hex_digit(ch) {
-                    self.parse_state = ParseState::ExpectingSecondHexDigit;
+                    self.parse_state = ParseState::SecondHexDigit;
                     true
                 } else if ch == u16::from(b'!') && !self.repeat_pending {
-                    self.parse_state = ParseState::ExpectingRepeatCount;
+                    self.parse_state = ParseState::RepeatCount;
                     self.repeat_count = 0;
                     true
                 } else if ch == u16::from(b';') && self.repeat_pending {
@@ -233,14 +233,14 @@ impl MacroBuffer {
                     false
                 }
             }
-            ParseState::ExpectingSecondHexDigit => {
+            ParseState::SecondHexDigit => {
                 let success =
                     self.decode_hex_digit(ch) && self.append_to_active_macro(self.decoded_char);
                 self.decoded_char = 0;
-                self.parse_state = ParseState::ExpectingHexDigit;
+                self.parse_state = ParseState::HexDigit;
                 success
             }
-            ParseState::ExpectingRepeatCount => {
+            ParseState::RepeatCount => {
                 if let Some(digit) = decimal_digit(ch) {
                     let limit = usize::try_from(MAX_PARAMETER_VALUE).unwrap_or(usize::MAX);
                     self.repeat_count = self
@@ -252,7 +252,7 @@ impl MacroBuffer {
                 } else if ch == u16::from(b';') {
                     self.repeat_pending = true;
                     self.repeat_start = self.active_macro().len();
-                    self.parse_state = ParseState::ExpectingHexDigit;
+                    self.parse_state = ParseState::HexDigit;
                     true
                 } else {
                     false
