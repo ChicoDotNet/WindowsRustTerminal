@@ -7,5 +7,6 @@
 
 pub mod geometry;
 pub mod line_rendition;
+pub mod row;
 pub mod text_attribute;
 pub mod text_color;
