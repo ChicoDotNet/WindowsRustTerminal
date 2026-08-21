@@ -30,3 +30,14 @@ replace_once(
 )
 
 path.write_text(text)
+
+mouse_path = Path("rust/terminal-input/src/mouse.rs")
+mouse = mouse_path.read_text()
+mouse = mouse.replace(
+    "        MouseMessage::LeftDoubleClick | MouseMessage::LeftDown => 0,\n        MouseMessage::LeftUp | MouseMessage::MiddleUp | MouseMessage::RightUp => 3,",
+    "        MouseMessage::LeftDoubleClick | MouseMessage::LeftDown | MouseMessage::Move => 0,\n        MouseMessage::LeftUp | MouseMessage::MiddleUp | MouseMessage::RightUp => 3,",
+    1,
+)
+mouse = mouse.replace("        MouseMessage::Move => 0,\n", "", 1)
+mouse = mouse.replace("i16::MAX as i32", "i32::from(i16::MAX)")
+mouse_path.write_text(mouse)
