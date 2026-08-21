@@ -183,9 +183,18 @@ mod tests {
     #[test]
     fn rotate_up_reuses_storage_and_clears_new_bottom() {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
-        buffer.row_mut(0).replace_glyph(0, 1, &[b'A' as u16]).unwrap();
-        buffer.row_mut(1).replace_glyph(0, 1, &[b'B' as u16]).unwrap();
-        buffer.row_mut(2).replace_glyph(0, 1, &[b'C' as u16]).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(0, 1, &[b'A' as u16])
+            .unwrap();
+        buffer
+            .row_mut(1)
+            .replace_glyph(0, 1, &[b'B' as u16])
+            .unwrap();
+        buffer
+            .row_mut(2)
+            .replace_glyph(0, 1, &[b'C' as u16])
+            .unwrap();
 
         buffer.rotate_up(1, attribute());
 
@@ -198,8 +207,14 @@ mod tests {
     #[test]
     fn rotate_down_reuses_storage_and_clears_new_top() {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
-        buffer.row_mut(0).replace_glyph(0, 1, &[b'A' as u16]).unwrap();
-        buffer.row_mut(1).replace_glyph(0, 1, &[b'B' as u16]).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(0, 1, &[b'A' as u16])
+            .unwrap();
+        buffer
+            .row_mut(1)
+            .replace_glyph(0, 1, &[b'B' as u16])
+            .unwrap();
 
         buffer.rotate_down(1, attribute());
 
@@ -212,9 +227,18 @@ mod tests {
     #[test]
     fn resize_height_preserves_logical_order_across_rotation() {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
-        buffer.row_mut(0).replace_glyph(0, 1, &[b'A' as u16]).unwrap();
-        buffer.row_mut(1).replace_glyph(0, 1, &[b'B' as u16]).unwrap();
-        buffer.row_mut(2).replace_glyph(0, 1, &[b'C' as u16]).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(0, 1, &[b'A' as u16])
+            .unwrap();
+        buffer
+            .row_mut(1)
+            .replace_glyph(0, 1, &[b'B' as u16])
+            .unwrap();
+        buffer
+            .row_mut(2)
+            .replace_glyph(0, 1, &[b'C' as u16])
+            .unwrap();
         buffer.rotate_up(1, attribute());
 
         buffer.resize_height(4, attribute()).unwrap();
