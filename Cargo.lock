@@ -6,8 +6,13 @@ version = 4
 name = "terminal-adapter"
 version = "0.0.0"
 dependencies = [
+ "terminal-buffer",
  "terminal-parser",
 ]
+
+[[package]]
+name = "terminal-buffer"
+version = "0.0.0"
 
 [[package]]
 name = "terminal-input"
