@@ -185,23 +185,23 @@ mod tests {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
         buffer
             .row_mut(0)
-            .replace_glyph(0, 1, &[b'A' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'A')])
             .unwrap();
         buffer
             .row_mut(1)
-            .replace_glyph(0, 1, &[b'B' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'B')])
             .unwrap();
         buffer
             .row_mut(2)
-            .replace_glyph(0, 1, &[b'C' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'C')])
             .unwrap();
 
         buffer.rotate_up(1, attribute());
 
         assert_eq!(buffer.first_row_index(), 1);
-        assert_eq!(buffer.row(0).glyph_at(0), &[b'B' as u16]);
-        assert_eq!(buffer.row(1).glyph_at(0), &[b'C' as u16]);
-        assert_eq!(buffer.row(2).glyph_at(0), &[b' ' as u16]);
+        assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'B')]);
+        assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'C')]);
+        assert_eq!(buffer.row(2).glyph_at(0), &[u16::from(b' ')]);
     }
 
     #[test]
@@ -209,19 +209,19 @@ mod tests {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
         buffer
             .row_mut(0)
-            .replace_glyph(0, 1, &[b'A' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'A')])
             .unwrap();
         buffer
             .row_mut(1)
-            .replace_glyph(0, 1, &[b'B' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'B')])
             .unwrap();
 
         buffer.rotate_down(1, attribute());
 
         assert_eq!(buffer.first_row_index(), 2);
-        assert_eq!(buffer.row(0).glyph_at(0), &[b' ' as u16]);
-        assert_eq!(buffer.row(1).glyph_at(0), &[b'A' as u16]);
-        assert_eq!(buffer.row(2).glyph_at(0), &[b'B' as u16]);
+        assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b' ')]);
+        assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'A')]);
+        assert_eq!(buffer.row(2).glyph_at(0), &[u16::from(b'B')]);
     }
 
     #[test]
@@ -229,24 +229,24 @@ mod tests {
         let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
         buffer
             .row_mut(0)
-            .replace_glyph(0, 1, &[b'A' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'A')])
             .unwrap();
         buffer
             .row_mut(1)
-            .replace_glyph(0, 1, &[b'B' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'B')])
             .unwrap();
         buffer
             .row_mut(2)
-            .replace_glyph(0, 1, &[b'C' as u16])
+            .replace_glyph(0, 1, &[u16::from(b'C')])
             .unwrap();
         buffer.rotate_up(1, attribute());
 
         buffer.resize_height(4, attribute()).unwrap();
 
         assert_eq!(buffer.first_row_index(), 0);
-        assert_eq!(buffer.row(0).glyph_at(0), &[b'B' as u16]);
-        assert_eq!(buffer.row(1).glyph_at(0), &[b'C' as u16]);
-        assert_eq!(buffer.row(2).glyph_at(0), &[b' ' as u16]);
-        assert_eq!(buffer.row(3).glyph_at(0), &[b' ' as u16]);
+        assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'B')]);
+        assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'C')]);
+        assert_eq!(buffer.row(2).glyph_at(0), &[u16::from(b' ')]);
+        assert_eq!(buffer.row(3).glyph_at(0), &[u16::from(b' ')]);
     }
 }
