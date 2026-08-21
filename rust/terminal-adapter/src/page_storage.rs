@@ -77,8 +77,7 @@ impl PageStorage {
 
     #[must_use]
     pub fn background(&self, page: i32) -> Option<&TextBuffer> {
-        self.background_index(page)
-            .and_then(|index| self.backgrounds[index].as_ref())
+        Self::background_index(page).and_then(|index| self.backgrounds[index].as_ref())
     }
 
     /// Applies a sequence emitted by `PageManager` in-order.
@@ -227,11 +226,10 @@ impl PageStorage {
     }
 
     fn checked_background_index(&self, page: i32) -> Result<usize, PageStorageError> {
-        self.background_index(page)
-            .ok_or(PageStorageError::MissingBackground(page))
+        Self::background_index(page).ok_or(PageStorageError::MissingBackground(page))
     }
 
-    fn background_index(&self, page: i32) -> Option<usize> {
+    fn background_index(page: i32) -> Option<usize> {
         (1..=MAX_PAGES)
             .contains(&page)
             .then(|| usize::try_from(page - 1).expect("positive page index fits usize"))
