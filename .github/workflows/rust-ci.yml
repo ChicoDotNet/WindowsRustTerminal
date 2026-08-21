@@ -22,13 +22,39 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  r02b-repair:
+    name: R02b canonical integration
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/rust/r02-keyboard-layout-kitty' && github.actor != 'github-actions[bot]') || (github.event_name == 'pull_request' && github.head_ref == 'rust/r02-keyboard-layout-kitty' && github.actor != 'github-actions[bot]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r02-keyboard-layout-kitty
+      - name: Integrate R02b module
+        run: python tools/rust/r02b-repair.py
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit canonical R02b source
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-input/src/lib.rs rust/terminal-input/src/keyboard.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "feat(rust): integrate layout-aware Kitty keyboard encoding"
+          git push origin HEAD:rust/r02-keyboard-layout-kitty
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
