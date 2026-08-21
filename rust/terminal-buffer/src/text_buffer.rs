@@ -578,10 +578,7 @@ mod tests {
             .row_mut(0)
             .replace_glyph(0, 1, &[u16::from(b'A')])
             .unwrap();
-        buffer
-            .row_mut(0)
-            .replace_glyph(1, 2, &[0x4e00])
-            .unwrap();
+        buffer.row_mut(0).replace_glyph(1, 2, &[0x4e00]).unwrap();
         buffer
             .row_mut(0)
             .replace_glyph(3, 1, &[u16::from(b'B')])
@@ -591,14 +588,8 @@ mod tests {
 
         assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'A')]);
         assert_eq!(buffer.row(0).glyph_at(1), &[0x4e00]);
-        assert_eq!(
-            buffer.row(0).dbcs_attribute_at(1),
-            DbcsAttribute::Leading
-        );
-        assert_eq!(
-            buffer.row(0).dbcs_attribute_at(2),
-            DbcsAttribute::Trailing
-        );
+        assert_eq!(buffer.row(0).dbcs_attribute_at(1), DbcsAttribute::Leading);
+        assert_eq!(buffer.row(0).dbcs_attribute_at(2), DbcsAttribute::Trailing);
         assert!(buffer.row(0).was_wrap_forced());
         assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'B')]);
     }
