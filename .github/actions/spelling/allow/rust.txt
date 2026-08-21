@@ -1,4 +1,8 @@
+altgr
+azerty
+backtab
 clippy
+condvar
 ffi
 psobject
 rustup
