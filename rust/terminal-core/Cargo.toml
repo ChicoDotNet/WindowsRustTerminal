@@ -6,5 +6,8 @@ license.workspace = true
 repository.workspace = true
 publish = false
 
+[dependencies]
+terminal-buffer = { path = "../terminal-buffer" }
+
 [lints]
 workspace = true
