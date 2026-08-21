@@ -100,7 +100,7 @@ pub struct OutputCellIterator<'a, W: GlyphWidthDetector> {
 
 impl<'a, W: GlyphWidthDetector> OutputCellIterator<'a, W> {
     #[must_use]
-    pub const fn text_only(text: &'a [u16], detector: &'a W) -> Self {
+    pub fn text_only(text: &'a [u16], detector: &'a W) -> Self {
         Self {
             text,
             detector,
@@ -217,11 +217,11 @@ const fn utf16_glyph_length(input: &[u16]) -> usize {
 }
 
 const fn is_high_surrogate(unit: u16) -> bool {
-    (0xd800..=0xdbff).contains(&unit)
+    unit >= 0xd800 && unit <= 0xdbff
 }
 
 const fn is_low_surrogate(unit: u16) -> bool {
-    (0xdc00..=0xdfff).contains(&unit)
+    unit >= 0xdc00 && unit <= 0xdfff
 }
 
 #[cfg(test)]
