@@ -5,4 +5,5 @@
 
 #![forbid(unsafe_code)]
 
+pub mod macro_buffer;
 pub mod sixel;
