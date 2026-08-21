@@ -167,7 +167,7 @@ impl TextBuffer {
                 0
             };
             let end_exclusive = if y == end.y {
-                row.adjust_to_glyph_end(i32::from(end.x.min(readable - 1)))
+                row.adjust_to_glyph_end(i32::from(end.x.min(readable - 1).saturating_add(1)))
             } else {
                 readable
             };
