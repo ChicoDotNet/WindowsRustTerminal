@@ -160,9 +160,7 @@ mod tests {
         let partial = ControlKeyStates::RIGHT_ALT_PRESSED;
         assert!(!partial.is_alt_gr_pressed());
 
-        let full = partial
-            | ControlKeyStates::LEFT_CTRL_PRESSED
-            | ControlKeyStates::CAPSLOCK_ON;
+        let full = partial | ControlKeyStates::LEFT_CTRL_PRESSED | ControlKeyStates::CAPSLOCK_ON;
         assert!(full.is_alt_gr_pressed());
     }
 
