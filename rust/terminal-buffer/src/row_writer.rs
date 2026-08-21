@@ -39,7 +39,10 @@ where
             }
         }
 
-        if !matches!(cell.text_attribute_behavior(), TextAttributeBehavior::StoredOnly) {
+        if !matches!(
+            cell.text_attribute_behavior(),
+            TextAttributeBehavior::StoredOnly
+        ) {
             match cell.dbcs_attribute() {
                 DbcsAttribute::Single => {
                     row.replace_glyph(i32::from(column), 1, cell.chars())?;
@@ -123,12 +126,8 @@ mod tests {
         row.replace_attributes(0, 5, highlighted);
 
         let text = [u16::from(b'A'), u16::from(b'B')];
-        let end = write_cells(
-            &mut row,
-            1,
-            OutputCellIterator::text_only(&text, &detector),
-        )
-        .expect("bulk write succeeds");
+        let end = write_cells(&mut row, 1, OutputCellIterator::text_only(&text, &detector))
+            .expect("bulk write succeeds");
 
         assert_eq!(end, 3);
         assert_eq!(row.glyph_at(1), &[u16::from(b'A')]);
@@ -162,12 +161,8 @@ mod tests {
         let mut row = row(5);
         let text = [0x4e00, u16::from(b'Z')];
 
-        let end = write_cells(
-            &mut row,
-            1,
-            OutputCellIterator::text_only(&text, &detector),
-        )
-        .expect("bulk write succeeds");
+        let end = write_cells(&mut row, 1, OutputCellIterator::text_only(&text, &detector))
+            .expect("bulk write succeeds");
 
         assert_eq!(end, 4);
         assert_eq!(row.glyph_at(1), &[0x4e00]);
@@ -182,12 +177,8 @@ mod tests {
         let mut row = row(3);
         let text = [u16::from(b'A'), u16::from(b'B')];
 
-        let end = write_cells(
-            &mut row,
-            2,
-            OutputCellIterator::text_only(&text, &detector),
-        )
-        .expect("bulk write succeeds");
+        let end = write_cells(&mut row, 2, OutputCellIterator::text_only(&text, &detector))
+            .expect("bulk write succeeds");
 
         assert_eq!(end, 3);
         assert_eq!(row.glyph_at(2), &[u16::from(b'A')]);
