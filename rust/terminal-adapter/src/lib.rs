@@ -1,7 +1,8 @@
 //! Safe Rust migration track for Windows Terminal's adapter layer.
 //!
-//! R03 starts with protocol-heavy components that can be isolated from the C++
-//! `TextBuffer`, renderer, and platform integration surfaces.
+//! R03 isolates protocol-heavy Adapter components from the C++ `TextBuffer`,
+//! renderer, and platform surfaces. `PageManager` completes the deterministic
+//! VT paging control plane while concrete page storage remains an R04 concern.
 
 #![forbid(unsafe_code)]
 
