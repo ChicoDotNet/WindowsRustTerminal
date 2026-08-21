@@ -34,15 +34,6 @@ impl Modifiers {
     const ALT: u8 = 1 << 2;
     const SHIFT: u8 = 1 << 3;
 
-    fn from_flags(alt_gr: bool, ctrl: bool, alt: bool, shift: bool) -> Self {
-        Self(
-            u8::from(alt_gr) * Self::ALT_GR
-                | u8::from(ctrl) * Self::CTRL
-                | u8::from(alt) * Self::ALT
-                | u8::from(shift) * Self::SHIFT,
-        )
-    }
-
     const fn alt_gr(self) -> bool {
         self.0 & Self::ALT_GR != 0
     }
@@ -88,11 +79,17 @@ replace_once(
         }
     }
 ''',
-    '''    let key = SanitizedKeyEvent {
+    '''    let modifier_state = Modifiers(
+        u8::from(alt_gr)
+            | (u8::from(ctrl) << 1)
+            | (u8::from(alt) << 2)
+            | (u8::from(shift) << 3),
+    );
+    let key = SanitizedKeyEvent {
         raw: event,
         codepoint: event.codepoint,
         key_repeat,
-        modifiers: Modifiers::from_flags(alt_gr, ctrl, alt, shift),
+        modifiers: modifier_state,
     };
 
     if input.kitty_flags != 0
