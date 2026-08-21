@@ -408,8 +408,8 @@ impl Row {
     #[must_use]
     pub fn measure_right(&self) -> u16 {
         if self.wrap_forced {
-            let padding = if self.double_byte_padded { 1 } else { 0 };
-            self.column_count.saturating_sub(padding)
+            self.column_count
+                .saturating_sub(u16::from(self.double_byte_padded))
         } else {
             self.get_last_non_space_column()
         }
