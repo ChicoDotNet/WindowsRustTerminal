@@ -7,6 +7,7 @@
 
 pub mod geometry;
 pub mod line_rendition;
+pub mod output_cell;
 pub mod rle;
 pub mod row;
 pub mod text_attribute;
