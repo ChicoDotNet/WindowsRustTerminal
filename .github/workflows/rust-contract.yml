@@ -3,18 +3,7 @@ name: Rust Microsoft Contract
 on:
   push:
     branches:
-      - "rust/main"
-    paths:
-      - "rust/terminal-parser/**"
-      - "rust/terminal-parser-ffi/**"
-      - "tools/rust/**"
-      - ".github/workflows/rust-contract.yml"
-  pull_request:
-    paths:
-      - "rust/terminal-parser/**"
-      - "rust/terminal-parser-ffi/**"
-      - "tools/rust/**"
-      - ".github/workflows/rust-contract.yml"
+      - "sync/microsoft/**"
   workflow_dispatch:
 
 permissions:

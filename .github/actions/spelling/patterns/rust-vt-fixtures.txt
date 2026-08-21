@@ -1,0 +1,2 @@
+# Rust VT/DCS fixture strings: the final `q` introducer directly precedes arbitrary payload bytes.
+\\u\{1b\}P[0-9;]*q(?:abcdef|abc)
