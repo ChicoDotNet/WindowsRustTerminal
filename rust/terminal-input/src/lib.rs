@@ -7,7 +7,10 @@
 #![forbid(unsafe_code)]
 
 mod keyboard;
+mod mouse;
+
 pub use keyboard::{KeyboardMapper, PortableKeyboardMapper};
+pub use mouse::{MouseButtonState, MouseMessage, Point};
 
 const ESC: char = '\u{1b}';
 const CSI_8BIT: char = '\u{009b}';
@@ -154,6 +157,7 @@ pub struct TerminalInput {
     kitty_flags: u8,
     kitty_main_stack: Vec<u8>,
     kitty_alt_stack: Vec<u8>,
+    mouse_input_state: mouse::MouseInputState,
 }
 
 impl Default for TerminalInput {
@@ -168,6 +172,7 @@ impl Default for TerminalInput {
             kitty_flags: 0,
             kitty_main_stack: Vec::new(),
             kitty_alt_stack: Vec::new(),
+            mouse_input_state: mouse::MouseInputState::default(),
         };
         input.reset_input_modes();
         input

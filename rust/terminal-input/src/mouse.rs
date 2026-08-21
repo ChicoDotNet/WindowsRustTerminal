@@ -8,7 +8,7 @@ use super::{Mode, TerminalInput, control_state};
 
 const WHEEL_DELTA: i32 = 120;
 const MAX_DEFAULT_COORDINATE: i32 = 94;
-const MAX_UTF8_COORDINATE: i32 = i16::MAX as i32 - 33;
+const MAX_UTF8_COORDINATE: i32 = 32_734;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct Point {
@@ -98,7 +98,11 @@ impl TerminalInput {
             let button_event = is_button_event(message);
             let same_event = position == self.mouse_input_state.last_position
                 && self.mouse_input_state.last_message == Some(message);
-            let real_message = if hover { pressed_button(buttons) } else { message };
+            let real_message = if hover {
+                pressed_button(buttons)
+            } else {
+                message
+            };
             let physical_button_pressed = real_message != MouseMessage::LeftUp;
 
             let should_emit = button_event
@@ -230,13 +234,24 @@ fn x_button_encoding(
     delta: i32,
 ) -> u32 {
     let mut value = match message {
-        MouseMessage::LeftDoubleClick | MouseMessage::LeftDown => 0,
+        MouseMessage::LeftDoubleClick | MouseMessage::LeftDown | MouseMessage::Move => 0,
         MouseMessage::LeftUp | MouseMessage::MiddleUp | MouseMessage::RightUp => 3,
         MouseMessage::RightDown | MouseMessage::RightDoubleClick => 2,
         MouseMessage::MiddleDown | MouseMessage::MiddleDoubleClick => 1,
-        MouseMessage::Wheel => if delta > 0 { 0x40 } else { 0x41 },
-        MouseMessage::HorizontalWheel => if delta > 0 { 0x43 } else { 0x42 },
-        MouseMessage::Move => 0,
+        MouseMessage::Wheel => {
+            if delta > 0 {
+                0x40
+            } else {
+                0x41
+            }
+        }
+        MouseMessage::HorizontalWheel => {
+            if delta > 0 {
+                0x43
+            } else {
+                0x42
+            }
+        }
     };
     if hover {
         value += 0x20;
@@ -255,8 +270,20 @@ fn sgr_button_encoding(
         MouseMessage::RightUp | MouseMessage::RightDown | MouseMessage::RightDoubleClick => 2,
         MouseMessage::MiddleUp | MouseMessage::MiddleDown | MouseMessage::MiddleDoubleClick => 1,
         MouseMessage::Move => 3,
-        MouseMessage::Wheel => if delta > 0 { 0x40 } else { 0x41 },
-        MouseMessage::HorizontalWheel => if delta > 0 { 0x43 } else { 0x42 },
+        MouseMessage::Wheel => {
+            if delta > 0 {
+                0x40
+            } else {
+                0x41
+            }
+        }
+        MouseMessage::HorizontalWheel => {
+            if delta > 0 {
+                0x43
+            } else {
+                0x42
+            }
+        }
     };
     if hover {
         value += 0x20;
@@ -300,9 +327,8 @@ fn generate_x10_like_sequence(
     modifier_key_state: u32,
     delta: i32,
 ) -> Option<String> {
-    let encoded_button = char::from_u32(
-        0x20 + x_button_encoding(message, hover, modifier_key_state, delta),
-    )?;
+    let encoded_button =
+        char::from_u32(0x20 + x_button_encoding(message, hover, modifier_key_state, delta))?;
     let encoded_x = encode_default_coordinate(position.x.checked_add(1)?)?;
     let encoded_y = encode_default_coordinate(position.y.checked_add(1)?)?;
     Some(format!(
@@ -370,8 +396,14 @@ mod tests {
         Point { x: 96, y: 96 },
         Point { x: 127, y: 127 },
         Point { x: 128, y: 128 },
-        Point { x: i16::MAX as i32 - 33, y: i16::MAX as i32 - 33 },
-        Point { x: i16::MAX as i32 - 32, y: i16::MAX as i32 - 32 },
+        Point {
+            x: 32_734,
+            y: 32_734,
+        },
+        Point {
+            x: 32_735,
+            y: 32_735,
+        },
     ];
 
     fn sgr_expected(message: MouseMessage, modifiers: u32, delta: i16, p: Point) -> String {
@@ -381,7 +413,11 @@ mod tests {
             modifiers,
             i32::from(delta),
         );
-        let final_character = if super::is_button_up(message) { 'm' } else { 'M' };
+        let final_character = if super::is_button_up(message) {
+            'm'
+        } else {
+            'M'
+        };
         format!("\u{1b}[<{button};{};{}{final_character}", p.x + 1, p.y + 1)
     }
 
@@ -389,21 +425,46 @@ mod tests {
     fn mouse_is_unhandled_until_tracking_is_enabled() {
         let mut input = TerminalInput::new();
         assert_eq!(
-            input.handle_mouse(Point::default(), MouseMessage::LeftDown, 0, 0, MouseButtonState::default()),
+            input.handle_mouse(
+                Point::default(),
+                MouseMessage::LeftDown,
+                0,
+                0,
+                MouseButtonState::default()
+            ),
             None
         );
     }
 
     #[test]
     fn default_encoding_matches_microsoft_coordinate_boundary() {
-        let messages = [MouseMessage::LeftDown, MouseMessage::LeftUp, MouseMessage::MiddleDown, MouseMessage::MiddleUp, MouseMessage::RightDown, MouseMessage::RightUp];
-        let modifiers = [0, control_state::SHIFT_PRESSED, control_state::LEFT_CTRL_PRESSED, control_state::RIGHT_ALT_PRESSED, control_state::RIGHT_ALT_PRESSED | control_state::LEFT_CTRL_PRESSED];
+        let messages = [
+            MouseMessage::LeftDown,
+            MouseMessage::LeftUp,
+            MouseMessage::MiddleDown,
+            MouseMessage::MiddleUp,
+            MouseMessage::RightDown,
+            MouseMessage::RightUp,
+        ];
+        let modifiers = [
+            0,
+            control_state::SHIFT_PRESSED,
+            control_state::LEFT_CTRL_PRESSED,
+            control_state::RIGHT_ALT_PRESSED,
+            control_state::RIGHT_ALT_PRESSED | control_state::LEFT_CTRL_PRESSED,
+        ];
         for message in messages {
             for modifier in modifiers {
                 let mut input = TerminalInput::new();
                 input.set_input_mode(Mode::DefaultMouseTracking, true);
                 for point in TEST_COORDS {
-                    let actual = input.handle_mouse(point, message, modifier, 0, MouseButtonState::default());
+                    let actual = input.handle_mouse(
+                        point,
+                        message,
+                        modifier,
+                        0,
+                        MouseButtonState::default(),
+                    );
                     assert_eq!(actual.is_some(), point.x <= 94 && point.y <= 94);
                     if let Some(sequence) = actual {
                         assert!(sequence.starts_with("\u{1b}[M"));
@@ -420,22 +481,50 @@ mod tests {
         input.set_input_mode(Mode::Utf8MouseEncoding, true);
         input.set_input_mode(Mode::DefaultMouseTracking, true);
         for point in TEST_COORDS {
-            let output = input.handle_mouse(point, MouseMessage::LeftDown, 0, 0, MouseButtonState::default());
-            assert_eq!(output.is_some(), point.x <= i16::MAX as i32 - 33 && point.y <= i16::MAX as i32 - 33);
+            let output = input.handle_mouse(
+                point,
+                MouseMessage::LeftDown,
+                0,
+                0,
+                MouseButtonState::default(),
+            );
+            assert_eq!(output.is_some(), point.x <= 32_734 && point.y <= 32_734);
         }
     }
 
     #[test]
     fn sgr_encoding_matches_buttons_modifiers_and_coordinates() {
-        let messages = [MouseMessage::LeftDown, MouseMessage::LeftUp, MouseMessage::MiddleDown, MouseMessage::MiddleUp, MouseMessage::RightDown, MouseMessage::RightUp];
-        let modifiers = [0, control_state::SHIFT_PRESSED, control_state::LEFT_CTRL_PRESSED, control_state::RIGHT_ALT_PRESSED, control_state::RIGHT_ALT_PRESSED | control_state::LEFT_CTRL_PRESSED];
+        let messages = [
+            MouseMessage::LeftDown,
+            MouseMessage::LeftUp,
+            MouseMessage::MiddleDown,
+            MouseMessage::MiddleUp,
+            MouseMessage::RightDown,
+            MouseMessage::RightUp,
+        ];
+        let modifiers = [
+            0,
+            control_state::SHIFT_PRESSED,
+            control_state::LEFT_CTRL_PRESSED,
+            control_state::RIGHT_ALT_PRESSED,
+            control_state::RIGHT_ALT_PRESSED | control_state::LEFT_CTRL_PRESSED,
+        ];
         for message in messages {
             for modifier in modifiers {
                 let mut input = TerminalInput::new();
                 input.set_input_mode(Mode::SgrMouseEncoding, true);
                 input.set_input_mode(Mode::DefaultMouseTracking, true);
                 for point in TEST_COORDS {
-                    assert_eq!(input.handle_mouse(point, message, modifier, 0, MouseButtonState::default()), Some(sgr_expected(message, modifier, 0, point)));
+                    assert_eq!(
+                        input.handle_mouse(
+                            point,
+                            message,
+                            modifier,
+                            0,
+                            MouseButtonState::default()
+                        ),
+                        Some(sgr_expected(message, modifier, 0, point))
+                    );
                 }
             }
         }
@@ -447,15 +536,47 @@ mod tests {
         let mut input = TerminalInput::new();
         input.set_input_mode(Mode::SgrMouseEncoding, true);
         input.set_input_mode(Mode::DefaultMouseTracking, true);
-        assert_eq!(input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState::default()), None);
+        assert_eq!(
+            input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState::default()),
+            None
+        );
         input.set_input_mode(Mode::ButtonEventMouseTracking, true);
-        assert_eq!(input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState::default()), None);
-        let drag = input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState { left_down: true, ..MouseButtonState::default() });
+        assert_eq!(
+            input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState::default()),
+            None
+        );
+        let drag = input.handle_mouse(
+            point,
+            MouseMessage::Move,
+            0,
+            0,
+            MouseButtonState {
+                left_down: true,
+                ..MouseButtonState::default()
+            },
+        );
         assert_eq!(drag.as_deref(), Some("\u{1b}[<32;5;8M"));
-        assert_eq!(input.handle_mouse(point, MouseMessage::Move, 0, 0, MouseButtonState { left_down: true, ..MouseButtonState::default() }), None);
+        assert_eq!(
+            input.handle_mouse(
+                point,
+                MouseMessage::Move,
+                0,
+                0,
+                MouseButtonState {
+                    left_down: true,
+                    ..MouseButtonState::default()
+                }
+            ),
+            None
+        );
         input.set_input_mode(Mode::AnyEventMouseTracking, true);
         let next = Point { x: 5, y: 7 };
-        assert_eq!(input.handle_mouse(next, MouseMessage::Move, 0, 0, MouseButtonState::default()).as_deref(), Some("\u{1b}[<35;6;8M"));
+        assert_eq!(
+            input
+                .handle_mouse(next, MouseMessage::Move, 0, 0, MouseButtonState::default())
+                .as_deref(),
+            Some("\u{1b}[<35;6;8M")
+        );
     }
 
     #[test]
@@ -464,10 +585,46 @@ mod tests {
         input.set_input_mode(Mode::SgrMouseEncoding, true);
         input.set_input_mode(Mode::DefaultMouseTracking, true);
         let point = Point::default();
-        assert_eq!(input.handle_mouse(point, MouseMessage::Wheel, 0, 40, MouseButtonState::default()), Some(String::new()));
-        assert_eq!(input.handle_mouse(point, MouseMessage::Wheel, 0, 40, MouseButtonState::default()), Some(String::new()));
-        assert_eq!(input.handle_mouse(point, MouseMessage::Wheel, 0, -40, MouseButtonState::default()), Some(String::new()));
-        assert_eq!(input.handle_mouse(point, MouseMessage::Wheel, 0, -80, MouseButtonState::default()), Some("\u{1b}[<65;1;1M".to_string()));
+        assert_eq!(
+            input.handle_mouse(
+                point,
+                MouseMessage::Wheel,
+                0,
+                40,
+                MouseButtonState::default()
+            ),
+            Some(String::new())
+        );
+        assert_eq!(
+            input.handle_mouse(
+                point,
+                MouseMessage::Wheel,
+                0,
+                40,
+                MouseButtonState::default()
+            ),
+            Some(String::new())
+        );
+        assert_eq!(
+            input.handle_mouse(
+                point,
+                MouseMessage::Wheel,
+                0,
+                -40,
+                MouseButtonState::default()
+            ),
+            Some(String::new())
+        );
+        assert_eq!(
+            input.handle_mouse(
+                point,
+                MouseMessage::Wheel,
+                0,
+                -80,
+                MouseButtonState::default()
+            ),
+            Some("\u{1b}[<65;1;1M".to_string())
+        );
         assert_eq!(WHEEL_DELTA, 120);
     }
 
@@ -477,8 +634,16 @@ mod tests {
         input.set_input_mode(Mode::SgrMouseEncoding, true);
         input.set_input_mode(Mode::DefaultMouseTracking, true);
         let p = Point { x: 2, y: 3 };
-        for (message, delta, expected_button) in [(MouseMessage::Wheel, 120, 64), (MouseMessage::Wheel, -120, 65), (MouseMessage::HorizontalWheel, 120, 67), (MouseMessage::HorizontalWheel, -120, 66)] {
-            assert_eq!(input.handle_mouse(p, message, 0, delta, MouseButtonState::default()), Some(format!("\u{1b}[<{expected_button};3;4M")));
+        for (message, delta, expected_button) in [
+            (MouseMessage::Wheel, 120, 64),
+            (MouseMessage::Wheel, -120, 65),
+            (MouseMessage::HorizontalWheel, 120, 67),
+            (MouseMessage::HorizontalWheel, -120, 66),
+        ] {
+            assert_eq!(
+                input.handle_mouse(p, message, 0, delta, MouseButtonState::default()),
+                Some(format!("\u{1b}[<{expected_button};3;4M"))
+            );
         }
     }
 
@@ -486,13 +651,45 @@ mod tests {
     fn alternate_scroll_generates_cursor_sequences_and_honors_cursor_mode() {
         let mut input = TerminalInput::new();
         input.use_alternate_screen_buffer();
-        for (message, delta, expected) in [(MouseMessage::Wheel, 120, "\u{1b}[A"), (MouseMessage::Wheel, -120, "\u{1b}[B"), (MouseMessage::HorizontalWheel, 120, "\u{1b}[C"), (MouseMessage::HorizontalWheel, -120, "\u{1b}[D")] {
-            assert_eq!(input.handle_mouse(Point::default(), message, 0, delta, MouseButtonState::default()), Some(expected.to_string()));
+        for (message, delta, expected) in [
+            (MouseMessage::Wheel, 120, "\u{1b}[A"),
+            (MouseMessage::Wheel, -120, "\u{1b}[B"),
+            (MouseMessage::HorizontalWheel, 120, "\u{1b}[C"),
+            (MouseMessage::HorizontalWheel, -120, "\u{1b}[D"),
+        ] {
+            assert_eq!(
+                input.handle_mouse(
+                    Point::default(),
+                    message,
+                    0,
+                    delta,
+                    MouseButtonState::default()
+                ),
+                Some(expected.to_string())
+            );
         }
         input.set_input_mode(Mode::CursorKey, true);
-        assert_eq!(input.handle_mouse(Point::default(), MouseMessage::Wheel, 0, 120, MouseButtonState::default()), Some("\u{1b}OA".to_string()));
+        assert_eq!(
+            input.handle_mouse(
+                Point::default(),
+                MouseMessage::Wheel,
+                0,
+                120,
+                MouseButtonState::default()
+            ),
+            Some("\u{1b}OA".to_string())
+        );
         input.set_input_mode(Mode::AlternateScroll, false);
-        assert_eq!(input.handle_mouse(Point::default(), MouseMessage::Wheel, 0, 120, MouseButtonState::default()), None);
+        assert_eq!(
+            input.handle_mouse(
+                Point::default(),
+                MouseMessage::Wheel,
+                0,
+                120,
+                MouseButtonState::default()
+            ),
+            None
+        );
     }
 
     #[test]
@@ -500,7 +697,25 @@ mod tests {
         let mut input = TerminalInput::new();
         input.set_input_mode(Mode::SgrMouseEncoding, true);
         input.set_input_mode(Mode::AnyEventMouseTracking, true);
-        assert_eq!(input.handle_mouse(Point { x: 1, y: 2 }, MouseMessage::LeftUp, 0, 0, MouseButtonState::default()), Some("\u{1b}[<0;2;3m".to_string()));
-        assert_eq!(input.handle_mouse(Point { x: 2, y: 2 }, MouseMessage::Move, control_state::LEFT_CTRL_PRESSED, 0, MouseButtonState::default()), Some("\u{1b}[<51;3;3M".to_string()));
+        assert_eq!(
+            input.handle_mouse(
+                Point { x: 1, y: 2 },
+                MouseMessage::LeftUp,
+                0,
+                0,
+                MouseButtonState::default()
+            ),
+            Some("\u{1b}[<0;2;3m".to_string())
+        );
+        assert_eq!(
+            input.handle_mouse(
+                Point { x: 2, y: 2 },
+                MouseMessage::Move,
+                control_state::LEFT_CTRL_PRESSED,
+                0,
+                MouseButtonState::default()
+            ),
+            Some("\u{1b}[<51;3;3M".to_string())
+        );
     }
 }
