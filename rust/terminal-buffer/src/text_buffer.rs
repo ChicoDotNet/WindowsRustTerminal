@@ -21,6 +21,50 @@ impl From<RowError> for TextBufferError {
     }
 }
 
+/// A cell coordinate in logical buffer space.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TextBufferPoint {
+    pub y: u16,
+    pub x: u16,
+}
+
+impl TextBufferPoint {
+    #[must_use]
+    pub const fn new(x: u16, y: u16) -> Self {
+        Self { y, x }
+    }
+}
+
+/// An inclusive selection in logical buffer space.
+///
+/// The endpoints are normalized by [`TextBuffer::selection_text`] so callers
+/// may provide them in either order. Selection boundaries that land on the
+/// trailing half of a wide glyph are expanded to include the complete glyph.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextSelection {
+    pub anchor: TextBufferPoint,
+    pub end: TextBufferPoint,
+}
+
+impl TextSelection {
+    #[must_use]
+    pub const fn new(anchor: TextBufferPoint, end: TextBufferPoint) -> Self {
+        Self { anchor, end }
+    }
+
+    #[must_use]
+    pub fn normalized(self) -> Self {
+        if self.anchor <= self.end {
+            self
+        } else {
+            Self {
+                anchor: self.end,
+                end: self.anchor,
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TextBuffer {
     rows: Vec<Row>,
@@ -85,6 +129,53 @@ impl TextBuffer {
     pub fn row_mut(&mut self, logical_y: i32) -> &mut Row {
         let index = self.physical_index(logical_y);
         &mut self.rows[index]
+    }
+
+    /// Returns rows in logical top-to-bottom order regardless of circular
+    /// storage rotation.
+    pub fn logical_rows(&self) -> impl Iterator<Item = &Row> {
+        (0..self.height).map(|logical_y| self.row(i32::from(logical_y)))
+    }
+
+    /// Extracts UTF-16 text for an inclusive rectangularly linear selection.
+    ///
+    /// Rows between the endpoints are joined with `line_separator`. The first
+    /// and last row are clipped to the selected cells, while intermediate rows
+    /// contribute their complete readable text. Wide-glyph boundaries are
+    /// repaired so a selection can never return half of a glyph.
+    #[must_use]
+    pub fn selection_text(&self, selection: TextSelection, line_separator: &[u16]) -> Vec<u16> {
+        let selection = selection.normalized();
+        let start = self.clamp_point(selection.anchor);
+        let end = self.clamp_point(selection.end);
+        let mut output = Vec::new();
+
+        for y in start.y..=end.y {
+            if y != start.y {
+                output.extend_from_slice(line_separator);
+            }
+
+            let row = self.row(i32::from(y));
+            let readable = row.readable_column_count();
+            if readable == 0 {
+                continue;
+            }
+
+            let begin = if y == start.y {
+                row.adjust_to_glyph_start(i32::from(start.x.min(readable - 1)))
+            } else {
+                0
+            };
+            let end_exclusive = if y == end.y {
+                row.adjust_to_glyph_end(i32::from(end.x.min(readable - 1)))
+            } else {
+                readable
+            };
+
+            output.extend_from_slice(row.text_range(i32::from(begin), i32::from(end_exclusive)));
+        }
+
+        output
     }
 
     /// Rotates the logical top upward by `count` rows and resets the rows that
@@ -155,6 +246,14 @@ impl TextBuffer {
     }
 
     #[must_use]
+    fn clamp_point(&self, point: TextBufferPoint) -> TextBufferPoint {
+        TextBufferPoint {
+            x: point.x.min(self.width - 1),
+            y: point.y.min(self.height - 1),
+        }
+    }
+
+    #[must_use]
     fn physical_index(&self, logical_y: i32) -> usize {
         let logical_y = logical_y.clamp(0, i32::from(self.height) - 1);
         let logical_y = u16::try_from(logical_y).unwrap_or_default();
@@ -178,6 +277,77 @@ mod tests {
         assert_eq!(buffer.first_row_index(), 0);
         assert_eq!(buffer.row(0).size(), 8);
         assert_eq!(buffer.row(99).size(), 8);
+    }
+
+    #[test]
+    fn logical_rows_follow_rotation() {
+        let mut buffer = TextBuffer::new(4, 3, attribute()).unwrap();
+        for (row, glyph) in [(0, b'A'), (1, b'B'), (2, b'C')] {
+            buffer
+                .row_mut(row)
+                .replace_glyph(0, 1, &[u16::from(glyph)])
+                .unwrap();
+        }
+        buffer.rotate_up(1, attribute());
+
+        let first_glyphs: Vec<u16> = buffer
+            .logical_rows()
+            .map(|row| row.glyph_at(0)[0])
+            .collect();
+        assert_eq!(
+            first_glyphs,
+            [u16::from(b'B'), u16::from(b'C'), u16::from(b' ')]
+        );
+    }
+
+    #[test]
+    fn selection_normalizes_reverse_endpoints_and_joins_rows() {
+        let mut buffer = TextBuffer::new(4, 2, attribute()).unwrap();
+        for (x, glyph) in [(0, b'A'), (1, b'B'), (2, b'C'), (3, b'D')] {
+            buffer
+                .row_mut(0)
+                .replace_glyph(x, 1, &[u16::from(glyph)])
+                .unwrap();
+        }
+        for (x, glyph) in [(0, b'E'), (1, b'F'), (2, b'G'), (3, b'H')] {
+            buffer
+                .row_mut(1)
+                .replace_glyph(x, 1, &[u16::from(glyph)])
+                .unwrap();
+        }
+
+        let text = buffer.selection_text(
+            TextSelection::new(TextBufferPoint::new(2, 1), TextBufferPoint::new(1, 0)),
+            &[u16::from(b'\r'), u16::from(b'\n')],
+        );
+        assert_eq!(
+            text,
+            [
+                u16::from(b'B'),
+                u16::from(b'C'),
+                u16::from(b'D'),
+                u16::from(b'\r'),
+                u16::from(b'\n'),
+                u16::from(b'E'),
+                u16::from(b'F'),
+                u16::from(b'G')
+            ]
+        );
+    }
+
+    #[test]
+    fn selection_expands_trailing_half_of_wide_glyph() {
+        let mut buffer = TextBuffer::new(5, 1, attribute()).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(1, 2, &[0x4e00])
+            .expect("wide glyph fits");
+
+        let text = buffer.selection_text(
+            TextSelection::new(TextBufferPoint::new(2, 0), TextBufferPoint::new(2, 0)),
+            &[],
+        );
+        assert_eq!(text, [0x4e00]);
     }
 
     #[test]
