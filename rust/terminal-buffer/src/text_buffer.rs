@@ -331,7 +331,7 @@ impl TextBuffer {
                 let glyph_width = original_width.min(new_width);
                 if column != 0 && column.saturating_add(glyph_width) > new_width {
                     row.set_wrap_forced(true);
-                    rows.push(row);
+                    rows.push(row.clone());
                     if rows.len() >= usize::from(self.height) {
                         break;
                     }
@@ -559,9 +559,15 @@ mod tests {
         buffer.resize_width_reflow(3, attribute()).unwrap();
 
         assert_eq!(buffer.width(), 3);
-        assert_eq!(buffer.row(0).text_range(0, 3), &[u16::from(b'A'), u16::from(b'B'), u16::from(b'C')]);
+        assert_eq!(
+            buffer.row(0).text_range(0, 3),
+            &[u16::from(b'A'), u16::from(b'B'), u16::from(b'C')]
+        );
         assert!(buffer.row(0).was_wrap_forced());
-        assert_eq!(buffer.row(1).text_range(0, 3), &[u16::from(b'D'), u16::from(b'E'), u16::from(b'F')]);
+        assert_eq!(
+            buffer.row(1).text_range(0, 3),
+            &[u16::from(b'D'), u16::from(b'E'), u16::from(b'F')]
+        );
         assert!(!buffer.row(1).was_wrap_forced());
     }
 
@@ -585,8 +591,14 @@ mod tests {
 
         assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'A')]);
         assert_eq!(buffer.row(0).glyph_at(1), &[0x4e00]);
-        assert_eq!(buffer.row(0).dbcs_attribute_at(1), DbcsAttribute::Leading);
-        assert_eq!(buffer.row(0).dbcs_attribute_at(2), DbcsAttribute::Trailing);
+        assert_eq!(
+            buffer.row(0).dbcs_attribute_at(1),
+            DbcsAttribute::Leading
+        );
+        assert_eq!(
+            buffer.row(0).dbcs_attribute_at(2),
+            DbcsAttribute::Trailing
+        );
         assert!(buffer.row(0).was_wrap_forced());
         assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'B')]);
     }
