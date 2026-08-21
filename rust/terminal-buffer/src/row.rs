@@ -281,7 +281,8 @@ impl Row {
             let trailer = raw & CHAR_OFFSETS_TRAILER;
             let old_offset = i32::from(raw & CHAR_OFFSETS_MASK);
             let shifted = old_offset.saturating_add(difference);
-            let shifted = usize::try_from(shifted).map_err(|_| RowError::CharacterStorageOverflow)?;
+            let shifted =
+                usize::try_from(shifted).map_err(|_| RowError::CharacterStorageOverflow)?;
             new_offsets[usize::from(column)] = to_offset(shifted)? | trailer;
         }
 
@@ -494,8 +495,7 @@ mod tests {
     #[test]
     fn wide_glyph_uses_trailer_column_and_shared_character_offset() {
         let mut row = row(6);
-        row.replace_glyph(2, 2, &[0x4e00])
-            .expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
 
         assert_eq!(row.glyph_at(2), &[0x4e00]);
         assert_eq!(row.glyph_at(3), &[0x4e00]);
@@ -509,10 +509,8 @@ mod tests {
     #[test]
     fn navigation_never_stops_on_wide_glyph_trailer() {
         let mut row = row(8);
-        row.replace_glyph(2, 2, &[0x4e00])
-            .expect("wide glyph fits");
-        row.replace_glyph(4, 2, &[0x4e01])
-            .expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
+        row.replace_glyph(4, 2, &[0x4e01]).expect("wide glyph fits");
 
         assert_eq!(row.adjust_to_glyph_start(3), 2);
         assert_eq!(row.adjust_to_glyph_end(3), 4);
@@ -523,8 +521,7 @@ mod tests {
     #[test]
     fn overwriting_half_of_wide_glyph_pads_the_other_half_with_space() {
         let mut row = row(6);
-        row.replace_glyph(2, 2, &[0x4e00])
-            .expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
         let dirty = row
             .replace_glyph(2, 1, &[u16::from(b'A')])
             .expect("narrow fits");
@@ -532,8 +529,7 @@ mod tests {
         assert_eq!(row.glyph_at(2), &[u16::from(b'A')]);
         assert_eq!(row.glyph_at(3), &[UNICODE_SPACE]);
 
-        row.replace_glyph(2, 2, &[0x4e00])
-            .expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
         let dirty = row
             .replace_glyph(3, 1, &[u16::from(b'B')])
             .expect("narrow fits");
