@@ -123,19 +123,10 @@ pub struct PivotedSelection {
 }
 
 /// Deterministic endpoint switching used by Mark Mode.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
 pub struct EndpointState {
     pub target: SelectionEndpoint,
     pub anchor_inactive_endpoint: bool,
-}
-
-impl Default for EndpointState {
-    fn default() -> Self {
-        Self {
-            target: SelectionEndpoint::Both,
-            anchor_inactive_endpoint: false,
-        }
-    }
 }
 
 impl EndpointState {
