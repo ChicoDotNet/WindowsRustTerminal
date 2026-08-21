@@ -1,11 +1,13 @@
 //! Safe, platform-neutral port of Windows Terminal's `TerminalInput` state and
 //! deterministic VT keyboard encoding.
 //!
-//! R02a intentionally excludes keyboard-layout translation and mouse encoding.
-//! Those are isolated behind later increments so this crate stays deterministic
-//! on Linux and Windows.
+//! R02b adds layout-aware Unicode and Kitty keyboard encoding behind a narrow
+//! mapper abstraction. Mouse encoding remains isolated for R02c.
 
 #![forbid(unsafe_code)]
+
+mod keyboard;
+pub use keyboard::{KeyboardMapper, PortableKeyboardMapper};
 
 const ESC: char = '\u{1b}';
 const CSI_8BIT: char = '\u{009b}';
@@ -22,6 +24,7 @@ pub mod control_state {
     pub const LEFT_CTRL_PRESSED: u32 = 0x0008;
     pub const SHIFT_PRESSED: u32 = 0x0010;
     pub const NUMLOCK_ON: u32 = 0x0020;
+    pub const CAPSLOCK_ON: u32 = 0x0080;
     pub const ENHANCED_KEY: u32 = 0x0100;
     pub const ALT_PRESSED: u32 = RIGHT_ALT_PRESSED | LEFT_ALT_PRESSED;
     pub const CTRL_PRESSED: u32 = RIGHT_CTRL_PRESSED | LEFT_CTRL_PRESSED;
@@ -37,6 +40,7 @@ pub mod virtual_key {
     pub const CONTROL: u16 = 0x11;
     pub const MENU: u16 = 0x12;
     pub const PAUSE: u16 = 0x13;
+    pub const CAPITAL: u16 = 0x14;
     pub const ESCAPE: u16 = 0x1b;
     pub const SPACE: u16 = 0x20;
     pub const PRIOR: u16 = 0x21;
@@ -49,6 +53,10 @@ pub mod virtual_key {
     pub const DOWN: u16 = 0x28;
     pub const INSERT: u16 = 0x2d;
     pub const DELETE: u16 = 0x2e;
+    pub const SNAPSHOT: u16 = 0x2c;
+    pub const LWIN: u16 = 0x5b;
+    pub const RWIN: u16 = 0x5c;
+    pub const APPS: u16 = 0x5d;
     pub const NUMPAD0: u16 = 0x60;
     pub const NUMPAD9: u16 = 0x69;
     pub const MULTIPLY: u16 = 0x6a;
@@ -64,12 +72,25 @@ pub mod virtual_key {
     pub const F12: u16 = 0x7b;
     pub const F13: u16 = 0x7c;
     pub const F20: u16 = 0x83;
+    pub const F21: u16 = 0x84;
+    pub const F22: u16 = 0x85;
+    pub const F23: u16 = 0x86;
+    pub const F24: u16 = 0x87;
+    pub const NUMLOCK: u16 = 0x90;
+    pub const SCROLL: u16 = 0x91;
     pub const LSHIFT: u16 = 0xa0;
     pub const RSHIFT: u16 = 0xa1;
     pub const LCONTROL: u16 = 0xa2;
     pub const RCONTROL: u16 = 0xa3;
     pub const LMENU: u16 = 0xa4;
     pub const RMENU: u16 = 0xa5;
+    pub const VOLUME_MUTE: u16 = 0xad;
+    pub const VOLUME_DOWN: u16 = 0xae;
+    pub const VOLUME_UP: u16 = 0xaf;
+    pub const MEDIA_NEXT_TRACK: u16 = 0xb0;
+    pub const MEDIA_PREV_TRACK: u16 = 0xb1;
+    pub const MEDIA_STOP: u16 = 0xb2;
+    pub const MEDIA_PLAY_PAUSE: u16 = 0xb3;
     pub const PACKET: u16 = 0xe7;
 }
 
@@ -128,6 +149,7 @@ pub struct TerminalInput {
     force_disable_win32_input_mode: bool,
     in_alternate_buffer: bool,
     last_virtual_key: Option<u16>,
+    leading_surrogate: Option<u16>,
     force_disable_kitty_keyboard_protocol: bool,
     kitty_flags: u8,
     kitty_main_stack: Vec<u8>,
@@ -141,6 +163,7 @@ impl Default for TerminalInput {
             force_disable_win32_input_mode: false,
             in_alternate_buffer: false,
             last_virtual_key: None,
+            leading_surrogate: None,
             force_disable_kitty_keyboard_protocol: false,
             kitty_flags: 0,
             kitty_main_stack: Vec::new(),
@@ -199,6 +222,7 @@ impl TerminalInput {
         self.set_mode(Mode::AutoRepeat, true);
         self.set_mode(Mode::AlternateScroll, true);
         self.last_virtual_key = None;
+        self.leading_surrogate = None;
         self.reset_kitty_keyboard_protocols();
     }
 
@@ -280,68 +304,25 @@ impl TerminalInput {
         Some(format!("{}{suffix}", self.csi_prefix()))
     }
 
-    /// Translates one typed key event into its VT input representation.
+    /// Translates one typed key event using the portable keyboard mapper.
     ///
     /// An empty string means the event was handled but intentionally emitted nothing.
     #[must_use]
     pub fn handle_key(&mut self, event: KeyEvent) -> String {
-        if self.get_input_mode(Mode::Win32)
-            && !self.force_disable_win32_input_mode
-            && self.kitty_flags == 0
-        {
-            return self.make_win32_output(event);
-        }
+        self.handle_key_with_mapper(event, &PortableKeyboardMapper)
+    }
 
-        if !event.key_down {
-            self.last_virtual_key = None;
-            return String::new();
-        }
-
-        if event.virtual_key == virtual_key::PACKET || event.virtual_key == 0 {
-            return codepoint_string(event.codepoint);
-        }
-
-        let key_repeat = self.last_virtual_key == Some(event.virtual_key);
-        self.last_virtual_key = Some(event.virtual_key);
-        if key_repeat
-            && (is_modifier_key(event.virtual_key) || !self.get_input_mode(Mode::AutoRepeat))
-        {
-            return String::new();
-        }
-        if is_modifier_key(event.virtual_key) {
-            return String::new();
-        }
-
-        let ctrl = event.control_key_state & control_state::CTRL_PRESSED != 0;
-        let alt = event.control_key_state & control_state::ALT_PRESSED != 0;
-        let modifier = modifier_parameter(event.control_key_state);
-
-        if let Some(sequence) =
-            self.encode_special(event.virtual_key, event.control_key_state, modifier)
-        {
-            return sequence;
-        }
-
-        let mut codepoint = event.codepoint;
-        if codepoint == 0
-            && ctrl
-            && (u16::from(b'1')..=u16::from(b'Z')).contains(&event.virtual_key)
-        {
-            codepoint = u32::from(event.virtual_key);
-        }
-        if codepoint == 0 {
-            return String::new();
-        }
-        if ctrl {
-            codepoint = make_ctrl_char(codepoint);
-        }
-
-        let mut output = String::new();
-        if alt && self.get_input_mode(Mode::Ansi) {
-            output.push(ESC);
-        }
-        output.push_str(&codepoint_string(codepoint));
-        output
+    /// Translates one key event with an injected keyboard-layout mapper.
+    ///
+    /// This is the platform seam for the future Windows `ToUnicodeEx` adapter and
+    /// for deterministic layout fixtures in Rust-native tests.
+    #[must_use]
+    pub fn handle_key_with_mapper<M: KeyboardMapper>(
+        &mut self,
+        event: KeyEvent,
+        mapper: &M,
+    ) -> String {
+        keyboard::handle_key(self, event, mapper)
     }
 
     fn set_mode(&mut self, mode: Mode, enabled: bool) {
@@ -381,185 +362,6 @@ impl TerminalInput {
             key.repeat_count
         )
     }
-
-    fn encode_special(
-        &self,
-        virtual_key: u16,
-        control_key_state: u32,
-        modifier: u8,
-    ) -> Option<String> {
-        let shift = control_key_state & control_state::SHIFT_PRESSED != 0;
-        let ctrl = control_key_state & control_state::CTRL_PRESSED != 0;
-        let alt = control_key_state & control_state::ALT_PRESSED != 0;
-        let enhanced = control_key_state & control_state::ENHANCED_KEY != 0;
-        let ansi = self.get_input_mode(Mode::Ansi);
-
-        match virtual_key {
-            virtual_key::BACK => {
-                let backarrow = self.get_input_mode(Mode::BackarrowKey);
-                let character = if ctrl == backarrow { '\u{7f}' } else { '\u{8}' };
-                Some(with_alt_prefix(character.to_string(), alt && ansi))
-            }
-            virtual_key::TAB => {
-                let sequence = if shift {
-                    format!("{}Z", self.csi_prefix())
-                } else {
-                    "\t".to_string()
-                };
-                Some(with_alt_prefix(sequence, alt && ansi))
-            }
-            virtual_key::RETURN => {
-                let sequence = if self.get_input_mode(Mode::Keypad) && enhanced {
-                    if ansi {
-                        format!("{}M", self.ss3_prefix())
-                    } else {
-                        format!("{ESC}?M")
-                    }
-                } else if ctrl {
-                    "\n".to_string()
-                } else if self.get_input_mode(Mode::LineFeed) {
-                    "\r\n".to_string()
-                } else {
-                    "\r".to_string()
-                };
-                Some(with_alt_prefix(sequence, alt && ansi))
-            }
-            virtual_key::PAUSE => Some("\u{1a}".to_string()),
-            virtual_key::CANCEL => Some("\u{3}".to_string()),
-            virtual_key::F1..=virtual_key::F4 => {
-                Some(self.function_key_f1_f4(virtual_key, modifier, ansi))
-            }
-            virtual_key::F5..=virtual_key::F20 => {
-                Some(self.function_key_f5_f20(virtual_key, modifier, ansi))
-            }
-            virtual_key::LEFT | virtual_key::UP | virtual_key::RIGHT | virtual_key::DOWN => {
-                Some(self.cursor_key(virtual_key, modifier, ansi))
-            }
-            virtual_key::CLEAR | virtual_key::HOME | virtual_key::END => {
-                Some(self.navigation_key(virtual_key, modifier, ansi))
-            }
-            virtual_key::INSERT | virtual_key::DELETE => {
-                if ansi {
-                    let number = 2 + (virtual_key - virtual_key::INSERT);
-                    Some(self.csi_numeric(number, modifier, '~'))
-                } else {
-                    Some(String::new())
-                }
-            }
-            virtual_key::PRIOR | virtual_key::NEXT => {
-                if ansi {
-                    let number = 5 + (virtual_key - virtual_key::PRIOR);
-                    Some(self.csi_numeric(number, modifier, '~'))
-                } else {
-                    Some(String::new())
-                }
-            }
-            virtual_key::NUMPAD0..=virtual_key::NUMPAD9 if self.get_input_mode(Mode::Keypad) => {
-                let final_character =
-                    char::from_u32(u32::from(b'p') + u32::from(virtual_key - virtual_key::NUMPAD0))
-                        .expect("ASCII keypad final");
-                Some(if ansi {
-                    format!("{}{final_character}", self.ss3_prefix())
-                } else {
-                    format!("{ESC}?{final_character}")
-                })
-            }
-            virtual_key::MULTIPLY..=virtual_key::DIVIDE if self.get_input_mode(Mode::Keypad) => {
-                let final_character = char::from_u32(
-                    u32::from(b'j') + u32::from(virtual_key - virtual_key::MULTIPLY),
-                )
-                .expect("ASCII keypad operator final");
-                Some(if ansi {
-                    format!("{}{final_character}", self.ss3_prefix())
-                } else {
-                    format!("{ESC}?{final_character}")
-                })
-            }
-            _ => None,
-        }
-    }
-
-    fn function_key_f1_f4(&self, virtual_key: u16, modifier: u8, ansi: bool) -> String {
-        let final_character =
-            char::from_u32(u32::from(b'P') + u32::from(virtual_key - virtual_key::F1))
-                .expect("ASCII function-key final");
-        if !ansi {
-            return format!("{ESC}{final_character}");
-        }
-        if modifier == 0 {
-            format!("{}{final_character}", self.ss3_prefix())
-        } else {
-            self.csi_with_modifier(1, modifier, final_character)
-        }
-    }
-
-    fn function_key_f5_f20(&self, virtual_key: u16, modifier: u8, ansi: bool) -> String {
-        if !ansi {
-            return match virtual_key {
-                virtual_key::F11 => ESC.to_string(),
-                virtual_key::F12 => "\u{8}".to_string(),
-                virtual_key::F13 => "\n".to_string(),
-                _ => String::new(),
-            };
-        }
-        let number = FUNCTION_KEY_NUMBERS[usize::from(virtual_key - virtual_key::F5)];
-        self.csi_numeric(number, modifier, '~')
-    }
-
-    fn cursor_key(&self, virtual_key: u16, modifier: u8, ansi: bool) -> String {
-        let final_character = match virtual_key {
-            virtual_key::LEFT => 'D',
-            virtual_key::UP => 'A',
-            virtual_key::RIGHT => 'C',
-            virtual_key::DOWN => 'B',
-            _ => unreachable!("validated cursor key"),
-        };
-        if !ansi {
-            return format!("{ESC}{final_character}");
-        }
-        if modifier == 0 && self.get_input_mode(Mode::CursorKey) {
-            format!("{}{final_character}", self.ss3_prefix())
-        } else if modifier == 0 {
-            format!("{}{final_character}", self.csi_prefix())
-        } else {
-            self.csi_with_modifier(1, modifier, final_character)
-        }
-    }
-
-    fn navigation_key(&self, virtual_key: u16, modifier: u8, ansi: bool) -> String {
-        let final_character = match virtual_key {
-            virtual_key::CLEAR => 'E',
-            virtual_key::HOME => 'H',
-            virtual_key::END => 'F',
-            _ => unreachable!("validated navigation key"),
-        };
-        if !ansi {
-            return format!("{ESC}{final_character}");
-        }
-        if modifier == 0 && self.get_input_mode(Mode::CursorKey) {
-            format!("{}{final_character}", self.ss3_prefix())
-        } else if modifier == 0 {
-            format!("{}{final_character}", self.csi_prefix())
-        } else {
-            self.csi_with_modifier(1, modifier, final_character)
-        }
-    }
-
-    fn csi_numeric(&self, number: u16, modifier: u8, final_character: char) -> String {
-        if modifier == 0 {
-            format!("{}{number}{final_character}", self.csi_prefix())
-        } else {
-            self.csi_with_modifier(number, modifier, final_character)
-        }
-    }
-
-    fn csi_with_modifier(&self, number: u16, modifier: u8, final_character: char) -> String {
-        format!(
-            "{}{number};{}{final_character}",
-            self.csi_prefix(),
-            modifier + 1
-        )
-    }
 }
 
 const fn mode_bit(mode: Mode) -> u32 {
@@ -571,26 +373,6 @@ const fn is_tracking_mode(mode: Mode) -> bool {
         mode,
         Mode::DefaultMouseTracking | Mode::ButtonEventMouseTracking | Mode::AnyEventMouseTracking
     )
-}
-
-fn is_modifier_key(virtual_key: u16) -> bool {
-    (virtual_key::SHIFT..=virtual_key::MENU).contains(&virtual_key)
-        || (virtual_key::LSHIFT..=virtual_key::RMENU).contains(&virtual_key)
-}
-
-fn modifier_parameter(control_key_state: u32) -> u8 {
-    let shift = u8::from(control_key_state & control_state::SHIFT_PRESSED != 0);
-    let alt = u8::from(control_key_state & control_state::ALT_PRESSED != 0);
-    let ctrl = u8::from(control_key_state & control_state::CTRL_PRESSED != 0);
-    shift | (alt << 1) | (ctrl << 2)
-}
-
-fn with_alt_prefix(sequence: String, alt: bool) -> String {
-    if alt {
-        format!("{ESC}{sequence}")
-    } else {
-        sequence
-    }
 }
 
 fn codepoint_string(codepoint: u32) -> String {

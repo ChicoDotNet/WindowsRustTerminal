@@ -24,7 +24,7 @@ pub trait KeyboardMapper {
     /// Character produced by the active layout with Ctrl/Alt removed.
     fn unmodified_key(&self, event: &KeyEvent) -> Option<u32>;
 
-    /// Kitty base key in the active layout (Ctrl/Alt/Shift/Caps removed, AltGr retained).
+    /// Kitty base key in the active layout (Ctrl/Alt/Shift/Caps removed, `AltGr` retained).
     fn kitty_base_key(&self, event: &KeyEvent, alt_gr: bool) -> Option<u32>;
 
     /// Kitty shifted key in the active layout.
@@ -51,7 +51,8 @@ impl KeyboardMapper for PortableKeyboardMapper {
         if alt_gr {
             valid_codepoint(event.codepoint).map(lowercase_ascii)
         } else {
-            ascii_base_key(event.virtual_key).or_else(|| valid_codepoint(event.codepoint).map(lowercase_ascii))
+            ascii_base_key(event.virtual_key)
+                .or_else(|| valid_codepoint(event.codepoint).map(lowercase_ascii))
         }
     }
 
@@ -68,15 +69,38 @@ impl KeyboardMapper for PortableKeyboardMapper {
     }
 }
 
+#[derive(Debug, Clone, Copy, Default)]
+struct Modifiers(u8);
+
+impl Modifiers {
+    const ALT_GR: u8 = 1 << 0;
+    const CTRL: u8 = 1 << 1;
+    const ALT: u8 = 1 << 2;
+    const SHIFT: u8 = 1 << 3;
+
+    const fn alt_gr(self) -> bool {
+        self.0 & Self::ALT_GR != 0
+    }
+
+    const fn ctrl(self) -> bool {
+        self.0 & Self::CTRL != 0
+    }
+
+    const fn alt(self) -> bool {
+        self.0 & Self::ALT != 0
+    }
+
+    const fn shift(self) -> bool {
+        self.0 & Self::SHIFT != 0
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct SanitizedKeyEvent {
     raw: KeyEvent,
     codepoint: u32,
     key_repeat: bool,
-    alt_gr: bool,
-    ctrl: bool,
-    alt: bool,
-    shift: bool,
+    modifiers: Modifiers,
 }
 
 #[derive(Debug, Default)]
@@ -116,13 +140,15 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
         input.last_virtual_key = None;
     }
 
-    if key_repeat
-        && (is_modifier_key(event.virtual_key) || !input.get_input_mode(Mode::AutoRepeat))
+    if key_repeat && (is_modifier_key(event.virtual_key) || !input.get_input_mode(Mode::AutoRepeat))
     {
         return String::new();
     }
 
-    let all_keys = flag(input.kitty_flags, KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES);
+    let all_keys = flag(
+        input.kitty_flags,
+        KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES,
+    );
     if is_modifier_key(event.virtual_key) && !all_keys {
         return String::new();
     }
@@ -134,7 +160,10 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
         {
             return codepoint_string(event.codepoint);
         }
-        if !flag(input.kitty_flags, KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES) {
+        if !flag(
+            input.kitty_flags,
+            KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES,
+        ) {
             return String::new();
         }
         let regular_enter = event.virtual_key == virtual_key::RETURN
@@ -149,30 +178,30 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
     }
 
     let any_ctrl = event.control_key_state & control_state::CTRL_PRESSED != 0;
-    let both_ctrl = event.control_key_state & control_state::CTRL_PRESSED
-        == control_state::CTRL_PRESSED;
+    let both_ctrl =
+        event.control_key_state & control_state::CTRL_PRESSED == control_state::CTRL_PRESSED;
     let any_alt = event.control_key_state & control_state::ALT_PRESSED != 0;
-    let both_alt = event.control_key_state & control_state::ALT_PRESSED
-        == control_state::ALT_PRESSED;
+    let both_alt =
+        event.control_key_state & control_state::ALT_PRESSED == control_state::ALT_PRESSED;
     let alt_gr = any_alt && any_ctrl && event.codepoint > 0x20 && event.codepoint != 0x7f;
     let ctrl = both_ctrl || (any_ctrl && !alt_gr);
     let alt = both_alt || (any_alt && !alt_gr);
     let shift = event.control_key_state & control_state::SHIFT_PRESSED != 0;
 
+    let modifier_state = Modifiers(
+        u8::from(alt_gr) | (u8::from(ctrl) << 1) | (u8::from(alt) << 2) | (u8::from(shift) << 3),
+    );
     let key = SanitizedKeyEvent {
         raw: event,
         codepoint: event.codepoint,
         key_repeat,
-        alt_gr,
-        ctrl,
-        alt,
-        shift,
+        modifiers: modifier_state,
     };
 
-    if input.kitty_flags != 0 {
-        if let Some(sequence) = encode_kitty(input, &key, mapper) {
-            return sequence;
-        }
+    if input.kitty_flags != 0
+        && let Some(sequence) = encode_kitty(input, &key, mapper)
+    {
+        return sequence;
     }
 
     if !key.raw.key_down {
@@ -188,17 +217,20 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
 
 fn combine_surrogate(input: &mut TerminalInput, event: &mut KeyEvent) -> Option<String> {
     if (0xd800..=0xdbff).contains(&event.codepoint) {
-        input.leading_surrogate = Some(event.codepoint as u16);
+        let Ok(code_unit) = u16::try_from(event.codepoint) else {
+            return None;
+        };
+        input.leading_surrogate = Some(code_unit);
         return Some(String::new());
     }
 
-    if let Some(leading) = input.leading_surrogate.take() {
-        if (0xdc00..=0xdfff).contains(&event.codepoint) {
-            let trailing = event.codepoint as u16;
-            let high = u32::from(leading) - 0xd800;
-            let low = u32::from(trailing) - 0xdc00;
-            event.codepoint = 0x1_0000 + ((high << 10) | low);
-        }
+    if let Some(leading) = input.leading_surrogate.take()
+        && (0xdc00..=0xdfff).contains(&event.codepoint)
+        && let Ok(trailing) = u16::try_from(event.codepoint)
+    {
+        let high = u32::from(leading) - 0xd800;
+        let low = u32::from(trailing) - 0xdc00;
+        event.codepoint = 0x1_0000 + ((high << 10) | low);
     }
     None
 }
@@ -222,7 +254,10 @@ fn encode_kitty<M: KeyboardMapper>(
         input.kitty_flags,
         KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES,
     );
-    let report_events = flag(input.kitty_flags, KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES);
+    let report_events = flag(
+        input.kitty_flags,
+        KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES,
+    );
     let all_keys = flag(
         input.kitty_flags,
         KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES,
@@ -250,12 +285,11 @@ fn encode_kitty<M: KeyboardMapper>(
     if all_keys || disambiguated_text || release {
         if is_kitty_functional(functional) {
             enc.unicode_key = functional;
-        } else if functional == KITTY_TEXT_SENTINEL {
-            if let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.alt_gr) {
-                if codepoint < INVALID_CODEPOINT {
-                    enc.unicode_key = codepoint;
-                }
-            }
+        } else if functional == KITTY_TEXT_SENTINEL
+            && let Some(codepoint) = mapper.kitty_base_key(&key.raw, key.modifiers.alt_gr())
+            && codepoint < INVALID_CODEPOINT
+        {
+            enc.unicode_key = codepoint;
         }
 
         if flag(
@@ -273,19 +307,19 @@ fn encode_kitty<M: KeyboardMapper>(
         KittyKeyboardProtocolFlags::REPORT_ALTERNATE_KEYS,
     ) && enc.unicode_key != 0
     {
-        if functional == KITTY_TEXT_SENTINEL && key.shift {
-            if let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.alt_gr) {
-                if codepoint < INVALID_CODEPOINT {
-                    enc.shifted_key = codepoint;
-                }
-            }
+        if functional == KITTY_TEXT_SENTINEL
+            && key.modifiers.shift()
+            && let Some(codepoint) = mapper.kitty_shifted_key(&key.raw, key.modifiers.alt_gr())
+            && codepoint < INVALID_CODEPOINT
+        {
+            enc.shifted_key = codepoint;
         }
-        if key.raw.scan_code != 0 {
-            if let Some(codepoint) = mapper.kitty_us_base_key(&key.raw) {
-                if codepoint < INVALID_CODEPOINT && codepoint != enc.unicode_key {
-                    enc.base_layout_key = codepoint;
-                }
-            }
+        if key.raw.scan_code != 0
+            && let Some(codepoint) = mapper.kitty_us_base_key(&key.raw)
+            && codepoint < INVALID_CODEPOINT
+            && codepoint != enc.unicode_key
+        {
+            enc.base_layout_key = codepoint;
         }
     }
 
@@ -333,6 +367,10 @@ fn format_kitty(input: &TerminalInput, enc: &KittyEncoding) -> String {
     output
 }
 
+#[expect(
+    clippy::too_many_lines,
+    reason = "VT key dispatch stays contiguous for direct Microsoft parity review"
+)]
 fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Option<String> {
     let kitty_regular = input.kitty_flags
         & (KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES
@@ -340,7 +378,10 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
             | KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES)
         != 0;
     let modifier = modifier_bits(key);
-    let event_type = if flag(input.kitty_flags, KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES) {
+    let event_type = if flag(
+        input.kitty_flags,
+        KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES,
+    ) {
         if !key.raw.key_down {
             3
         } else if key.key_repeat {
@@ -356,16 +397,23 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
     match key.raw.virtual_key {
         virtual_key::BACK => {
             let backarrow = input.get_input_mode(Mode::BackarrowKey);
-            let character = if key.ctrl == backarrow { '\u{7f}' } else { '\u{8}' };
-            Some(alt_prefix(character.to_string(), key.alt && ansi))
+            let character = if key.modifiers.ctrl() == backarrow {
+                '\u{7f}'
+            } else {
+                '\u{8}'
+            };
+            Some(alt_prefix(
+                character.to_string(),
+                key.modifiers.alt() && ansi,
+            ))
         }
         virtual_key::TAB => {
-            let sequence = if key.shift {
+            let sequence = if key.modifiers.shift() {
                 format!("{}Z", input.csi_prefix())
             } else {
                 "\t".to_string()
             };
-            Some(alt_prefix(sequence, key.alt && ansi))
+            Some(alt_prefix(sequence, key.modifiers.alt() && ansi))
         }
         virtual_key::RETURN => {
             let enhanced = key.raw.control_key_state & control_state::ENHANCED_KEY != 0;
@@ -375,14 +423,14 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
                 } else {
                     format!("{ESC}?M")
                 }
-            } else if key.ctrl {
+            } else if key.modifiers.ctrl() {
                 "\n".to_string()
             } else if input.get_input_mode(Mode::LineFeed) {
                 "\r\n".to_string()
             } else {
                 "\r".to_string()
             };
-            Some(alt_prefix(sequence, key.alt && ansi))
+            Some(alt_prefix(sequence, key.modifiers.alt() && ansi))
         }
         virtual_key::PAUSE => Some("\u{1a}".to_string()),
         virtual_key::CANCEL => Some("\u{3}".to_string()),
@@ -400,7 +448,13 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
                 return Some(format_csi(input, Some(13), modifier, event_type, '~'));
             }
             if kitty_regular || modifier != 0 || event_type != 0 {
-                Some(format_csi(input, None, modifier, event_type, final_character))
+                Some(format_csi(
+                    input,
+                    None,
+                    modifier,
+                    event_type,
+                    final_character,
+                ))
             } else {
                 Some(format!("{}{final_character}", input.ss3_prefix()))
             }
@@ -414,7 +468,8 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
                     _ => String::new(),
                 });
             }
-            let number = super::FUNCTION_KEY_NUMBERS[usize::from(key.raw.virtual_key - virtual_key::F5)];
+            let number =
+                super::FUNCTION_KEY_NUMBERS[usize::from(key.raw.virtual_key - virtual_key::F5)];
             Some(format_csi(input, Some(number), modifier, event_type, '~'))
         }
         virtual_key::LEFT | virtual_key::UP | virtual_key::RIGHT | virtual_key::DOWN => {
@@ -433,12 +488,16 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
                 && input.get_input_mode(Mode::CursorKey)
             {
                 Some(format!("{}{final_character}", input.ss3_prefix()))
-            } else if modifier == 0 && event_type == 0 && !kitty_regular {
-                Some(format!("{}{final_character}", input.csi_prefix()))
             } else if modifier == 0 && event_type == 0 {
                 Some(format!("{}{final_character}", input.csi_prefix()))
             } else {
-                Some(format_csi(input, None, modifier, event_type, final_character))
+                Some(format_csi(
+                    input,
+                    None,
+                    modifier,
+                    event_type,
+                    final_character,
+                ))
             }
         }
         virtual_key::CLEAR | virtual_key::HOME | virtual_key::END => {
@@ -459,7 +518,13 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
             } else if modifier == 0 && event_type == 0 {
                 Some(format!("{}{final_character}", input.csi_prefix()))
             } else {
-                Some(format_csi(input, None, modifier, event_type, final_character))
+                Some(format_csi(
+                    input,
+                    None,
+                    modifier,
+                    event_type,
+                    final_character,
+                ))
             }
         }
         virtual_key::INSERT | virtual_key::DELETE if ansi => {
@@ -471,7 +536,10 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
             Some(format_csi(input, Some(number), modifier, event_type, '~'))
         }
         virtual_key::NUMPAD0..=virtual_key::NUMPAD9 if input.get_input_mode(Mode::Keypad) => {
-            let final_character = char::from(b'p' + (key.raw.virtual_key - virtual_key::NUMPAD0) as u8);
+            let final_character = char::from_u32(
+                u32::from(b'p') + u32::from(key.raw.virtual_key - virtual_key::NUMPAD0),
+            )
+            .unwrap_or('p');
             Some(if ansi {
                 format!("{}{final_character}", input.ss3_prefix())
             } else {
@@ -479,7 +547,10 @@ fn encode_regular_special(input: &TerminalInput, key: &SanitizedKeyEvent) -> Opt
             })
         }
         virtual_key::MULTIPLY..=virtual_key::DIVIDE if input.get_input_mode(Mode::Keypad) => {
-            let final_character = char::from(b'j' + (key.raw.virtual_key - virtual_key::MULTIPLY) as u8);
+            let final_character = char::from_u32(
+                u32::from(b'j') + u32::from(key.raw.virtual_key - virtual_key::MULTIPLY),
+            )
+            .unwrap_or('j');
             Some(if ansi {
                 format!("{}{final_character}", input.ss3_prefix())
             } else {
@@ -524,10 +595,10 @@ fn encode_fallback<M: KeyboardMapper>(
         return String::new();
     }
 
-    let ctrl_space = key.ctrl && key.raw.virtual_key == virtual_key::SPACE;
+    let ctrl_space = key.modifiers.ctrl() && key.raw.virtual_key == virtual_key::SPACE;
     let mut codepoint = if key.codepoint != 0 && !ctrl_space {
         key.codepoint
-    } else if key.alt || key.ctrl {
+    } else if key.modifiers.alt() || key.modifiers.ctrl() {
         match mapper.unmodified_key(&key.raw) {
             Some(value) if value < INVALID_CODEPOINT => value,
             _ => return String::new(),
@@ -536,7 +607,7 @@ fn encode_fallback<M: KeyboardMapper>(
         return String::new();
     };
 
-    if key.ctrl {
+    if key.modifiers.ctrl() {
         codepoint = make_ctrl_char(codepoint);
         if codepoint >= u32::from(b' ')
             && (u16::from(b'2')..=u16::from(b'Z')).contains(&key.raw.virtual_key)
@@ -546,7 +617,7 @@ fn encode_fallback<M: KeyboardMapper>(
     }
 
     let mut output = String::new();
-    if key.alt && input.get_input_mode(Mode::Ansi) {
+    if key.modifiers.alt() && input.get_input_mode(Mode::Ansi) {
         output.push(ESC);
     }
     output.push_str(&codepoint_string(codepoint));
@@ -569,15 +640,30 @@ fn kitty_functional_key(mut virtual_key: u16, scan_code: u16, enhanced: bool) ->
         | virtual_key::END
         | virtual_key::INSERT
         | virtual_key::DELETE
-            if enhanced => return KITTY_LEGACY_SENTINEL,
+            if enhanced =>
+        {
+            return KITTY_LEGACY_SENTINEL;
+        }
         virtual_key::SHIFT => {
-            virtual_key = if scan_code == 0x36 { virtual_key::RSHIFT } else { virtual_key::LSHIFT };
+            virtual_key = if scan_code == 0x36 {
+                virtual_key::RSHIFT
+            } else {
+                virtual_key::LSHIFT
+            };
         }
         virtual_key::CONTROL => {
-            virtual_key = if enhanced { virtual_key::RCONTROL } else { virtual_key::LCONTROL };
+            virtual_key = if enhanced {
+                virtual_key::RCONTROL
+            } else {
+                virtual_key::LCONTROL
+            };
         }
         virtual_key::MENU => {
-            virtual_key = if enhanced { virtual_key::RMENU } else { virtual_key::LMENU };
+            virtual_key = if enhanced {
+                virtual_key::RMENU
+            } else {
+                virtual_key::LMENU
+            };
         }
         _ => {}
     }
@@ -591,7 +677,9 @@ fn kitty_functional_key(mut virtual_key: u16, scan_code: u16, enhanced: bool) ->
         virtual_key::APPS => 57_363,
         virtual_key::F1..=virtual_key::F12 => KITTY_LEGACY_SENTINEL,
         virtual_key::F13..=virtual_key::F24 => 57_376 + u32::from(virtual_key - virtual_key::F13),
-        virtual_key::NUMPAD0..=virtual_key::NUMPAD9 => 57_399 + u32::from(virtual_key - virtual_key::NUMPAD0),
+        virtual_key::NUMPAD0..=virtual_key::NUMPAD9 => {
+            57_399 + u32::from(virtual_key - virtual_key::NUMPAD0)
+        }
         virtual_key::DECIMAL => 57_409,
         virtual_key::DIVIDE => 57_410,
         virtual_key::MULTIPLY => 57_411,
@@ -629,7 +717,9 @@ fn kitty_functional_key(mut virtual_key: u16, scan_code: u16, enhanced: bool) ->
 }
 
 fn modifier_bits(key: &SanitizedKeyEvent) -> u32 {
-    u32::from(key.shift) | (u32::from(key.alt) << 1) | (u32::from(key.ctrl) << 2)
+    u32::from(key.modifiers.shift())
+        | (u32::from(key.modifiers.alt()) << 1)
+        | (u32::from(key.modifiers.ctrl()) << 2)
 }
 
 fn is_kitty_functional(codepoint: u32) -> bool {
@@ -639,8 +729,7 @@ fn is_kitty_functional(codepoint: u32) -> bool {
 }
 
 fn is_kitty_valid_text(codepoint: u32) -> bool {
-    (codepoint > 0x1f && codepoint < 0x7f)
-        || (codepoint > 0x9f && codepoint < INVALID_CODEPOINT)
+    (codepoint > 0x1f && codepoint < 0x7f) || (codepoint > 0x9f && codepoint < INVALID_CODEPOINT)
 }
 
 fn is_modifier_key(key: u16) -> bool {
@@ -748,29 +837,83 @@ mod tests {
     #[test]
     fn disambiguation_and_altgr_match_microsoft_cases() {
         let mut value = input(KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES);
-        assert_eq!(value.handle_key_with_mapper(event(virtual_key::ESCAPE, 1, 0, 0), &AzertyFixture), "\u{1b}[27u");
+        assert_eq!(
+            value.handle_key_with_mapper(event(virtual_key::ESCAPE, 1, 0, 0), &AzertyFixture),
+            "\u{1b}[27u"
+        );
 
         let mut value = input(KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, 0, control_state::LEFT_CTRL_PRESSED), &AzertyFixture), "\u{1b}[97;5u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(u16::from(b'A'), 0x10, 0, control_state::LEFT_CTRL_PRESSED),
+                &AzertyFixture
+            ),
+            "\u{1b}[97;5u"
+        );
 
         let mut value = input(KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, u32::from('æ'), control_state::LEFT_CTRL_PRESSED | control_state::LEFT_ALT_PRESSED), &AzertyFixture), "æ");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(
+                    u16::from(b'A'),
+                    0x10,
+                    u32::from('æ'),
+                    control_state::LEFT_CTRL_PRESSED | control_state::LEFT_ALT_PRESSED
+                ),
+                &AzertyFixture
+            ),
+            "æ"
+        );
     }
 
     #[test]
     fn all_keys_modifiers_locks_and_associated_text_match_microsoft() {
         let k = KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
         let mut value = input(k);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, u32::from(b'a'), 0), &AzertyFixture), "\u{1b}[97u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(u16::from(b'A'), 0x10, u32::from(b'a'), 0),
+                &AzertyFixture
+            ),
+            "\u{1b}[97u"
+        );
 
         let mut value = input(k);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, u32::from(b'A'), control_state::SHIFT_PRESSED), &AzertyFixture), "\u{1b}[97;2u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(
+                    u16::from(b'A'),
+                    0x10,
+                    u32::from(b'A'),
+                    control_state::SHIFT_PRESSED
+                ),
+                &AzertyFixture
+            ),
+            "\u{1b}[97;2u"
+        );
 
         let mut value = input(k);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, u32::from(b'A'), control_state::CAPSLOCK_ON), &AzertyFixture), "\u{1b}[97;65u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(
+                    u16::from(b'A'),
+                    0x10,
+                    u32::from(b'A'),
+                    control_state::CAPSLOCK_ON
+                ),
+                &AzertyFixture
+            ),
+            "\u{1b}[97;65u"
+        );
 
         let mut value = input(k | KittyKeyboardProtocolFlags::REPORT_ASSOCIATED_TEXT);
-        assert_eq!(value.handle_key_with_mapper(event(u16::from(b'A'), 0x10, u32::from(b'a'), 0), &AzertyFixture), "\u{1b}[97;;97u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(u16::from(b'A'), 0x10, u32::from(b'a'), 0),
+                &AzertyFixture
+            ),
+            "\u{1b}[97;;97u"
+        );
     }
 
     #[test]
@@ -780,7 +923,12 @@ mod tests {
         let mut value = input(flags);
         assert_eq!(
             value.handle_key_with_mapper(
-                event(u16::from(b'A'), 0x10, u32::from(b'A'), control_state::SHIFT_PRESSED),
+                event(
+                    u16::from(b'A'),
+                    0x10,
+                    u32::from(b'A'),
+                    control_state::SHIFT_PRESSED
+                ),
                 &AzertyFixture,
             ),
             "\u{1b}[97:65:113;2u"
@@ -791,20 +939,38 @@ mod tests {
     fn keypad_pua_and_modifier_keys_match_microsoft() {
         let d = KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES;
         let mut value = input(d);
-        assert_eq!(value.handle_key_with_mapper(event(virtual_key::NUMPAD0, 0x52, u32::from(b'0'), 0), &AzertyFixture), "\u{1b}[57399u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(virtual_key::NUMPAD0, 0x52, u32::from(b'0'), 0),
+                &AzertyFixture
+            ),
+            "\u{1b}[57399u"
+        );
 
         let k = KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
         let mut value = input(k);
-        assert_eq!(value.handle_key_with_mapper(event(virtual_key::SHIFT, 0x2a, 0, control_state::SHIFT_PRESSED), &AzertyFixture), "\u{1b}[57441;2u");
+        assert_eq!(
+            value.handle_key_with_mapper(
+                event(virtual_key::SHIFT, 0x2a, 0, control_state::SHIFT_PRESSED),
+                &AzertyFixture
+            ),
+            "\u{1b}[57441;2u"
+        );
     }
 
     #[test]
     fn legacy_function_keys_use_kitty_csi_rules() {
         let d = KittyKeyboardProtocolFlags::DISAMBIGUATE_ESCAPE_CODES;
         let mut value = input(d);
-        assert_eq!(value.handle_key_with_mapper(event(virtual_key::F1, 0x3b, 0, 0), &AzertyFixture), "\u{1b}[P");
+        assert_eq!(
+            value.handle_key_with_mapper(event(virtual_key::F1, 0x3b, 0, 0), &AzertyFixture),
+            "\u{1b}[P"
+        );
         let mut value = input(d);
-        assert_eq!(value.handle_key_with_mapper(event(virtual_key::F1 + 2, 0x3d, 0, 0), &AzertyFixture), "\u{1b}[13~");
+        assert_eq!(
+            value.handle_key_with_mapper(event(virtual_key::F1 + 2, 0x3d, 0, 0), &AzertyFixture),
+            "\u{1b}[13~"
+        );
     }
 
     #[test]
@@ -813,11 +979,20 @@ mod tests {
             | KittyKeyboardProtocolFlags::REPORT_ALL_KEYS_AS_ESCAPE_CODES;
         let mut value = input(flags);
         let down = event(u16::from(b'A'), 0x10, u32::from(b'a'), 0);
-        assert_eq!(value.handle_key_with_mapper(down, &AzertyFixture), "\u{1b}[97u");
-        assert_eq!(value.handle_key_with_mapper(down, &AzertyFixture), "\u{1b}[97;1:2u");
+        assert_eq!(
+            value.handle_key_with_mapper(down, &AzertyFixture),
+            "\u{1b}[97u"
+        );
+        assert_eq!(
+            value.handle_key_with_mapper(down, &AzertyFixture),
+            "\u{1b}[97;1:2u"
+        );
         let mut up = down;
         up.key_down = false;
-        assert_eq!(value.handle_key_with_mapper(up, &AzertyFixture), "\u{1b}[97;1:3u");
+        assert_eq!(
+            value.handle_key_with_mapper(up, &AzertyFixture),
+            "\u{1b}[97;1:3u"
+        );
     }
 
     #[test]
@@ -827,7 +1002,10 @@ mod tests {
         let mut value = input(flags);
         let mut up = event(virtual_key::UP, 0x48, 0, control_state::ENHANCED_KEY);
         up.key_down = false;
-        assert_eq!(value.handle_key_with_mapper(up, &AzertyFixture), "\u{1b}[1;1:3A");
+        assert_eq!(
+            value.handle_key_with_mapper(up, &AzertyFixture),
+            "\u{1b}[1;1:3A"
+        );
     }
 
     #[test]
