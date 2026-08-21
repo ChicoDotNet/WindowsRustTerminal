@@ -38,7 +38,9 @@ jobs:
         with:
           ref: rust/r02-keyboard-layout-kitty
       - name: Integrate R02b module
-        run: python tools/rust/r02b-repair.py
+        run: |
+          python tools/rust/r02b-repair.py
+          python tools/rust/r02b-clippy.py
       - name: Format
         run: cargo fmt --all
       - name: Clippy
