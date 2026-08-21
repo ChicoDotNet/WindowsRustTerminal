@@ -29,6 +29,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  r03c-integrate:
+    name: R03c dispatch integration
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r03-sixel-core' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r03-sixel-core
+          fetch-depth: 0
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit validated R03c core
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-adapter/src/adapt_dispatch.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "Format and lint R03c adapter dispatch core"
+          git push origin HEAD:rust/r03-sixel-core
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
