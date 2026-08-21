@@ -29,50 +29,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  r03b-clippy-fix:
-    name: R03b Clippy integration
-    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r03-sixel-core' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: rust/r03-sixel-core
-          fetch-depth: 0
-      - name: Rename parser states
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path('rust/terminal-adapter/src/macro_buffer.rs')
-          text = path.read_text(encoding='utf-8')
-          replacements = {
-              'ExpectingSecondHexDigit': 'SecondHexDigit',
-              'ExpectingRepeatCount': 'RepeatCount',
-              'ExpectingHexDigit': 'HexDigit',
-              'ExpectingText': 'Text',
-          }
-          for old, new in replacements.items():
-              text = text.replace(old, new)
-          path.write_text(text, encoding='utf-8')
-          PY
-      - name: Format
-        run: cargo fmt --all
-      - name: Clippy
-        run: cargo clippy --workspace --all-targets --locked -- -D warnings
-      - name: Test
-        run: cargo test --workspace --all-targets --locked
-      - name: Commit validated Clippy fix
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add rust/terminal-adapter/src/macro_buffer.rs
-          git diff --cached --quiet && exit 0
-          git commit -m "Satisfy Clippy for R03b MacroBuffer"
-          git push origin HEAD:rust/r03-sixel-core
-
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
