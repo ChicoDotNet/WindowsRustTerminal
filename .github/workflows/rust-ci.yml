@@ -29,29 +29,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  r03b-format:
-    name: R03b rustfmt integration
-    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r03-sixel-core' && github.actor != 'github-actions[bot]'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: rust/r03-sixel-core
-          fetch-depth: 0
-      - name: Format MacroBuffer
-        run: cargo fmt --all
-      - name: Commit rustfmt output
-        shell: bash
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add rust/terminal-adapter/src/macro_buffer.rs
-          git diff --cached --quiet && exit 0
-          git commit -m "Format R03b MacroBuffer"
-          git push origin HEAD:rust/r03-sixel-core
-
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
