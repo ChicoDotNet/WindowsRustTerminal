@@ -64,6 +64,12 @@ pub struct Row {
 }
 
 impl Row {
+    /// Creates one initialized row filled with spaces and one attribute.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for zero-width rows or widths that cannot fit in the
+    /// 15-bit character-offset representation used by Windows Terminal.
     pub fn new(column_count: u16, fill_attribute: TextAttribute) -> Result<Self, RowError> {
         if column_count == 0 {
             return Err(RowError::EmptyRow);
@@ -135,7 +141,7 @@ impl Row {
 
     #[must_use]
     pub const fn readable_column_count(&self) -> u16 {
-        let padding = u16::from(self.double_byte_padded);
+        let padding = if self.double_byte_padded { 1 } else { 0 };
         if matches!(self.line_rendition, LineRendition::SingleWidth) {
             self.column_count.saturating_sub(padding)
         } else {
@@ -184,6 +190,12 @@ impl Row {
         self.adjust_forward(self.clamped_column_inclusive(column))
     }
 
+    /// Clears one cell while repairing a clipped wide glyph when necessary.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error only if the row's validated character-offset capacity
+    /// would be exceeded.
     pub fn clear_cell(&mut self, column: i32) -> Result<DirtyRange, RowError> {
         self.replace_glyph(column, 1, &[UNICODE_SPACE])
     }
@@ -191,6 +203,12 @@ impl Row {
     /// Replaces one one- or two-column glyph while preserving the C++ row's
     /// behavior when the write intersects an existing wide glyph: any clipped
     /// leading/trailing portion is replaced with spaces.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for invalid/empty glyphs, a two-column glyph that does
+    /// not fit, or a replacement whose UTF-16 storage exceeds the 15-bit offset
+    /// representation.
     pub fn replace_glyph(
         &mut self,
         column_begin: i32,
@@ -235,44 +253,50 @@ impl Row {
             return Err(RowError::CharacterStorageOverflow);
         }
 
+        let difference = i32::try_from(new_segment_len)
+            .map_err(|_| RowError::CharacterStorageOverflow)?
+            - i32::try_from(old_segment_len).map_err(|_| RowError::CharacterStorageOverflow)?;
+        let mut new_offsets = self.char_offsets.clone();
+        let mut character = old_char_begin;
+
+        for column in dirty_begin..column_begin {
+            new_offsets[usize::from(column)] = to_offset(character)?;
+            character += 1;
+        }
+
+        new_offsets[usize::from(column_begin)] = to_offset(character)?;
+        for column in column_begin + 1..requested_end {
+            new_offsets[usize::from(column)] = to_offset(character)? | CHAR_OFFSETS_TRAILER;
+        }
+        character += glyph.len();
+
+        for column in requested_end..dirty_end {
+            new_offsets[usize::from(column)] = to_offset(character)?;
+            character += 1;
+        }
+        new_offsets[usize::from(dirty_end)] = to_offset(character)?;
+
+        for column in dirty_end + 1..=self.column_count {
+            let raw = self.char_offsets[usize::from(column)];
+            let trailer = raw & CHAR_OFFSETS_TRAILER;
+            let old_offset = i32::from(raw & CHAR_OFFSETS_MASK);
+            let shifted = old_offset.saturating_add(difference);
+            let shifted = usize::try_from(shifted).map_err(|_| RowError::CharacterStorageOverflow)?;
+            new_offsets[usize::from(column)] = to_offset(shifted)? | trailer;
+        }
+
         let mut segment = Vec::with_capacity(new_segment_len);
         segment.resize(usize::from(leading_spaces), UNICODE_SPACE);
         segment.extend_from_slice(glyph);
         segment.resize(new_segment_len, UNICODE_SPACE);
 
-        let difference = isize::try_from(new_segment_len).unwrap_or(isize::MAX)
-            - isize::try_from(old_segment_len).unwrap_or(isize::MAX);
-        let old_offsets = self.char_offsets.clone();
         self.chars.splice(old_char_begin..old_char_end, segment);
+        self.char_offsets = new_offsets;
 
-        let mut character = old_char_begin;
-        for column in dirty_begin..column_begin {
-            self.char_offsets[usize::from(column)] = to_offset(character)?;
-            character += 1;
-        }
-
-        self.char_offsets[usize::from(column_begin)] = to_offset(character)?;
-        for column in column_begin + 1..requested_end {
-            self.char_offsets[usize::from(column)] = to_offset(character)? | CHAR_OFFSETS_TRAILER;
-        }
-        character += glyph.len();
-
-        for column in requested_end..dirty_end {
-            self.char_offsets[usize::from(column)] = to_offset(character)?;
-            character += 1;
-        }
-        self.char_offsets[usize::from(dirty_end)] = to_offset(character)?;
-
-        for column in dirty_end + 1..=self.column_count {
-            let raw = old_offsets[usize::from(column)];
-            let trailer = raw & CHAR_OFFSETS_TRAILER;
-            let old_offset = isize::try_from(raw & CHAR_OFFSETS_MASK).unwrap_or_default();
-            let shifted = old_offset.saturating_add(difference);
-            let shifted = usize::try_from(shifted).map_err(|_| RowError::CharacterStorageOverflow)?;
-            self.char_offsets[usize::from(column)] = to_offset(shifted)? | trailer;
-        }
-
-        debug_assert_eq!(self.char_offset_raw(self.column_count), self.chars.len() as u16);
+        debug_assert_eq!(
+            self.char_offset_raw(self.column_count),
+            u16::try_from(self.chars.len()).unwrap_or(u16::MAX)
+        );
         debug_assert!(!self.is_trailer(0));
         debug_assert!(!self.is_trailer(self.column_count));
 
@@ -317,8 +341,10 @@ impl Row {
         let columns = i32::from(self.readable_column_count());
         let begin = column_begin.clamp(0, columns);
         let end = column_end.clamp(begin, columns);
-        let char_begin = usize::from(self.char_offset_raw(begin as u16));
-        let char_end = usize::from(self.char_offset_raw(end as u16));
+        let begin = u16::try_from(begin).unwrap_or_default();
+        let end = u16::try_from(end).unwrap_or_default();
+        let char_begin = usize::from(self.char_offset_raw(begin));
+        let char_end = usize::from(self.char_offset_raw(end));
         &self.chars[char_begin..char_end]
     }
 
@@ -353,13 +379,17 @@ impl Row {
     #[must_use]
     pub fn char_offset(&self, column: i32) -> u16 {
         let column = column.clamp(0, i32::from(self.readable_column_count()));
-        self.char_offset_raw(column as u16)
+        self.char_offset_raw(u16::try_from(column).unwrap_or_default())
     }
 
     #[must_use]
     pub fn get_last_non_space_column(&self) -> u16 {
         let text = self.text();
-        let trailing_spaces = text.iter().rev().take_while(|&&unit| unit == UNICODE_SPACE).count();
+        let trailing_spaces = text
+            .iter()
+            .rev()
+            .take_while(|&&unit| unit == UNICODE_SPACE)
+            .count();
         self.readable_column_count()
             .saturating_sub(u16::try_from(trailing_spaces).unwrap_or(u16::MAX))
     }
@@ -377,8 +407,8 @@ impl Row {
     #[must_use]
     pub fn measure_right(&self) -> u16 {
         if self.wrap_forced {
-            self.column_count
-                .saturating_sub(u16::from(self.double_byte_padded))
+            let padding = if self.double_byte_padded { 1 } else { 0 };
+            self.column_count.saturating_sub(padding)
         } else {
             self.get_last_non_space_column()
         }
@@ -464,7 +494,8 @@ mod tests {
     #[test]
     fn wide_glyph_uses_trailer_column_and_shared_character_offset() {
         let mut row = row(6);
-        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00])
+            .expect("wide glyph fits");
 
         assert_eq!(row.glyph_at(2), &[0x4e00]);
         assert_eq!(row.glyph_at(3), &[0x4e00]);
@@ -478,8 +509,10 @@ mod tests {
     #[test]
     fn navigation_never_stops_on_wide_glyph_trailer() {
         let mut row = row(8);
-        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
-        row.replace_glyph(4, 2, &[0x4e01]).expect("wide glyph fits");
+        row.replace_glyph(2, 2, &[0x4e00])
+            .expect("wide glyph fits");
+        row.replace_glyph(4, 2, &[0x4e01])
+            .expect("wide glyph fits");
 
         assert_eq!(row.adjust_to_glyph_start(3), 2);
         assert_eq!(row.adjust_to_glyph_end(3), 4);
@@ -490,14 +523,20 @@ mod tests {
     #[test]
     fn overwriting_half_of_wide_glyph_pads_the_other_half_with_space() {
         let mut row = row(6);
-        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
-        let dirty = row.replace_glyph(2, 1, &[u16::from(b'A')]).expect("narrow fits");
+        row.replace_glyph(2, 2, &[0x4e00])
+            .expect("wide glyph fits");
+        let dirty = row
+            .replace_glyph(2, 1, &[u16::from(b'A')])
+            .expect("narrow fits");
         assert_eq!(dirty, DirtyRange { begin: 2, end: 4 });
         assert_eq!(row.glyph_at(2), &[u16::from(b'A')]);
         assert_eq!(row.glyph_at(3), &[UNICODE_SPACE]);
 
-        row.replace_glyph(2, 2, &[0x4e00]).expect("wide glyph fits");
-        let dirty = row.replace_glyph(3, 1, &[u16::from(b'B')]).expect("narrow fits");
+        row.replace_glyph(2, 2, &[0x4e00])
+            .expect("wide glyph fits");
+        let dirty = row
+            .replace_glyph(3, 1, &[u16::from(b'B')])
+            .expect("narrow fits");
         assert_eq!(dirty, DirtyRange { begin: 2, end: 4 });
         assert_eq!(row.glyph_at(2), &[UNICODE_SPACE]);
         assert_eq!(row.glyph_at(3), &[u16::from(b'B')]);
@@ -540,7 +579,8 @@ mod tests {
     #[test]
     fn wrap_measurement_honors_double_byte_padding() {
         let mut row = row(5);
-        row.replace_glyph(0, 1, &[u16::from(b'X')]).expect("glyph fits");
+        row.replace_glyph(0, 1, &[u16::from(b'X')])
+            .expect("glyph fits");
         assert_eq!(row.measure_right(), 1);
         row.set_wrap_forced(true);
         assert_eq!(row.measure_right(), 5);
@@ -551,6 +591,9 @@ mod tests {
     #[test]
     fn wide_glyph_cannot_start_in_last_column() {
         let mut row = row(4);
-        assert_eq!(row.replace_glyph(3, 2, &[0x4e00]), Err(RowError::GlyphDoesNotFit));
+        assert_eq!(
+            row.replace_glyph(3, 2, &[0x4e00]),
+            Err(RowError::GlyphDoesNotFit)
+        );
     }
 }
