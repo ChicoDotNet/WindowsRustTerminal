@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - "rust/r03-sixel-core"
+  workflow_dispatch:
 
 permissions:
   contents: write
