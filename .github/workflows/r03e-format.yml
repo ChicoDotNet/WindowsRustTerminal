@@ -21,69 +21,70 @@ jobs:
           ref: rust/r03-sixel-core
           fetch-depth: 0
       - name: Match C++ redraw ordering
-        shell: python
+        shell: bash
         run: |
+          python - <<'PY'
           from pathlib import Path
           path = Path('rust/terminal-adapter/src/page_manager.rs')
           text = path.read_text()
           old = '''        let was_visible = old_active_page == old_visible_page;
-        let size = PageSize::from(self.visible_geometry);
+          let size = PageSize::from(self.visible_geometry);
 
-        if make_visible && self.visible_page_number != new_page_number {
-'''
+          if make_visible && self.visible_page_number != new_page_number {
+          '''
           new = '''        let was_visible = old_active_page == old_visible_page;
-        let size = PageSize::from(self.visible_geometry);
-        let mut redraw_required = false;
+          let size = PageSize::from(self.visible_geometry);
+          let mut redraw_required = false;
 
-        if make_visible && self.visible_page_number != new_page_number {
-'''
+          if make_visible && self.visible_page_number != new_page_number {
+          '''
           if old not in text:
               raise SystemExit('redraw declaration anchor not found')
           text = text.replace(old, new, 1)
           old = '''            self.visible_page_number = new_page_number;
-            self.events.push(PageEvent::RedrawAll);
-        }
-'''
+              self.events.push(PageEvent::RedrawAll);
+          }
+          '''
           new = '''            self.visible_page_number = new_page_number;
-            redraw_required = true;
-        }
-'''
+              redraw_required = true;
+          }
+          '''
           if old not in text:
               raise SystemExit('redraw assignment anchor not found')
           text = text.replace(old, new, 1)
           old = '''        self.active_page_number = new_page_number;
-        let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
-'''
+          let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
+          '''
           new = '''        self.active_page_number = new_page_number;
-        if redraw_required {
-            self.events.push(PageEvent::RedrawAll);
-        }
-        let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
-'''
+          if redraw_required {
+              self.events.push(PageEvent::RedrawAll);
+          }
+          let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
+          '''
           if old not in text:
               raise SystemExit('redraw flush anchor not found')
           text = text.replace(old, new, 1)
-          # The recoupling test mirrors the C++ order: property transfer precedes redraw.
           old = '''                PageEvent::RedrawAll,
-                PageEvent::CopyProperties {
-                    from: PageBufferRef::Background(4),
-                    to: PageBufferRef::Visible,
-                    old_top: 0,
-                    new_top: 20,
-                },
-'''
+                  PageEvent::CopyProperties {
+                      from: PageBufferRef::Background(4),
+                      to: PageBufferRef::Visible,
+                      old_top: 0,
+                      new_top: 20,
+                  },
+          '''
           new = '''                PageEvent::CopyProperties {
-                    from: PageBufferRef::Background(4),
-                    to: PageBufferRef::Visible,
-                    old_top: 0,
-                    new_top: 20,
-                },
-                PageEvent::RedrawAll,
-'''
+                      from: PageBufferRef::Background(4),
+                      to: PageBufferRef::Visible,
+                      old_top: 0,
+                      new_top: 20,
+                  },
+                  PageEvent::RedrawAll,
+          '''
           if old not in text:
               raise SystemExit('recoupling expectation anchor not found')
           text = text.replace(old, new, 1)
           path.write_text(text)
+          PY
       - name: Format
         run: cargo fmt --all
       - name: Clippy
