@@ -204,6 +204,32 @@ impl Parser {
         parser
     }
 
+    /// Starts a new image while preserving terminal-scoped Sixel state.
+    ///
+    /// Windows Terminal keeps one `SixelParser` alive across DCS image
+    /// definitions, so palette changes survive into later images. The
+    /// per-image color-number map and raster state are rebuilt here.
+    pub fn restart_image(&mut self, config: Config) {
+        if self.conformance_level != config.conformance_level {
+            self.conformance_level = config.conformance_level;
+            self.cell_size = cell_size_for_level(config.conformance_level);
+            self.max_colors = max_colors_for_level(config.conformance_level);
+            self.color_table = initial_color_table();
+            if self.conformance_level < 3 {
+                self.display_mode = true;
+            }
+        }
+
+        self.state = CommandState::Normal;
+        self.parameters.clear();
+        self.canvas = config.canvas;
+        self.max_pixel_aspect_ratio = (config.canvas.height / SIXEL_ROWS).max(1);
+        self.available_height = config.canvas.height;
+        self.init_raster_attributes(config.macro_parameter, config.background);
+        self.init_color_map(config.background_color);
+        self.init_image_buffer();
+    }
+
     pub fn set_display_mode(&mut self, enabled: bool) {
         if self.conformance_level >= 3 {
             self.display_mode = enabled;

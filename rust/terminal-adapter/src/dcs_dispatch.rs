@@ -87,9 +87,14 @@ impl AdapterDispatch {
         };
         config.background_color = parameters.at(2);
 
-        let mut parser = SixelParser::new(config);
-        parser.set_display_mode(self.core.sixel_display_mode());
-        self.sixel_parser = Some(parser);
+        if let Some(parser) = self.sixel_parser.as_mut() {
+            parser.restart_image(config);
+            parser.set_display_mode(self.core.sixel_display_mode());
+        } else {
+            let mut parser = SixelParser::new(config);
+            parser.set_display_mode(self.core.sixel_display_mode());
+            self.sixel_parser = Some(parser);
+        }
         self.active_dcs = Some(DcsSessionKind::Sixel);
         true
     }
@@ -141,7 +146,6 @@ impl AdapterDispatch {
                 .margins()
                 .vertical()
                 .unwrap_or_else(|| MarginRange::new(0, geometry.height - 1));
-            let top = geometry.top.saturating_add(vertical.start);
             let bottom = geometry.top.saturating_add(vertical.end);
             let cursor = self.core.cursor();
 
@@ -154,12 +158,13 @@ impl AdapterDispatch {
 
             let width = horizontal.end.saturating_sub(cursor.x).saturating_add(1);
             let height = bottom.saturating_sub(cursor.y).saturating_add(1);
-            let _ = top; // retained to document the page-relative vertical margin origin
             (width, height)
         };
 
         let width = usize::try_from(width_cells).ok()?.checked_mul(cell.width)?;
-        let height = usize::try_from(height_cells).ok()?.checked_mul(cell.height)?;
+        let height = usize::try_from(height_cells)
+            .ok()?
+            .checked_mul(cell.height)?;
         if width == 0 || height == 0 {
             None
         } else {
@@ -252,7 +257,9 @@ mod tests {
     }
 
     fn machine() -> StateMachine<OutputStateMachineEngine<AdapterDispatch>> {
-        StateMachine::new(OutputStateMachineEngine::new(AdapterDispatch::new(geometry())))
+        StateMachine::new(OutputStateMachineEngine::new(AdapterDispatch::new(
+            geometry(),
+        )))
     }
 
     fn dispatch(
@@ -273,7 +280,12 @@ mod tests {
             .expect("Sixel parser was negotiated");
         assert_eq!(parser.image_width(), 1);
         assert!(!parser.pixel(0, 0).expect("first pixel exists").transparent);
-        assert!(!parser.pixel(0, 1).expect("aspect-ratio pixel exists").transparent);
+        assert!(
+            !parser
+                .pixel(0, 1)
+                .expect("aspect-ratio pixel exists")
+                .transparent
+        );
         assert!(parser.pixel(0, 2).expect("unset pixel exists").transparent);
     }
 
@@ -288,6 +300,22 @@ mod tests {
         assert!(parser.display_mode());
         assert_eq!(parser.pixel_aspect_ratio(), 1);
         assert_eq!(parser.image_height(), 6);
+    }
+
+    #[test]
+    fn sixel_palette_changes_persist_across_image_dcs_sessions() {
+        let mut machine = machine();
+        machine.process_str("\u{1b}P1;1q#1;2;100;0;0@\u{1b}\\");
+        machine.process_str("\u{1b}P1;1q#1@\u{1b}\\");
+
+        let parser = dispatch(&machine)
+            .sixel_parser()
+            .expect("Sixel parser was reused");
+        assert_eq!(
+            parser.palette_color(1),
+            Some(crate::sixel::Rgb::new(255, 0, 0))
+        );
+        assert_eq!(parser.pixel(0, 0).expect("pixel exists").color_index, 1);
     }
 
     #[test]
