@@ -269,8 +269,7 @@ impl ImageSlice {
                 let dst_end = dst_start
                     .checked_add(write_pixels)
                     .ok_or(ImageSliceError::ArithmeticOverflow)?;
-                self.pixels[dst_start..dst_end]
-                    .copy_from_slice(&source.pixels[src_start..src_end]);
+                self.pixels[dst_start..dst_end].copy_from_slice(&source.pixels[src_start..src_end]);
             }
         }
 
@@ -359,13 +358,19 @@ mod tests {
     #[test]
     fn copy_cells_projects_only_used_source_pixels() {
         let mut source = ImageSlice::new(CellSize::new(1, 1)).unwrap();
-        source.mutable_pixel_row(0, 2, 4).unwrap().copy_from_slice(&[red(2), red(3)]);
+        source
+            .mutable_pixel_row(0, 2, 4)
+            .unwrap()
+            .copy_from_slice(&[red(2), red(3)]);
         let mut destination = ImageSlice::new(CellSize::new(1, 1)).unwrap();
         destination.ensure_columns(5, 9).unwrap();
         destination.pixels.fill(red(8));
 
         assert!(!destination.copy_cells(&source, 1, 5, 9).unwrap());
-        assert_eq!(destination.pixels(), &[Pixel::default(), red(2), red(3), Pixel::default()]);
+        assert_eq!(
+            destination.pixels(),
+            &[Pixel::default(), red(2), red(3), Pixel::default()]
+        );
     }
 
     #[test]
@@ -386,7 +391,14 @@ mod tests {
         assert!(!slice.erase_cells(2, 3).unwrap());
         assert_eq!(
             slice.pixels(),
-            &[red(5), red(5), Pixel::default(), Pixel::default(), red(5), red(5)]
+            &[
+                red(5),
+                red(5),
+                Pixel::default(),
+                Pixel::default(),
+                red(5),
+                red(5)
+            ]
         );
     }
 
