@@ -4,6 +4,7 @@ backtab
 clippy
 condvar
 ffi
+nuls
 psobject
 rustup
 usize
