@@ -6,3 +6,4 @@
 #![forbid(unsafe_code)]
 
 pub mod control_key_states;
+pub mod selection;
