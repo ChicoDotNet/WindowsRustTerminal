@@ -14,3 +14,4 @@ pub mod row_writer;
 pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;
+pub mod width_detector;
