@@ -7,6 +7,8 @@
 use crate::row::{DbcsAttribute, Row, RowError};
 use crate::text_attribute::TextAttribute;
 
+type ReflowGlyph = (Vec<u16>, u16, TextAttribute);
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TextBufferError {
     EmptyWidth,
@@ -268,8 +270,7 @@ impl TextBuffer {
             return Ok(());
         }
 
-        type Glyph = (Vec<u16>, u16, TextAttribute);
-        let mut logical_lines: Vec<Vec<Glyph>> = Vec::new();
+        let mut logical_lines: Vec<Vec<ReflowGlyph>> = Vec::new();
         let mut line = Vec::new();
 
         for row in self.logical_rows() {
