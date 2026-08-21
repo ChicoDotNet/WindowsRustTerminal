@@ -1,4 +1,4 @@
-//! Safe equivalent of TerminalCore `ControlKeyStates`.
+//! Safe equivalent of `TerminalCore` `ControlKeyStates`.
 //!
 //! The bit values intentionally remain compatible with the NT console
 //! `KEY_EVENT_RECORD` control-key-state flags. The two Windows-key bits are the
