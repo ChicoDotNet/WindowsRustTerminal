@@ -146,8 +146,8 @@ impl SixelRowStore {
             .checked_add(cell_width - 1)
             .ok_or(SixelStoreError::ArithmeticOverflow)?
             / cell_width;
-        let covered_columns = i32::try_from(covered_columns)
-            .map_err(|_| SixelStoreError::ArithmeticOverflow)?;
+        let covered_columns =
+            i32::try_from(covered_columns).map_err(|_| SixelStoreError::ArithmeticOverflow)?;
         let column_end = origin_column
             .checked_add(covered_columns)
             .ok_or(SixelStoreError::ArithmeticOverflow)?;
@@ -193,9 +193,7 @@ impl SixelRowStore {
         if slot.is_none() {
             *slot = Some(ImageSlice::new(self.cell_size)?);
         }
-        let slice = slot
-            .as_mut()
-            .ok_or(SixelStoreError::ArithmeticOverflow)?;
+        let slice = slot.as_mut().ok_or(SixelStoreError::ArithmeticOverflow)?;
         slice.bump_revision();
         Ok(slice)
     }
