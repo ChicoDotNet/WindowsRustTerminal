@@ -234,9 +234,7 @@ pub fn expand_selection_anchors(
 
     match expansion {
         SelectionExpansion::Line => {
-            while start.y > 0
-                && buffer.row(start.y.saturating_sub(1)).was_wrap_forced()
-            {
+            while start.y > 0 && buffer.row(start.y.saturating_sub(1)).was_wrap_forced() {
                 start.y -= 1;
             }
             while end.y + 1 < i32::from(buffer.height()) && buffer.row(end.y).was_wrap_forced() {
@@ -359,8 +357,12 @@ fn next_glyph(buffer: &TextBuffer, point: BufferPoint) -> Option<BufferPoint> {
 #[must_use]
 fn clamp_point(buffer: &TextBuffer, point: BufferPoint) -> BufferPoint {
     BufferPoint::new(
-        point.x.clamp(0, i32::from(buffer.width()).saturating_sub(1)),
-        point.y.clamp(0, i32::from(buffer.height()).saturating_sub(1)),
+        point
+            .x
+            .clamp(0, i32::from(buffer.width()).saturating_sub(1)),
+        point
+            .y
+            .clamp(0, i32::from(buffer.height()).saturating_sub(1)),
     )
 }
 
@@ -508,7 +510,7 @@ mod tests {
             BufferPoint::new(5, 0),
             BufferPoint::new(5, 0),
             SelectionExpansion::Word,
-            b".",
+            &[u16::from(b'.')],
         );
 
         assert_eq!(expanded.0, BufferPoint::new(4, 0));
