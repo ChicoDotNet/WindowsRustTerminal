@@ -27,12 +27,26 @@ The third slice connects `terminal-core` directly to the safe R04 `terminal-buff
 
 Tests cover wrapped-line expansion, delimiter-aware word expansion, cross-wrap words, forward character Shift+Click, and target-side-only word expansion.
 
+## R05d — keyboard selection command mapping
+
+The fourth slice ports `Terminal::ConvertKeyEventToUpdateSelectionParams` as a safe, platform-neutral mapping layer.
+
+- Mark Mode permits selection movement without requiring Shift; outside Mark Mode, Shift is required.
+- Alt suppresses selection movement exactly as in TerminalCore.
+- Ctrl+Left/Right maps to word movement.
+- Ctrl+Home/End maps to whole-buffer movement.
+- Home/End and PageUp/PageDown map to viewport movement without Ctrl.
+- Arrow keys map to character movement without Ctrl.
+- The Windows virtual-key values used by this contract are represented locally, avoiding a Win32 dependency.
+
+Tests cover every mapped direction/expansion family, Alt suppression, Mark Mode behavior, unsupported keys, and the important rule that Ctrl does not fall through to non-Ctrl commands.
+
 ## Safety
 
 `terminal-core` uses `#![forbid(unsafe_code)]`.
 
-R05a–R05c add no product C++, no FFI, and no platform-specific dependency. The ordinary blocking gate is therefore workspace fmt, Clippy with `-D warnings`, Linux and Windows check/test, repository quality gates, and the TAEF harness self-test.
+R05a–R05d add no product C++, no FFI, and no platform-specific dependency. The ordinary blocking gate is therefore workspace fmt, Clippy with `-D warnings`, Linux and Windows check/test, repository quality gates, and the TAEF harness self-test.
 
 ## Next slices
 
-Continue upward through deterministic TerminalCore API behavior, reusing the R04 buffer, R02 input, and R03 adapter contracts. A C++ compatibility facade is deferred until a concrete boundary is required and then becomes subject to the relevant Microsoft C++ contract tests.
+Continue from command mapping into the deterministic `UpdateSelection` movement semantics, reusing the R04 buffer geometry and existing R05 endpoint state. A C++ compatibility facade is deferred until a concrete boundary is required and then becomes subject to the relevant Microsoft C++ contract tests.
