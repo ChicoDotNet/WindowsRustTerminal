@@ -105,11 +105,11 @@ impl PageStorage {
     ) -> Result<(), PageStorageError> {
         match event {
             PageEvent::CreateBackgroundBuffer { page, size } => {
-                let index = self.checked_background_index(page)?;
+                let index = Self::checked_background_index(page)?;
                 self.backgrounds[index] = Some(Self::new_buffer(size, fill_attribute)?);
             }
             PageEvent::ResizeBackgroundBuffer { page, new_size, .. } => {
-                let index = self.checked_background_index(page)?;
+                let index = Self::checked_background_index(page)?;
                 let buffer = self.backgrounds[index]
                     .as_mut()
                     .ok_or(PageStorageError::MissingBackground(page))?;
@@ -150,7 +150,7 @@ impl PageStorage {
         size: PageSize,
         fill_attribute: TextAttribute,
     ) -> Result<(), PageStorageError> {
-        let index = self.checked_background_index(page)?;
+        let index = Self::checked_background_index(page)?;
         if self.backgrounds[index].is_none() {
             self.backgrounds[index] = Some(Self::new_buffer(size, fill_attribute)?);
         }
@@ -171,7 +171,7 @@ impl PageStorage {
         visible_top: i32,
         size: PageSize,
     ) -> Result<(), PageStorageError> {
-        let index = self.checked_background_index(page)?;
+        let index = Self::checked_background_index(page)?;
         let background = self.backgrounds[index]
             .as_ref()
             .ok_or(PageStorageError::MissingBackground(page))?;
@@ -187,7 +187,7 @@ impl PageStorage {
         match reference {
             PageBufferRef::Visible => Ok(self.visible_properties),
             PageBufferRef::Background(page) => {
-                let index = self.checked_background_index(page)?;
+                let index = Self::checked_background_index(page)?;
                 Ok(self.background_properties[index])
             }
         }
@@ -201,7 +201,7 @@ impl PageStorage {
         match reference {
             PageBufferRef::Visible => self.visible_properties = properties,
             PageBufferRef::Background(page) => {
-                let index = self.checked_background_index(page)?;
+                let index = Self::checked_background_index(page)?;
                 self.background_properties[index] = properties;
             }
         }
@@ -225,7 +225,7 @@ impl PageStorage {
         Ok((width, height))
     }
 
-    fn checked_background_index(&self, page: i32) -> Result<usize, PageStorageError> {
+    fn checked_background_index(page: i32) -> Result<usize, PageStorageError> {
         Self::background_index(page).ok_or(PageStorageError::MissingBackground(page))
     }
 
