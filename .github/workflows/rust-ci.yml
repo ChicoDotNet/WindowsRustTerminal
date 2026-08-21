@@ -22,13 +22,42 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: rust-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
+  spelling-cleanup:
+    name: R02c spelling expectation cleanup
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r02-mouse-input' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r02-mouse-input
+      - name: Remove migrated expectations
+        shell: python
+        run: |
+          from pathlib import Path
+          path = Path('.github/actions/spelling/expect/expect.txt')
+          remove = {'ALTGR', 'AZERTY', 'PSobject'}
+          lines = path.read_text().splitlines()
+          found = remove.intersection(lines)
+          if found != remove:
+              raise SystemExit(f'missing expected spelling entries: {sorted(remove - found)}')
+          path.write_text('\n'.join(line for line in lines if line not in remove) + '\n')
+      - name: Commit spelling cleanup
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/actions/spelling/expect/expect.txt
+          git diff --cached --quiet && exit 0
+          git commit -m "chore(spelling): migrate Rust terms out of expect list"
+          git push origin HEAD:rust/r02-mouse-input
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
