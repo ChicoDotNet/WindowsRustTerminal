@@ -4,7 +4,7 @@
 //! through that storage as the viewport advances. This module keeps the same
 //! ownership model without pointer arithmetic or shared mutable aliases.
 
-use crate::row::{Row, RowError};
+use crate::row::{DbcsAttribute, Row, RowError};
 use crate::text_attribute::TextAttribute;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -212,8 +212,6 @@ impl TextBuffer {
     }
 
     /// Changes only the row count while preserving the oldest logical rows.
-    /// Width-changing reflow remains a separate R04 operation because it must
-    /// account for glyph widths and wrapped-line semantics.
     ///
     /// # Errors
     ///
@@ -241,6 +239,127 @@ impl TextBuffer {
 
         self.rows = rows;
         self.height = new_height;
+        self.first_row = 0;
+        Ok(())
+    }
+
+    /// Changes the width and reflows forced-wrap row chains into the new width.
+    ///
+    /// Unwrapped rows keep their logical line boundary. Forced-wrap rows are
+    /// concatenated with the following row before being wrapped again. Glyph
+    /// storage, wide-cell boundaries, and per-cell attributes are preserved.
+    /// The fixed buffer height is retained; excess reflow rows are clipped at
+    /// the logical bottom and newly unused rows are initialized with
+    /// `fill_attribute`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error for zero width or if a reconstructed row cannot satisfy
+    /// the validated `Row` storage invariants.
+    pub fn resize_width_reflow(
+        &mut self,
+        new_width: u16,
+        fill_attribute: TextAttribute,
+    ) -> Result<(), TextBufferError> {
+        if new_width == 0 {
+            return Err(TextBufferError::EmptyWidth);
+        }
+        if new_width == self.width {
+            return Ok(());
+        }
+
+        type Glyph = (Vec<u16>, u16, TextAttribute);
+        let mut logical_lines: Vec<Vec<Glyph>> = Vec::new();
+        let mut line = Vec::new();
+
+        for row in self.logical_rows() {
+            let column_limit = if row.was_wrap_forced() {
+                row.readable_column_count()
+            } else {
+                row.measure_right()
+            };
+            let mut column = 0;
+
+            while column < column_limit {
+                match row.dbcs_attribute_at(i32::from(column)) {
+                    DbcsAttribute::Trailing => {
+                        column = column.saturating_add(1);
+                    }
+                    DbcsAttribute::Single | DbcsAttribute::Leading => {
+                        let glyph_width = if matches!(
+                            row.dbcs_attribute_at(i32::from(column)),
+                            DbcsAttribute::Leading
+                        ) {
+                            2
+                        } else {
+                            1
+                        };
+                        line.push((
+                            row.glyph_at(i32::from(column)).to_vec(),
+                            glyph_width,
+                            row.attribute_at(i32::from(column)),
+                        ));
+                        column = column.saturating_add(glyph_width);
+                    }
+                }
+            }
+
+            if !row.was_wrap_forced() {
+                logical_lines.push(core::mem::take(&mut line));
+            }
+        }
+
+        if !line.is_empty() {
+            logical_lines.push(line);
+        }
+
+        let mut rows = Vec::with_capacity(usize::from(self.height));
+        for logical_line in logical_lines {
+            if rows.len() >= usize::from(self.height) {
+                break;
+            }
+
+            if logical_line.is_empty() {
+                rows.push(Row::new(new_width, fill_attribute)?);
+                continue;
+            }
+
+            let mut row = Row::new(new_width, fill_attribute)?;
+            let mut column = 0_u16;
+
+            for (glyph, original_width, attribute) in logical_line {
+                let glyph_width = original_width.min(new_width);
+                if column != 0 && column.saturating_add(glyph_width) > new_width {
+                    row.set_wrap_forced(true);
+                    rows.push(row);
+                    if rows.len() >= usize::from(self.height) {
+                        break;
+                    }
+                    row = Row::new(new_width, fill_attribute)?;
+                    column = 0;
+                }
+
+                row.replace_glyph(i32::from(column), glyph_width, &glyph)?;
+                row.replace_attributes(
+                    i32::from(column),
+                    i32::from(column.saturating_add(glyph_width)),
+                    attribute,
+                );
+                column = column.saturating_add(glyph_width);
+            }
+
+            if rows.len() < usize::from(self.height) {
+                row.set_wrap_forced(false);
+                rows.push(row);
+            }
+        }
+
+        while rows.len() < usize::from(self.height) {
+            rows.push(Row::new(new_width, fill_attribute)?);
+        }
+
+        self.rows = rows;
+        self.width = new_width;
         self.first_row = 0;
         Ok(())
     }
@@ -418,5 +537,57 @@ mod tests {
         assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'C')]);
         assert_eq!(buffer.row(2).glyph_at(0), &[u16::from(b' ')]);
         assert_eq!(buffer.row(3).glyph_at(0), &[u16::from(b' ')]);
+    }
+
+    #[test]
+    fn resize_width_reflows_forced_wrap_chain() {
+        let mut buffer = TextBuffer::new(4, 4, attribute()).unwrap();
+        for (x, glyph) in [(0, b'A'), (1, b'B'), (2, b'C'), (3, b'D')] {
+            buffer
+                .row_mut(0)
+                .replace_glyph(x, 1, &[u16::from(glyph)])
+                .unwrap();
+        }
+        buffer.row_mut(0).set_wrap_forced(true);
+        for (x, glyph) in [(0, b'E'), (1, b'F')] {
+            buffer
+                .row_mut(1)
+                .replace_glyph(x, 1, &[u16::from(glyph)])
+                .unwrap();
+        }
+
+        buffer.resize_width_reflow(3, attribute()).unwrap();
+
+        assert_eq!(buffer.width(), 3);
+        assert_eq!(buffer.row(0).text_range(0, 3), &[u16::from(b'A'), u16::from(b'B'), u16::from(b'C')]);
+        assert!(buffer.row(0).was_wrap_forced());
+        assert_eq!(buffer.row(1).text_range(0, 3), &[u16::from(b'D'), u16::from(b'E'), u16::from(b'F')]);
+        assert!(!buffer.row(1).was_wrap_forced());
+    }
+
+    #[test]
+    fn resize_width_preserves_wide_glyph_boundary() {
+        let mut buffer = TextBuffer::new(5, 3, attribute()).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(0, 1, &[u16::from(b'A')])
+            .unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(1, 2, &[0x4e00])
+            .unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(3, 1, &[u16::from(b'B')])
+            .unwrap();
+
+        buffer.resize_width_reflow(3, attribute()).unwrap();
+
+        assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'A')]);
+        assert_eq!(buffer.row(0).glyph_at(1), &[0x4e00]);
+        assert_eq!(buffer.row(0).dbcs_attribute_at(1), DbcsAttribute::Leading);
+        assert_eq!(buffer.row(0).dbcs_attribute_at(2), DbcsAttribute::Trailing);
+        assert!(buffer.row(0).was_wrap_forced());
+        assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'B')]);
     }
 }
