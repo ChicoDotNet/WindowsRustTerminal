@@ -41,7 +41,9 @@ jobs:
           ref: rust/r03-sixel-core
           fetch-depth: 0
       - name: Generate R03a product files
-        run: python tools/rust/R03Bootstrap.py
+        run: |
+          python tools/rust/R03Bootstrap.py
+          python tools/rust/R03Patch.py
       - name: Format
         run: cargo fmt --all
       - name: Clippy
