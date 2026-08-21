@@ -6,6 +6,7 @@
 #![forbid(unsafe_code)]
 
 pub mod geometry;
+pub mod image_slice;
 pub mod line_rendition;
 pub mod output_cell;
 pub mod rle;
