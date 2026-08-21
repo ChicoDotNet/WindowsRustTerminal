@@ -29,6 +29,35 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  r03-bootstrap:
+    name: R03a Sixel integration
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r03-sixel-core' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r03-sixel-core
+          fetch-depth: 0
+      - name: Generate R03a product files
+        run: python tools/rust/R03Bootstrap.py
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit validated R03a
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.toml Cargo.lock rust/terminal-adapter doc/rust-migration/r03-sixel.md
+          git diff --cached --quiet && exit 0
+          git commit -m "Add safe Rust Sixel parser core"
+          git push origin HEAD:rust/r03-sixel-core
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
