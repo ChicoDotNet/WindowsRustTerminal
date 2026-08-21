@@ -234,8 +234,8 @@ impl MacroBuffer {
                 }
             }
             ParseState::ExpectingSecondHexDigit => {
-                let success = self.decode_hex_digit(ch)
-                    && self.append_to_active_macro(self.decoded_char);
+                let success =
+                    self.decode_hex_digit(ch) && self.append_to_active_macro(self.decoded_char);
                 self.decoded_char = 0;
                 self.parse_state = ParseState::ExpectingHexDigit;
                 success
@@ -324,15 +324,9 @@ fn decimal_digit(ch: u16) -> Option<usize> {
 
 fn hex_digit(ch: u16) -> Option<u16> {
     match ch {
-        ch if (u16::from(b'0')..=u16::from(b'9')).contains(&ch) => {
-            Some(ch - u16::from(b'0'))
-        }
-        ch if (u16::from(b'A')..=u16::from(b'F')).contains(&ch) => {
-            Some(ch - u16::from(b'A') + 10)
-        }
-        ch if (u16::from(b'a')..=u16::from(b'f')).contains(&ch) => {
-            Some(ch - u16::from(b'a') + 10)
-        }
+        ch if (u16::from(b'0')..=u16::from(b'9')).contains(&ch) => Some(ch - u16::from(b'0')),
+        ch if (u16::from(b'A')..=u16::from(b'F')).contains(&ch) => Some(ch - u16::from(b'A') + 10),
+        ch if (u16::from(b'a')..=u16::from(b'f')).contains(&ch) => Some(ch - u16::from(b'a') + 10),
         _ => None,
     }
 }
@@ -365,7 +359,10 @@ mod tests {
     fn text_encoding_matches_microsoft_definition_contract() {
         let mut buffer = MacroBuffer::default();
         define_text(&mut buffer, 1, "Text Encoding");
-        assert_eq!(buffer.macro_contents(1), Some(units("Text Encoding").as_slice()));
+        assert_eq!(
+            buffer.macro_contents(1),
+            Some(units("Text Encoding").as_slice())
+        );
     }
 
     #[test]
@@ -373,8 +370,14 @@ mod tests {
         let mut buffer = MacroBuffer::default();
         define_hex(&mut buffer, 2, "486578204A4B4C4D4E4F");
         define_hex(&mut buffer, 3, "486578206a6b6c6d6e6f");
-        assert_eq!(buffer.macro_contents(2), Some(units("Hex JKLMNO").as_slice()));
-        assert_eq!(buffer.macro_contents(3), Some(units("Hex jklmno").as_slice()));
+        assert_eq!(
+            buffer.macro_contents(2),
+            Some(units("Hex JKLMNO").as_slice())
+        );
+        assert_eq!(
+            buffer.macro_contents(3),
+            Some(units("Hex jklmno").as_slice())
+        );
     }
 
     #[test]
@@ -395,21 +398,9 @@ mod tests {
     #[test]
     fn repeat_sequences_match_microsoft_three_zero_and_default_cases() {
         let mut buffer = MacroBuffer::default();
-        define_hex(
-            &mut buffer,
-            5,
-            "526570656174!3;206563686F;207468726565",
-        );
-        define_hex(
-            &mut buffer,
-            6,
-            "526570656174!0;206563686F;207A65726F",
-        );
-        define_hex(
-            &mut buffer,
-            7,
-            "526570656174!;206563686F;2064656661756C74",
-        );
+        define_hex(&mut buffer, 5, "526570656174!3;206563686F;207468726565");
+        define_hex(&mut buffer, 6, "526570656174!0;206563686F;207A65726F");
+        define_hex(&mut buffer, 7, "526570656174!;206563686F;2064656661756C74");
         assert_eq!(
             buffer.macro_contents(5),
             Some(units("Repeat echo echo echo three").as_slice())
@@ -441,7 +432,10 @@ mod tests {
         let mut buffer = MacroBuffer::default();
         define_text(&mut buffer, 9, "Replaced");
         assert!(buffer.init_parser(9, MacroDeleteControl::DeleteId, MacroEncoding::HexPair));
-        assert!(!feed(&mut buffer, "526570656174!3;206563;686F;207468726565"));
+        assert!(!feed(
+            &mut buffer,
+            "526570656174!3;206563;686F;207468726565"
+        ));
         assert_eq!(buffer.macro_contents(9), Some([].as_slice()));
     }
 
@@ -452,13 +446,19 @@ mod tests {
         for ch in units("A\u{7}B\u{8}C\tD\nE\u{b}F\u{c}G\rH") {
             assert!(buffer.parse_definition(ch));
         }
-        assert_eq!(buffer.macro_contents(10), Some(units("ABCDEFGH").as_slice()));
+        assert_eq!(
+            buffer.macro_contents(10),
+            Some(units("ABCDEFGH").as_slice())
+        );
 
         assert!(buffer.init_parser(11, MacroDeleteControl::DeleteId, MacroEncoding::HexPair));
         for ch in units("41\u{7}42\u{8}43\t44\n45\u{b}46\u{c}47\r48") {
             assert!(buffer.parse_definition(ch));
         }
-        assert_eq!(buffer.macro_contents(11), Some(units("ABCDEFGH").as_slice()));
+        assert_eq!(
+            buffer.macro_contents(11),
+            Some(units("ABCDEFGH").as_slice())
+        );
     }
 
     #[test]
@@ -476,14 +476,21 @@ mod tests {
         let mut buffer = MacroBuffer::default();
         assert!(buffer.init_parser(0, MacroDeleteControl::DeleteId, MacroEncoding::HexPair));
         assert!(feed(&mut buffer, "!999999999999999999999999999999999999;"));
-        assert_eq!(buffer.repeat_count, usize::try_from(MAX_PARAMETER_VALUE).unwrap());
+        assert_eq!(
+            buffer.repeat_count,
+            usize::try_from(MAX_PARAMETER_VALUE).unwrap()
+        );
     }
 
     #[test]
     fn invalid_macro_id_is_rejected_without_mutating_existing_data() {
         let mut buffer = MacroBuffer::default();
         define_text(&mut buffer, 1, "keep");
-        assert!(!buffer.init_parser(MACRO_COUNT, MacroDeleteControl::DeleteAll, MacroEncoding::Text));
+        assert!(!buffer.init_parser(
+            MACRO_COUNT,
+            MacroDeleteControl::DeleteAll,
+            MacroEncoding::Text
+        ));
         assert_eq!(buffer.macro_contents(1), Some(units("keep").as_slice()));
     }
 
@@ -504,7 +511,10 @@ mod tests {
         let mut buffer = MacroBuffer::default();
         define_text(&mut buffer, 0, "A");
         define_text(&mut buffer, 1, "B");
-        assert_eq!(buffer.calculate_checksum(), 0u16.wrapping_sub(65).wrapping_sub(66));
+        assert_eq!(
+            buffer.calculate_checksum(),
+            0u16.wrapping_sub(65).wrapping_sub(66)
+        );
     }
 
     #[test]
@@ -514,7 +524,9 @@ mod tests {
 
         let mut context = InvocationContext::default();
         for expected_depth in 1..=MAX_INVOCATION_DEPTH {
-            let prepared = buffer.prepare_invoke(0, context).expect("invocation should fit");
+            let prepared = buffer
+                .prepare_invoke(0, context)
+                .expect("invocation should fit");
             context = prepared.context();
             assert_eq!(context.depth(), expected_depth);
         }
@@ -529,7 +541,9 @@ mod tests {
             depth: 1,
             sequence_length: MAX_SPACE - 2,
         };
-        let prepared = buffer.prepare_invoke(0, context).expect("one unit still fits");
+        let prepared = buffer
+            .prepare_invoke(0, context)
+            .expect("one unit still fits");
         assert_eq!(prepared.context().sequence_length(), MAX_SPACE - 1);
         assert!(buffer.prepare_invoke(0, prepared.context()).is_none());
     }
@@ -575,6 +589,10 @@ mod tests {
             .prepare_invoke(63, InvocationContext::default())
             .expect("valid macro id");
         assert_eq!(prepared.sequence(), units("Macro 63"));
-        assert!(buffer.prepare_invoke(MACRO_COUNT, InvocationContext::default()).is_none());
+        assert!(
+            buffer
+                .prepare_invoke(MACRO_COUNT, InvocationContext::default())
+                .is_none()
+        );
     }
 }
