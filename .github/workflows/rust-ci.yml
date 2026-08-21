@@ -29,33 +29,41 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  spelling-smoke:
-    name: R03d spelling validation
+  quality:
+    name: fmt + clippy
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Check spelling
-        uses: check-spelling/check-spelling@cfb6f7e75bbfc89c71eaa30366d0c166f1bd9c8c
-        with:
-          checkout: true
-          check_file_names: 1
-          spell_check_this: microsoft/terminal@main
-          post_comment: 0
-          use_magic_file: 1
-          report-timing: 1
-          warnings: bad-regex,binary-file,deprecated-feature,ignored-expect-variant,large-file,limited-references,no-newline-at-eof,noisy-file,non-alpha-in-dictionary,token-is-substring,unexpected-line-ending,whitespace-in-dictionary,minified-file,unsupported-configuration,no-files-to-check,unclosed-block-ignore-begin,unclosed-block-ignore-end
-          allow-hunspell: false
-          load-config-from: |
-            {
-              "pr-base-keys": [
-                ""
-              ],
-              "pr-trusted-keys": [
-                "check_extra_dictionaries",
-                "dictionary_source_prefixes",
-                "extra_dictionaries",
-                ""
-              ],
-              "": []
-            }
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: rustup show
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+
+  test:
+    name: test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-2025-vs2026
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Toolchain
+        run: rustup show
+      - name: Check
+        run: cargo check --workspace --all-targets --locked
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+
+  contract-harness:
+    name: TAEF harness self-test
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate TAEF result parser
+        shell: pwsh
+        run: ./tools/rust/Test-TaefContract.ps1
