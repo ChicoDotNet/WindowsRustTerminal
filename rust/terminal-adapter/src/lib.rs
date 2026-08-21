@@ -5,5 +5,6 @@
 
 #![forbid(unsafe_code)]
 
+pub mod adapt_dispatch;
 pub mod macro_buffer;
 pub mod sixel;
