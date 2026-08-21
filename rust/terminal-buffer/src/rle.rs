@@ -11,10 +11,19 @@ pub struct Run<T> {
     pub length: usize,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Rle<T> {
     runs: Vec<Run<T>>,
     len: usize,
+}
+
+impl<T> Default for Rle<T> {
+    fn default() -> Self {
+        Self {
+            runs: Vec::new(),
+            len: 0,
+        }
+    }
 }
 
 impl<T: Clone + Eq> Rle<T> {
@@ -111,9 +120,16 @@ impl<T: Clone + Eq> Rle<T> {
         }
 
         self.runs = rebuilt;
-        debug_assert_eq!(self.runs.iter().map(|run| run.length).sum::<usize>(), self.len);
+        debug_assert_eq!(
+            self.runs.iter().map(|run| run.length).sum::<usize>(),
+            self.len
+        );
         debug_assert!(self.runs.iter().all(|run| run.length > 0));
-        debug_assert!(self.runs.windows(2).all(|pair| pair[0].value != pair[1].value));
+        debug_assert!(
+            self.runs
+                .windows(2)
+                .all(|pair| pair[0].value != pair[1].value)
+        );
     }
 
     pub fn fill(&mut self, value: T) {
@@ -164,7 +180,13 @@ mod tests {
 
         let values = Rle::new(5, 7u8);
         assert_eq!(values.len(), 5);
-        assert_eq!(values.runs(), &[Run { value: 7, length: 5 }]);
+        assert_eq!(
+            values.runs(),
+            &[Run {
+                value: 7,
+                length: 5
+            }]
+        );
         assert_eq!(values.expanded(), vec![7, 7, 7, 7, 7]);
     }
 
@@ -189,14 +211,29 @@ mod tests {
         assert_eq!(
             values.runs(),
             &[
-                Run { value: 1, length: 2 },
-                Run { value: 2, length: 4 },
-                Run { value: 1, length: 2 }
+                Run {
+                    value: 1,
+                    length: 2
+                },
+                Run {
+                    value: 2,
+                    length: 4
+                },
+                Run {
+                    value: 1,
+                    length: 2
+                }
             ]
         );
 
         values.replace(1, 7, 1);
-        assert_eq!(values.runs(), &[Run { value: 1, length: 8 }]);
+        assert_eq!(
+            values.runs(),
+            &[Run {
+                value: 1,
+                length: 8
+            }]
+        );
         assert_eq!(values.expanded(), vec![1; 8]);
     }
 
@@ -209,7 +246,10 @@ mod tests {
 
         assert_eq!(values.len(), 10);
         assert_eq!(values.expanded(), vec![0, 0, 1, 9, 9, 9, 9, 2, 0, 0]);
-        assert_eq!(values.runs().iter().map(|run| run.length).sum::<usize>(), 10);
+        assert_eq!(
+            values.runs().iter().map(|run| run.length).sum::<usize>(),
+            10
+        );
     }
 
     #[test]
@@ -229,7 +269,13 @@ mod tests {
         values.replace(1, 4, 2);
         values.fill(3);
 
-        assert_eq!(values.runs(), &[Run { value: 3, length: 5 }]);
+        assert_eq!(
+            values.runs(),
+            &[Run {
+                value: 3,
+                length: 5
+            }]
+        );
         assert_eq!(values.expanded(), vec![3; 5]);
     }
 }
