@@ -172,11 +172,7 @@ impl PageManager {
         if !self.main_buffer || self.active_page_number == self.visible_page_number {
             self.visible_geometry
         } else {
-            PageGeometry::new(
-                0,
-                self.visible_geometry.width,
-                self.visible_geometry.height,
-            )
+            PageGeometry::new(0, self.visible_geometry.width, self.visible_geometry.height)
         }
     }
 
@@ -338,11 +334,17 @@ mod tests {
         let transition = pages.move_to(9_999, false);
         assert_eq!(pages.active_page_number(), 6);
         assert_eq!(pages.visible_page_number(), 1);
-        assert_eq!(transition.adjust_point(Point { x: 7, y: 31 }), Point { x: 7, y: 11 });
+        assert_eq!(
+            transition.adjust_point(Point { x: 7, y: 31 }),
+            Point { x: 7, y: 11 }
+        );
 
         let transition = pages.move_to(-9_999, false);
         assert_eq!(pages.active_page_number(), 1);
-        assert_eq!(transition.adjust_point(Point { x: 7, y: 11 }), Point { x: 7, y: 31 });
+        assert_eq!(
+            transition.adjust_point(Point { x: 7, y: 11 }),
+            Point { x: 7, y: 31 }
+        );
     }
 
     #[test]
@@ -421,7 +423,10 @@ mod tests {
             .expect("background active page should become visible");
         assert_eq!(pages.active_page_number(), 4);
         assert_eq!(pages.visible_page_number(), 4);
-        assert_eq!(transition.adjust_point(background_cursor), Point { x: 30, y: 35 });
+        assert_eq!(
+            transition.adjust_point(background_cursor),
+            Point { x: 30, y: 35 }
+        );
         assert_eq!(
             pages.take_events(),
             vec![
@@ -469,11 +474,15 @@ mod tests {
 
         pages.set_visible_geometry(PageGeometry::new(40, 100, 30));
         pages.move_to(2, false);
-        assert!(pages.pending_events().contains(&PageEvent::ResizeBackgroundBuffer {
-            page: 2,
-            old_size: PageSize::new(80, 24),
-            new_size: PageSize::new(100, 30),
-        }));
+        assert!(
+            pages
+                .pending_events()
+                .contains(&PageEvent::ResizeBackgroundBuffer {
+                    page: 2,
+                    old_size: PageSize::new(80, 24),
+                    new_size: PageSize::new(100, 30),
+                })
+        );
         assert_eq!(pages.active_geometry(), PageGeometry::new(0, 100, 30));
     }
 

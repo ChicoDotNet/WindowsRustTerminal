@@ -509,18 +509,23 @@ mod tests {
         assert_eq!(adapter.core().geometry(), PageGeometry::new(0, 80, 24));
         assert_eq!(adapter.core().cursor(), TextPoint { x: 30, y: 15 });
         assert!(adapter.core().delayed_eol_wrap());
-        assert!(adapter.page_manager().pending_events().contains(
-            &PageEvent::CopyProperties {
-                from: PageBufferRef::Visible,
-                to: PageBufferRef::Background(4),
-                old_top: 20,
-                new_top: 0,
-            }
-        ));
-        assert!(adapter
-            .page_manager()
-            .pending_events()
-            .contains(&PageEvent::SetVisibleCursorVisible(false)));
+        assert!(
+            adapter
+                .page_manager()
+                .pending_events()
+                .contains(&PageEvent::CopyProperties {
+                    from: PageBufferRef::Visible,
+                    to: PageBufferRef::Background(4),
+                    old_top: 20,
+                    new_top: 0,
+                })
+        );
+        assert!(
+            adapter
+                .page_manager()
+                .pending_events()
+                .contains(&PageEvent::SetVisibleCursorVisible(false))
+        );
     }
 
     #[test]
@@ -545,10 +550,12 @@ mod tests {
         assert_eq!(adapter.page_manager().visible_page_number(), 4);
         assert_eq!(adapter.core().geometry(), scrolled_geometry());
         assert_eq!(adapter.core().cursor(), TextPoint { x: 30, y: 35 });
-        assert!(adapter
-            .page_manager()
-            .pending_events()
-            .contains(&PageEvent::RedrawAll));
+        assert!(
+            adapter
+                .page_manager()
+                .pending_events()
+                .contains(&PageEvent::RedrawAll)
+        );
     }
 
     #[test]
@@ -596,6 +603,9 @@ mod tests {
 
         assert_eq!(dispatch(&machine).page_manager().active_page_number(), 4);
         assert_eq!(dispatch(&machine).page_manager().visible_page_number(), 1);
-        assert_eq!(dispatch(&machine).core().geometry(), PageGeometry::new(0, 80, 24));
+        assert_eq!(
+            dispatch(&machine).core().geometry(),
+            PageGeometry::new(0, 80, 24)
+        );
     }
 }
