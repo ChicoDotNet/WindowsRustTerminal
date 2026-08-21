@@ -204,6 +204,7 @@ impl PageManager {
         let new_page_number = page_number.clamp(1, MAX_PAGES);
         let was_visible = old_active_page == old_visible_page;
         let size = PageSize::from(self.visible_geometry);
+        let mut redraw_required = false;
 
         if make_visible && self.visible_page_number != new_page_number {
             self.ensure_background(new_page_number, size);
@@ -219,7 +220,7 @@ impl PageManager {
                 size,
             });
             self.visible_page_number = new_page_number;
-            self.events.push(PageEvent::RedrawAll);
+            redraw_required = true;
         }
 
         let is_visible = new_page_number == self.visible_page_number;
@@ -262,6 +263,9 @@ impl PageManager {
         }
 
         self.active_page_number = new_page_number;
+        if redraw_required {
+            self.events.push(PageEvent::RedrawAll);
+        }
         let new_active_top = self.top_for(self.active_page_number, self.visible_page_number);
 
         PageTransition {
@@ -444,13 +448,13 @@ mod tests {
                     visible_top: 20,
                     size: PageSize::new(80, 24),
                 },
-                PageEvent::RedrawAll,
                 PageEvent::CopyProperties {
                     from: PageBufferRef::Background(4),
                     to: PageBufferRef::Visible,
                     old_top: 0,
                     new_top: 20,
                 },
+                PageEvent::RedrawAll,
             ]
         );
     }
