@@ -29,7 +29,6 @@ allocing
 alpc
 ALTERNATENAME
 ALTF
-ALTGR
 ALTNUMPAD
 ALWAYSTIP
 ansicpg
@@ -77,7 +76,6 @@ autoscrolling
 Autowrap
 AVerify
 awch
-AZERTY
 azurecr
 backgrounded
 Backgrounder
@@ -1335,7 +1333,6 @@ PSINGLE
 psl
 psldl
 PSNRET
-PSobject
 psp
 PSPCB
 psr
