@@ -29,6 +29,141 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  r03d-integrate:
+    name: R03d DCS integration
+    if: github.event_name == 'pull_request' && github.head_ref == 'rust/r03-sixel-core' && github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: rust/r03-sixel-core
+          fetch-depth: 0
+      - name: Preserve Sixel session palette
+        shell: python
+        run: |
+          from pathlib import Path
+
+          sixel_path = Path("rust/terminal-adapter/src/sixel.rs")
+          sixel = sixel_path.read_text()
+          marker = """        parser
+              }
+
+              pub fn set_display_mode(&mut self, enabled: bool) {
+          """.replace("              ", "    ")
+          replacement = """        parser
+              }
+
+              /// Starts a new image while preserving terminal-scoped Sixel state.
+              ///
+              /// Windows Terminal keeps one `SixelParser` alive across DCS image
+              /// definitions, so palette changes survive into later images. The
+              /// per-image color-number map and raster state are rebuilt here.
+              pub fn restart_image(&mut self, config: Config) {
+                  if self.conformance_level != config.conformance_level {
+                      self.conformance_level = config.conformance_level;
+                      self.cell_size = cell_size_for_level(config.conformance_level);
+                      self.max_colors = max_colors_for_level(config.conformance_level);
+                      self.color_table = initial_color_table();
+                      if self.conformance_level < 3 {
+                          self.display_mode = true;
+                      }
+                  }
+
+                  self.state = CommandState::Normal;
+                  self.parameters.clear();
+                  self.canvas = config.canvas;
+                  self.max_pixel_aspect_ratio = (config.canvas.height / SIXEL_ROWS).max(1);
+                  self.available_height = config.canvas.height;
+                  self.init_raster_attributes(config.macro_parameter, config.background);
+                  self.init_color_map(config.background_color);
+                  self.init_image_buffer();
+              }
+
+              pub fn set_display_mode(&mut self, enabled: bool) {
+          """.replace("              ", "    ")
+          if "pub fn restart_image" not in sixel:
+              if marker not in sixel:
+                  raise SystemExit("Sixel insertion marker not found")
+              sixel = sixel.replace(marker, replacement, 1)
+              sixel_path.write_text(sixel)
+
+          dcs_path = Path("rust/terminal-adapter/src/dcs_dispatch.rs")
+          dcs = dcs_path.read_text()
+          old_begin = """        let mut parser = SixelParser::new(config);
+                  parser.set_display_mode(self.core.sixel_display_mode());
+                  self.sixel_parser = Some(parser);
+                  self.active_dcs = Some(DcsSessionKind::Sixel);
+                  true
+          """.replace("                  ", "        ")
+          new_begin = """        if let Some(parser) = self.sixel_parser.as_mut() {
+                      parser.restart_image(config);
+                      parser.set_display_mode(self.core.sixel_display_mode());
+                  } else {
+                      let mut parser = SixelParser::new(config);
+                      parser.set_display_mode(self.core.sixel_display_mode());
+                      self.sixel_parser = Some(parser);
+                  }
+                  self.active_dcs = Some(DcsSessionKind::Sixel);
+                  true
+          """.replace("                  ", "        ")
+          if old_begin not in dcs:
+              raise SystemExit("R03d Sixel begin marker not found")
+          dcs = dcs.replace(old_begin, new_begin, 1)
+          dcs = dcs.replace(
+              "            let top = geometry.top.saturating_add(vertical.start);\n",
+              "",
+              1,
+          )
+          dcs = dcs.replace(
+              "            let _ = top; // retained to document the page-relative vertical margin origin\n",
+              "",
+              1,
+          )
+          test_marker = """    #[test]
+              fn text_encoded_macro_dcs_persists_in_macro_buffer() {
+          """.replace("              ", "    ")
+          palette_test = """    #[test]
+              fn sixel_palette_changes_persist_across_image_dcs_sessions() {
+                  let mut machine = machine();
+                  machine.process_str("\\u{1b}P1;1q#1;2;100;0;0@\\u{1b}\\\\");
+                  machine.process_str("\\u{1b}P1;1q#1@\\u{1b}\\\\");
+
+                  let parser = dispatch(&machine)
+                      .sixel_parser()
+                      .expect("Sixel parser was reused");
+                  assert_eq!(
+                      parser.palette_color(1),
+                      Some(crate::sixel::Rgb::new(255, 0, 0))
+                  );
+                  assert_eq!(parser.pixel(0, 0).expect("pixel exists").color_index, 1);
+              }
+
+              #[test]
+              fn text_encoded_macro_dcs_persists_in_macro_buffer() {
+          """.replace("              ", "    ")
+          if "sixel_palette_changes_persist_across_image_dcs_sessions" not in dcs:
+              if test_marker not in dcs:
+                  raise SystemExit("R03d palette test marker not found")
+              dcs = dcs.replace(test_marker, palette_test, 1)
+          dcs_path.write_text(dcs)
+      - name: Format
+        run: cargo fmt --all
+      - name: Clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: Test
+        run: cargo test --workspace --all-targets --locked
+      - name: Commit validated R03d integration
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add rust/terminal-adapter/src/sixel.rs rust/terminal-adapter/src/dcs_dispatch.rs
+          git diff --cached --quiet && exit 0
+          git commit -m "Preserve Sixel state across R03d DCS sessions"
+          git push origin HEAD:rust/r03-sixel-core
+
   quality:
     name: fmt + clippy
     runs-on: ubuntu-latest
