@@ -14,9 +14,7 @@ const END_TASK_SIZE: usize = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HostSignalAction {
-    NotifyApp {
-        process_id: u32,
-    },
+    NotifyApp { process_id: u32 },
     /// Retained for compatibility with older terminals; current conhost ignores it.
     SetForeground {
         process_handle: u32,
@@ -41,6 +39,10 @@ pub enum HostSignalDecodeError {
 /// Typed packets are self-sized. A declared size may exceed the known C++
 /// structure size; those extension bytes are skipped before reading the next
 /// signal, matching `_ReceiveTypedPacket`.
+///
+/// # Errors
+/// Returns an error for an unknown signal ID, a packet shorter than its known
+/// C++ structure, or a stream that ends before the declared packet size.
 pub fn decode_host_signal_stream(
     bytes: &[u8],
 ) -> Result<Vec<HostSignalAction>, HostSignalDecodeError> {
@@ -58,12 +60,8 @@ pub fn decode_host_signal_stream(
             other => return Err(HostSignalDecodeError::UnknownSignal(other)),
         };
 
-        let header = bytes
-            .get(cursor..cursor + 4)
-            .ok_or(HostSignalDecodeError::TruncatedPacket)?;
-        let declared_size =
-            u32::from_le_bytes(header.try_into().expect("slice length was checked")) as usize;
-
+        let declared_size = read_u32(bytes, cursor)
+            .ok_or(HostSignalDecodeError::TruncatedPacket)? as usize;
         if declared_size < minimum_size {
             return Err(HostSignalDecodeError::PacketSmallerThanKnownType);
         }
@@ -72,28 +70,25 @@ pub fn decode_host_signal_stream(
             .get(cursor..cursor + declared_size)
             .ok_or(HostSignalDecodeError::TruncatedPacket)?;
 
-        let read_u32 = |offset: usize| {
-            u32::from_le_bytes(
-                packet[offset..offset + 4]
-                    .try_into()
-                    .expect("known packet fields fit the minimum size"),
-            )
-        };
-
         let action = match signal {
             NOTIFY_APP => HostSignalAction::NotifyApp {
-                process_id: read_u32(4),
+                process_id: read_u32(packet, 4).ok_or(HostSignalDecodeError::TruncatedPacket)?,
             },
             SET_FOREGROUND => HostSignalAction::SetForeground {
-                process_handle: read_u32(4),
-                is_foreground: packet[8] != 0,
+                process_handle: read_u32(packet, 4)
+                    .ok_or(HostSignalDecodeError::TruncatedPacket)?,
+                is_foreground: packet
+                    .get(8)
+                    .copied()
+                    .ok_or(HostSignalDecodeError::TruncatedPacket)?
+                    != 0,
             },
             END_TASK => HostSignalAction::EndTask {
-                process_id: read_u32(4),
-                event_type: read_u32(8),
-                ctrl_flags: read_u32(12),
+                process_id: read_u32(packet, 4).ok_or(HostSignalDecodeError::TruncatedPacket)?,
+                event_type: read_u32(packet, 8).ok_or(HostSignalDecodeError::TruncatedPacket)?,
+                ctrl_flags: read_u32(packet, 12).ok_or(HostSignalDecodeError::TruncatedPacket)?,
             },
-            _ => unreachable!("signal was validated above"),
+            _ => return Err(HostSignalDecodeError::UnknownSignal(signal)),
         };
 
         actions.push(action);
@@ -101,6 +96,14 @@ pub fn decode_host_signal_stream(
     }
 
     Ok(actions)
+}
+
+fn read_u32(bytes: &[u8], offset: usize) -> Option<u32> {
+    let slice = bytes.get(offset..offset + 4)?;
+    let [a, b, c, d] = slice else {
+        return None;
+    };
+    Some(u32::from_le_bytes([*a, *b, *c, *d]))
 }
 
 #[cfg(test)]
@@ -114,16 +117,16 @@ mod tests {
     #[test]
     fn canonical_signal_ids_and_payloads_decode_in_order() {
         let mut bytes = vec![NOTIFY_APP];
-        append_u32(&mut bytes, NOTIFY_APP_SIZE as u32);
+        append_u32(&mut bytes, 8);
         append_u32(&mut bytes, 42);
 
         bytes.push(SET_FOREGROUND);
-        append_u32(&mut bytes, SET_FOREGROUND_SIZE as u32);
+        append_u32(&mut bytes, 12);
         append_u32(&mut bytes, 0x1234_5678);
         bytes.extend_from_slice(&[1, 0, 0, 0]);
 
         bytes.push(END_TASK);
-        append_u32(&mut bytes, END_TASK_SIZE as u32);
+        append_u32(&mut bytes, 16);
         append_u32(&mut bytes, 77);
         append_u32(&mut bytes, 2);
         append_u32(&mut bytes, 9);
@@ -152,7 +155,7 @@ mod tests {
         append_u32(&mut bytes, 7);
         bytes.extend_from_slice(&[0xaa, 0xbb, 0xcc, 0xdd]);
         bytes.push(NOTIFY_APP);
-        append_u32(&mut bytes, NOTIFY_APP_SIZE as u32);
+        append_u32(&mut bytes, 8);
         append_u32(&mut bytes, 8);
 
         assert_eq!(
@@ -179,7 +182,7 @@ mod tests {
     #[test]
     fn truncated_declared_packet_is_rejected() {
         let mut bytes = vec![NOTIFY_APP];
-        append_u32(&mut bytes, NOTIFY_APP_SIZE as u32);
+        append_u32(&mut bytes, 8);
         bytes.extend_from_slice(&[1, 2]);
 
         assert_eq!(
