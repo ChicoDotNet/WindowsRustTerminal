@@ -10,6 +10,7 @@ pub mod console_arguments;
 pub mod console_shim_policy;
 pub mod event_synthesis;
 pub mod host_signal;
+pub mod keyboard_modifier_plan;
 pub mod pty_clear_buffer;
 pub mod pty_signal;
 pub mod pty_signal_session;
