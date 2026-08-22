@@ -2,7 +2,7 @@
 //!
 //! Win32 calls, `GetLastError`, and `ConIoSrvComm` ownership remain at the platform boundary.
 
-/// API wrapper whose native result may trigger a OneCore fallback.
+/// API wrapper whose native result may trigger a `OneCore` fallback.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum RedirectedApi {
     MapVirtualKey,
@@ -18,7 +18,7 @@ pub enum NativeFailure {
     Other,
 }
 
-/// Decide whether the OneCore service should be consulted after the native call.
+/// Decide whether the `OneCore` service should be consulted after the native call.
 ///
 /// The native sentinel differs by API: `MapVirtualKeyW` and `GetKeyState` use zero,
 /// while `VkKeyScanW` uses -1.
