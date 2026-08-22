@@ -74,7 +74,9 @@ pub enum ConsoleArgumentError {
 /// # Errors
 /// Returns an error when a recognized switch is missing its value, contains an
 /// invalid value, or attempts to set a server/signal handle more than once.
-pub fn parse_console_arguments(tokens: &[String]) -> Result<ConsoleArgumentState, ConsoleArgumentError> {
+pub fn parse_console_arguments(
+    tokens: &[String],
+) -> Result<ConsoleArgumentState, ConsoleArgumentError> {
     let mut state = ConsoleArgumentState::default();
     let mut index = 0usize;
 
@@ -136,10 +138,12 @@ pub fn parse_console_arguments(tokens: &[String]) -> Result<ConsoleArgumentState
             state.ambiguous_is_wide = true;
             index += 1;
         } else if arg == CLIENT_COMMANDLINE_ARG {
-            state.client_commandline = join_client_arguments(tokens[index + 1..].iter().map(String::as_str));
+            state.client_commandline =
+                join_client_arguments(tokens[index + 1..].iter().map(String::as_str));
             break;
         } else {
-            state.client_commandline = join_client_arguments(tokens[index..].iter().map(String::as_str));
+            state.client_commandline =
+                join_client_arguments(tokens[index..].iter().map(String::as_str));
             break;
         }
     }
@@ -165,31 +169,26 @@ fn parse_short(value: &str) -> Result<i16, ConsoleArgumentError> {
     if parsed > i32::from(i16::MAX) {
         return Err(ConsoleArgumentError::InvalidValue("dimension"));
     }
-    Ok(parsed as i16)
+
+    let wrapped = parsed & 0xffff;
+    let unsigned = u16::try_from(wrapped).expect("16-bit mask always fits u16");
+    Ok(i16::from_ne_bytes(unsigned.to_ne_bytes()))
 }
 
 fn parse_handle(value: &str) -> Result<u32, ConsoleArgumentError> {
     let digits = value
         .strip_prefix(HANDLE_PREFIX)
         .ok_or(ConsoleArgumentError::InvalidValue("handle"))?;
-    let digits = digits
-        .chars()
-        .take_while(char::is_ascii_hexdigit)
-        .collect::<String>();
-    if digits.is_empty() {
-        return Err(ConsoleArgumentError::InvalidValue("handle"));
-    }
 
     let mut parsed = 0u32;
-    for digit in digits.bytes() {
-        let value = u32::from(
-            (digit as char)
-                .to_digit(16)
-                .expect("filtered hexadecimal digit"),
-        );
+    let mut saw_digit = false;
+    for digit in digits.chars().take_while(char::is_ascii_hexdigit) {
+        saw_digit = true;
+        let value = digit.to_digit(16).expect("filtered hexadecimal digit");
         parsed = parsed.saturating_mul(16).saturating_add(value);
     }
-    if parsed == 0 {
+
+    if !saw_digit || parsed == 0 {
         Err(ConsoleArgumentError::InvalidValue("handle"))
     } else {
         Ok(parsed)
@@ -251,8 +250,14 @@ mod tests {
 
     #[test]
     fn explicit_separator_starts_client_commandline() {
-        let parsed = parse_console_arguments(&tokens(&["--headless", "--", "cmd.exe", "/c", "echo hi"]))
-            .expect("client command line");
+        let parsed = parse_console_arguments(&tokens(&[
+            "--headless",
+            "--",
+            "cmd.exe",
+            "/c",
+            "echo hi",
+        ]))
+        .expect("client command line");
         assert!(parsed.headless);
         assert_eq!(parsed.client_commandline, "cmd.exe /c \"echo hi\"");
     }
@@ -267,8 +272,11 @@ mod tests {
 
     #[test]
     fn historical_filepath_leader_is_ignored() {
-        let parsed = parse_console_arguments(&tokens(&["\\??\\C:\\Windows\\System32\\conhost.exe", "--headless"]))
-            .expect("historical path token");
+        let parsed = parse_console_arguments(&tokens(&[
+            "\\??\\C:\\Windows\\System32\\conhost.exe",
+            "--headless",
+        ]))
+        .expect("historical path token");
         assert!(parsed.headless);
         assert!(parsed.client_commandline.is_empty());
     }
