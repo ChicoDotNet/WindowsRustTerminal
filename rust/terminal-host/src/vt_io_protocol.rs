@@ -154,15 +154,17 @@ pub fn encode_ucs2_utf8(value: u16) -> Vec<u8> {
         value
     };
 
+    let low_byte = |unit: u16| unit.to_le_bytes()[0];
+
     if value <= 0x7f {
-        vec![value as u8]
+        vec![low_byte(value)]
     } else if value <= 0x7ff {
-        vec![0xc0 | (value >> 6) as u8, 0x80 | (value & 0x3f) as u8]
+        vec![0xc0 | low_byte(value >> 6), 0x80 | low_byte(value & 0x3f)]
     } else {
         vec![
-            0xe0 | (value >> 12) as u8,
-            0x80 | ((value >> 6) & 0x3f) as u8,
-            0x80 | (value & 0x3f) as u8,
+            0xe0 | low_byte(value >> 12),
+            0x80 | low_byte((value >> 6) & 0x3f),
+            0x80 | low_byte(value & 0x3f),
         ]
     }
 }
@@ -242,32 +244,42 @@ mod tests {
     #[test]
     fn crlf_translation_only_inserts_missing_carriage_returns() {
         assert_eq!(translate_crlf_utf16(&[]), Vec::<u16>::new());
-        assert_eq!(translate_crlf_utf16(&[b'a' as u16]), vec![b'a' as u16]);
+        assert_eq!(
+            translate_crlf_utf16(&[u16::from(b'a')]),
+            vec![u16::from(b'a')]
+        );
         assert_eq!(translate_crlf_utf16(&[0x000a]), vec![0x000d, 0x000a]);
         assert_eq!(
             translate_crlf_utf16(&[0x000d, 0x000a]),
             vec![0x000d, 0x000a]
         );
         assert_eq!(
-            translate_crlf_utf16(&[b'a' as u16, 0x000a, 0x000a, 0x000d, 0x000a, b'b' as u16]),
+            translate_crlf_utf16(&[
+                u16::from(b'a'),
+                0x000a,
+                0x000a,
+                0x000d,
+                0x000a,
+                u16::from(b'b'),
+            ]),
             vec![
-                b'a' as u16,
+                u16::from(b'a'),
                 0x000d,
                 0x000a,
                 0x000a,
                 0x000d,
                 0x000a,
-                b'b' as u16,
+                u16::from(b'b'),
             ]
         );
     }
 
     #[test]
     fn raw_control_stripping_preserves_cell_count() {
-        let input = [b'A' as u16, 0x0001, 0x007f, 0x0080, b'Z' as u16];
+        let input = [u16::from(b'A'), 0x0001, 0x007f, 0x0080, u16::from(b'Z')];
         assert_eq!(
             strip_control_chars_utf16(&input),
-            vec![b'A' as u16, 0x263a, 0x2302, 0x003f, b'Z' as u16]
+            vec![u16::from(b'A'), 0x263a, 0x2302, 0x003f, u16::from(b'Z')]
         );
     }
 
