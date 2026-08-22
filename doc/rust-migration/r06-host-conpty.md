@@ -59,10 +59,16 @@ The ninth slice ports the byte formatting for CUP, DECTCEM, SGR 1006 mouse mode,
 
 The tenth slice ports `VtIo::Writer::WriteInfos` over a platform-neutral view of the consumed `CHAR_INFO` fields. It preserves CUP positioning, attribute transition emission, incomplete wide-glyph edge replacement, suppression of interior trailing halves, and the double replacement needed when a nominally wide cell contains a surrogate or control code unit. It reuses the migrated R04 attribute representation plus the R06 sanitization and UTF-8 helpers instead of duplicating those rules.
 
+## R06k–R06y — remaining deterministic host/server/interactivity contracts
+
+The remainder of R06 completes the pure policy surface needed before a future platform boundary is introduced: screen-snapshot serialization; pre-connect ConPTY signal deferral; clear-buffer planning; exact signal-stream framing and shutdown semantics; `_CONSOLE_API_MSG` buffer planning; console shim process classification; `ApiSorter` dispatch planning; host-signal framing; legacy full-width and keyboard-modifier planning; outbound remote-control packet serialization; OneCore API redirection policy; `ApiDetector` fallback selection; and `InteractivityFactory` implementation selection.
+
+These slices preserve the existing C++ contracts while keeping Windows handles, `ReadFile`/`WriteFile`, process lookup, keyboard-layout APIs, library loading, object construction, locking, device communication, and actual console mutation on the existing platform side.
+
+## Stage exit
+
+R06 is complete when its final head passes workspace formatting, Clippy with warnings denied, Linux and Windows check/test, repository spelling/quality checks, and the TAEF harness self-test. Because R06 does not modify product C++ or an FFI boundary, Microsoft C++ contract tests are not additionally required for this stage.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06j do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW`, `WriteFile`, overlapped I/O, thread creation, console locking, and `CHAR_INFO` acquisition remain explicit platform boundaries for later compatibility plumbing.
-
-## Next slices
-
-Continue through deterministic host/server/interactivity state and ConPTY lifecycle decisions, reusing the migrated parser, input, buffer, adapter, and core crates rather than creating parallel representations.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06 introduces no product unsafe Rust, no C++ changes, and no FFI changes. Platform ownership remains outside the migrated safe implementation crate.
