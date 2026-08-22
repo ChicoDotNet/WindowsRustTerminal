@@ -47,9 +47,7 @@ pub fn startup_negotiation(inherit_cursor: bool) -> Vec<u8> {
     if inherit_cursor {
         bytes.extend_from_slice(b"\x1b[6n");
     }
-    bytes.extend_from_slice(
-        b"\x1b[c\x1b[?1004h\x1b[?9001h",
-    );
+    bytes.extend_from_slice(b"\x1b[c\x1b[?1004h\x1b[?9001h");
     bytes
 }
 
@@ -66,6 +64,32 @@ pub const fn shutdown_negotiation() -> &'static [u8] {
 #[must_use]
 pub const fn is_control_character(value: u16) -> bool {
     value <= 0x1f || (value >= 0x7f && value <= 0x9f)
+}
+
+/// Sanitizes one UTF-16 code unit using the legacy host `SanitizeUCS2` contract.
+///
+/// C0 controls and DEL use the historical code page 437 display glyphs, C1
+/// controls become `?`, and isolated surrogate code units become U+FFFD.
+#[must_use]
+pub const fn sanitize_ucs2(value: u16) -> u16 {
+    const C0_GLYPHS: [u16; 32] = [
+        0x0020, 0x263a, 0x263b, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022, 0x25d8, 0x25cb,
+        0x25d9, 0x2642, 0x2640, 0x266a, 0x266b, 0x263c, 0x25ba, 0x25c4, 0x2195, 0x203c,
+        0x00b6, 0x00a7, 0x25ac, 0x21a8, 0x2191, 0x2193, 0x2192, 0x2190, 0x221f, 0x2194,
+        0x25b2, 0x25bc,
+    ];
+
+    if value < 0x20 {
+        C0_GLYPHS[value as usize]
+    } else if value == 0x7f {
+        0x2302
+    } else if value > 0x7f && value < 0xa0 {
+        u16::from(b'?')
+    } else if value >= 0xd800 && value <= 0xdfff {
+        0xfffd
+    } else {
+        value
+    }
 }
 
 #[cfg(test)]
@@ -126,5 +150,20 @@ mod tests {
         assert!(is_control_character(0x9f));
         assert!(!is_control_character(0xa0));
         assert!(!is_control_character(0xffff));
+    }
+
+    #[test]
+    fn sanitize_ucs2_matches_legacy_display_contract() {
+        assert_eq!(sanitize_ucs2(0x00), 0x0020);
+        assert_eq!(sanitize_ucs2(0x01), 0x263a);
+        assert_eq!(sanitize_ucs2(0x1f), 0x25bc);
+        assert_eq!(sanitize_ucs2(0x20), 0x20);
+        assert_eq!(sanitize_ucs2(0x7f), 0x2302);
+        assert_eq!(sanitize_ucs2(0x80), u16::from(b'?'));
+        assert_eq!(sanitize_ucs2(0x9f), u16::from(b'?'));
+        assert_eq!(sanitize_ucs2(0xa0), 0xa0);
+        assert_eq!(sanitize_ucs2(0xd800), 0xfffd);
+        assert_eq!(sanitize_ucs2(0xdfff), 0xfffd);
+        assert_eq!(sanitize_ucs2(0x2603), 0x2603);
     }
 }
