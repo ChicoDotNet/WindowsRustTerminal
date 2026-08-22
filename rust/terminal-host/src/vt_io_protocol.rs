@@ -244,7 +244,10 @@ mod tests {
         assert_eq!(translate_crlf_utf16(&[]), Vec::<u16>::new());
         assert_eq!(translate_crlf_utf16(&[b'a' as u16]), vec![b'a' as u16]);
         assert_eq!(translate_crlf_utf16(&[0x000a]), vec![0x000d, 0x000a]);
-        assert_eq!(translate_crlf_utf16(&[0x000d, 0x000a]), vec![0x000d, 0x000a]);
+        assert_eq!(
+            translate_crlf_utf16(&[0x000d, 0x000a]),
+            vec![0x000d, 0x000a]
+        );
         assert_eq!(
             translate_crlf_utf16(&[b'a' as u16, 0x000a, 0x000a, 0x000d, 0x000a, b'b' as u16]),
             vec![
