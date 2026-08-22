@@ -84,8 +84,8 @@ pub const fn sanitize_ucs2(value: u16) -> u16 {
     } else if value == 0x7f {
         0x2302
     } else if value > 0x7f && value < 0xa0 {
-        u16::from(b'?')
-    } else if value >= 0xd800 && value <= 0xdfff {
+        0x003f
+    } else if value.wrapping_sub(0xd800) <= 0x07ff {
         0xfffd
     } else {
         value
@@ -159,8 +159,8 @@ mod tests {
         assert_eq!(sanitize_ucs2(0x1f), 0x25bc);
         assert_eq!(sanitize_ucs2(0x20), 0x20);
         assert_eq!(sanitize_ucs2(0x7f), 0x2302);
-        assert_eq!(sanitize_ucs2(0x80), u16::from(b'?'));
-        assert_eq!(sanitize_ucs2(0x9f), u16::from(b'?'));
+        assert_eq!(sanitize_ucs2(0x80), 0x003f);
+        assert_eq!(sanitize_ucs2(0x9f), 0x003f);
         assert_eq!(sanitize_ucs2(0xa0), 0xa0);
         assert_eq!(sanitize_ucs2(0xd800), 0xfffd);
         assert_eq!(sanitize_ucs2(0xdfff), 0xfffd);
