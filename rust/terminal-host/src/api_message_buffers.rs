@@ -104,11 +104,17 @@ mod tests {
     #[test]
     fn oversized_capacity_is_trimmed_only_when_more_than_half_is_unneeded() {
         let capacity = LARGE_BUFFER_THRESHOLD + 2;
-        assert!(!plan_buffer(capacity, 0, capacity).unwrap().shrink_capacity_first);
+        assert!(
+            !plan_buffer(capacity, 0, capacity)
+                .unwrap()
+                .shrink_capacity_first
+        );
         assert!(plan_buffer(10, 0, capacity).unwrap().shrink_capacity_first);
-        assert!(!plan_buffer(10, 0, LARGE_BUFFER_THRESHOLD)
-            .unwrap()
-            .shrink_capacity_first);
+        assert!(
+            !plan_buffer(10, 0, LARGE_BUFFER_THRESHOLD)
+                .unwrap()
+                .shrink_capacity_first
+        );
     }
 
     #[test]
