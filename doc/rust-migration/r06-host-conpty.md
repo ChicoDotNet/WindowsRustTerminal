@@ -27,9 +27,15 @@ The third slice ports the deterministic portion of `ConsoleArguments::ParseComma
 
 Handle parsing mirrors the existing `wcstoul` behavior used by conhost, including nonzero enforcement, duplicate-handle rejection, prefix consumption and 32-bit saturation. Dimension parsing preserves the current C++ upper-bound behavior and full-token numeric validation.
 
+## R06d — deterministic VtIo lifecycle
+
+The fourth slice extracts the platform-neutral lifecycle decisions from `VtIo`. It preserves the `Uninitialized`, `Initialized`, `Starting`, `StartupFailed`, and `Running` states, the no-op path outside ConPTY mode, single initialization, non-reentrant start, startup failure when a close arrives while starting, close-event deduplication after startup, and the rule that shutdown reset sequences are emitted only while running.
+
+Handle ownership, I/O threads, renderer construction, console locking, and actual close-event delivery remain on the C++/Win32 side. The Rust type models only the deterministic transition contract so later compatibility plumbing can delegate these decisions without duplicating state logic.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06c do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06d do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
 
 ## Next slices
 
