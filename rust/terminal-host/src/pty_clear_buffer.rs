@@ -1,4 +1,4 @@
-//! Pure planning for ConPTY clear-buffer requests.
+//! Pure planning for `ConPTY` clear-buffer requests.
 //!
 //! `PtySignalInputThread::_DoClearBuffer` owns locking and buffer mutation in
 //! C++. This module preserves only the deterministic arguments supplied to
