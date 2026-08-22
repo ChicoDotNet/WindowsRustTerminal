@@ -12,4 +12,5 @@
 pub mod control_key_states;
 pub mod keyboard_selection;
 pub mod selection;
+pub mod selection_rendering;
 pub mod update_selection;
