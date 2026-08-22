@@ -5,6 +5,7 @@
 pub mod attribute_format;
 pub mod console_argument_parser;
 pub mod console_arguments;
+pub mod pty_clear_buffer;
 pub mod pty_signal;
 pub mod pty_signal_state;
 pub mod vt_char_info;
