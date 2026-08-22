@@ -5,3 +5,4 @@
 pub mod console_argument_parser;
 pub mod console_arguments;
 pub mod pty_signal;
+pub mod vt_io_state;
