@@ -1,4 +1,4 @@
-//! Safe decoding for the private ConPTY signal pipe used by `PtySignalInputThread`.
+//! Safe decoding for the private `ConPTY` signal pipe used by `PtySignalInputThread`.
 //!
 //! The C++ implementation reads native Windows `unsigned short`/`uint64_t`
 //! payloads from the pipe. Windows Terminal targets little-endian Windows, so
@@ -14,7 +14,7 @@ pub enum PtySignal {
 }
 
 impl PtySignal {
-    /// Decodes the two-byte signal discriminator used by the ConPTY signal pipe.
+    /// Decodes the two-byte signal discriminator used by the `ConPTY` signal pipe.
     ///
     /// # Errors
     /// Returns [`PtySignalError::UnknownSignal`] for unsupported signal values.
@@ -87,7 +87,7 @@ pub enum PtySignalError {
     InvalidPayloadLength { expected: usize, actual: usize },
 }
 
-/// Decodes the payload associated with one ConPTY signal.
+/// Decodes the payload associated with one `ConPTY` signal.
 ///
 /// # Errors
 /// Returns [`PtySignalError::InvalidPayloadLength`] unless the payload has the
