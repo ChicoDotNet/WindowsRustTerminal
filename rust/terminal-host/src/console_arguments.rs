@@ -103,7 +103,10 @@ mod tests {
 
     #[test]
     fn trailing_backslashes_are_doubled_inside_quotes() {
-        assert_eq!(escape_argument("C:\\Program Files\\"), "\"C:\\Program Files\\\\\"");
+        assert_eq!(
+            escape_argument("C:\\Program Files\\"),
+            "\"C:\\Program Files\\\\\""
+        );
     }
 
     #[test]
