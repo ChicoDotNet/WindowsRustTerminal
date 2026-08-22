@@ -58,7 +58,8 @@ pub fn write_screen_info(main: &ScreenSnapshot, alternate: Option<&ScreenSnapsho
 
 fn append_snapshot(output: &mut Vec<u8>, snapshot: &ScreenSnapshot) {
     for (y, row) in snapshot.rows.iter().enumerate() {
-        output.extend_from_slice(&write_infos(0, y as i32, row));
+        let y = i32::try_from(y).expect("screen row index must fit in an i32 coordinate");
+        output.extend_from_slice(&write_infos(0, y, row));
     }
 
     output.extend_from_slice(&cup(snapshot.cursor_x, snapshot.cursor_y));
