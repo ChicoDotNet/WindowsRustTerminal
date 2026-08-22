@@ -26,6 +26,10 @@ pub enum FactoryImplementation {
 pub struct UnsupportedApiLevel;
 
 /// Select the same implementation family as `InteractivityFactory` without constructing it.
+///
+/// # Errors
+/// Returns [`UnsupportedApiLevel`] when the detected API level is `OneCore` but the build
+/// does not include `OneCore` interactivity support.
 pub const fn select_factory_implementation(
     product: FactoryProduct,
     level: ApiLevel,
