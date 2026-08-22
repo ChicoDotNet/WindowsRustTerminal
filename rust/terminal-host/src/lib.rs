@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod api_detection;
 pub mod api_message_buffers;
 pub mod api_sorter;
 pub mod attribute_format;
