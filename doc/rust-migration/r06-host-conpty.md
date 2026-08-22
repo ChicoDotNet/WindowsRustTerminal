@@ -39,9 +39,13 @@ The fifth slice ports the remaining pure choices around `VtIo::Initialize`, `Sta
 
 Actual writes, DA1 waiting, global settings mutation, handle ownership, threads, and console locking remain platform boundaries. The Rust code returns explicit data/bytes for those operations rather than performing them.
 
+## R06f — legacy UCS-2 sanitization
+
+The sixth slice ports `VtIo::SanitizeUCS2` as a safe UTF-16-code-unit transformation. It preserves the historical code page 437 display glyphs for C0 controls and DEL, maps C1 controls to `?`, maps isolated UTF-16 surrogate code units to U+FFFD, and leaves ordinary code units unchanged.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06e do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06f do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
 
 ## Next slices
 
