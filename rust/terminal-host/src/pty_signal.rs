@@ -133,11 +133,14 @@ mod tests {
         assert_eq!(PtySignal::decode([2, 0]), Ok(PtySignal::ClearBuffer));
         assert_eq!(PtySignal::decode([3, 0]), Ok(PtySignal::SetParent));
         assert_eq!(PtySignal::decode([8, 0]), Ok(PtySignal::ResizeWindow));
-        assert_eq!(PtySignal::decode([4, 0]), Err(PtySignalError::UnknownSignal(4)));
+        assert_eq!(
+            PtySignal::decode([4, 0]),
+            Err(PtySignalError::UnknownSignal(4))
+        );
     }
 
     #[test]
-    fn resize_payload_is_two_little_endian_ushorts() {
+    fn resize_payload_is_two_little_endian_u16_values() {
         assert_eq!(
             decode_payload(PtySignal::ResizeWindow, &[0x50, 0x00, 0x18, 0x00]),
             Ok(PtySignalData::ResizeWindow(ResizeWindowData {
@@ -148,7 +151,7 @@ mod tests {
     }
 
     #[test]
-    fn boolean_wire_fields_preserve_raw_ushort_semantics() {
+    fn boolean_wire_fields_preserve_raw_u16_semantics() {
         let show = ShowHideData { show: 7 };
         let clear = ClearBufferData { keep_cursor_row: 2 };
         assert!(show.is_visible());
