@@ -4,6 +4,10 @@
 //! or WinRT/COM boundary is introduced.
 
 #![forbid(unsafe_code)]
+#![expect(
+    clippy::too_many_arguments,
+    reason = "the update-selection entry point mirrors the upstream compatibility call shape"
+)]
 
 pub mod control_key_states;
 pub mod keyboard_selection;
