@@ -100,10 +100,7 @@ mod tests {
             HostCharInfo::new(u16::from(b'C'), 0x0004),
         ];
 
-        assert_eq!(
-            write_infos(4, 2, &infos),
-            b"\x1b[3;5H\x1b[0mAB\x1b[0;31mC"
-        );
+        assert_eq!(write_infos(4, 2, &infos), b"\x1b[3;5H\x1b[0mAB\x1b[0;31mC");
     }
 
     #[test]
