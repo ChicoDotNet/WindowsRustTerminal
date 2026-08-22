@@ -38,7 +38,11 @@ pub fn selection_spans(buffer: &TextBuffer, selection: &SelectionInfo) -> Vec<Se
     let start = clamp_exclusive(buffer, selection.start);
     let end = clamp_exclusive(buffer, selection.end);
     if !selection.block_selection {
-        let (start, end) = if start <= end { (start, end) } else { (end, start) };
+        let (start, end) = if start <= end {
+            (start, end)
+        } else {
+            (end, start)
+        };
         return vec![SelectionSpan::new(start, end)];
     }
 
@@ -48,12 +52,7 @@ pub fn selection_spans(buffer: &TextBuffer, selection: &SelectionInfo) -> Vec<Se
     let right = start.x.max(end.x).clamp(0, i32::from(buffer.width()));
 
     (top..=bottom)
-        .map(|y| {
-            SelectionSpan::new(
-                BufferPoint::new(left, y),
-                BufferPoint::new(right, y),
-            )
-        })
+        .map(|y| SelectionSpan::new(BufferPoint::new(left, y), BufferPoint::new(right, y)))
         .collect()
 }
 
