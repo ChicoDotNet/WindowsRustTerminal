@@ -9,4 +9,5 @@ pub mod pty_signal;
 pub mod vt_char_info;
 pub mod vt_io_protocol;
 pub mod vt_io_state;
+pub mod vt_screen_dump;
 pub mod vt_writer_sequences;
