@@ -73,7 +73,6 @@ automagically
 autopositioning
 AUTORADIOBUTTON
 autoscrolling
-Autowrap
 AVerify
 awch
 azurecr
@@ -734,7 +733,6 @@ hostlib
 HPA
 hpcon
 hpen
-HPR
 HProvider
 HREDRAW
 hresult
@@ -1806,7 +1804,6 @@ VPA
 vpack
 vpackdirectory
 VPACKMANIFESTDIRECTORY
-VPR
 VREDRAW
 vsc
 vsconfig
