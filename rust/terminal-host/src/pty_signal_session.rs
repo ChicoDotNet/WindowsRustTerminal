@@ -11,7 +11,9 @@ use crate::pty_signal_state::{PtySignalAction, PtySignalState};
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PtySignalSessionEnd {
     EndOfFile,
-    TruncatedSignal { remaining: usize },
+    TruncatedSignal {
+        remaining: usize,
+    },
     TruncatedPayload {
         signal: PtySignal,
         expected: usize,
@@ -33,10 +35,7 @@ pub struct PtySignalSessionResult {
 /// resulting `send_close_event` flag is always true because `_Shutdown()` is
 /// registered before the C++ read loop and therefore runs on every exit path.
 #[must_use]
-pub fn process_transcript(
-    state: &mut PtySignalState,
-    mut bytes: &[u8],
-) -> PtySignalSessionResult {
+pub fn process_transcript(state: &mut PtySignalState, mut bytes: &[u8]) -> PtySignalSessionResult {
     let mut actions = Vec::new();
 
     loop {
