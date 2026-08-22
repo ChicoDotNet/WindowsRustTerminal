@@ -167,10 +167,7 @@ mod tests {
 
         assert_eq!(lifecycle.request_close(), CloseDecision::StartupAborted);
         assert_eq!(lifecycle.state(), VtIoState::StartupFailed);
-        assert_eq!(
-            lifecycle.finish_start(),
-            FinishStartDecision::StartupFailed
-        );
+        assert_eq!(lifecycle.finish_start(), FinishStartDecision::StartupFailed);
         assert!(!lifecycle.should_emit_shutdown_sequences());
     }
 
