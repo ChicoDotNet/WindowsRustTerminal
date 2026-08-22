@@ -102,23 +102,23 @@ mod tests {
 
         assert_eq!(
             write_infos(4, 2, &infos),
-            b"\x1b[3;5H\x1b[0;37;40mAB\x1b[0;34;40mC"
+            b"\x1b[3;5H\x1b[0mAB\x1b[0;31mC"
         );
     }
 
     #[test]
     fn incomplete_wide_halves_at_run_edges_become_spaces() {
-        let leading = [HostCharInfo::new(0x4e2d, DEFAULT_ATTRS | COMMON_LVB_LEADING_BYTE)];
-        let trailing = [HostCharInfo::new(0x4e2d, DEFAULT_ATTRS | COMMON_LVB_TRAILING_BYTE)];
+        let leading = [HostCharInfo::new(
+            0x4e2d,
+            DEFAULT_ATTRS | COMMON_LVB_LEADING_BYTE,
+        )];
+        let trailing = [HostCharInfo::new(
+            0x4e2d,
+            DEFAULT_ATTRS | COMMON_LVB_TRAILING_BYTE,
+        )];
 
-        assert_eq!(
-            write_infos(0, 0, &leading),
-            b"\x1b[1;1H\x1b[0;37;40m "
-        );
-        assert_eq!(
-            write_infos(0, 0, &trailing),
-            b"\x1b[1;1H\x1b[0;37;40m "
-        );
+        assert_eq!(write_infos(0, 0, &leading), b"\x1b[1;1H\x1b[0m ");
+        assert_eq!(write_infos(0, 0, &trailing), b"\x1b[1;1H\x1b[0m ");
     }
 
     #[test]
@@ -131,7 +131,7 @@ mod tests {
 
         assert_eq!(
             write_infos(0, 0, &infos),
-            b"\x1b[1;1H\x1b[0;37;40m\xe4\xb8\xad\x1b[0;37;40m!"
+            b"\x1b[1;1H\x1b[0m\xe4\xb8\xad\x1b[0m!"
         );
     }
 
@@ -144,7 +144,7 @@ mod tests {
 
         assert_eq!(
             write_infos(0, 0, &infos),
-            b"\x1b[1;1H\x1b[0;37;40m\xe2\x98\xba\xe2\x98\xba"
+            b"\x1b[1;1H\x1b[0m\xe2\x98\xba\xe2\x98\xba"
         );
     }
 
