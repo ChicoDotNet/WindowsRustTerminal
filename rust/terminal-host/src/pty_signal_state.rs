@@ -5,9 +5,7 @@
 //! applies parent changes immediately. Locking and Win32 side effects remain
 //! platform-owned boundaries.
 
-use crate::pty_signal::{
-    ClearBufferData, PtySignalData, ResizeWindowData, SetParentData, ShowHideData,
-};
+use crate::pty_signal::{PtySignalData, ResizeWindowData, SetParentData, ShowHideData};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PtySignalAction {
@@ -74,6 +72,7 @@ impl PtySignalState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::pty_signal::ClearBufferData;
 
     #[test]
     fn resize_and_visibility_are_deferred_until_connect() {
