@@ -2,4 +2,5 @@
 
 #![forbid(unsafe_code)]
 
+pub mod console_arguments;
 pub mod pty_signal;
