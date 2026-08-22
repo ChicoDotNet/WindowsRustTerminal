@@ -57,7 +57,9 @@ pub fn process_transcript(state: &mut PtySignalState, mut bytes: &[u8]) -> PtySi
             Err(PtySignalError::UnknownSignal(value)) => {
                 return result(actions, PtySignalSessionEnd::UnexpectedSignal(value));
             }
-            Err(PtySignalError::InvalidPayloadLength { .. }) => unreachable!(),
+            Err(PtySignalError::InvalidPayloadLength { .. }) => {
+                return result(actions, PtySignalSessionEnd::UnexpectedSignal(raw));
+            }
         };
         debug_assert_eq!(raw, signal as u16);
         bytes = &bytes[2..];
@@ -75,8 +77,22 @@ pub fn process_transcript(state: &mut PtySignalState, mut bytes: &[u8]) -> PtySi
         }
 
         let (payload, rest) = bytes.split_at(expected);
-        let decoded = decode_payload(signal, payload)
-            .expect("payload was sliced to the signal's exact contract length");
+        let decoded = match decode_payload(signal, payload) {
+            Ok(decoded) => decoded,
+            Err(PtySignalError::InvalidPayloadLength { expected, actual }) => {
+                return result(
+                    actions,
+                    PtySignalSessionEnd::TruncatedPayload {
+                        signal,
+                        expected,
+                        actual,
+                    },
+                );
+            }
+            Err(PtySignalError::UnknownSignal(value)) => {
+                return result(actions, PtySignalSessionEnd::UnexpectedSignal(value));
+            }
+        };
         if let Some(action) = state.apply(decoded) {
             actions.push(action);
         }
