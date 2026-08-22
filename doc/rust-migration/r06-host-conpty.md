@@ -33,9 +33,15 @@ The fourth slice extracts the platform-neutral lifecycle decisions from `VtIo`. 
 
 Handle ownership, I/O threads, renderer construction, console locking, and actual close-event delivery remain on the C++/Win32 side. The Rust type models only the deterministic transition contract so later compatibility plumbing can delegate these decisions without duplicating state logic.
 
+## R06e — deterministic VtIo protocol/configuration decisions
+
+The fifth slice ports the remaining pure choices around `VtIo::Initialize`, `StartIfNeeded`, and `Shutdown`: text-measurement mapping, ambiguous-width override, cursor-inheritance negotiation ordering, the DA1/focus/win32-input startup byte sequence, shutdown resets, and C0/C1 control-character classification.
+
+Actual writes, DA1 waiting, global settings mutation, handle ownership, threads, and console locking remain platform boundaries. The Rust code returns explicit data/bytes for those operations rather than performing them.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06d do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06e do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
 
 ## Next slices
 
