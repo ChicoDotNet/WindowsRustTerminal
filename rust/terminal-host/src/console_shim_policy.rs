@@ -17,10 +17,7 @@ pub struct ConsoleShimPolicy {
 /// Linux and Windows while retaining Windows filename semantics.
 #[must_use]
 pub fn classify_process_path(path: &str) -> ConsoleShimPolicy {
-    let filename = path
-        .rsplit(['/', '\\'])
-        .next()
-        .unwrap_or_default();
+    let filename = path.rsplit(['/', '\\']).next().unwrap_or_default();
 
     let is_cmd = filename.eq_ignore_ascii_case("cmd.exe");
     let is_powershell = filename.eq_ignore_ascii_case("powershell.exe")
@@ -80,6 +77,9 @@ mod tests {
     #[test]
     fn empty_or_trailing_separator_is_not_a_known_client() {
         assert_eq!(classify_process_path(""), ConsoleShimPolicy::default());
-        assert_eq!(classify_process_path(r"C:\Windows\"), ConsoleShimPolicy::default());
+        assert_eq!(
+            classify_process_path(r"C:\Windows\"),
+            ConsoleShimPolicy::default()
+        );
     }
 }
