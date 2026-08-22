@@ -5,7 +5,9 @@
 //! applies parent changes immediately. Locking and Win32 side effects remain
 //! platform-owned boundaries.
 
-use crate::pty_signal::{ClearBufferData, PtySignalData, ResizeWindowData, SetParentData, ShowHideData};
+use crate::pty_signal::{
+    ClearBufferData, PtySignalData, ResizeWindowData, SetParentData, ShowHideData,
+};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PtySignalAction {
