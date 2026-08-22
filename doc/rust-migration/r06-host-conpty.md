@@ -43,9 +43,13 @@ Actual writes, DA1 waiting, global settings mutation, handle ownership, threads,
 
 The sixth slice ports `VtIo::SanitizeUCS2` as a safe UTF-16-code-unit transformation. It preserves the historical code page 437 display glyphs for C0 controls and DEL, maps C1 controls to `?`, maps isolated UTF-16 surrogate code units to U+FFFD, and leaves ordinary code units unchanged.
 
+## R06g — legacy host attribute formatting
+
+The seventh slice ports the deterministic `VtIo::FormatAttributes` formatting contract. It reuses the R04 `terminal-buffer::TextAttribute` representation rather than creating host-local color state, always emits SGR 0 to clear unknown VT-exclusive rendition state, then emits reverse video plus legacy ANSI foreground/background colors in the same order as the C++ host. Nonlegacy colors remain outside this legacy formatting path exactly as in the source contract.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06f do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06g do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
 
 ## Next slices
 
