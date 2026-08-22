@@ -250,14 +250,9 @@ mod tests {
 
     #[test]
     fn explicit_separator_starts_client_commandline() {
-        let parsed = parse_console_arguments(&tokens(&[
-            "--headless",
-            "--",
-            "cmd.exe",
-            "/c",
-            "echo hi",
-        ]))
-        .expect("client command line");
+        let parsed =
+            parse_console_arguments(&tokens(&["--headless", "--", "cmd.exe", "/c", "echo hi"]))
+                .expect("client command line");
         assert!(parsed.headless);
         assert_eq!(parsed.client_commandline, "cmd.exe /c \"echo hi\"");
     }
