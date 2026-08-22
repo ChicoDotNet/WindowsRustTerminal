@@ -26,7 +26,7 @@ pub struct CharacterModifierPlan {
 /// Interprets the high-byte modifier state returned by the keyboard-layout
 /// lookup used by the C++ event synthesizer.
 ///
-/// AltGr is represented by Ctrl+Alt together. It takes precedence over the
+/// `AltGr` is represented by Ctrl+Alt together. It takes precedence over the
 /// separate Shift envelope, exactly matching `SynthesizeKeyboardEvents`; Shift
 /// can still remain set on the synthesized character itself.
 #[must_use]
