@@ -91,6 +91,82 @@ pub fn sanitize_ucs2(value: u16) -> u16 {
     }
 }
 
+/// Applies the legacy host LF-to-CRLF translation to UTF-16 code units.
+///
+/// A CR is inserted only before an LF that is not already preceded by CR. Runs
+/// of CR/LF are copied as a unit, matching `Writer::WriteUTF16TranslateCRLF`.
+#[must_use]
+pub fn translate_crlf_utf16(input: &[u16]) -> Vec<u16> {
+    let mut output = Vec::with_capacity(input.len());
+    let mut index = 0usize;
+
+    while index < input.len() {
+        let Some(relative_lf) = input[index..].iter().position(|value| *value == 0x000a) else {
+            output.extend_from_slice(&input[index..]);
+            break;
+        };
+        let lf = index + relative_lf;
+        output.extend_from_slice(&input[index..lf]);
+
+        if lf == 0 || input[lf - 1] != 0x000d {
+            output.push(0x000d);
+        }
+
+        let run_start = lf;
+        index = lf + 1;
+        while index < input.len() && matches!(input[index], 0x000a | 0x000d) {
+            index += 1;
+        }
+        output.extend_from_slice(&input[run_start..index]);
+    }
+
+    output
+}
+
+/// Replaces actionable C0/C1 controls with their printable host equivalents.
+///
+/// Ordinary UTF-16 code units are copied unchanged. This preserves one display
+/// cell per raw control as required by the legacy console write contract.
+#[must_use]
+pub fn strip_control_chars_utf16(input: &[u16]) -> Vec<u16> {
+    input
+        .iter()
+        .copied()
+        .map(|value| {
+            if is_control_character(value) {
+                sanitize_ucs2(value)
+            } else {
+                value
+            }
+        })
+        .collect()
+}
+
+/// Encodes one UCS-2 code unit to the UTF-8 bytes emitted by `VtIo::Writer`.
+///
+/// Surrogate code units are first replaced with U+FFFD. Because the input is a
+/// single UCS-2 unit, the result is always one to three bytes.
+#[must_use]
+pub fn encode_ucs2_utf8(value: u16) -> Vec<u8> {
+    let value = if (0xd800..=0xdfff).contains(&value) {
+        0xfffd
+    } else {
+        value
+    };
+
+    if value <= 0x7f {
+        vec![value as u8]
+    } else if value <= 0x7ff {
+        vec![0xc0 | (value >> 6) as u8, 0x80 | (value & 0x3f) as u8]
+    } else {
+        vec![
+            0xe0 | (value >> 12) as u8,
+            0x80 | ((value >> 6) & 0x3f) as u8,
+            0x80 | (value & 0x3f) as u8,
+        ]
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -161,5 +237,42 @@ mod tests {
         assert_eq!(sanitize_ucs2(0xd800), 0xfffd);
         assert_eq!(sanitize_ucs2(0xdfff), 0xfffd);
         assert_eq!(sanitize_ucs2(0x2603), 0x2603);
+    }
+
+    #[test]
+    fn crlf_translation_only_inserts_missing_carriage_returns() {
+        assert_eq!(translate_crlf_utf16(&[]), Vec::<u16>::new());
+        assert_eq!(translate_crlf_utf16(&[b'a' as u16]), vec![b'a' as u16]);
+        assert_eq!(translate_crlf_utf16(&[0x000a]), vec![0x000d, 0x000a]);
+        assert_eq!(translate_crlf_utf16(&[0x000d, 0x000a]), vec![0x000d, 0x000a]);
+        assert_eq!(
+            translate_crlf_utf16(&[b'a' as u16, 0x000a, 0x000a, 0x000d, 0x000a, b'b' as u16]),
+            vec![
+                b'a' as u16,
+                0x000d,
+                0x000a,
+                0x000a,
+                0x000d,
+                0x000a,
+                b'b' as u16,
+            ]
+        );
+    }
+
+    #[test]
+    fn raw_control_stripping_preserves_cell_count() {
+        let input = [b'A' as u16, 0x0001, 0x007f, 0x0080, b'Z' as u16];
+        assert_eq!(
+            strip_control_chars_utf16(&input),
+            vec![b'A' as u16, 0x263a, 0x2302, 0x003f, b'Z' as u16]
+        );
+    }
+
+    #[test]
+    fn ucs2_encoding_matches_writer_contract() {
+        assert_eq!(encode_ucs2_utf8(0x0041), vec![0x41]);
+        assert_eq!(encode_ucs2_utf8(0x00a2), vec![0xc2, 0xa2]);
+        assert_eq!(encode_ucs2_utf8(0x2603), vec![0xe2, 0x98, 0x83]);
+        assert_eq!(encode_ucs2_utf8(0xd800), vec![0xef, 0xbf, 0xbd]);
     }
 }
