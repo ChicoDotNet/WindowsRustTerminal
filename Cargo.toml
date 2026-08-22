@@ -4,6 +4,7 @@ members = [
     "rust/terminal-adapter",
     "rust/terminal-buffer",
     "rust/terminal-core",
+    "rust/terminal-host",
     "rust/terminal-input",
     "rust/terminal-parser",
     "rust/terminal-parser-ffi",
