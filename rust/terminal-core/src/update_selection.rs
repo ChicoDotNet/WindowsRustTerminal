@@ -50,9 +50,8 @@ pub fn update_selection(
     viewport: SelectionViewport,
     word_delimiters: &[u16],
 ) -> UpdateSelectionResult {
-    let move_both = mark_mode
-        && !endpoint_state.anchor_inactive_endpoint
-        && !mods.is_shift_pressed();
+    let move_both =
+        mark_mode && !endpoint_state.anchor_inactive_endpoint && !mods.is_shift_pressed();
 
     endpoint_state.target = if move_both {
         SelectionEndpoint::Both
@@ -75,7 +74,9 @@ pub fn update_selection(
         KeyboardSelectionExpansion::Word => {
             move_by_word(buffer, target, direction, viewport, word_delimiters)
         }
-        KeyboardSelectionExpansion::Viewport => move_by_viewport(buffer, target, direction, viewport),
+        KeyboardSelectionExpansion::Viewport => {
+            move_by_viewport(buffer, target, direction, viewport)
+        }
         KeyboardSelectionExpansion::Buffer => move_by_buffer(buffer, direction, viewport),
     };
 
@@ -337,8 +338,7 @@ fn word_end(
 fn data_point(buffer: &TextBuffer, pos: BufferPoint) -> BufferPoint {
     BufferPoint::new(
         pos.x.clamp(0, i32::from(buffer.width()).saturating_sub(1)),
-        pos.y
-            .clamp(0, i32::from(buffer.height()).saturating_sub(1)),
+        pos.y.clamp(0, i32::from(buffer.height()).saturating_sub(1)),
     )
 }
 
@@ -424,19 +424,39 @@ mod tests {
         let viewport = SelectionViewport::new(3, 6);
 
         assert_eq!(
-            move_by_viewport(&buffer, BufferPoint::new(4, 4), SelectionDirection::Left, viewport),
+            move_by_viewport(
+                &buffer,
+                BufferPoint::new(4, 4),
+                SelectionDirection::Left,
+                viewport
+            ),
             BufferPoint::new(0, 4)
         );
         assert_eq!(
-            move_by_viewport(&buffer, BufferPoint::new(4, 4), SelectionDirection::Right, viewport),
+            move_by_viewport(
+                &buffer,
+                BufferPoint::new(4, 4),
+                SelectionDirection::Right,
+                viewport
+            ),
             BufferPoint::new(10, 4)
         );
         assert_eq!(
-            move_by_viewport(&buffer, BufferPoint::new(4, 1), SelectionDirection::Up, viewport),
+            move_by_viewport(
+                &buffer,
+                BufferPoint::new(4, 1),
+                SelectionDirection::Up,
+                viewport
+            ),
             BufferPoint::new(0, 0)
         );
         assert_eq!(
-            move_by_viewport(&buffer, BufferPoint::new(4, 5), SelectionDirection::Down, viewport),
+            move_by_viewport(
+                &buffer,
+                BufferPoint::new(4, 5),
+                SelectionDirection::Down,
+                viewport
+            ),
             BufferPoint::new(10, 6)
         );
     }
@@ -462,11 +482,21 @@ mod tests {
         let viewport = SelectionViewport::new(3, 3);
 
         assert_eq!(
-            move_by_char(&buffer, BufferPoint::new(4, 0), SelectionDirection::Up, viewport),
+            move_by_char(
+                &buffer,
+                BufferPoint::new(4, 0),
+                SelectionDirection::Up,
+                viewport
+            ),
             BufferPoint::new(0, 0)
         );
         assert_eq!(
-            move_by_char(&buffer, BufferPoint::new(4, 3), SelectionDirection::Down, viewport),
+            move_by_char(
+                &buffer,
+                BufferPoint::new(4, 3),
+                SelectionDirection::Down,
+                viewport
+            ),
             BufferPoint::new(10, 3)
         );
     }
