@@ -93,7 +93,11 @@ mod tests {
             RedirectedApi::VkKeyScan,
             RedirectedApi::GetKeyState,
         ] {
-            let sentinel = if api == RedirectedApi::VkKeyScan { -1 } else { 0 };
+            let sentinel = if api == RedirectedApi::VkKeyScan {
+                -1
+            } else {
+                0
+            };
             assert!(!should_use_onecore_fallback(
                 api,
                 sentinel,
