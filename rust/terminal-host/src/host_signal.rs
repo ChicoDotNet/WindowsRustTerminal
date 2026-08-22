@@ -14,7 +14,9 @@ const END_TASK_SIZE: usize = 16;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum HostSignalAction {
-    NotifyApp { process_id: u32 },
+    NotifyApp {
+        process_id: u32,
+    },
     /// Retained for compatibility with older terminals; current conhost ignores it.
     SetForeground {
         process_handle: u32,
@@ -60,8 +62,8 @@ pub fn decode_host_signal_stream(
             other => return Err(HostSignalDecodeError::UnknownSignal(other)),
         };
 
-        let declared_size = read_u32(bytes, cursor)
-            .ok_or(HostSignalDecodeError::TruncatedPacket)? as usize;
+        let declared_size =
+            read_u32(bytes, cursor).ok_or(HostSignalDecodeError::TruncatedPacket)? as usize;
         if declared_size < minimum_size {
             return Err(HostSignalDecodeError::PacketSmallerThanKnownType);
         }
