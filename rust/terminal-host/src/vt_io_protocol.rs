@@ -71,7 +71,7 @@ pub const fn is_control_character(value: u16) -> bool {
 /// C0 controls and DEL use the historical code page 437 display glyphs, C1
 /// controls become `?`, and isolated surrogate code units become U+FFFD.
 #[must_use]
-pub const fn sanitize_ucs2(value: u16) -> u16 {
+pub fn sanitize_ucs2(value: u16) -> u16 {
     const C0_GLYPHS: [u16; 32] = [
         0x0020, 0x263a, 0x263b, 0x2665, 0x2666, 0x2663, 0x2660, 0x2022, 0x25d8, 0x25cb,
         0x25d9, 0x2642, 0x2640, 0x266a, 0x266b, 0x263c, 0x25ba, 0x25c4, 0x2195, 0x203c,
@@ -80,12 +80,12 @@ pub const fn sanitize_ucs2(value: u16) -> u16 {
     ];
 
     if value < 0x20 {
-        C0_GLYPHS[value as usize]
+        C0_GLYPHS[usize::from(value)]
     } else if value == 0x7f {
         0x2302
-    } else if value > 0x7f && value < 0xa0 {
+    } else if (0x80..0xa0).contains(&value) {
         0x003f
-    } else if value.wrapping_sub(0xd800) <= 0x07ff {
+    } else if (0xd800..=0xdfff).contains(&value) {
         0xfffd
     } else {
         value
