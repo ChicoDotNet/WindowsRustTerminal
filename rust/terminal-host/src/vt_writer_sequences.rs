@@ -112,7 +112,10 @@ mod tests {
 
     #[test]
     fn title_framing_preserves_sanitized_payload() {
-        assert_eq!(window_title(b"Windows Terminal"), b"\x1b]0;Windows Terminal\x1b\\");
+        assert_eq!(
+            window_title(b"Windows Terminal"),
+            b"\x1b]0;Windows Terminal\x1b\\"
+        );
         assert_eq!(window_title(b""), b"\x1b]0;\x1b\\");
     }
 }
