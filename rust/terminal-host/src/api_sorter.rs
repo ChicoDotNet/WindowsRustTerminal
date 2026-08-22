@@ -4,14 +4,17 @@
 //! C++ dispatcher still owns function pointers, exception translation, NTSTATUS
 //! conversion, pending replies, and device I/O.
 
+/// Number of API entries in each of the three canonical console API layers.
 pub const CONSOLE_API_LAYER_COUNTS: [usize; 3] = [10, 22, 45];
 
+/// Decomposed console API number.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ApiAddress {
     pub layer_index: usize,
     pub api_index: usize,
 }
 
+/// Offsets and reply-buffer state initialized before a server routine runs.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct DispatchPlan {
     pub address: ApiAddress,
@@ -20,6 +23,7 @@ pub struct DispatchPlan {
     pub read_offset: usize,
 }
 
+/// Reason a console API request cannot be dispatched.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum DispatchValidationError {
     InvalidLayer,
@@ -104,39 +108,97 @@ mod tests {
     const HEADER: usize = 16;
     const UNION: usize = 256;
 
-    fn encoded(layer: u32, api: u32) -> u32 { (layer << 24) | api }
+    fn encoded(layer: u32, api: u32) -> u32 {
+        (layer << 24) | api
+    }
 
     #[test]
     fn canonical_layer_boundaries_are_accepted() {
-        assert_eq!(decode_api_number(encoded(1, 9)).unwrap(), ApiAddress { layer_index: 0, api_index: 9 });
-        assert_eq!(decode_api_number(encoded(2, 21)).unwrap(), ApiAddress { layer_index: 1, api_index: 21 });
-        assert_eq!(decode_api_number(encoded(3, 44)).unwrap(), ApiAddress { layer_index: 2, api_index: 44 });
+        assert_eq!(
+            decode_api_number(encoded(1, 9)).unwrap(),
+            ApiAddress {
+                layer_index: 0,
+                api_index: 9,
+            }
+        );
+        assert_eq!(
+            decode_api_number(encoded(2, 21)).unwrap(),
+            ApiAddress {
+                layer_index: 1,
+                api_index: 21,
+            }
+        );
+        assert_eq!(
+            decode_api_number(encoded(3, 44)).unwrap(),
+            ApiAddress {
+                layer_index: 2,
+                api_index: 44,
+            }
+        );
     }
 
     #[test]
     fn zero_and_unknown_layers_are_rejected() {
-        assert_eq!(decode_api_number(encoded(0, 0)), Err(DispatchValidationError::InvalidLayer));
-        assert_eq!(decode_api_number(encoded(4, 0)), Err(DispatchValidationError::InvalidLayer));
+        assert_eq!(
+            decode_api_number(encoded(0, 0)),
+            Err(DispatchValidationError::InvalidLayer)
+        );
+        assert_eq!(
+            decode_api_number(encoded(4, 0)),
+            Err(DispatchValidationError::InvalidLayer)
+        );
     }
 
     #[test]
     fn api_index_must_fit_selected_layer() {
-        assert_eq!(decode_api_number(encoded(1, 10)), Err(DispatchValidationError::InvalidApi));
-        assert_eq!(decode_api_number(encoded(2, 22)), Err(DispatchValidationError::InvalidApi));
-        assert_eq!(decode_api_number(encoded(3, 45)), Err(DispatchValidationError::InvalidApi));
+        assert_eq!(
+            decode_api_number(encoded(1, 10)),
+            Err(DispatchValidationError::InvalidApi)
+        );
+        assert_eq!(
+            decode_api_number(encoded(2, 22)),
+            Err(DispatchValidationError::InvalidApi)
+        );
+        assert_eq!(
+            decode_api_number(encoded(3, 45)),
+            Err(DispatchValidationError::InvalidApi)
+        );
     }
 
     #[test]
     fn dispatch_plan_matches_cpp_offset_initialization() {
-        assert_eq!(plan_dispatch(encoded(2, 5), 80, 32, 24, HEADER, UNION).unwrap(), DispatchPlan { address: ApiAddress { layer_index: 1, api_index: 5 }, write_size: 32, write_offset: 32, read_offset: 48 });
+        assert_eq!(
+            plan_dispatch(encoded(2, 5), 80, 32, 24, HEADER, UNION).unwrap(),
+            DispatchPlan {
+                address: ApiAddress {
+                    layer_index: 1,
+                    api_index: 5,
+                },
+                write_size: 32,
+                write_offset: 32,
+                read_offset: 48,
+            }
+        );
     }
 
     #[test]
     fn each_cpp_size_guard_has_a_distinct_failure() {
-        assert_eq!(plan_dispatch(encoded(1, 0), 15, 0, 0, HEADER, UNION), Err(DispatchValidationError::InputSmallerThanHeader));
-        assert_eq!(plan_dispatch(encoded(1, 0), 400, 257, 0, HEADER, UNION), Err(DispatchValidationError::DescriptorExceedsMessageUnion));
-        assert_eq!(plan_dispatch(encoded(1, 0), 40, 25, 0, HEADER, UNION), Err(DispatchValidationError::DescriptorExceedsInput));
-        assert_eq!(plan_dispatch(encoded(1, 0), 80, 23, 24, HEADER, UNION), Err(DispatchValidationError::DescriptorSmallerThanRequired));
+        assert_eq!(
+            plan_dispatch(encoded(1, 0), 15, 0, 0, HEADER, UNION),
+            Err(DispatchValidationError::InputSmallerThanHeader)
+        );
+        assert_eq!(
+            plan_dispatch(encoded(1, 0), 400, 257, 0, HEADER, UNION),
+            Err(DispatchValidationError::DescriptorExceedsMessageUnion)
+        );
+        assert_eq!(
+            plan_dispatch(encoded(1, 0), 40, 25, 0, HEADER, UNION),
+            Err(DispatchValidationError::DescriptorExceedsInput)
+        );
+        assert_eq!(
+            plan_dispatch(encoded(1, 0), 80, 23, 24, HEADER, UNION),
+            Err(DispatchValidationError::DescriptorSmallerThanRequired)
+        );
     }
 
     #[test]
