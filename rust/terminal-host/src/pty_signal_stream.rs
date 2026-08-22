@@ -9,7 +9,9 @@ use crate::pty_signal::{PtySignal, PtySignalData, PtySignalError, decode_payload
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum PtySignalStreamError {
-    TruncatedSignal { remaining: usize },
+    TruncatedSignal {
+        remaining: usize,
+    },
     TruncatedPayload {
         signal: PtySignal,
         expected: usize,
@@ -122,9 +124,9 @@ mod tests {
     fn unknown_signal_stops_before_consuming_a_payload() {
         assert_eq!(
             decode_stream(&[4, 0, 1, 2, 3, 4]),
-            Err(PtySignalStreamError::Signal(
-                PtySignalError::UnknownSignal(4)
-            ))
+            Err(PtySignalStreamError::Signal(PtySignalError::UnknownSignal(
+                4
+            )))
         );
     }
 
