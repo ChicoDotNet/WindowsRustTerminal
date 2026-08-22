@@ -2,6 +2,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod api_message_buffers;
 pub mod attribute_format;
 pub mod console_argument_parser;
 pub mod console_arguments;
