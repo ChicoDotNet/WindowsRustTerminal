@@ -37,7 +37,7 @@ pub struct UpdateSelectionResult {
 /// Ports `Terminal::UpdateSelection` as a deterministic state transition.
 ///
 /// In Mark Mode without Shift, both endpoints and the pivot move together until
-/// `SwitchSelectionEndpoint` anchors one side. Otherwise only the endpoint on
+/// `SwitchSelectionEndpoint` anchors one side. Otherwise, only the endpoint on
 /// the non-pivot side moves, and crossing the pivot retargets the opposite side.
 pub fn update_selection(
     buffer: &TextBuffer,
