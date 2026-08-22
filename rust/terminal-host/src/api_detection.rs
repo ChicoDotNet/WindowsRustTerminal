@@ -49,8 +49,7 @@ pub const fn should_free_module(level: ApiLevel, module_loaded: bool) -> bool {
 #[cfg(test)]
 mod tests {
     use super::{
-        ApiLevel, LoaderFailure, retry_without_no_forwarder, select_api_level,
-        should_free_module,
+        ApiLevel, LoaderFailure, retry_without_no_forwarder, select_api_level, should_free_module,
     };
 
     #[test]
@@ -59,10 +58,7 @@ mod tests {
             false,
             LoaderFailure::InvalidParameter
         ));
-        assert!(!retry_without_no_forwarder(
-            false,
-            LoaderFailure::Other
-        ));
+        assert!(!retry_without_no_forwarder(false, LoaderFailure::Other));
         assert!(!retry_without_no_forwarder(
             true,
             LoaderFailure::InvalidParameter
@@ -71,14 +67,8 @@ mod tests {
 
     #[test]
     fn library_only_probe_selects_win32_when_load_succeeds() {
-        assert_eq!(
-            select_api_level(true, false, false),
-            ApiLevel::Win32
-        );
-        assert_eq!(
-            select_api_level(false, false, false),
-            ApiLevel::OneCore
-        );
+        assert_eq!(select_api_level(true, false, false), ApiLevel::Win32);
+        assert_eq!(select_api_level(false, false, false), ApiLevel::OneCore);
     }
 
     #[test]
