@@ -96,12 +96,8 @@ mod tests {
     #[test]
     fn onecore_level_is_invalid_when_onecore_build_support_is_absent() {
         assert!(
-            select_factory_implementation(
-                FactoryProduct::ConsoleControl,
-                ApiLevel::OneCore,
-                false
-            )
-            .is_err()
+            select_factory_implementation(FactoryProduct::ConsoleControl, ApiLevel::OneCore, false)
+                .is_err()
         );
     }
 }
