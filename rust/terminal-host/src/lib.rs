@@ -8,6 +8,7 @@ pub mod console_arguments;
 pub mod pty_clear_buffer;
 pub mod pty_signal;
 pub mod pty_signal_state;
+pub mod pty_signal_stream;
 pub mod vt_char_info;
 pub mod vt_io_protocol;
 pub mod vt_io_state;
