@@ -23,21 +23,23 @@ const COM_SERVER_ARG: &str = "-Embedding";
 const TEXT_MEASUREMENT_ARG: &str = "--textMeasurement";
 const AMBIGUOUS_IS_WIDE_ARG: &str = "--ambiguousIsWide";
 
+const MODE_AMBIGUOUS_IS_WIDE: u16 = 1 << 0;
+const MODE_FORCE_V1: u16 = 1 << 1;
+const MODE_FORCE_NO_HANDOFF: u16 = 1 << 2;
+const MODE_HEADLESS: u16 = 1 << 3;
+const MODE_RUN_AS_COM_SERVER: u16 = 1 << 4;
+const MODE_CREATE_SERVER_HANDLE: u16 = 1 << 5;
+const MODE_INHERIT_CURSOR: u16 = 1 << 6;
+
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ConsoleArgumentState {
     pub client_commandline: String,
     pub text_measurement: String,
-    pub ambiguous_is_wide: bool,
-    pub force_v1: bool,
-    pub force_no_handoff: bool,
-    pub headless: bool,
     pub width: i16,
     pub height: i16,
-    pub run_as_com_server: bool,
-    pub create_server_handle: bool,
     pub server_handle: Option<u32>,
     pub signal_handle: Option<u32>,
-    pub inherit_cursor: bool,
+    modes: u16,
 }
 
 impl Default for ConsoleArgumentState {
@@ -45,18 +47,61 @@ impl Default for ConsoleArgumentState {
         Self {
             client_commandline: String::new(),
             text_measurement: String::new(),
-            ambiguous_is_wide: false,
-            force_v1: false,
-            force_no_handoff: false,
-            headless: false,
             width: 0,
             height: 0,
-            run_as_com_server: false,
-            create_server_handle: true,
             server_handle: None,
             signal_handle: None,
-            inherit_cursor: false,
+            modes: MODE_CREATE_SERVER_HANDLE,
         }
+    }
+}
+
+impl ConsoleArgumentState {
+    #[must_use]
+    pub const fn ambiguous_is_wide(&self) -> bool {
+        self.has_mode(MODE_AMBIGUOUS_IS_WIDE)
+    }
+
+    #[must_use]
+    pub const fn force_v1(&self) -> bool {
+        self.has_mode(MODE_FORCE_V1)
+    }
+
+    #[must_use]
+    pub const fn force_no_handoff(&self) -> bool {
+        self.has_mode(MODE_FORCE_NO_HANDOFF)
+    }
+
+    #[must_use]
+    pub const fn headless(&self) -> bool {
+        self.has_mode(MODE_HEADLESS)
+    }
+
+    #[must_use]
+    pub const fn run_as_com_server(&self) -> bool {
+        self.has_mode(MODE_RUN_AS_COM_SERVER)
+    }
+
+    #[must_use]
+    pub const fn create_server_handle(&self) -> bool {
+        self.has_mode(MODE_CREATE_SERVER_HANDLE)
+    }
+
+    #[must_use]
+    pub const fn inherit_cursor(&self) -> bool {
+        self.has_mode(MODE_INHERIT_CURSOR)
+    }
+
+    const fn has_mode(&self, mode: u16) -> bool {
+        self.modes & mode != 0
+    }
+
+    fn set_mode(&mut self, mode: u16) {
+        self.modes |= mode;
+    }
+
+    fn clear_mode(&mut self, mode: u16) {
+        self.modes &= !mode;
     }
 }
 
@@ -93,7 +138,7 @@ pub fn parse_console_arguments(
                 return Err(ConsoleArgumentError::DuplicateHandle("server"));
             }
             state.server_handle = Some(parse_handle(value)?);
-            state.create_server_handle = false;
+            state.clear_mode(MODE_CREATE_SERVER_HANDLE);
             index += consumed;
         } else if arg == SIGNAL_HANDLE_ARG {
             let value = next_value(tokens, index, SIGNAL_HANDLE_ARG)?;
@@ -103,13 +148,13 @@ pub fn parse_console_arguments(
             state.signal_handle = Some(parse_handle(value)?);
             index += 2;
         } else if arg == FORCE_V1_ARG {
-            state.force_v1 = true;
+            state.set_mode(MODE_FORCE_V1);
             index += 1;
         } else if arg == FORCE_NO_HANDOFF_ARG {
-            state.force_no_handoff = true;
+            state.set_mode(MODE_FORCE_NO_HANDOFF);
             index += 1;
         } else if arg == COM_SERVER_ARG {
-            state.run_as_com_server = true;
+            state.set_mode(MODE_RUN_AS_COM_SERVER);
             index += 1;
         } else if arg.starts_with(FILEPATH_LEADER_PREFIX) {
             index += 1;
@@ -126,16 +171,17 @@ pub fn parse_console_arguments(
             }
             index += 2;
         } else if arg == HEADLESS_ARG {
-            state.headless = true;
+            state.set_mode(MODE_HEADLESS);
             index += 1;
         } else if arg == INHERIT_CURSOR_ARG {
-            state.inherit_cursor = true;
+            state.set_mode(MODE_INHERIT_CURSOR);
             index += 1;
         } else if arg == TEXT_MEASUREMENT_ARG {
-            state.text_measurement = next_value(tokens, index, TEXT_MEASUREMENT_ARG)?.to_owned();
+            next_value(tokens, index, TEXT_MEASUREMENT_ARG)?
+                .clone_into(&mut state.text_measurement);
             index += 2;
         } else if arg == AMBIGUOUS_IS_WIDE_ARG {
-            state.ambiguous_is_wide = true;
+            state.set_mode(MODE_AMBIGUOUS_IS_WIDE);
             index += 1;
         } else if arg == CLIENT_COMMANDLINE_ARG {
             state.client_commandline =
@@ -229,23 +275,23 @@ mod tests {
 
         assert_eq!(parsed.server_handle, Some(0x40));
         assert_eq!(parsed.signal_handle, Some(0x50));
-        assert!(!parsed.create_server_handle);
-        assert!(parsed.force_v1);
-        assert!(parsed.force_no_handoff);
-        assert!(parsed.run_as_com_server);
+        assert!(!parsed.create_server_handle());
+        assert!(parsed.force_v1());
+        assert!(parsed.force_no_handoff());
+        assert!(parsed.run_as_com_server());
         assert_eq!(parsed.width, 120);
         assert_eq!(parsed.height, 30);
-        assert!(parsed.headless);
-        assert!(parsed.inherit_cursor);
+        assert!(parsed.headless());
+        assert!(parsed.inherit_cursor());
         assert_eq!(parsed.text_measurement, "graphemes");
-        assert!(parsed.ambiguous_is_wide);
+        assert!(parsed.ambiguous_is_wide());
     }
 
     #[test]
     fn legacy_server_handle_is_accepted() {
         let parsed = parse_console_arguments(&tokens(&["0x1234"])).expect("legacy handle");
         assert_eq!(parsed.server_handle, Some(0x1234));
-        assert!(!parsed.create_server_handle);
+        assert!(!parsed.create_server_handle());
     }
 
     #[test]
@@ -253,7 +299,7 @@ mod tests {
         let parsed =
             parse_console_arguments(&tokens(&["--headless", "--", "cmd.exe", "/c", "echo hi"]))
                 .expect("client command line");
-        assert!(parsed.headless);
+        assert!(parsed.headless());
         assert_eq!(parsed.client_commandline, "cmd.exe /c \"echo hi\"");
     }
 
@@ -261,7 +307,7 @@ mod tests {
     fn first_unknown_argument_starts_client_commandline() {
         let parsed = parse_console_arguments(&tokens(&["--headless", "pwsh.exe", "-NoLogo"]))
             .expect("implicit client command line");
-        assert!(parsed.headless);
+        assert!(parsed.headless());
         assert_eq!(parsed.client_commandline, "pwsh.exe -NoLogo");
     }
 
@@ -272,7 +318,7 @@ mod tests {
             "--headless",
         ]))
         .expect("historical path token");
-        assert!(parsed.headless);
+        assert!(parsed.headless());
         assert!(parsed.client_commandline.is_empty());
     }
 
