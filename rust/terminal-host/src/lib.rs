@@ -16,6 +16,7 @@ pub mod pty_signal;
 pub mod pty_signal_session;
 pub mod pty_signal_state;
 pub mod pty_signal_stream;
+pub mod remote_console_control;
 pub mod vt_char_info;
 pub mod vt_io_protocol;
 pub mod vt_io_state;
