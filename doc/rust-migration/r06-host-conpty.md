@@ -51,9 +51,17 @@ The seventh slice ports the deterministic `VtIo::FormatAttributes` formatting co
 
 The eighth slice ports three deterministic writer transforms without taking ownership of the output pipe: newline translation inserts CR only before an LF that does not already have one, raw control stripping maps C0/C1 code units through the same legacy printable substitutions while preserving cell count, and single-unit UCS-2 output encodes one to three UTF-8 bytes after replacing isolated surrogates with U+FFFD.
 
+## R06i — deterministic VtIo writer sequences
+
+The ninth slice ports the byte formatting for CUP, DECTCEM, SGR 1006 mouse mode, DECAWM, alternate-screen-buffer mode, DSR CPR, XTWINOPS visibility, OSC 0 title framing, and DECSC/DECRC cursor save/restore. These helpers only construct bytes; whether the bytes are submitted, corked, overlapped, or discarded remains the responsibility of the platform-owned writer boundary.
+
+## R06j — deterministic CHAR_INFO serialization
+
+The tenth slice ports `VtIo::Writer::WriteInfos` over a platform-neutral view of the consumed `CHAR_INFO` fields. It preserves CUP positioning, attribute transition emission, incomplete wide-glyph edge replacement, suppression of interior trailing halves, and the double replacement needed when a nominally wide cell contains a surrogate or control code unit. It reuses the migrated R04 attribute representation plus the R06 sanitization and UTF-8 helpers instead of duplicating those rules.
+
 ## Safety boundary
 
-`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06h do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW` remains an explicit platform boundary for a later compatibility slice.
+`terminal-host` uses `#![forbid(unsafe_code)]`. R06a–R06j do not own Windows handles, create threads, call Win32, modify C++, or introduce FFI. `CommandLineToArgvW`, `WriteFile`, overlapped I/O, thread creation, console locking, and `CHAR_INFO` acquisition remain explicit platform boundaries for later compatibility plumbing.
 
 ## Next slices
 
