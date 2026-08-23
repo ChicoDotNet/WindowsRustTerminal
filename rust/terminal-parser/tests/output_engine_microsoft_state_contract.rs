@@ -197,10 +197,7 @@ fn microsoft_output_csi_subparameter_accepts_many_leading_zeroes() {
     let sequence = format!("\u{1b}[3:{}12345J", "0".repeat(50));
     let mut machine = machine();
     machine.process_str(&sequence);
-    assert_eq!(
-        last_parameters(&machine).sub_params_for(0),
-        &[Some(12_345)]
-    );
+    assert_eq!(last_parameters(&machine).sub_params_for(0), &[Some(12_345)]);
 }
 
 #[test]
