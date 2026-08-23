@@ -174,9 +174,7 @@ fn microsoft_output_control_characters_match_bel_bs_cr_and_ht() {
 fn microsoft_output_vt52_sequences_match_all_reference_operations() {
     let mut machine = machine();
     machine.set_parser_mode(ParserMode::Ansi, false);
-    machine.process_str(
-        "\u{1b}A\u{1b}B\u{1b}C\u{1b}D\u{1b}H\u{1b}I\u{1b}J\u{1b}K\u{1b}Y#%",
-    );
+    machine.process_str("\u{1b}A\u{1b}B\u{1b}C\u{1b}D\u{1b}H\u{1b}I\u{1b}J\u{1b}K\u{1b}Y#%");
 
     assert_eq!(
         actions(&machine),
