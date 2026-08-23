@@ -44,6 +44,34 @@ Assert-SourceMethodSet -Inventory $inventory -Source 'StateMachineTest.cpp' -Exp
     'VtParameterSubspanTest'
 )
 
+Assert-SourceMethodSet -Inventory $inventory -Source 'InputEngineTest.cpp' -Expected @(
+    'AlphanumericTest',
+    'AltBackspaceEnterTest',
+    'AltBackspaceTest',
+    'AltCtrlDTest',
+    'AltIntermediateTest',
+    'C0Test',
+    'CSICursorBackTabTest',
+    'ChunkedSequence',
+    'CtrlAltZCtrlAltXTest',
+    'CursorPositioningTest',
+    'EnhancedKeysTest',
+    'NonAsciiTest',
+    'RoundTripTest',
+    'SGRMouseTest_ButtonClick',
+    'SGRMouseTest_DoubleClick',
+    'SGRMouseTest_Hover',
+    'SGRMouseTest_Modifiers',
+    'SGRMouseTest_Movement',
+    'SGRMouseTest_Scroll',
+    'SS3CursorKeyTest',
+    'TestSs3Entry',
+    'TestSs3Immediate',
+    'TestSs3Param',
+    'TestWin32InputOptionals',
+    'TestWin32InputParsing'
+)
+
 $duplicates = @($inventory | Group-Object suite, source, method | Where-Object Count -gt 1)
 if ($duplicates.Count -ne 0) {
     throw 'Microsoft source test inventory contains duplicate method identities.'
