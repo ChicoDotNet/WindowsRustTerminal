@@ -142,11 +142,20 @@ fn microsoft_win32_input_optionals_matrix() {
 #[test]
 fn microsoft_sgr_mouse_button_click_table() {
     assert_mouse_table(&[
-        ("\u{1b}[<0;1;1M", mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<0;1;1M",
+            mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<0;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<1;1;1M", mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<1;1;1M",
+            mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<1;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<2;1;1M", mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<2;1;1M",
+            mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<2;1;1m", mouse(0, 0, 0, 0, 0)),
     ]);
 }
@@ -176,7 +185,10 @@ fn microsoft_sgr_mouse_modifier_table() {
 fn microsoft_sgr_mouse_movement_table() {
     let both = FROM_LEFT_1ST_BUTTON_PRESSED | RIGHTMOST_BUTTON_PRESSED;
     assert_mouse_table(&[
-        ("\u{1b}[<2;1;1M", mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<2;1;1M",
+            mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         (
             "\u{1b}[<34;1;2M",
             mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 1, MOUSE_MOVED),
@@ -226,32 +238,50 @@ fn microsoft_sgr_mouse_scroll_table() {
 #[test]
 fn microsoft_sgr_mouse_double_click_table() {
     assert_mouse_table(&[
-        ("\u{1b}[<0;1;1M", mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<0;1;1M",
+            mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<0;1;1m", mouse(0, 0, 0, 0, 0)),
         (
             "\u{1b}[<0;1;1M",
             mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, DOUBLE_CLICK),
         ),
         ("\u{1b}[<0;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<0;1;1M", mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<0;1;1M",
+            mouse(FROM_LEFT_1ST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<0;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<1;1;1M", mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<1;1;1M",
+            mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<1;1;1m", mouse(0, 0, 0, 0, 0)),
         (
             "\u{1b}[<1;1;1M",
             mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, DOUBLE_CLICK),
         ),
         ("\u{1b}[<1;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<1;1;1M", mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<1;1;1M",
+            mouse(FROM_LEFT_2ND_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<1;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<2;1;1M", mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<2;1;1M",
+            mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<2;1;1m", mouse(0, 0, 0, 0, 0)),
         (
             "\u{1b}[<2;1;1M",
             mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, DOUBLE_CLICK),
         ),
         ("\u{1b}[<2;1;1m", mouse(0, 0, 0, 0, 0)),
-        ("\u{1b}[<2;1;1M", mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0)),
+        (
+            "\u{1b}[<2;1;1M",
+            mouse(RIGHTMOST_BUTTON_PRESSED, 0, 0, 0, 0),
+        ),
         ("\u{1b}[<2;1;1m", mouse(0, 0, 0, 0, 0)),
     ]);
 }
