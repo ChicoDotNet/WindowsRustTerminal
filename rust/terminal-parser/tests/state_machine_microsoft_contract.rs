@@ -1,6 +1,4 @@
-use terminal_parser::state_machine::{
-    Parameters, State, StateMachine, StateMachineEngine, VtId,
-};
+use terminal_parser::state_machine::{Parameters, State, StateMachine, StateMachineEngine, VtId};
 
 #[derive(Default)]
 struct CaptureEngine {
