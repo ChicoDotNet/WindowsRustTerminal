@@ -12,7 +12,9 @@ R08a adds four `terminal-parser-ffi` tests, bringing the current R08 branch inve
 
 `tools/rust/contract-baseline.json` records the Microsoft `terminal` suite at **760 total**, with zero failed/blocked/not-run allowed and at most one skipped. The full suite remains the certification oracle; its approximately 24-minute runtime is not used as a reason to weaken a gate.
 
-R08c adds `tools/rust/Get-MicrosoftTestInventory.ps1`, which derives stable source-level `TEST_METHOD` identities without running the Microsoft binary. Source methods are deliberately treated as contract groups, not as a replacement for TAEF's expanded case count: data-driven methods can expand into many of the 760 runtime cases.
+R08c adds two complementary inventories. `tools/rust/Get-MicrosoftTestInventory.ps1` derives stable source-level `TEST_METHOD` identities without a build. The TAEF harness also uses `/listProperties` to enumerate expanded runtime invocation identities, including data-driven `#metadataSet` cases, before executing the expensive suite. A baseline-count mismatch therefore fails early before spending the full contract runtime.
+
+Source methods are contract groups, not a replacement for TAEF's expanded 760-case inventory. The runtime inventory is authoritative when finer-grained boundary selection is needed.
 
 ## Coverage classifications
 
@@ -31,7 +33,7 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 | Area | Rust crate | Stage | R07 stable tests | Current R08 tests | Initial equivalence status | C# retained? | Default CI tier |
 |---|---|---:|---:|---:|---|---|---|
-| VT parser | `terminal-parser` | R01 | 39 | 39 | Partial; mapping started | No | Fast + affected boundary |
+| VT parser | `terminal-parser` | R01 | 39 | 39 | Partial; Base64 + StateMachine mapping complete | No | Fast + affected boundary |
 | Terminal input | `terminal-input` | R02 | 28 | 28 | Partial pending method mapping | No | Fast + affected boundary |
 | Adapter / dispatch / Sixel | `terminal-adapter` | R03 | 77 | 77 | Partial pending method mapping | No | Fast + affected boundary |
 | TextBuffer / foundational types | `terminal-buffer` | R04 | 68 | 68 | Partial pending method mapping | No | Fast + affected boundary |
@@ -46,14 +48,30 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 ## Evidence rows
 
-The first method-level mappings are intentionally small and auditable. `src/terminal/parser/ut_parser/Base64Test.cpp` contains exactly two Microsoft `TEST_METHOD` contracts, and the new source-inventory self-test locks that identity set.
+### R01 Base64
+
+`src/terminal/parser/ut_parser/Base64Test.cpp` contains exactly two Microsoft `TEST_METHOD` contracts, and the source-inventory self-test locks that identity set.
 
 | Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `terminal / Base64Test.DecodeUTF8` | Parser/Base64 | Decode multilingual UTF-8 and emoji/skin-tone payloads | `base64::tests::matches_windows_terminal_unicode_vectors` | Rust uses the same two Base64 inputs and the same expected Unicode strings as Microsoft | Exact | No | No | Fast + Full certification | R01 | Direct vector-for-vector equivalence |
 | `terminal / Base64Test.DecodeFuzz` | Parser/Base64 | ASCII round-trip across varying lengths, padded/unpadded input, including empty input | `base64::tests::deterministic_ascii_round_trips_match_reference_encoding`; `decodes_rfc_4648_vectors_with_and_without_padding` | Microsoft samples 8 random lengths/content choices; Rust deterministically covers every length 0..128 and both padded and unpadded forms, plus canonical RFC vectors | Stronger | No | No | Fast + Full certification | R01 | Rust trades nondeterministic sampling for broader reproducible length/padding coverage |
 
-These two source methods may leave the **per-change semantic boundary** set when Base64 implementation-only Rust changes are made. They remain part of the complete Microsoft suite at R08/R09 certification, and they become boundary-relevant again if the C ABI representation or C++ consumer for Base64 changes.
+### R01 StateMachine
+
+`StateMachineTest.cpp` defines seven source methods. Rust has direct semantic counterparts for all seven; the data-driven DCS method expands to four Microsoft runtime invocations and Rust covers the same four terminators.
+
+| Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `terminal / StateMachineTest.TwoStateMachinesDoNotInterfereWithEachOther` | Parser/state machine | Parser instance isolation across interleaved partial/full CSI sequences | `state_machine::tests::two_state_machines_do_not_interfere` | Same partial `ESC[12`, independent `ESC[3C`, then completion `;34m`; same parameter observations | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
+| `terminal / StateMachineTest.PassThroughUnhandled` | Parser/state machine | Unknown CSI is flushed intact while following printable text remains printable | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Same `ESC[?999h` passthrough contract and printable-run preservation | Exact | No | No | Fast + Full certification | R01 | Rust also verifies prior buffered text is not lost |
+| `terminal / StateMachineTest.RunStorageBeforeEscape` | Parser/state machine | Buffered printable run is emitted before transition into an escape sequence | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Rust combines the pre-escape run and unhandled-CSI assertions in one scenario | Exact | No | No | Fast + Full certification | R01 | One Rust test covers two adjacent Microsoft source contracts |
+| `terminal / StateMachineTest.BulkTextPrint` | Parser/state machine | Plain text is emitted as a single bulk print run | `state_machine::tests::bulk_text_is_printed_as_one_run` | Same `12345 Hello World` payload and expected single run | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
+| `terminal / StateMachineTest.PassThroughUnhandledSplitAcrossWrites` | Parser/state machine | Unknown CSI/OSC sequences survive two- and three-part write boundaries | `state_machine::tests::unhandled_sequences_survive_split_writes` | Rust covers split CSI and split OSC-ST boundaries corresponding to the Microsoft regression cases | Exact | No | No | Fast + Full certification | R01 | Boundary preservation is deterministic |
+| `terminal / StateMachineTest.DcsDataStringsReceivedByHandler` | Parser/state machine | DCS id/params/data delivery and termination by ST, CSI, CAN, or SUB | `state_machine::tests::dcs_data_is_delivered_and_st_can_terminate_it`; `dcs_can_be_terminated_by_csi_can_or_sub` | Microsoft data source has terminatorType `{0,1,2,3}`; Rust explicitly covers ST plus CSI/CAN/SUB and validates id, params, data, execution/CSI side effects, and following text | Exact | No | No | Fast + Full certification | R01 | Four expanded TAEF cases map to two Rust tests |
+| `terminal / StateMachineTest.VtParameterSubspanTest` | Parser/parameters | Parameter subspan at 0, 2, end, and past-end | `state_machine::tests::parameter_subspan_matches_terminal_semantics` | Same values `[12,34,56,78]`, offsets `0,2,4,6`, sizes/default omitted value semantics | Exact | No | No | Fast + Full certification | R01 | Direct vector-for-vector equivalence |
+
+The nine Base64/StateMachine source methods above may leave the **per-change semantic boundary** set for Rust-only implementation changes. They remain in complete Microsoft certification and become boundary-relevant again whenever their C ABI representation or C++ consumer changes.
 
 ## Per-test row schema
 
@@ -98,4 +116,4 @@ where that ownership already exists, while native WinRT/COM/Win32 boundaries rem
 
 ## Next matrix increment
 
-Continue source-method mapping through `StateMachineTest`, `InputEngineTest`, and `OutputEngineTest`, then R02-R07. Runtime-expanded TAEF case identities should be captured from a successful certification artifact when needed for finer-grained boundary selection. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
+Continue R01 mapping through `InputEngineTest` and `OutputEngineTest`, then R02-R07. Runtime-expanded TAEF identities are captured automatically by the contract harness when a certification run is required. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
