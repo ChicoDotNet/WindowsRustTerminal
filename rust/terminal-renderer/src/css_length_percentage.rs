@@ -89,7 +89,11 @@ mod tests {
         for input in ["", " ", "bogus", "12em", "12 px", "1e1000"] {
             let value = CssLengthPercentage::from_css(input);
             assert_eq!(value.reference_frame(), ReferenceFrame::None, "{input}");
-            assert_eq!(value.resolve(7.0, 96.0, 12.0, 8.0), 7.0, "{input}");
+            assert_eq!(
+                value.resolve(7.0, 96.0, 12.0, 8.0).to_bits(),
+                7.0_f32.to_bits(),
+                "{input}"
+            );
         }
     }
 
@@ -97,31 +101,46 @@ mod tests {
     fn unitless_and_percent_values_are_relative_to_font_size() {
         let unitless = CssLengthPercentage::from_css("1.25");
         assert_eq!(unitless.reference_frame(), ReferenceFrame::FontSize);
-        assert_eq!(unitless.resolve(0.0, 96.0, 16.0, 8.0), 20.0);
+        assert_eq!(
+            unitless.resolve(0.0, 96.0, 16.0, 8.0).to_bits(),
+            20.0_f32.to_bits()
+        );
 
         let percent = CssLengthPercentage::from_css("125%");
         assert_eq!(percent.reference_frame(), ReferenceFrame::FontSize);
-        assert_eq!(percent.resolve(0.0, 96.0, 16.0, 8.0), 20.0);
+        assert_eq!(
+            percent.resolve(0.0, 96.0, 16.0, 8.0).to_bits(),
+            20.0_f32.to_bits()
+        );
     }
 
     #[test]
     fn pixels_and_points_are_normalized_to_inches() {
         let pixels = CssLengthPercentage::from_css("96px");
         assert_eq!(pixels.reference_frame(), ReferenceFrame::Absolute);
-        assert_eq!(pixels.value(), 1.0);
-        assert_eq!(pixels.resolve(0.0, 144.0, 0.0, 0.0), 144.0);
+        assert_eq!(pixels.value().to_bits(), 1.0_f32.to_bits());
+        assert_eq!(
+            pixels.resolve(0.0, 144.0, 0.0, 0.0).to_bits(),
+            144.0_f32.to_bits()
+        );
 
         let points = CssLengthPercentage::from_css("72pt");
         assert_eq!(points.reference_frame(), ReferenceFrame::Absolute);
-        assert_eq!(points.value(), 1.0);
-        assert_eq!(points.resolve(0.0, 144.0, 0.0, 0.0), 144.0);
+        assert_eq!(points.value().to_bits(), 1.0_f32.to_bits());
+        assert_eq!(
+            points.resolve(0.0, 144.0, 0.0, 0.0).to_bits(),
+            144.0_f32.to_bits()
+        );
     }
 
     #[test]
     fn ch_values_are_relative_to_advance_width() {
         let value = CssLengthPercentage::from_css("1.5ch");
         assert_eq!(value.reference_frame(), ReferenceFrame::AdvanceWidth);
-        assert_eq!(value.resolve(0.0, 96.0, 16.0, 8.0), 12.0);
+        assert_eq!(
+            value.resolve(0.0, 96.0, 16.0, 8.0).to_bits(),
+            12.0_f32.to_bits()
+        );
     }
 
     #[test]
@@ -140,6 +159,9 @@ mod tests {
     fn exponent_and_sign_forms_are_supported() {
         let value = CssLengthPercentage::from_css("-1.25e1%");
         assert_eq!(value.reference_frame(), ReferenceFrame::FontSize);
-        assert_eq!(value.resolve(0.0, 96.0, 80.0, 8.0), -10.0);
+        assert_eq!(
+            value.resolve(0.0, 96.0, 80.0, 8.0).to_bits(),
+            (-10.0_f32).to_bits()
+        );
     }
 }
