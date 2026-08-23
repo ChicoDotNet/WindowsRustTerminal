@@ -65,12 +65,7 @@ fn parse_single_key(sequence: &str) -> KeyEvent {
     keys[0]
 }
 
-fn assert_key(
-    key: KeyEvent,
-    virtual_key: u16,
-    unicode_char: u16,
-    control_key_state: u32,
-) {
+fn assert_key(key: KeyEvent, virtual_key: u16, unicode_char: u16, control_key_state: u32) {
     assert!(key.key_down);
     assert_eq!(key.repeat_count, 1);
     assert_eq!(key.virtual_key, virtual_key);
@@ -93,12 +88,7 @@ fn microsoft_cursor_positioning_consumes_once_then_reverts_to_f3() {
     machine.process_str("\u{1b}[1;4R");
     let keys = primary_key_downs(&machine);
     assert_eq!(keys.len(), 1);
-    assert_key(
-        keys[0],
-        VK_F3,
-        0,
-        LEFT_ALT_PRESSED | SHIFT_PRESSED,
-    );
+    assert_key(keys[0], VK_F3, 0, LEFT_ALT_PRESSED | SHIFT_PRESSED);
 }
 
 #[test]
@@ -125,12 +115,7 @@ fn microsoft_enhanced_keys_table_matches_all_ten_sequences() {
         (VK_INSERT, "\u{1b}[2~"),
         (VK_DELETE, "\u{1b}[3~"),
     ] {
-        assert_key(
-            parse_single_key(sequence),
-            virtual_key,
-            0,
-            ENHANCED_KEY,
-        );
+        assert_key(parse_single_key(sequence), virtual_key, 0, ENHANCED_KEY);
     }
 }
 
@@ -208,10 +193,5 @@ fn microsoft_alt_intermediate_parser_half_preserves_alt_slash_then_ctrl_e() {
     let keys = primary_key_downs(&machine);
     assert_eq!(keys.len(), 2);
     assert_key(keys[0], VK_OEM_2, u16::from(b'/'), LEFT_ALT_PRESSED);
-    assert_key(
-        keys[1],
-        u16::from(b'E'),
-        0x05,
-        LEFT_CTRL_PRESSED,
-    );
+    assert_key(keys[1], u16::from(b'E'), 0x05, LEFT_CTRL_PRESSED);
 }
