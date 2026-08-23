@@ -7,7 +7,6 @@ pub struct RenderAttempt {
     pub backoff_millis: u32,
 }
 
-#[must_use]
 pub fn render_attempts() -> impl Iterator<Item = RenderAttempt> {
     (0..=MAX_RETRIES_FOR_RENDER_ENGINE).map(|attempt| RenderAttempt {
         attempt,
