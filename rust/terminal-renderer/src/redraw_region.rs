@@ -24,7 +24,10 @@ pub fn plan_redraw_region(
     viewport: ExclusiveRect,
     double_width_rows: &[bool],
 ) -> Option<ExclusiveRect> {
-    if double_width_rows.iter().any(|is_double_width| *is_double_width) {
+    if double_width_rows
+        .iter()
+        .any(|is_double_width| *is_double_width)
+    {
         region.right *= 2;
     }
 
