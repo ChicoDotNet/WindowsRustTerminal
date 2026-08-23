@@ -140,7 +140,7 @@ fn normalize_color_field(field: &mut String) -> bool {
 }
 
 fn parse_xparse_hash(hex: &str) -> Option<[u8; 3]> {
-    if hex.len() % 3 != 0 {
+    if !hex.len().is_multiple_of(3) {
         return None;
     }
     let width = hex.len() / 3;
