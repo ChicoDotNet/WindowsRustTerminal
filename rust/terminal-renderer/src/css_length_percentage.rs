@@ -58,7 +58,14 @@ impl CssLengthPercentage {
 }
 
 fn parse_number_prefix(input: &str) -> Option<(f32, &str)> {
-    for split in input.char_indices().map(|(index, _)| index).skip(1).chain([input.len()]).rev() {
+    let mut splits = input.char_indices().map(|(index, _)| index).collect::<Vec<_>>();
+    splits.push(input.len());
+
+    for split in splits.into_iter().rev() {
+        if split == 0 {
+            continue;
+        }
+
         let candidate = &input[..split];
         if let Ok(value) = candidate.parse::<f32>() {
             if value.is_finite() {
