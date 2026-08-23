@@ -1,4 +1,6 @@
-use terminal_parser::state_machine::{Parameters, StateMachine, StateMachineEngine, VtId};
+use terminal_parser::state_machine::{
+    Parameters, State, StateMachine, StateMachineEngine, VtId,
+};
 
 #[derive(Default)]
 struct CaptureEngine {
@@ -22,6 +24,10 @@ impl StateMachineEngine for CaptureEngine {
     }
 }
 
+fn input_machine() -> StateMachine<CaptureEngine> {
+    StateMachine::new_input(CaptureEngine::default())
+}
+
 #[test]
 fn microsoft_passthrough_unhandled_sequence_before_printable_text() {
     let mut machine = StateMachine::new(CaptureEngine::default());
@@ -37,4 +43,56 @@ fn microsoft_passthrough_unhandled_sequence_before_printable_text() {
         String::from_utf16(&machine.engine().printed).expect("test text is valid UTF-16"),
         " 12345 Hello World"
     );
+}
+
+#[test]
+fn microsoft_chunked_csi_remains_in_parameter_state() {
+    let mut machine = input_machine();
+    machine.process_str("\u{1b}[1");
+    assert_eq!(machine.state(), State::CsiParam);
+}
+
+#[test]
+fn microsoft_ss3_entry_transitions_to_ground_after_dispatch() {
+    let mut machine = input_machine();
+    assert_eq!(machine.state(), State::Ground);
+
+    machine.process_code_unit(0x1b);
+    assert_eq!(machine.state(), State::Escape);
+    machine.process_code_unit(u16::from(b'O'));
+    assert_eq!(machine.state(), State::Ss3Entry);
+    machine.process_code_unit(u16::from(b'm'));
+    assert_eq!(machine.state(), State::Ground);
+}
+
+#[test]
+fn microsoft_ss3_immediates_dispatch_directly_from_entry() {
+    let mut machine = input_machine();
+
+    for final_byte in [b'$', b'#', b'%', b'?'] {
+        machine.process_code_unit(0x1b);
+        assert_eq!(machine.state(), State::Escape);
+        machine.process_code_unit(u16::from(b'O'));
+        assert_eq!(machine.state(), State::Ss3Entry);
+        machine.process_code_unit(u16::from(final_byte));
+        assert_eq!(machine.state(), State::Ground);
+    }
+}
+
+#[test]
+fn microsoft_ss3_parameters_remain_parameter_state_until_final_byte() {
+    let mut machine = input_machine();
+
+    machine.process_code_unit(0x1b);
+    assert_eq!(machine.state(), State::Escape);
+    machine.process_code_unit(u16::from(b'O'));
+    assert_eq!(machine.state(), State::Ss3Entry);
+
+    for parameter_byte in [b';', b'3', b'2', b'4', b';', b';', b'8'] {
+        machine.process_code_unit(u16::from(parameter_byte));
+        assert_eq!(machine.state(), State::Ss3Param);
+    }
+
+    machine.process_code_unit(u16::from(b'J'));
+    assert_eq!(machine.state(), State::Ground);
 }
