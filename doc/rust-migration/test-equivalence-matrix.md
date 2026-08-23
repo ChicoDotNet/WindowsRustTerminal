@@ -8,7 +8,7 @@ The matrix is deliberately conservative: until an individual Microsoft contract 
 
 The fully integrated R07 checkpoint (`33190ef8d43626adabc7286e2ffe09ea383300fe`) contains **418 distinct Rust tests**. The same 418 contracts run on Linux and Windows, so the CI matrix performs 836 executions but represents 418 distinct test definitions. R07 reported zero ignored tests.
 
-R08a added four `terminal-parser-ffi` tests. R08c has since added two explicit Microsoft-contract tests, bringing the current branch inventory to **424 distinct Rust tests**.
+R08a added four `terminal-parser-ffi` tests. R08c then added twelve explicit Microsoft-contract tests, bringing the current branch inventory to **434 distinct Rust tests**.
 
 `tools/rust/contract-baseline.json` records the Microsoft `terminal` suite at **760 total**, with zero failed/blocked/not-run allowed and at most one skipped. The full suite remains the certification oracle; its approximately 24-minute runtime is not used as a reason to weaken a gate.
 
@@ -33,7 +33,7 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 | Area | Rust crate | Stage | R07 stable tests | Current R08 tests | Initial equivalence status | C# retained? | Default CI tier |
 |---|---|---:|---:|---:|---|---|---|
-| VT parser | `terminal-parser` | R01 | 39 | 41 | Partial; Base64 + StateMachine complete, InputEngine mapping in progress | No | Fast + affected boundary |
+| VT parser | `terminal-parser` | R01 | 39 | 51 | Partial; Base64 + StateMachine complete, InputEngine mapping in progress | No | Fast + affected boundary |
 | Terminal input | `terminal-input` | R02 | 28 | 28 | Partial pending method mapping | No | Fast + affected boundary |
 | Adapter / dispatch / Sixel | `terminal-adapter` | R03 | 77 | 77 | Partial pending method mapping | No | Fast + affected boundary |
 | TextBuffer / foundational types | `terminal-buffer` | R04 | 68 | 68 | Partial pending method mapping | No | Fast + affected boundary |
@@ -44,7 +44,7 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 | XAML code-behind / bindings / view models | existing managed projects | R08 | n/a | n/a | UI-managed where already owned by C# | Yes | Managed/UI contract |
 | WinRT/COM/XAML native boundary | existing platform layer | R08 | n/a | n/a | Platform-only until narrowed | Where applicable | Boundary + Stage |
 
-**Current total:** 418 stable R07 tests; 424 on the current R08 branch.
+**Current total:** 418 stable R07 tests; **434** on the current R08 branch. CI #691 passed the complete fast gate on the exact semantic checkpoint that contains these tests: fmt, Clippy with `-D warnings`, Ubuntu, Windows, TAEF harness self-test, and Microsoft source-inventory self-test.
 
 ## Evidence rows
 
@@ -64,28 +64,52 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 | Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `terminal / StateMachineTest.TwoStateMachinesDoNotInterfereWithEachOther` | Parser/state machine | Parser instance isolation across interleaved partial/full CSI sequences | `state_machine::tests::two_state_machines_do_not_interfere` | Same partial `ESC[12`, independent `ESC[3C`, then completion `;34m`; same parameter observations | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
-| `terminal / StateMachineTest.PassThroughUnhandled` | Parser/state machine | Unknown CSI is flushed intact while following printable text remains printable | `state_machine_microsoft_contract::microsoft_passthrough_unhandled_sequence_before_printable_text` | Rust now uses the same `ESC[?999h 12345 Hello World` ordering and separately asserts the intact passthrough sequence and following printable text | Exact | No | No | Fast + Full certification | R01 | Dedicated R08c test closes the former ordering gap |
-| `terminal / StateMachineTest.RunStorageBeforeEscape` | Parser/state machine | Buffered printable run is emitted before transition into an escape sequence | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Both send `12345 Hello World` followed by `ESC[?999h` and observe the complete text plus passthrough sequence | Exact | No | No | Fast + Full certification | R01 | Direct ordering/vector match |
+| `terminal / StateMachineTest.PassThroughUnhandled` | Parser/state machine | Unknown CSI is flushed intact while following printable text remains printable | `state_machine_microsoft_contract::microsoft_passthrough_unhandled_sequence_before_printable_text` | Rust uses the same `ESC[?999h 12345 Hello World` ordering and separately asserts the intact passthrough sequence and following printable text | Exact | No | No | Fast + Full certification | R01 | Dedicated R08c test closes the former ordering gap |
+| `terminal / StateMachineTest.RunStorageBeforeEscape` | Parser/state machine | Buffered printable run is emitted before transition into an escape sequence | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Both send `12345 Hello World` followed by `ESC[?999h` and observe complete text plus passthrough sequence | Exact | No | No | Fast + Full certification | R01 | Direct ordering/vector match |
 | `terminal / StateMachineTest.BulkTextPrint` | Parser/state machine | Plain text is emitted as a single bulk print run | `state_machine::tests::bulk_text_is_printed_as_one_run` | Same `12345 Hello World` payload and expected single run | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
-| `terminal / StateMachineTest.PassThroughUnhandledSplitAcrossWrites` | Parser/state machine | Unknown CSI/OSC sequences survive two- and three-part write boundaries | `state_machine::tests::unhandled_sequences_survive_split_writes` | Rust covers the same split CSI cases and the OSC split at ESC/ST used by Microsoft | Exact | No | No | Fast + Full certification | R01 | Direct split-write equivalence |
-| `terminal / StateMachineTest.DcsDataStringsReceivedByHandler` | Parser/state machine | DCS id/params/data delivery and termination by ST, CSI, CAN, or SUB | `state_machine::tests::dcs_data_is_delivered_and_st_can_terminate_it`; `dcs_can_be_terminated_by_csi_can_or_sub` | Microsoft data source has terminatorType `{0,1,2,3}`; Rust explicitly covers ST plus CSI/CAN/SUB and validates id, params, data, execution/CSI side effects, and following text | Exact | No | No | Fast + Full certification | R01 | Four expanded TAEF cases map to two Rust tests; runtime inventory supplies canonical invocation identities |
-| `terminal / StateMachineTest.VtParameterSubspanTest` | Parser/parameters | Parameter subspan at 0, 2, end, and past-end | `state_machine::tests::parameter_subspan_matches_terminal_semantics` | Same values `[12,34,56,78]`, offsets `0,2,4,6`, sizes/default omitted value semantics | Exact | No | No | Fast + Full certification | R01 | Direct vector-for-vector equivalence |
+| `terminal / StateMachineTest.PassThroughUnhandledSplitAcrossWrites` | Parser/state machine | Unknown CSI/OSC survives two- and three-part writes | `state_machine::tests::unhandled_sequences_survive_split_writes` | Rust covers the same split CSI cases and OSC split at ESC/ST | Exact | No | No | Fast + Full certification | R01 | Direct split-write equivalence |
+| `terminal / StateMachineTest.DcsDataStringsReceivedByHandler` | Parser/state machine | DCS id/params/data and ST, CSI, CAN, SUB termination | `state_machine::tests::dcs_data_is_delivered_and_st_can_terminate_it`; `dcs_can_be_terminated_by_csi_can_or_sub` | Same four terminator families with id/params/data and post-termination observations | Exact | No | No | Fast + Full certification | R01 | Four expanded TAEF cases map to two Rust tests |
+| `terminal / StateMachineTest.VtParameterSubspanTest` | Parser/parameters | Parameter subspan at 0, 2, end, past-end | `state_machine::tests::parameter_subspan_matches_terminal_semantics` | Same `[12,34,56,78]`, offsets `0,2,4,6` and omitted-value semantics | Exact | No | No | Fast + Full certification | R01 | Direct vector-for-vector equivalence |
 
-All nine Base64/StateMachine source methods are now Exact or Stronger. They may leave the per-change semantic boundary set for Rust-only implementation changes. They remain in complete Microsoft certification and become boundary-relevant whenever their C ABI representation or C++ consumer changes.
+All nine Base64/StateMachine source methods are Exact or Stronger. They may leave the per-change semantic boundary set for Rust-only implementation changes. They remain in complete Microsoft certification and become boundary-relevant whenever their C ABI representation or C++ consumer changes.
 
-### R01 InputEngine — Win32-input parameter contracts
+### R01 InputEngine — deterministic semantic contracts
 
-`InputEngineTest.cpp` contains 25 source methods; the source inventory locks the complete set before individual mappings are accepted. The largest immediate win is the data-driven Win32-input parameter matrix.
+`InputEngineTest.cpp` contains 25 source methods; the source-inventory self-test locks the complete set before individual mappings are accepted.
 
 | Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
-| `terminal / InputEngineTest.TestWin32InputOptionals` | Parser/input engine | Six optional Win32 key fields across parameter counts 0..6 | `input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix` | Microsoft source defines six independent `{false,true}` properties and `numParams={0..6}`; Rust deterministically executes the complete `64 * 7 = 448` Cartesian product and checks every output field | Exact | No | No | Fast + Full certification | R01 | Runtime inventory will provide the canonical expanded TAEF identities; the source vector space is fully reproduced |
-| `terminal / InputEngineTest.TestWin32InputParsing` | Parser/input engine | Prefixes of the six Win32 key fields preserve defaults and supplied values | `input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix` | The Rust matrix case with all six provide-bits set and parameter counts 1..6 reproduces each Microsoft prefix `{1}`, `{1,2}`, … `{1..6}`; it additionally checks the empty case and every optional-field combination | Stronger | No | No | Fast + Full certification | R01 | One exhaustive Rust contract subsumes the smaller fixed-vector method |
-| `terminal / InputEngineTest.RoundTripTest` | Parser/input + TerminalInput | Round-trip every VKEY through TerminalInput and InputEngine | none adequate | Microsoft source explicitly skips this test (GH#4405); intended body depends on Windows virtual-key/scan-code translation | Platform-only | Yes | No | Full certification | R01/R02 | Do not claim Rust replacement for an upstream-skipped Windows contract |
-| `terminal / InputEngineTest.AlphanumericTest` | Parser/input engine | Printable ASCII translated through Windows keyboard mapping into input records | nearest: `input_engine::tests::printable_and_non_ascii_runs_use_the_string_dispatch_boundary` | Rust proves the platform-neutral `WriteString` semantic handoff; Microsoft additionally validates `VkKeyScanW`/`MapVirtualKeyW`-derived records | Platform-only | Yes | No | Boundary + Full certification | R01 | Keep the Windows mapping contract at the platform boundary |
-| `terminal / InputEngineTest.NonAsciiTest` | Parser/input engine | Non-ASCII UTF-16 translated into key-down/up input records | nearest: `input_engine::tests::printable_and_non_ascii_runs_use_the_string_dispatch_boundary` | Rust proves UTF-16 reaches the `WriteString` boundary losslessly; Microsoft additionally exercises `CharToKeyEvents` | Platform-only | Yes | No | Boundary + Full certification | R01 | Semantic string transport is Rust; Windows event synthesis remains boundary evidence |
+| `terminal / InputEngineTest.TestWin32InputOptionals` | Parser/input engine | Six optional Win32 key fields across parameter counts 0..6 | `input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix` | Complete `64 * 7 = 448` Cartesian product; every output field checked | Exact | No | No | Fast + Full certification | R01 | Runtime inventory provides expanded TAEF identities |
+| `terminal / InputEngineTest.TestWin32InputParsing` | Parser/input engine | Prefixes of six Win32 key fields preserve defaults/supplied values | `input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix` | All-six-bits case with parameter counts 1..6 reproduces Microsoft prefixes; exhaustive matrix adds all optional combinations | Stronger | No | No | Fast + Full certification | R01 | Fixed vectors are a subset of the Rust matrix |
+| `terminal / InputEngineTest.SGRMouseTest_ButtonClick` | Parser/input mouse | Left/middle/right press and release state | `input_engine_microsoft_contract::microsoft_sgr_mouse_button_click_table` | Same 6 SGR sequences, same zero-based coordinates/button states/event flags | Exact | No | No | Fast + Full certification | R01 | Direct vector table |
+| `terminal / InputEngineTest.SGRMouseTest_Modifiers` | Parser/input mouse | Shift/Alt/Ctrl projection onto SGR mouse events | `input_engine_microsoft_contract::microsoft_sgr_mouse_modifier_table` | Same 6 sequences and modifier/button combinations | Exact | No | No | Fast + Full certification | R01 | Direct vector table |
+| `terminal / InputEngineTest.SGRMouseTest_Movement` | Parser/input mouse | Drag/move state across held/released buttons and coordinates | `input_engine_microsoft_contract::microsoft_sgr_mouse_movement_table` | Same 10-sequence stateful movement trace | Exact | No | No | Fast + Full certification | R01 | State is preserved across the full Microsoft trace |
+| `terminal / InputEngineTest.SGRMouseTest_Scroll` | Parser/input mouse | Vertical/horizontal forward/backward wheel encoding | `input_engine_microsoft_contract::microsoft_sgr_mouse_scroll_table` | Same 4 sequences, deltas, wheel flags and coordinates | Exact | No | No | Fast + Full certification | R01 | Direct vector table |
+| `terminal / InputEngineTest.SGRMouseTest_DoubleClick` | Parser/input mouse | Same-button/same-position click pairs produce double-click and reset | `input_engine_microsoft_contract::microsoft_sgr_mouse_double_click_table` | Same 18-event left/middle/right trace; one-second deterministic test interval | Exact | No | No | Fast + Full certification | R01 | Direct stateful trace; CI #685/#691 green on both OSes |
+| `terminal / InputEngineTest.SGRMouseTest_Hover` | Parser/input mouse | Hover motion with no pressed button | `input_engine_microsoft_contract::microsoft_sgr_mouse_hover_table` | Same 2 motion sequences and coordinates | Exact | No | No | Fast + Full certification | R01 | Direct vector table |
+| `terminal / InputEngineTest.ChunkedSequence` | Parser state | Partial CSI `ESC[1` remains in CSI-parameter state | `state_machine_microsoft_contract::microsoft_chunked_csi_remains_in_parameter_state` | Same bytes and same intermediate state | Exact | No | No | Fast + Full certification | R01 | Pure parser state contract |
+| `terminal / InputEngineTest.TestSs3Entry` | Parser state | `ESC O` enters SS3 and final `m` returns to ground | `state_machine_microsoft_contract::microsoft_ss3_entry_transitions_to_ground_after_dispatch` | Same characters and state after each character | Exact | No | No | Fast + Full certification | R01 | Pure parser state contract |
+| `terminal / InputEngineTest.TestSs3Immediate` | Parser state | `$`, `#`, `%`, `?` dispatch immediately from SS3 entry | `state_machine_microsoft_contract::microsoft_ss3_immediates_dispatch_directly_from_entry` | Same four final bytes and state transitions | Exact | No | No | Fast + Full certification | R01 | Pure parser state contract |
+| `terminal / InputEngineTest.TestSs3Param` | Parser state | `;324;;8` remains SS3-param until final `J` | `state_machine_microsoft_contract::microsoft_ss3_parameters_remain_parameter_state_until_final_byte` | Same exact byte trace and intermediate/final states | Exact | No | No | Fast + Full certification | R01 | Pure parser state contract |
 
-The two Win32-parameter source methods above are eligible to leave the per-change semantic boundary set after their new Rust test is green. This does **not** remove their expanded Microsoft cases from full R08/R09 certification. The remaining InputEngine methods stay unmapped/Partial until their concrete vectors are compared.
+The six SGR methods represent **46 concrete Microsoft mouse-event observations**. Together with the Win32-optional matrix, this gives the fast Rust loop hundreds of deterministic compatibility vectors without invoking Windows keyboard-layout APIs.
+
+### R01 InputEngine — retained Windows/platform contracts
+
+These are intentionally not promoted merely because Rust covers nearby semantics.
+
+| Microsoft suite/test | Area | Rust evidence | Coverage | Why it remains Microsoft/platform evidence |
+|---|---|---|---|---|
+| `terminal / InputEngineTest.RoundTripTest` | Parser/input + TerminalInput | none adequate | Platform-only | Upstream-skipped GH#4405; intended body depends on Windows virtual-key/scan-code translation |
+| `terminal / InputEngineTest.AlphanumericTest` | Parser/input | `printable_and_non_ascii_runs_use_the_string_dispatch_boundary` | Platform-only | Microsoft validates `VkKeyScanW`/`MapVirtualKeyW`-derived records |
+| `terminal / InputEngineTest.NonAsciiTest` | Parser/input | `printable_and_non_ascii_runs_use_the_string_dispatch_boundary` | Platform-only | Microsoft exercises Windows `CharToKeyEvents` synthesis |
+| `terminal / InputEngineTest.EnhancedKeysTest` | Parser/input | nearby key-semantic coverage exists | Partial / platform boundary | Microsoft also validates platform-derived scan codes |
+| `terminal / InputEngineTest.SS3CursorKeyTest` | Parser/input | SS3 semantic routing exists | Partial / platform boundary | Microsoft observes platform-derived key-event details |
+| `terminal / InputEngineTest.CSICursorBackTabTest` | Parser/input | BackTab semantic routing exists | Partial / platform boundary | Microsoft observes Windows scan-code/key-event representation |
+| `terminal / InputEngineTest.C0Test` | Parser/input | C0 semantic handling exists | Partial / platform boundary | Microsoft uses Windows key/scan-code mapping across the C0 table |
+| `terminal / InputEngineTest.CursorPositioningTest` | Parser/input | cursor-position capture Rust test exists | Partial / platform boundary | Microsoft also exercises a subsequent F3 event with Windows mapping |
+
+Other unmapped InputEngine source methods remain Partial until their exact vectors are compared. None are removed from a boundary gate by inference.
 
 ## Per-test row schema
 
@@ -132,4 +156,4 @@ where that ownership already exists, while native WinRT/COM/Win32 boundaries rem
 
 ## Next matrix increment
 
-Continue the remaining `InputEngineTest` methods and then `OutputEngineTest`, followed by R02-R07. Runtime-expanded TAEF identities are captured automatically by the contract harness when a certification run is required. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
+Finish the remaining `InputEngineTest` methods that have deterministic platform-neutral semantics, then map `OutputEngineTest`, followed by R02-R07. Runtime-expanded TAEF identities are captured automatically by the contract harness when certification is required. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
