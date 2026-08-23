@@ -41,7 +41,10 @@ fn microsoft_output_strings_preserve_complete_split_and_mixed_processing() {
 
     let mut combined = machine();
     combined.process_str("\u{1b}[1;4;7;30;45;53m\u{1b}[2J");
-    assert_eq!(sgr_values(&actions(&combined)[0]), Some(vec![1, 4, 7, 30, 45, 53]));
+    assert_eq!(
+        sgr_values(&actions(&combined)[0]),
+        Some(vec![1, 4, 7, 30, 45, 53])
+    );
     assert_eq!(actions(&combined)[1], OutputAction::EraseInDisplay(2));
 
     let mut text_between = machine();
@@ -209,9 +212,9 @@ fn microsoft_output_osc_color_table_reset_stops_at_first_unparseable_index() {
 fn microsoft_output_osc_window_title_covers_all_four_data_driven_numbers() {
     for osc in [0, 1, 2, 21] {
         let mut machine = machine();
-        machine.process_str(&format!("\u{{1b}}]{osc};Title Text\u{{1b}}\\"));
-        machine.process_str(&format!("\u{{1b}}]{osc};\u{{1b}}\\"));
-        machine.process_str(&format!("\u{{1b}}]{osc}\u{{1b}}\\"));
+        machine.process_str(&format!("\x1b]{osc};Title Text\x1b\\"));
+        machine.process_str(&format!("\x1b]{osc};\x1b\\"));
+        machine.process_str(&format!("\x1b]{osc}\x1b\\"));
         assert_eq!(
             actions(&machine),
             [
@@ -238,7 +241,7 @@ fn microsoft_output_osc_clipboard_matches_unicode_and_invalid_payload_contract()
     ];
     for (payload, expected) in valid {
         let mut machine = machine();
-        machine.process_str(&format!("\u{{1b}}]52;{payload}\u{{7}}"));
+        machine.process_str(&format!("\x1b]52;{payload}\x07"));
         assert_eq!(
             actions(&machine),
             [OutputAction::SetClipboard(expected.to_owned())],
@@ -248,7 +251,7 @@ fn microsoft_output_osc_clipboard_matches_unicode_and_invalid_payload_contract()
 
     for payload in ["Zm9v", ";???", ";;Zm9v", ";?", "?", ";;?"] {
         let mut machine = machine();
-        machine.process_str(&format!("\u{{1b}}]52;{payload}\u{{7}}"));
+        machine.process_str(&format!("\x1b]52;{payload}\x07"));
         assert!(actions(&machine).is_empty(), "payload={payload:?}");
     }
 }
@@ -276,7 +279,7 @@ fn microsoft_output_osc_hyperlink_matches_ids_parameters_queries_and_close() {
     for (parameters, uri, custom_id) in cases {
         let mut machine = machine();
         machine.process_str(&format!(
-            "\u{{1b}}]8;{parameters};{uri}\u{{1b}}\\\u{{1b}}]8;;\u{{1b}}\\"
+            "\x1b]8;{parameters};{uri}\x1b\\\x1b]8;;\x1b\\"
         ));
         assert_eq!(
             actions(&machine),
