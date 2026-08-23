@@ -37,11 +37,31 @@ fn apply(core: &mut AdaptDispatchCore, direction: Direction, distance: i32) {
 fn microsoft_adapter_cursor_movement_matches_six_directions_and_bounds() {
     let edge_cases = [
         (Direction::Up, Point { x: 0, y: 20 }, Point { x: 0, y: 20 }),
-        (Direction::Down, Point { x: 0, y: 48 }, Point { x: 0, y: 48 }),
-        (Direction::Right, Point { x: 99, y: 20 }, Point { x: 99, y: 20 }),
-        (Direction::Left, Point { x: 0, y: 20 }, Point { x: 0, y: 20 }),
-        (Direction::Next, Point { x: 0, y: 48 }, Point { x: 0, y: 48 }),
-        (Direction::Previous, Point { x: 0, y: 20 }, Point { x: 0, y: 20 }),
+        (
+            Direction::Down,
+            Point { x: 0, y: 48 },
+            Point { x: 0, y: 48 },
+        ),
+        (
+            Direction::Right,
+            Point { x: 99, y: 20 },
+            Point { x: 99, y: 20 },
+        ),
+        (
+            Direction::Left,
+            Point { x: 0, y: 20 },
+            Point { x: 0, y: 20 },
+        ),
+        (
+            Direction::Next,
+            Point { x: 0, y: 48 },
+            Point { x: 0, y: 48 },
+        ),
+        (
+            Direction::Previous,
+            Point { x: 0, y: 20 },
+            Point { x: 0, y: 20 },
+        ),
     ];
     for (direction, start, expected) in edge_cases {
         let mut core = core_at(start);
@@ -50,8 +70,16 @@ fn microsoft_adapter_cursor_movement_matches_six_directions_and_bounds() {
     }
 
     for (direction, start, expected) in [
-        (Direction::Next, Point { x: 99, y: 48 }, Point { x: 0, y: 48 }),
-        (Direction::Previous, Point { x: 99, y: 20 }, Point { x: 0, y: 20 }),
+        (
+            Direction::Next,
+            Point { x: 99, y: 48 },
+            Point { x: 0, y: 48 },
+        ),
+        (
+            Direction::Previous,
+            Point { x: 99, y: 20 },
+            Point { x: 0, y: 20 },
+        ),
     ] {
         let mut core = core_at(start);
         apply(&mut core, direction, 1);
