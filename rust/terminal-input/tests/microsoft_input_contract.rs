@@ -18,6 +18,17 @@ fn key_up(virtual_key: u16, codepoint: u32) -> KeyEvent {
     }
 }
 
+fn assert_modifier_cases(cases: &[(u16, u32, u32, &str)]) {
+    for &(virtual_key, state, codepoint, expected) in cases {
+        let mut input = TerminalInput::new();
+        assert_eq!(
+            input.handle_key(key(virtual_key, state, codepoint)),
+            expected,
+            "virtual_key={virtual_key:#x}, state={state:#x}"
+        );
+    }
+}
+
 #[test]
 fn microsoft_terminal_input_focus_events_match_disabled_and_enabled_contract() {
     let mut input = TerminalInput::new();
@@ -59,8 +70,8 @@ fn microsoft_terminal_input_null_key_portable_subset_matches_ctrl_space_contract
 }
 
 #[test]
-fn microsoft_terminal_input_different_modifiers_preserve_reference_sequences() {
-    let cases = [
+fn microsoft_terminal_input_different_modifiers_backspace_delete_and_tab() {
+    assert_modifier_cases(&[
         (virtual_key::BACK, 0, 0, "\u{7f}"),
         (
             virtual_key::BACK,
@@ -118,6 +129,12 @@ fn microsoft_terminal_input_different_modifiers_preserve_reference_sequences() {
             0,
             "\u{1b}[Z",
         ),
+    ]);
+}
+
+#[test]
+fn microsoft_terminal_input_different_modifiers_slash_and_question() {
+    assert_modifier_cases(&[
         (
             u16::from(b'/'),
             control_state::LEFT_CTRL_PRESSED,
@@ -196,16 +213,7 @@ fn microsoft_terminal_input_different_modifiers_preserve_reference_sequences() {
             0,
             "\u{1b}\u{7f}",
         ),
-    ];
-
-    for (virtual_key, state, codepoint, expected) in cases {
-        let mut input = TerminalInput::new();
-        assert_eq!(
-            input.handle_key(key(virtual_key, state, codepoint)),
-            expected,
-            "virtual_key={virtual_key:#x}, state={state:#x}"
-        );
-    }
+    ]);
 }
 
 #[test]
