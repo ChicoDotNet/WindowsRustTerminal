@@ -2,6 +2,7 @@
 
 mod css_length_percentage;
 mod font_info_desired_policy;
+mod font_info_policy;
 mod render_settings_policy;
 mod retry_policy;
 mod timer_policy;
@@ -9,6 +10,7 @@ mod title_state;
 
 pub use css_length_percentage::{CssLengthPercentage, ReferenceFrame};
 pub use font_info_desired_policy::{CellSize, FontInfoDesiredPolicy};
+pub use font_info_policy::{FontCellSizes, validate_font_cell_sizes};
 pub use render_settings_policy::{RenderMode, RenderSettingsPolicy};
 pub use retry_policy::{
     MAX_RETRIES_FOR_RENDER_ENGINE, RENDER_BACKOFF_BASE_MILLIS, RenderAttempt, render_attempts,
