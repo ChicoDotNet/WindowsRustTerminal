@@ -10,7 +10,11 @@ pub fn legacy_face_name_buffer(face_name: &[u16]) -> [u16; LEGACY_FACE_NAME_CAPA
 }
 
 #[must_use]
-pub const fn is_default_raster_without_size(face_name_empty: bool, family: u8, weight: u32) -> bool {
+pub const fn is_default_raster_without_size(
+    face_name_empty: bool,
+    family: u8,
+    weight: u32,
+) -> bool {
     face_name_empty && family == 0 && weight == 0
 }
 
@@ -21,7 +25,10 @@ pub const fn is_true_type_family(family: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{LEGACY_FACE_NAME_CAPACITY, is_default_raster_without_size, is_true_type_family, legacy_face_name_buffer};
+    use super::{
+        LEGACY_FACE_NAME_CAPACITY, is_default_raster_without_size, is_true_type_family,
+        legacy_face_name_buffer,
+    };
 
     #[test]
     fn legacy_name_buffer_is_zero_terminated_and_zero_filled() {
