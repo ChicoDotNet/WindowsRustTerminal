@@ -8,6 +8,8 @@ struct RecordingEngine {
     printed: Vec<u16>,
     executed: Vec<u16>,
     csi: Vec<(VtId, Parameters)>,
+    dcs_handler: bool,
+    dcs_data: Vec<u16>,
 }
 
 impl StateMachineEngine for RecordingEngine {
@@ -29,6 +31,15 @@ impl StateMachineEngine for RecordingEngine {
         self.csi.push((id, parameters.clone()));
         true
     }
+
+    fn action_dcs_dispatch(&mut self, _id: VtId, _parameters: &Parameters) -> bool {
+        self.dcs_handler
+    }
+
+    fn action_dcs_put(&mut self, code_unit: u16) -> bool {
+        self.dcs_data.push(code_unit);
+        true
+    }
 }
 
 fn machine() -> StateMachine<RecordingEngine> {
@@ -37,6 +48,61 @@ fn machine() -> StateMachine<RecordingEngine> {
 
 fn last_parameters(machine: &StateMachine<RecordingEngine>) -> &Parameters {
     &machine.engine().csi.last().expect("CSI must dispatch").1
+}
+
+fn assert_escape_from_output(sequence: &str, expected_before: State, expected_after: State) {
+    let mut machine = machine();
+    machine.process_str(sequence);
+    assert_eq!(machine.state(), expected_before, "setup {sequence:?}");
+    machine.process_code_unit(0x1b);
+    assert_eq!(machine.state(), expected_after, "escape from {expected_before:?}");
+}
+
+#[test]
+fn microsoft_output_escape_path_covers_all_eighteen_source_states() {
+    // OutputEngineTest::TestEscapePath directly assigns each internal state. Here
+    // every output-reachable state is reached through the public parser API.
+    assert_escape_from_output("", State::Ground, State::Escape);
+    assert_escape_from_output("\u{1b}", State::Escape, State::Escape);
+    assert_escape_from_output("\u{1b}#", State::EscapeIntermediate, State::Escape);
+    assert_escape_from_output("\u{1b}[", State::CsiEntry, State::Escape);
+    assert_escape_from_output("\u{1b}[4;=", State::CsiIgnore, State::Escape);
+    assert_escape_from_output("\u{1b}[1", State::CsiParam, State::Escape);
+    assert_escape_from_output("\u{1b}[#", State::CsiIntermediate, State::Escape);
+    assert_escape_from_output("\u{1b}]", State::OscParam, State::OscTermination);
+    assert_escape_from_output("\u{1b}]0;x", State::OscString, State::OscTermination);
+    assert_escape_from_output("\u{1b}]0;x\u{1b}", State::OscTermination, State::Escape);
+    assert_escape_from_output("\u{1b}P", State::DcsEntry, State::Escape);
+    assert_escape_from_output("\u{1b}P:", State::DcsIgnore, State::Escape);
+    assert_escape_from_output("\u{1b}P ", State::DcsIntermediate, State::Escape);
+    assert_escape_from_output("\u{1b}P1", State::DcsParam, State::Escape);
+    assert_escape_from_output("\u{1b}X1", State::SosPmApcString, State::Escape);
+
+    // SS3 states are input-only in the migrated parser. Reaching them through
+    // new_input is stronger than mutating a private state field as the C++ test
+    // does; ESC still exercises the same global escape transition.
+    let mut ss3_entry = StateMachine::new_input(RecordingEngine::default());
+    ss3_entry.process_str("\u{1b}O");
+    assert_eq!(ss3_entry.state(), State::Ss3Entry);
+    ss3_entry.process_code_unit(0x1b);
+    assert_eq!(ss3_entry.state(), State::Escape);
+
+    let mut ss3_param = StateMachine::new_input(RecordingEngine::default());
+    ss3_param.process_str("\u{1b}O1");
+    assert_eq!(ss3_param.state(), State::Ss3Param);
+    ss3_param.process_code_unit(0x1b);
+    assert_eq!(ss3_param.state(), State::Escape);
+
+    let engine = RecordingEngine {
+        dcs_handler: true,
+        ..RecordingEngine::default()
+    };
+    let mut dcs_passthrough = StateMachine::new(engine);
+    dcs_passthrough.process_str("\u{1b}Pq");
+    assert_eq!(dcs_passthrough.state(), State::DcsPassThrough);
+    dcs_passthrough.process_code_unit(0x1b);
+    assert_eq!(dcs_passthrough.state(), State::Escape);
+    assert_eq!(dcs_passthrough.engine().dcs_data, [0x1b]);
 }
 
 #[test]
