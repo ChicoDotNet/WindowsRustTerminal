@@ -2,6 +2,7 @@
 
 mod attribute_color_policy;
 mod css_length_percentage;
+mod font_info_base_policy;
 mod font_info_desired_policy;
 mod font_info_policy;
 mod render_settings_policy;
@@ -13,6 +14,10 @@ pub use attribute_color_policy::{
     AttributeColorFlags, AttributeColors, apply_attribute_alpha, apply_attribute_effects,
 };
 pub use css_length_percentage::{CssLengthPercentage, ReferenceFrame};
+pub use font_info_base_policy::{
+    LEGACY_FACE_NAME_CAPACITY, is_default_raster_without_size, is_true_type_family,
+    legacy_face_name_buffer,
+};
 pub use font_info_desired_policy::{CellSize, FontInfoDesiredPolicy};
 pub use font_info_policy::{FontCellSizes, validate_font_cell_sizes};
 pub use render_settings_policy::{RenderMode, RenderSettingsPolicy};
