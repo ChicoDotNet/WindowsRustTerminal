@@ -42,3 +42,7 @@ version = "0.0.0"
 dependencies = [
  "terminal-parser",
 ]
+
+[[package]]
+name = "terminal-renderer"
+version = "0.0.0"
