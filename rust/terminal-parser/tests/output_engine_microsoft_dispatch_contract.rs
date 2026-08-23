@@ -63,7 +63,9 @@ fn movement_action(command: char, distance: i32) -> OutputAction {
 
 #[test]
 fn microsoft_output_cursor_movement_with_values_exhausts_data_matrix() {
-    let commands = ['A', 'B', 'C', 'D', 'E', 'F', 'G', '`', 'd', 'a', 'e', '@', 'P'];
+    let commands = [
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', '`', 'd', 'a', 'e', '@', 'P',
+    ];
 
     for distance in PARAM_VALUES {
         for extra_parameter in [false, true] {
@@ -84,7 +86,9 @@ fn microsoft_output_cursor_movement_with_values_exhausts_data_matrix() {
 
 #[test]
 fn microsoft_output_cursor_movement_without_values_defaults_to_one() {
-    for command in ['A', 'B', 'C', 'D', 'E', 'F', 'G', '`', 'd', 'a', 'e', '@', 'P'] {
+    for command in [
+        'A', 'B', 'C', 'D', 'E', 'F', 'G', '`', 'd', 'a', 'e', '@', 'P',
+    ] {
         let mut machine = machine();
         machine.process_str(&format!("\u{1b}[{command}"));
         assert_eq!(
