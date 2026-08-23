@@ -3,8 +3,11 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $inventoryScript = Join-Path $PSScriptRoot 'Get-MicrosoftTestInventory.ps1'
 $parserTests = Join-Path $root 'src\terminal\parser\ut_parser'
+$adapterTests = Join-Path $root 'src\terminal\adapter\ut_adapter'
 
-$inventory = @(& $inventoryScript -Path $parserTests -Suite terminal | ConvertFrom-Json)
+$parserInventory = @(& $inventoryScript -Path $parserTests -Suite terminal | ConvertFrom-Json)
+$adapterInventory = @(& $inventoryScript -Path $adapterTests -Suite terminal | ConvertFrom-Json)
+$inventory = @($parserInventory + $adapterInventory)
 if ($inventory.Count -eq 0) {
     throw 'Microsoft source test inventory is empty.'
 }
@@ -137,6 +140,18 @@ Assert-SourceMethodSet -Inventory $inventory -Source 'OutputEngineTest.cpp' -Exp
     'TestTabClear',
     'TestTertiaryDeviceAttributes',
     'TestVt52Sequences'
+)
+
+Assert-SourceMethodSet -Inventory $inventory -Source 'inputTest.cpp' -Expected @(
+    'AutoRepeatModeTest',
+    'BackarrowKeyModeTest',
+    'CtrlNumTest',
+    'DifferentModifiersTest',
+    'SendC1ControlTest',
+    'TerminalInputModifierKeyTests',
+    'TerminalInputNullKeyTests',
+    'TerminalInputTests',
+    'TestFocusEvents'
 )
 
 $duplicates = @($inventory | Group-Object suite, source, method | Where-Object Count -gt 1)
