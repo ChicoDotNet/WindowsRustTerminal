@@ -128,7 +128,9 @@ fn microsoft_output_csi_parameter_count_is_capped_at_32() {
         if index > 0 {
             sequence.push(';');
         }
-        sequence.push(char::from(b'0' + u8::try_from(index % 10).expect("single digit")));
+        sequence.push(char::from(
+            b'0' + u8::try_from(index % 10).expect("single digit"),
+        ));
     }
     sequence.push('J');
 
@@ -137,7 +139,10 @@ fn microsoft_output_csi_parameter_count_is_capped_at_32() {
     let values = last_parameters(&machine).values();
     assert_eq!(values.len(), MAX_PARAMETER_COUNT);
     for (index, value) in values.iter().enumerate() {
-        assert_eq!(*value, Some(i32::try_from(index % 10).expect("single digit")));
+        assert_eq!(
+            *value,
+            Some(i32::try_from(index % 10).expect("single digit"))
+        );
     }
 }
 
@@ -192,7 +197,10 @@ fn microsoft_output_csi_subparameter_accepts_many_leading_zeroes() {
     let sequence = format!("\u{1b}[3:{}12345J", "0".repeat(50));
     let mut machine = machine();
     machine.process_str(&sequence);
-    assert_eq!(last_parameters(&machine).sub_params_for(0), &[Some(12_345)]);
+    assert_eq!(
+        last_parameters(&machine).sub_params_for(0),
+        &[Some(12_345)]
+    );
 }
 
 #[test]
