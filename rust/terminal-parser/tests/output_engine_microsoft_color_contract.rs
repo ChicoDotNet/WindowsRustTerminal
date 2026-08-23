@@ -42,14 +42,32 @@ fn table(index: usize, red: u8, green: u8, blue: u8) -> OutputAction {
 fn microsoft_output_osc_set_default_foreground_matches_all_reference_vectors() {
     let mut machine = machine();
     let cases = [
-        ("\u{1b}]10;rgb:1/1/1\u{1b}\\", vec![resource(10, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]10;rgb:12/34/56\u{1b}\\", vec![resource(10, 0x12, 0x34, 0x56)]),
-        ("\u{1b}]10;#111\u{1b}\\", vec![resource(10, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]10;#123456\u{1b}\\", vec![resource(10, 0x12, 0x34, 0x56)]),
-        ("\u{1b}]10;DarkOrange\u{1b}\\", vec![resource(10, 255, 140, 0)]),
+        (
+            "\u{1b}]10;rgb:1/1/1\u{1b}\\",
+            vec![resource(10, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]10;rgb:12/34/56\u{1b}\\",
+            vec![resource(10, 0x12, 0x34, 0x56)],
+        ),
+        (
+            "\u{1b}]10;#111\u{1b}\\",
+            vec![resource(10, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]10;#123456\u{1b}\\",
+            vec![resource(10, 0x12, 0x34, 0x56)],
+        ),
+        (
+            "\u{1b}]10;DarkOrange\u{1b}\\",
+            vec![resource(10, 255, 140, 0)],
+        ),
         (
             "\u{1b}]10;#111;rgb:2/2/2\u{1b}\\",
-            vec![resource(10, 0x10, 0x10, 0x10), resource(11, 0x22, 0x22, 0x22)],
+            vec![
+                resource(10, 0x10, 0x10, 0x10),
+                resource(11, 0x22, 0x22, 0x22),
+            ],
         ),
         (
             "\u{1b}]10;#111;DarkOrange\u{1b}\\",
@@ -63,17 +81,36 @@ fn microsoft_output_osc_set_default_foreground_matches_all_reference_vectors() {
                 resource(12, 0x22, 0x22, 0x22),
             ],
         ),
-        ("\u{1b}]10;#111;\u{1b}\\", vec![resource(10, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]10;#111;rgb:\u{1b}\\", vec![resource(10, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]10;#111;#2\u{1b}\\", vec![resource(10, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]10;;rgb:1/1/1\u{1b}\\", vec![resource(11, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]10;#1;rgb:1/1/1\u{1b}\\", vec![resource(11, 0x11, 0x11, 0x11)]),
+        (
+            "\u{1b}]10;#111;\u{1b}\\",
+            vec![resource(10, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]10;#111;rgb:\u{1b}\\",
+            vec![resource(10, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]10;#111;#2\u{1b}\\",
+            vec![resource(10, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]10;;rgb:1/1/1\u{1b}\\",
+            vec![resource(11, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]10;#1;rgb:1/1/1\u{1b}\\",
+            vec![resource(11, 0x11, 0x11, 0x11)],
+        ),
         ("\u{1b}]10;rgb:1/1/\u{1b}\\", vec![]),
         ("\u{1b}]10;#1\u{1b}\\", vec![]),
     ];
 
     for (sequence, expected) in cases {
-        assert_eq!(process(&mut machine, sequence), expected, "sequence={sequence:?}");
+        assert_eq!(
+            process(&mut machine, sequence),
+            expected,
+            "sequence={sequence:?}"
+        );
     }
 }
 
@@ -81,14 +118,32 @@ fn microsoft_output_osc_set_default_foreground_matches_all_reference_vectors() {
 fn microsoft_output_osc_set_default_background_matches_all_reference_vectors() {
     let mut machine = machine();
     let cases = [
-        ("\u{1b}]11;rgb:1/1/1\u{1b}\\", vec![resource(11, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]11;rgb:12/34/56\u{1b}\\", vec![resource(11, 0x12, 0x34, 0x56)]),
-        ("\u{1b}]11;#111\u{1b}\\", vec![resource(11, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]11;#123456\u{1b}\\", vec![resource(11, 0x12, 0x34, 0x56)]),
-        ("\u{1b}]11;DarkOrange\u{1b}\\", vec![resource(11, 255, 140, 0)]),
+        (
+            "\u{1b}]11;rgb:1/1/1\u{1b}\\",
+            vec![resource(11, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]11;rgb:12/34/56\u{1b}\\",
+            vec![resource(11, 0x12, 0x34, 0x56)],
+        ),
+        (
+            "\u{1b}]11;#111\u{1b}\\",
+            vec![resource(11, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]11;#123456\u{1b}\\",
+            vec![resource(11, 0x12, 0x34, 0x56)],
+        ),
+        (
+            "\u{1b}]11;DarkOrange\u{1b}\\",
+            vec![resource(11, 255, 140, 0)],
+        ),
         (
             "\u{1b}]11;#111;rgb:2/2/2\u{1b}\\",
-            vec![resource(11, 0x10, 0x10, 0x10), resource(12, 0x22, 0x22, 0x22)],
+            vec![
+                resource(11, 0x10, 0x10, 0x10),
+                resource(12, 0x22, 0x22, 0x22),
+            ],
         ),
         (
             "\u{1b}]11;#111;DarkOrange\u{1b}\\",
@@ -102,17 +157,36 @@ fn microsoft_output_osc_set_default_background_matches_all_reference_vectors() {
                 resource(13, 0x22, 0x22, 0x22),
             ],
         ),
-        ("\u{1b}]11;#111;\u{1b}\\", vec![resource(11, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]11;#111;rgb:\u{1b}\\", vec![resource(11, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]11;#111;#2\u{1b}\\", vec![resource(11, 0x10, 0x10, 0x10)]),
-        ("\u{1b}]11;;rgb:1/1/1\u{1b}\\", vec![resource(12, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]11;#1;rgb:1/1/1\u{1b}\\", vec![resource(12, 0x11, 0x11, 0x11)]),
+        (
+            "\u{1b}]11;#111;\u{1b}\\",
+            vec![resource(11, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]11;#111;rgb:\u{1b}\\",
+            vec![resource(11, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]11;#111;#2\u{1b}\\",
+            vec![resource(11, 0x10, 0x10, 0x10)],
+        ),
+        (
+            "\u{1b}]11;;rgb:1/1/1\u{1b}\\",
+            vec![resource(12, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]11;#1;rgb:1/1/1\u{1b}\\",
+            vec![resource(12, 0x11, 0x11, 0x11)],
+        ),
         ("\u{1b}]11;rgb:1/1/\u{1b}\\", vec![]),
         ("\u{1b}]11;#1\u{1b}\\", vec![]),
     ];
 
     for (sequence, expected) in cases {
-        assert_eq!(process(&mut machine, sequence), expected, "sequence={sequence:?}");
+        assert_eq!(
+            process(&mut machine, sequence),
+            expected,
+            "sequence={sequence:?}"
+        );
     }
 }
 
@@ -120,9 +194,18 @@ fn microsoft_output_osc_set_default_background_matches_all_reference_vectors() {
 fn microsoft_output_osc_set_color_table_entry_matches_valid_partial_and_invalid_vectors() {
     let mut machine = machine();
     let cases = [
-        ("\u{1b}]4;0;rgb:1/1/1\u{1b}\\", vec![table(0, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]4;16;rgb:11/11/11\u{1b}\\", vec![table(16, 0x11, 0x11, 0x11)]),
-        ("\u{1b}]4;64;#111\u{1b}\\", vec![table(64, 0x10, 0x10, 0x10)]),
+        (
+            "\u{1b}]4;0;rgb:1/1/1\u{1b}\\",
+            vec![table(0, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]4;16;rgb:11/11/11\u{1b}\\",
+            vec![table(16, 0x11, 0x11, 0x11)],
+        ),
+        (
+            "\u{1b}]4;64;#111\u{1b}\\",
+            vec![table(64, 0x10, 0x10, 0x10)],
+        ),
         ("\u{1b}]4;128;orange\u{1b}\\", vec![table(128, 255, 165, 0)]),
         ("\u{1b}]4;\u{1b}\\", vec![]),
         ("\u{1b}]4;;\u{1b}\\", vec![]),
@@ -185,6 +268,10 @@ fn microsoft_output_osc_set_color_table_entry_matches_valid_partial_and_invalid_
     ];
 
     for (sequence, expected) in cases {
-        assert_eq!(process(&mut machine, sequence), expected, "sequence={sequence:?}");
+        assert_eq!(
+            process(&mut machine, sequence),
+            expected,
+            "sequence={sequence:?}"
+        );
     }
 }
