@@ -44,7 +44,7 @@ if ($inventory.Count -ne $expectedInventory.Count) {
 
 for ($i = 0; $i -lt $expectedInventory.Count; $i++) {
     if ($inventory[$i] -ne $expectedInventory[$i]) {
-        throw "TAEF inventory parser self-test failed at index $i: expected '$($expectedInventory[$i])', got '$($inventory[$i])'."
+        throw "TAEF inventory parser self-test failed at index ${i}: expected '$($expectedInventory[$i])', got '$($inventory[$i])'."
     }
 }
 
