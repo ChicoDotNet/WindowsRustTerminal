@@ -2,12 +2,7 @@ use terminal_input::{KeyEvent, TerminalInput, control_state, virtual_key};
 
 const VK_OEM_2: u16 = 0xbf;
 
-fn event(
-    virtual_key: u16,
-    codepoint: u32,
-    control_key_state: u32,
-    key_down: bool,
-) -> KeyEvent {
+fn event(virtual_key: u16, codepoint: u32, control_key_state: u32, key_down: bool) -> KeyEvent {
     KeyEvent {
         virtual_key,
         scan_code: 0,
