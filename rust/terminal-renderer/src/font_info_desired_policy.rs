@@ -123,8 +123,10 @@ mod tests {
         );
 
         assert!(!zero.is_default_raster_font());
-        assert!(FontInfoDesiredPolicy::new(true, 0, CellSize::default(), false)
-            .is_default_raster_font());
+        assert!(
+            FontInfoDesiredPolicy::new(true, 0, CellSize::default(), false)
+                .is_default_raster_font()
+        );
         assert!(legacy.is_default_raster_font());
     }
 
