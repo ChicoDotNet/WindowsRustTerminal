@@ -55,7 +55,11 @@ fn assert_escape_from_output(sequence: &str, expected_before: State, expected_af
     machine.process_str(sequence);
     assert_eq!(machine.state(), expected_before, "setup {sequence:?}");
     machine.process_code_unit(0x1b);
-    assert_eq!(machine.state(), expected_after, "escape from {expected_before:?}");
+    assert_eq!(
+        machine.state(),
+        expected_after,
+        "escape from {expected_before:?}"
+    );
 }
 
 #[test]
