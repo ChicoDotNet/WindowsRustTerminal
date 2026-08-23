@@ -67,3 +67,6 @@ jobs:
       - name: Validate TAEF result parser
         shell: pwsh
         run: ./tools/rust/Test-TaefContract.ps1
+      - name: Validate Microsoft source inventory
+        shell: pwsh
+        run: ./tools/rust/Test-MicrosoftTestInventory.ps1
