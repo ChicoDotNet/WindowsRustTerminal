@@ -181,7 +181,8 @@ Assert-SourceMethodsPresent -Inventory $inventory -Source 'adapterTest.cpp' -Exp
     'CursorMovementTest',
     'CursorPositionTest',
     'CursorSaveRestoreTest',
-    'CursorSingleDimensionMoveTest'
+    'CursorSingleDimensionMoveTest',
+    'PageMovementTests'
 )
 
 $duplicates = @($inventory | Group-Object suite, source, method | Where-Object Count -gt 1)
