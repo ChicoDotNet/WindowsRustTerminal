@@ -9,7 +9,9 @@ mod retry_policy;
 mod timer_policy;
 mod title_state;
 
-pub use attribute_color_policy::{AttributeColors, apply_attribute_alpha, apply_attribute_effects};
+pub use attribute_color_policy::{
+    AttributeColorFlags, AttributeColors, apply_attribute_alpha, apply_attribute_effects,
+};
 pub use css_length_percentage::{CssLengthPercentage, ReferenceFrame};
 pub use font_info_desired_policy::{CellSize, FontInfoDesiredPolicy};
 pub use font_info_policy::{FontCellSizes, validate_font_cell_sizes};
