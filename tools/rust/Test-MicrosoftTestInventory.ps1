@@ -161,6 +161,14 @@ Assert-SourceMethodSet -Inventory $inventory -Source 'OutputEngineTest.cpp' -Exp
     'TestVt52Sequences'
 )
 
+Assert-SourceMethodSet -Inventory $inventory -Source 'MouseInputTest.cpp' -Expected @(
+    'AlternateScrollModeTests',
+    'DefaultModeTests',
+    'ScrollWheelTests',
+    'SgrModeTests',
+    'Utf8ModeTests'
+)
+
 Assert-SourceMethodSet -Inventory $inventory -Source 'inputTest.cpp' -Expected @(
     'AutoRepeatModeTest',
     'BackarrowKeyModeTest',
