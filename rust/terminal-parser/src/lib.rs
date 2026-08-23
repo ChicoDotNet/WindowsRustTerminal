@@ -8,8 +8,8 @@
 
 pub mod base64;
 pub mod input_engine;
-#[path = "output_engine.rs"]
-mod output_engine_core;
 #[path = "output_engine_compat.rs"]
 pub mod output_engine;
+#[path = "output_engine.rs"]
+mod output_engine_core;
 pub mod state_machine;
