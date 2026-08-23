@@ -264,11 +264,7 @@ fn microsoft_output_osc_hyperlink_matches_ids_parameters_queries_and_close() {
         ("id=testId", "https://example.com", "testId"),
         ("id=testId:foo=bar", "https://example.com", "testId"),
         ("foo=bar:id=testId", "https://example.com", "testId"),
-        (
-            "id=testId",
-            "https://example.com?query1=value1",
-            "testId",
-        ),
+        ("id=testId", "https://example.com?query1=value1", "testId"),
         (
             "id=testId",
             "https://example.com?query1=value1;value2;value3",
@@ -278,9 +274,7 @@ fn microsoft_output_osc_hyperlink_matches_ids_parameters_queries_and_close() {
 
     for (parameters, uri, custom_id) in cases {
         let mut machine = machine();
-        machine.process_str(&format!(
-            "\x1b]8;{parameters};{uri}\x1b\\\x1b]8;;\x1b\\"
-        ));
+        machine.process_str(&format!("\x1b]8;{parameters};{uri}\x1b\\\x1b]8;;\x1b\\"));
         assert_eq!(
             actions(&machine),
             [
