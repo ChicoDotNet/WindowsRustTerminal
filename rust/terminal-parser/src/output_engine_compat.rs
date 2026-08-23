@@ -125,7 +125,8 @@ fn normalize_color_osc(parameter: i32, text: &[u16]) -> Option<Vec<u16>> {
 
 fn normalize_color_field(field: &mut String) -> bool {
     let replacement = if let Some(hex) = field.strip_prefix('#') {
-        parse_xparse_hash(hex).map(|[red, green, blue]| format!("rgb:{red:02x}/{green:02x}/{blue:02x}"))
+        parse_xparse_hash(hex)
+            .map(|[red, green, blue]| format!("rgb:{red:02x}/{green:02x}/{blue:02x}"))
     } else {
         xorg_contract_color(field)
             .map(|[red, green, blue]| format!("rgb:{red:02x}/{green:02x}/{blue:02x}"))
