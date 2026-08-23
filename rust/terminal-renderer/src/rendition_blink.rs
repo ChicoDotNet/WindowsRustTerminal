@@ -8,10 +8,7 @@ pub enum RenditionBlinkAction {
 }
 
 #[must_use]
-pub const fn plan_rendition_blink(
-    blink_used: bool,
-    timer_running: bool,
-) -> RenditionBlinkAction {
+pub const fn plan_rendition_blink(blink_used: bool, timer_running: bool) -> RenditionBlinkAction {
     match (blink_used, timer_running) {
         (true, false) => RenditionBlinkAction::StartRepeating {
             interval_100ns: RENDITION_BLINK_INTERVAL_100NS,
@@ -23,9 +20,7 @@ pub const fn plan_rendition_blink(
 
 #[cfg(test)]
 mod tests {
-    use super::{
-        RENDITION_BLINK_INTERVAL_100NS, RenditionBlinkAction, plan_rendition_blink,
-    };
+    use super::{RENDITION_BLINK_INTERVAL_100NS, RenditionBlinkAction, plan_rendition_blink};
 
     #[test]
     fn starts_one_second_repeating_timer_when_blink_first_appears() {
