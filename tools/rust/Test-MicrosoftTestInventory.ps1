@@ -32,6 +32,25 @@ function Assert-SourceMethodSet {
     }
 }
 
+function Assert-SourceMethodsPresent {
+    param(
+        [Parameter(Mandatory)]
+        [object[]] $Inventory,
+
+        [Parameter(Mandatory)]
+        [string] $Source,
+
+        [Parameter(Mandatory)]
+        [string[]] $Expected
+    )
+
+    $actual = @($Inventory | Where-Object source -eq $Source | Select-Object -ExpandProperty method)
+    $missing = @($Expected | Where-Object { $_ -notin $actual })
+    if ($missing.Count -ne 0) {
+        throw "$Source mapped inventory changed: missing $($missing -join ', ')."
+    }
+}
+
 Assert-SourceMethodSet -Inventory $inventory -Source 'Base64Test.cpp' -Expected @(
     'DecodeFuzz',
     'DecodeUTF8'
@@ -152,6 +171,17 @@ Assert-SourceMethodSet -Inventory $inventory -Source 'inputTest.cpp' -Expected @
     'TerminalInputNullKeyTests',
     'TerminalInputTests',
     'TestFocusEvents'
+)
+
+# adapterTest.cpp mixes deterministic R03 semantics with TextBuffer, renderer,
+# terminal input, and host/platform contracts. Lock only the source identities
+# that have concrete Rust evidence instead of pretending the whole class has
+# migrated equivalence.
+Assert-SourceMethodsPresent -Inventory $inventory -Source 'adapterTest.cpp' -Expected @(
+    'CursorMovementTest',
+    'CursorPositionTest',
+    'CursorSaveRestoreTest',
+    'CursorSingleDimensionMoveTest'
 )
 
 $duplicates = @($inventory | Group-Object suite, source, method | Where-Object Count -gt 1)
