@@ -36,7 +36,9 @@ pub const fn plan_viewport_update(
     new_viewport: InclusiveRect,
     force_update: bool,
 ) -> Option<ViewportUpdate> {
-    if !force_update && old_viewport.left == new_viewport.left && old_viewport.top == new_viewport.top
+    if !force_update
+        && old_viewport.left == new_viewport.left
+        && old_viewport.top == new_viewport.top
         && old_viewport.right == new_viewport.right
         && old_viewport.bottom == new_viewport.bottom
     {
