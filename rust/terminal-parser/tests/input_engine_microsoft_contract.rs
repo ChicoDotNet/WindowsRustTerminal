@@ -22,12 +22,12 @@ fn microsoft_win32_input_optionals_matrix() {
         let provide_repeat_count = mask & 0b10_0000 != 0;
 
         let complete = [
-            if provide_virtual_key { 1 } else { 0 },
-            if provide_scan_code { 2 } else { 0 },
-            if provide_char_data { 3 } else { 0 },
-            if provide_key_down { 4 } else { 0 },
-            if provide_modifiers { 5 } else { 0 },
-            if provide_repeat_count { 6 } else { 0 },
+            i32::from(provide_virtual_key),
+            i32::from(provide_scan_code) * 2,
+            i32::from(provide_char_data) * 3,
+            i32::from(provide_key_down) * 4,
+            i32::from(provide_modifiers) * 5,
+            i32::from(provide_repeat_count) * 6,
         ];
 
         for parameter_count in 0usize..=6 {
@@ -42,29 +42,17 @@ fn microsoft_win32_input_optionals_matrix() {
 
             assert_eq!(
                 key.virtual_key,
-                if provide_virtual_key && parameter_count > 0 {
-                    1
-                } else {
-                    0
-                },
+                u16::from(provide_virtual_key && parameter_count > 0),
                 "mask={mask:#08b}, parameter_count={parameter_count}: virtual key"
             );
             assert_eq!(
                 key.scan_code,
-                if provide_scan_code && parameter_count > 1 {
-                    2
-                } else {
-                    0
-                },
+                u16::from(provide_scan_code && parameter_count > 1) * 2,
                 "mask={mask:#08b}, parameter_count={parameter_count}: scan code"
             );
             assert_eq!(
                 key.unicode_char,
-                if provide_char_data && parameter_count > 2 {
-                    3
-                } else {
-                    0
-                },
+                u16::from(provide_char_data && parameter_count > 2) * 3,
                 "mask={mask:#08b}, parameter_count={parameter_count}: character"
             );
             assert_eq!(
@@ -74,16 +62,12 @@ fn microsoft_win32_input_optionals_matrix() {
             );
             assert_eq!(
                 key.control_key_state,
-                if provide_modifiers && parameter_count > 4 {
-                    5
-                } else {
-                    0
-                },
+                u32::from(provide_modifiers && parameter_count > 4) * 5,
                 "mask={mask:#08b}, parameter_count={parameter_count}: modifiers"
             );
 
             let expected_repeat = if parameter_count == 6 {
-                if provide_repeat_count { 6 } else { 0 }
+                u16::from(provide_repeat_count) * 6
             } else {
                 1
             };
