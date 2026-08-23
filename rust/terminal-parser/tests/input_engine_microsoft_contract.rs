@@ -28,7 +28,7 @@ impl InputDispatch for RecordingDispatch {
 
 fn assert_mouse_table(cases: &[(&str, MouseEvent)]) {
     let mut engine = InputStateMachineEngine::new(RecordingDispatch::default());
-    engine.set_double_click_time(Duration::from_millis(1_000));
+    engine.set_double_click_time(Duration::from_secs(1));
     let mut machine = StateMachine::new_input(engine);
 
     for (sequence, _) in cases {
