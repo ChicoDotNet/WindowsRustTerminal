@@ -8,7 +8,10 @@ pub enum RenditionBlinkAction {
 }
 
 #[must_use]
-pub const fn plan_rendition_blink(blink_used: bool, timer_running: bool) -> RenditionBlinkAction {
+pub const fn plan_rendition_blink(
+    blink_used: bool,
+    timer_running: bool,
+) -> RenditionBlinkAction {
     match (blink_used, timer_running) {
         (true, false) => RenditionBlinkAction::StartRepeating {
             interval_100ns: RENDITION_BLINK_INTERVAL_100NS,
