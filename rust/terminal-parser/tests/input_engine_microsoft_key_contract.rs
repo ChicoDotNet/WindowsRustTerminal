@@ -153,7 +153,7 @@ fn microsoft_alt_backspace_matches_escape_delete() {
     assert_key(
         parse_single_key("\u{1b}\u{7f}"),
         VK_BACK,
-        u16::from(b'\u{8}'),
+        0x08,
         LEFT_ALT_PRESSED,
     );
 }
@@ -194,7 +194,7 @@ fn microsoft_alt_backspace_then_enter_returns_to_ground_between_keys() {
 
     let keys = primary_key_downs(&machine);
     assert_eq!(keys.len(), 2);
-    assert_key(keys[0], VK_BACK, u16::from(b'\u{8}'), LEFT_ALT_PRESSED);
+    assert_key(keys[0], VK_BACK, 0x08, LEFT_ALT_PRESSED);
     assert_key(keys[1], VK_RETURN, u16::from(b'\r'), 0);
 }
 
