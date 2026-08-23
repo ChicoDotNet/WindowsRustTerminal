@@ -10,6 +10,7 @@ on:
       - "rust-toolchain.toml"
       - "rust/**"
       - "tools/rust/**"
+      - "doc/rust-migration/**"
       - ".github/workflows/rust-ci.yml"
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - "rust-toolchain.toml"
       - "rust/**"
       - "tools/rust/**"
+      - "doc/rust-migration/**"
       - ".github/workflows/rust-ci.yml"
   workflow_dispatch:
 
