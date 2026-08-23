@@ -33,7 +33,7 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 | Area | Rust crate | Stage | R07 stable tests | Current R08 tests | Initial equivalence status | C# retained? | Default CI tier |
 |---|---|---:|---:|---:|---|---|---|
-| VT parser | `terminal-parser` | R01 | 39 | 39 | Partial; Base64 + StateMachine mapping complete | No | Fast + affected boundary |
+| VT parser | `terminal-parser` | R01 | 39 | 39 | Partial; Base64 + StateMachine mapping in progress | No | Fast + affected boundary |
 | Terminal input | `terminal-input` | R02 | 28 | 28 | Partial pending method mapping | No | Fast + affected boundary |
 | Adapter / dispatch / Sixel | `terminal-adapter` | R03 | 77 | 77 | Partial pending method mapping | No | Fast + affected boundary |
 | TextBuffer / foundational types | `terminal-buffer` | R04 | 68 | 68 | Partial pending method mapping | No | Fast + affected boundary |
@@ -59,19 +59,19 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 ### R01 StateMachine
 
-`StateMachineTest.cpp` defines seven source methods. Rust has direct semantic counterparts for all seven; the data-driven DCS method expands to four Microsoft runtime invocations and Rust covers the same four terminators.
+`StateMachineTest.cpp` defines seven source methods. Six have direct semantic counterparts with matching ordering/vectors. `PassThroughUnhandled` deliberately remains Partial because its Microsoft observation orders the unknown CSI before following printable text, while the closest Rust test proves the inverse ordering. The data-driven DCS method expands to four Microsoft runtime invocations and Rust covers the same four terminators.
 
 | Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
 |---|---|---|---|---|---|---|---|---|---|---|
 | `terminal / StateMachineTest.TwoStateMachinesDoNotInterfereWithEachOther` | Parser/state machine | Parser instance isolation across interleaved partial/full CSI sequences | `state_machine::tests::two_state_machines_do_not_interfere` | Same partial `ESC[12`, independent `ESC[3C`, then completion `;34m`; same parameter observations | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
-| `terminal / StateMachineTest.PassThroughUnhandled` | Parser/state machine | Unknown CSI is flushed intact while following printable text remains printable | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Same `ESC[?999h` passthrough contract and printable-run preservation | Exact | No | No | Fast + Full certification | R01 | Rust also verifies prior buffered text is not lost |
-| `terminal / StateMachineTest.RunStorageBeforeEscape` | Parser/state machine | Buffered printable run is emitted before transition into an escape sequence | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Rust combines the pre-escape run and unhandled-CSI assertions in one scenario | Exact | No | No | Fast + Full certification | R01 | One Rust test covers two adjacent Microsoft source contracts |
+| `terminal / StateMachineTest.PassThroughUnhandled` | Parser/state machine | Unknown CSI is flushed intact while following printable text remains printable | nearest: `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Microsoft sends `ESC[?999h` first and printable text afterward; Rust currently proves printable text first and unknown CSI afterward | Partial | No | No | Fast + Boundary + Full certification | R01 | Keep Microsoft boundary coverage until the sequence-first ordering is explicit in Rust |
+| `terminal / StateMachineTest.RunStorageBeforeEscape` | Parser/state machine | Buffered printable run is emitted before transition into an escape sequence | `state_machine::tests::unhandled_csi_is_passed_through_without_losing_prior_text` | Both send `12345 Hello World` followed by `ESC[?999h` and observe the complete text plus passthrough sequence | Exact | No | No | Fast + Full certification | R01 | Direct ordering/vector match |
 | `terminal / StateMachineTest.BulkTextPrint` | Parser/state machine | Plain text is emitted as a single bulk print run | `state_machine::tests::bulk_text_is_printed_as_one_run` | Same `12345 Hello World` payload and expected single run | Exact | No | No | Fast + Full certification | R01 | Direct scenario equivalence |
-| `terminal / StateMachineTest.PassThroughUnhandledSplitAcrossWrites` | Parser/state machine | Unknown CSI/OSC sequences survive two- and three-part write boundaries | `state_machine::tests::unhandled_sequences_survive_split_writes` | Rust covers split CSI and split OSC-ST boundaries corresponding to the Microsoft regression cases | Exact | No | No | Fast + Full certification | R01 | Boundary preservation is deterministic |
-| `terminal / StateMachineTest.DcsDataStringsReceivedByHandler` | Parser/state machine | DCS id/params/data delivery and termination by ST, CSI, CAN, or SUB | `state_machine::tests::dcs_data_is_delivered_and_st_can_terminate_it`; `dcs_can_be_terminated_by_csi_can_or_sub` | Microsoft data source has terminatorType `{0,1,2,3}`; Rust explicitly covers ST plus CSI/CAN/SUB and validates id, params, data, execution/CSI side effects, and following text | Exact | No | No | Fast + Full certification | R01 | Four expanded TAEF cases map to two Rust tests |
+| `terminal / StateMachineTest.PassThroughUnhandledSplitAcrossWrites` | Parser/state machine | Unknown CSI/OSC sequences survive two- and three-part write boundaries | `state_machine::tests::unhandled_sequences_survive_split_writes` | Rust covers the same split CSI cases and the OSC split at ESC/ST used by Microsoft | Exact | No | No | Fast + Full certification | R01 | Direct split-write equivalence |
+| `terminal / StateMachineTest.DcsDataStringsReceivedByHandler` | Parser/state machine | DCS id/params/data delivery and termination by ST, CSI, CAN, or SUB | `state_machine::tests::dcs_data_is_delivered_and_st_can_terminate_it`; `dcs_can_be_terminated_by_csi_can_or_sub` | Microsoft data source has terminatorType `{0,1,2,3}`; Rust explicitly covers ST plus CSI/CAN/SUB and validates id, params, data, execution/CSI side effects, and following text | Exact | No | No | Fast + Full certification | R01 | Four expanded TAEF cases map to two Rust tests; runtime inventory supplies canonical invocation identities |
 | `terminal / StateMachineTest.VtParameterSubspanTest` | Parser/parameters | Parameter subspan at 0, 2, end, and past-end | `state_machine::tests::parameter_subspan_matches_terminal_semantics` | Same values `[12,34,56,78]`, offsets `0,2,4,6`, sizes/default omitted value semantics | Exact | No | No | Fast + Full certification | R01 | Direct vector-for-vector equivalence |
 
-The nine Base64/StateMachine source methods above may leave the **per-change semantic boundary** set for Rust-only implementation changes. They remain in complete Microsoft certification and become boundary-relevant again whenever their C ABI representation or C++ consumer changes.
+At this checkpoint **eight of the nine Base64/StateMachine source methods are Exact or Stronger**. Those eight may leave the per-change semantic boundary set for Rust-only implementation changes. `PassThroughUnhandled` remains boundary-blocking. All nine remain in complete Microsoft certification and become boundary-relevant whenever their C ABI representation or C++ consumer changes.
 
 ## Per-test row schema
 
@@ -99,6 +99,8 @@ The area-level inventory above is only the bootstrap. The matrix becomes authori
 2. **Boundary** is added when C++/FFI/platform code changes. Run every affected Microsoft row still classified Partial, Platform-only, or Missing, plus any Exact/Stronger row whose boundary representation itself changed.
 3. **Stage** runs before R08 merge for all R08 contracts that have not been proven sufficiently equivalent.
 4. **Full certification** runs the complete Microsoft Terminal Suite at R08 exit and again in R09.
+
+A contract run captures the authoritative TAEF runtime inventory before executing the suite. If that inventory differs from the recorded baseline total, the run stops before spending the cost of the full suite. A successful full run additionally requires inventory count and result total to agree.
 
 No Microsoft test is removed from a blocking tier merely because it is slow. It leaves the per-change boundary tier only when the matrix contains concrete equivalence evidence.
 
