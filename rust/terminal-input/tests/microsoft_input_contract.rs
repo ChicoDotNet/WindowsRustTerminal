@@ -33,11 +33,7 @@ fn microsoft_terminal_input_focus_events_match_disabled_and_enabled_contract() {
 fn microsoft_terminal_input_null_key_portable_subset_matches_ctrl_space_contract() {
     let mut input = TerminalInput::new();
     assert_eq!(
-        input.handle_key(key(
-            virtual_key::SPACE,
-            control_state::LEFT_CTRL_PRESSED,
-            0,
-        )),
+        input.handle_key(key(virtual_key::SPACE, control_state::LEFT_CTRL_PRESSED, 0,)),
         "\0"
     );
 
@@ -114,18 +110,8 @@ fn microsoft_terminal_input_different_modifiers_preserve_reference_sequences() {
             0,
             "\u{1b}[3;3~",
         ),
-        (
-            virtual_key::TAB,
-            control_state::LEFT_CTRL_PRESSED,
-            0,
-            "\t",
-        ),
-        (
-            virtual_key::TAB,
-            control_state::RIGHT_CTRL_PRESSED,
-            0,
-            "\t",
-        ),
+        (virtual_key::TAB, control_state::LEFT_CTRL_PRESSED, 0, "\t"),
+        (virtual_key::TAB, control_state::RIGHT_CTRL_PRESSED, 0, "\t"),
         (
             virtual_key::TAB,
             control_state::SHIFT_PRESSED,
@@ -238,11 +224,7 @@ fn microsoft_terminal_input_ctrl_num_contract_matches_one_through_nine() {
     for (digit, expected) in cases {
         let mut input = TerminalInput::new();
         assert_eq!(
-            input.handle_key(key(
-                u16::from(digit),
-                control_state::LEFT_CTRL_PRESSED,
-                0,
-            )),
+            input.handle_key(key(u16::from(digit), control_state::LEFT_CTRL_PRESSED, 0,)),
             expected,
             "digit={} ",
             char::from(digit)
@@ -261,7 +243,11 @@ fn microsoft_terminal_input_backarrow_mode_matches_all_sixteen_combinations() {
             "\u{7f}",
             "\u{8}",
         ),
-        (control_state::LEFT_ALT_PRESSED, "\u{1b}\u{8}", "\u{1b}\u{7f}"),
+        (
+            control_state::LEFT_ALT_PRESSED,
+            "\u{1b}\u{8}",
+            "\u{1b}\u{7f}",
+        ),
         (
             control_state::LEFT_ALT_PRESSED | control_state::SHIFT_PRESSED,
             "\u{1b}\u{8}",
