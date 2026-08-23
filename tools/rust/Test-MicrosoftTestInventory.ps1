@@ -9,12 +9,40 @@ if ($inventory.Count -eq 0) {
     throw 'Microsoft source test inventory is empty.'
 }
 
-$base64 = @($inventory | Where-Object source -eq 'Base64Test.cpp')
-$expected = @('DecodeFuzz', 'DecodeUTF8')
-$actual = @($base64.method | Sort-Object)
-if (($actual -join ',') -ne (($expected | Sort-Object) -join ',')) {
-    throw "Base64 source inventory changed: expected $($expected -join ', '), got $($actual -join ', ')."
+function Assert-SourceMethodSet {
+    param(
+        [Parameter(Mandatory)]
+        [object[]] $Inventory,
+
+        [Parameter(Mandatory)]
+        [string] $Source,
+
+        [Parameter(Mandatory)]
+        [string[]] $Expected
+    )
+
+    $actual = @($Inventory | Where-Object source -eq $Source | Select-Object -ExpandProperty method | Sort-Object)
+    $expectedSorted = @($Expected | Sort-Object)
+
+    if (($actual -join ',') -ne ($expectedSorted -join ',')) {
+        throw "$Source inventory changed: expected $($expectedSorted -join ', '), got $($actual -join ', ')."
+    }
 }
+
+Assert-SourceMethodSet -Inventory $inventory -Source 'Base64Test.cpp' -Expected @(
+    'DecodeFuzz',
+    'DecodeUTF8'
+)
+
+Assert-SourceMethodSet -Inventory $inventory -Source 'StateMachineTest.cpp' -Expected @(
+    'BulkTextPrint',
+    'DcsDataStringsReceivedByHandler',
+    'PassThroughUnhandled',
+    'PassThroughUnhandledSplitAcrossWrites',
+    'RunStorageBeforeEscape',
+    'TwoStateMachinesDoNotInterfereWithEachOther',
+    'VtParameterSubspanTest'
+)
 
 $duplicates = @($inventory | Group-Object suite, source, method | Where-Object Count -gt 1)
 if ($duplicates.Count -ne 0) {
