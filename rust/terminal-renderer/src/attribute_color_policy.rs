@@ -8,7 +8,7 @@ pub struct AttributeColors {
 }
 
 #[must_use]
-pub const fn apply_attribute_effects(
+pub fn apply_attribute_effects(
     mut foreground: u32,
     mut background: u32,
     dim_foreground: bool,
@@ -21,9 +21,7 @@ pub const fn apply_attribute_effects(
     }
 
     if reverse_video ^ screen_reversed {
-        let swapped = foreground;
-        foreground = background;
-        background = swapped;
+        core::mem::swap(&mut foreground, &mut background);
     }
 
     if invisible {
@@ -133,7 +131,7 @@ mod tests {
     }
 
     #[test]
-    fn nondefault_reversed_and_invisible_backgrounds_are_opaque() {
+    fn custom_reversed_and_invisible_backgrounds_are_opaque() {
         for (background_is_default, reverse_video, screen_reversed, invisible) in [
             (false, false, false, false),
             (true, true, false, false),
