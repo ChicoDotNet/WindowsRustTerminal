@@ -54,14 +54,26 @@ fn ffi_guard(operation: impl FnOnce() -> FfiStatus) -> FfiStatus {
     catch_unwind(AssertUnwindSafe(operation)).unwrap_or(FfiStatus::Panic)
 }
 
+/// Exercises the status-returning ABI path without pointer or ownership
+/// semantics. This gives C/C++ consumers a stable handshake that also proves
+/// the panic-containment path is part of the production boundary.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_status_probe() -> FfiStatus {
+    ffi_guard(|| FfiStatus::Ok)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{ABI_VERSION, FfiStatus, ffi_guard, terminal_parser_ffi_abi_version};
+    use super::{
+        ABI_VERSION, FfiStatus, ffi_guard, terminal_parser_ffi_abi_version,
+        terminal_parser_ffi_status_probe,
+    };
     use terminal_parser::base64::DecodeError;
 
     #[test]
-    fn abi_version_is_stable_and_exported() {
+    fn abi_version_and_status_probe_are_stable_and_exported() {
         assert_eq!(terminal_parser_ffi_abi_version(), ABI_VERSION);
+        assert_eq!(terminal_parser_ffi_status_probe(), FfiStatus::Ok);
         assert_eq!(ABI_VERSION, 1);
     }
 
