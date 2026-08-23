@@ -29,7 +29,8 @@ fn microsoft_passthrough_unhandled_sequence_before_printable_text() {
     machine.process_str("\u{1b}[?999h 12345 Hello World");
 
     assert_eq!(
-        String::from_utf16(&machine.engine().passed_through).expect("test sequence is valid UTF-16"),
+        String::from_utf16(&machine.engine().passed_through)
+            .expect("test sequence is valid UTF-16"),
         "\u{1b}[?999h"
     );
     assert_eq!(
