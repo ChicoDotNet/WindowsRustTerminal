@@ -90,9 +90,5 @@ fn microsoft_adapter_macro_definitions_match_repeat_and_control_vectors() {
     assert_macro(&machine, 12, "ABCABCABC");
 
     machine.process_str("\u{1b}P13;0;1!z410742084309440A450B460C470D481B49\u{1b}\\");
-    assert_macro(
-        &machine,
-        13,
-        "A\u{7}B\u{8}C\tD\nE\u{b}F\u{c}G\rH\u{1b}I",
-    );
+    assert_macro(&machine, 13, "A\u{7}B\u{8}C\tD\nE\u{b}F\u{c}G\rH\u{1b}I");
 }
