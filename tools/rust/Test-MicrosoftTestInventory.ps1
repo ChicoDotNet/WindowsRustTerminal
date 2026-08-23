@@ -182,6 +182,7 @@ Assert-SourceMethodsPresent -Inventory $inventory -Source 'adapterTest.cpp' -Exp
     'CursorPositionTest',
     'CursorSaveRestoreTest',
     'CursorSingleDimensionMoveTest',
+    'MacroDefinitions',
     'PageMovementTests'
 )
 
