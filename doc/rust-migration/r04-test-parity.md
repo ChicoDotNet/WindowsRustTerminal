@@ -1,5 +1,7 @@
 # R04 Microsoft-to-Rust test parity
 
+> **Historical baseline:** this document records the original R04 delivery. H04 later hardens the same frozen source surface and supersedes the current classification counts; see `h04-r04-foundation-hardening.md` for the post-audit distribution.
+
 R04 reconciles the Microsoft source-test contracts owned by the TextBuffer and shared foundation layer against the current Rust migration.
 
 ## Scope
@@ -78,7 +80,7 @@ Thirty-one source methods intentionally remain `Missing` because no honest curre
 | `types/UuidTests.cpp` | 2 | UUID-v5 generation is not currently owned/consumed by the Rust product surface. |
 | `til/EnvTests.cpp` | 4 | Environment-block generation/expansion is a host/platform responsibility. |
 | `til/GenerationalTests.cpp` | 1 | No migrated generational-wrapper owner exists. |
-| `til/SizeTests.cpp` | 22 | R04 has dimensions on concrete types but no standalone `til::size` equivalent with the full arithmetic/cast contract. |
+| `til/SizeTests.cpp` | 22 | R04 has dimensions on concrete types but no standalone `til::size` equivalent with the full arithmetic/cast surface. |
 | `til/throttled_func.cpp` | 1 | No migrated Rust throttled-function scheduler exists. |
 | **Total** | **31** | |
 
