@@ -17,11 +17,12 @@ fn assert_deferred(action: OutputAction) {
 }
 
 fn assert_deferred_sequence(actions: Vec<OutputAction>) {
+    let expected = actions.clone();
     let mut dispatch = core();
-    for action in actions.clone() {
+    for action in actions {
         dispatch.dispatch(action);
     }
-    assert_eq!(dispatch.take_deferred_actions(), actions);
+    assert_eq!(dispatch.take_deferred_actions(), expected);
 }
 
 fn parse_core(text: &str) -> AdaptDispatchCore {
