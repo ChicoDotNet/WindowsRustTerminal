@@ -1,9 +1,7 @@
 use terminal_buffer::text_attribute::TextAttribute;
 use terminal_buffer::text_buffer::TextBuffer;
-use terminal_core::selection::{
-    BufferPoint, SelectionExpansion, SelectionInfo, SelectionState,
-};
-use terminal_core::selection_rendering::{selection_spans, SelectionSpan};
+use terminal_core::selection::{BufferPoint, SelectionExpansion, SelectionInfo, SelectionState};
+use terminal_core::selection_rendering::{SelectionSpan, selection_spans};
 
 fn buffer(width: u16, height: u16) -> TextBuffer {
     TextBuffer::new(width, height, TextAttribute::default()).expect("valid test buffer")
