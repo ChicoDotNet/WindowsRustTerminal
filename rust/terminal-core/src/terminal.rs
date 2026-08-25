@@ -89,8 +89,14 @@ mod tests {
     #[test]
     fn microsoft_screen_size_limits_scrollback_history_is_clamped_to_bounds() {
         const VISIBLE: i32 = 100;
-        assert_eq!(TerminalLayout::from_settings(0, VISIBLE, 100).total_rows(), 100);
-        assert_eq!(TerminalLayout::from_settings(-100, VISIBLE, 100).total_rows(), 100);
+        assert_eq!(
+            TerminalLayout::from_settings(0, VISIBLE, 100).total_rows(),
+            100
+        );
+        assert_eq!(
+            TerminalLayout::from_settings(-100, VISIBLE, 100).total_rows(),
+            100
+        );
         assert_eq!(
             TerminalLayout::from_settings(i32::from(i16::MAX) - VISIBLE, VISIBLE, 100).total_rows(),
             i16::MAX as u16
