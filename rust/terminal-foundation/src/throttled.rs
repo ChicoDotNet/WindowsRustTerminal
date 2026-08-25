@@ -3,7 +3,7 @@
 //! The native implementation uses Windows thread-pool timers. Rust owns the deterministic
 //! scheduling policy while the timer mechanism is expressed with safe standard-library threads.
 
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, PoisonError};
 use std::thread;
 use std::time::Duration;
 
@@ -85,7 +85,7 @@ impl<T: Send + 'static> Throttled<T> {
                 .inner
                 .state
                 .lock()
-                .unwrap_or_else(|error| error.into_inner());
+                .unwrap_or_else(PoisonError::into_inner);
             let timer_was_running = state.timer_running;
             state.timer_running = true;
 
@@ -109,18 +109,18 @@ impl<T: Send + 'static> Throttled<T> {
             let inner = Arc::clone(&self.inner);
             thread::spawn(move || {
                 thread::sleep(inner.options.delay);
-                run_trailing(inner, generation);
+                run_trailing(&inner, generation);
             });
         }
     }
 }
 
-fn run_trailing<T>(inner: Arc<Inner<T>>, generation: u64) {
+fn run_trailing<T>(inner: &Arc<Inner<T>>, generation: u64) {
     let pending = {
         let mut state = inner
             .state
             .lock()
-            .unwrap_or_else(|error| error.into_inner());
+            .unwrap_or_else(PoisonError::into_inner);
         if generation != state.timer_generation {
             return;
         }
@@ -137,7 +137,7 @@ fn run_trailing<T>(inner: Arc<Inner<T>>, generation: u64) {
 #[cfg(test)]
 mod tests {
     use super::{Throttled, ThrottledOptions};
-    use std::sync::{Arc, Mutex, mpsc};
+    use std::sync::{Arc, Mutex, PoisonError, mpsc};
     use std::time::Duration;
 
     #[test]
@@ -158,7 +158,7 @@ mod tests {
                 if reschedule {
                     let nested = callback_holder
                         .lock()
-                        .unwrap_or_else(|error| error.into_inner())
+                        .unwrap_or_else(PoisonError::into_inner)
                         .as_ref()
                         .unwrap()
                         .clone();
@@ -168,7 +168,7 @@ mod tests {
         )
         .unwrap();
 
-        *holder.lock().unwrap_or_else(|error| error.into_inner()) = Some(throttled.clone());
+        *holder.lock().unwrap_or_else(PoisonError::into_inner) = Some(throttled.clone());
         throttled.call(true);
 
         receiver.recv_timeout(Duration::from_secs(1)).unwrap();
