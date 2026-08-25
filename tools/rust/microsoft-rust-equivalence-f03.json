@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "description": "F03 Terminal aggregate sizing slice. Rust terminal-core now owns viewport dimension clamping, configured-history capacity and user-resize total-row clamping in a platform-neutral aggregate. The three Microsoft ScreenSizeLimits contracts are exercised directly against that product owner.",
+  "expectedCoveragePriority": 22,
+  "expectedCoverage": {
+    "terminalCore": { "Missing": 1 }
+  },
+  "expectedGlobalCoveragePriority": 22,
+  "expectedGlobalCoverage": {
+    "Exact": 232,
+    "Stronger": 11,
+    "Partial": 351,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 419
+  },
+  "entries": [
+    {
+      "suite": "terminalCore",
+      "source": "ScreenSizeLimitsTest.cpp",
+      "method": "ScreenWidthAndHeightAreClampedToBounds",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_screen_size_limits_width_and_height_are_clamped_to_bounds"],
+      "notes": "TerminalLayout clamps rows/columns to 1..SHRT_MAX using the same negative, zero and oversized vectors as Microsoft."
+    },
+    {
+      "suite": "terminalCore",
+      "source": "ScreenSizeLimitsTest.cpp",
+      "method": "ScrollbackHistorySizeIsClampedToBounds",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_screen_size_limits_scrollback_history_is_clamped_to_bounds"],
+      "notes": "TerminalLayout clamps configured history to zero or remaining SHRT_MAX capacity and exposes the resulting total row count."
+    },
+    {
+      "suite": "terminalCore",
+      "source": "ScreenSizeLimitsTest.cpp",
+      "method": "ResizeIsClampedToBounds",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_screen_size_limits_resize_is_clamped_to_bounds"],
+      "notes": "User resize clamps backing rows at SHRT_MAX while preserving configured history, so shrinking the viewport restores the original total exactly as the Microsoft regression requires."
+    }
+  ]
+}
