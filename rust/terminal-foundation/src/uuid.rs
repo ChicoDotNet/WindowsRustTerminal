@@ -91,10 +91,7 @@ fn sha1(input: &[u8]) -> [u8; 20] {
 
         for (index, word) in words.into_iter().enumerate() {
             let (round_function, constant) = match index {
-                0..=19 => (
-                    (state_b & state_c) | ((!state_b) & state_d),
-                    0x5a82_7999,
-                ),
+                0..=19 => ((state_b & state_c) | ((!state_b) & state_d), 0x5a82_7999),
                 20..=39 => (state_b ^ state_c ^ state_d, 0x6ed9_eba1),
                 40..=59 => (
                     (state_b & state_c) | (state_b & state_d) | (state_c & state_d),
