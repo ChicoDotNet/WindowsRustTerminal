@@ -3,7 +3,7 @@
   "description": "F02 Unicode-search ownership. Rust terminal-buffer now performs exact UTF-16 substring search over stored rows while returning end-exclusive terminal-cell coordinates through the row's validated character/cell mapping. This closes the portable UTextAdapter Unicode contract without importing ICU or conflating Host search flags/case-folding orchestration with TextBuffer ownership.",
   "expectedCoveragePriority": 21,
   "expectedCoverage": {
-    "textBuffer": { "Missing": 0 }
+    "textBuffer": { "Exact": 6, "Partial": 8 }
   },
   "expectedGlobalCoveragePriority": 21,
   "expectedGlobalCoverage": {
