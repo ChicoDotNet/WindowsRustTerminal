@@ -16,5 +16,6 @@ pub mod sixel_store;
 pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;
+pub mod uia_text_range;
 pub mod viewport;
 pub mod width_detector;
