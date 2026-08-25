@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "description": "Frozen source-method fingerprints for Microsoft unit-test suites. Null fingerprints are bootstrap-only and must be replaced before this increment is complete.",
+  "suites": {
+    "host": { "runtimeBaseline": 5101, "sourceMethodCount": null, "identitySha256": null },
+    "textBuffer": { "runtimeBaseline": 13, "sourceMethodCount": null, "identitySha256": null },
+    "terminalCore": { "runtimeBaseline": 54, "sourceMethodCount": null, "identitySha256": null },
+    "terminalApp": { "runtimeBaseline": 51, "sourceMethodCount": null, "identitySha256": null },
+    "localTerminalApp": { "runtimeBaseline": 76, "sourceMethodCount": null, "identitySha256": null },
+    "unitSettingsModel": { "runtimeBaseline": 157, "sourceMethodCount": null, "identitySha256": null },
+    "unitControl": { "runtimeBaseline": 29, "sourceMethodCount": null, "identitySha256": null },
+    "interactivityWin32": { "runtimeBaseline": 52, "sourceMethodCount": null, "identitySha256": null },
+    "terminal": { "runtimeBaseline": 760, "sourceMethodCount": null, "identitySha256": null },
+    "adapter": { "runtimeBaseline": 411, "sourceMethodCount": null, "identitySha256": null },
+    "types": { "runtimeBaseline": 16, "sourceMethodCount": null, "identitySha256": null },
+    "til": { "runtimeBaseline": 278, "sourceMethodCount": null, "identitySha256": null }
+  }
+}
