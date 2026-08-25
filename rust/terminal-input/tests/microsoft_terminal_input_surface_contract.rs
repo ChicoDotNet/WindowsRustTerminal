@@ -4,7 +4,14 @@ fn key_down(virtual_key: u16) -> KeyEvent {
     KeyEvent {
         virtual_key,
         scan_code: 0,
-        codepoint: 0,
+        // Microsoft TerminalInputTests populates UnicodeChar with
+        // MapVirtualKeyW(..., MAPVK_VK_TO_CHAR) for key-down events. Escape is
+        // the one fixed-key case where the portable Rust fallback consumes it.
+        codepoint: if virtual_key == virtual_key::ESCAPE {
+            u32::from(b'\x1b')
+        } else {
+            0
+        },
         control_key_state: 0,
         key_down: true,
         repeat_count: 1,
@@ -13,8 +20,12 @@ fn key_down(virtual_key: u16) -> KeyEvent {
 
 fn key_up(virtual_key: u16) -> KeyEvent {
     KeyEvent {
+        virtual_key,
+        scan_code: 0,
+        codepoint: 0,
+        control_key_state: 0,
         key_down: false,
-        ..key_down(virtual_key)
+        repeat_count: 1,
     }
 }
 
