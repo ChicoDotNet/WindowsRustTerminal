@@ -6,7 +6,7 @@ struct MicrosoftWidthDetector;
 
 impl GlyphWidthDetector for MicrosoftWidthDetector {
     fn is_full_width(&self, glyph: &[u16]) -> bool {
-        matches!(glyph, [0x30a2 | 0x30a3 | 0x30a4 | 0x30a5 | 0x30a6])
+        matches!(glyph, [0x30a2..=0x30a6])
     }
 }
 
