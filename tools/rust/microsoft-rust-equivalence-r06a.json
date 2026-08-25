@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "description": "R06-A host/ConPTY source reconciliation. Exact entries use Microsoft-derived vectors against migrated Rust product APIs; source rules remain conservative where C++ aggregate, Win32, ICU, queue, iterator, or screen-buffer behavior is not owned end-to-end by Rust.",
+  "description": "R06-A host/ConPTY source reconciliation, hardened by H06. Exact entries use Microsoft-derived vectors against migrated Rust product APIs; source rules remain conservative where C++ aggregate, Win32, ICU, queue, iterator, or screen-buffer behavior is not owned end-to-end by Rust.",
   "expectedCoverage": {
-    "host": { "Exact": 11, "Partial": 105, "Missing": 210, "Platform-only": 5 }
+    "host": { "Exact": 34, "Partial": 82, "Missing": 210, "Platform-only": 5 }
   },
   "entries": [
     {"suite":"host","source":"OutputCellIteratorTests.cpp","method":"StringData","coverage":"Exact","rustWitnesses":["microsoft_host_output_cell_string_and_distance_standard_match"],"notes":"Same Microsoft pangram; one narrow output cell per UTF-16 code unit with Current attribute behavior."},
@@ -18,6 +18,30 @@
     {"suite":"host","source":"VtIoTests.cpp","method":"SetConsoleTitleW","coverage":"Exact","rustWitnesses":["microsoft_host_vt_io_set_console_title_matches_sanitized_vectors"],"notes":"Same plain title, C0 controls, DEL and C1 control vectors through migrated sanitizer plus OSC-0 framing."},
     {"suite":"host","source":"VtIoTests.cpp","method":"SetConsoleCursorInfo","coverage":"Exact","rustWitnesses":["microsoft_host_vt_io_set_console_cursor_info_matches_exact_vectors"],"notes":"Same DECTCEM hidden/visible byte sequence."},
     {"suite":"host","source":"VtIoTests.cpp","method":"SetConsoleTextAttribute","coverage":"Exact","rustWitnesses":["microsoft_host_vt_io_set_console_text_attribute_matches_full_legacy_matrix"],"notes":"Same 16 foreground, 16 background and two reverse-video legacy attribute vectors."},
+
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateEmpty","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_empty"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateFromInclusive","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_from_inclusive"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateFromExclusive","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_from_exclusive"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateFromDimensionsWidthHeight","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_from_dimensions_width_height"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateFromDimensions","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_from_dimensions"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CreateFromDimensionsNoOrigin","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_create_from_dimensions_no_origin"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"IsInBoundsCoord","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_is_in_bounds_coord"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"IsInBoundsViewport","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_is_in_bounds_viewport"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"ClampCoord","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_clamp_coord"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"ClampViewport","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_clamp_viewport"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"IncrementInBounds","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_increment_in_bounds"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"DecrementInBounds","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_decrement_in_bounds"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"MoveInBounds","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_move_in_bounds"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"CompareInBounds","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_compare_in_bounds"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"Offset","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_offset"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"Union","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_union"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"Intersect","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_intersect"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractFour","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_four"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractThree","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_three"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractTwo","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_two"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractOne","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_one"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractZero","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_zero"]},
+    {"suite":"host","source":"ViewportTests.cpp","method":"SubtractSame","coverage":"Exact","rustWitnesses":["microsoft_host_viewport_subtract_same"]},
 
     {"suite":"host","source":"ClipboardTests.cpp","method":"TestRetrieveBlockSelectionFromBuffer","coverage":"Missing","rustWitnesses":[],"notes":"Rust TextBuffer does not yet own the C++ CopyRequest/GetPlainText block-selection extraction contract."},
     {"suite":"host","source":"ClipboardTests.cpp","method":"TestRetrieveLineSelectionFromBuffer","coverage":"Missing","rustWitnesses":[],"notes":"Rust TextBuffer does not yet own wrapped-line trimming and CRLF projection for clipboard plain-text extraction."}
@@ -39,7 +63,7 @@
     {"suite":"host","source":"TextBufferTests.cpp","coverage":"Partial","rustWitnesses":["text_buffer::tests::resize_width_reflows_forced_wrap_chain","text_buffer::tests::resize_width_preserves_wide_glyph_boundary","row::tests::reset_row_is_spaces_with_one_offset_per_column"],"notes":"Rust owns rows, attributes, wide glyphs and core resize/reflow behavior, but Microsoft's host suite also asserts circular-buffer rotation, renderer/VT orchestration, API backspace/write paths, clipboard text extraction, hyperlinks and prompt-region behavior outside the current Rust owner."},
     {"suite":"host","source":"TitleTests.cpp","coverage":"Missing","rustWitnesses":[],"notes":"TranslateConsoleTitle environment unexpansion and filesystem-title substitution have no migrated Rust owner; this is distinct from VtIo OSC title framing."},
     {"suite":"host","source":"UtilsTests.cpp","coverage":"Missing","rustWitnesses":[],"notes":"Fallback is intentionally Missing; the suite's sole TestCompareCoords method is explicitly Exact above."},
-    {"suite":"host","source":"ViewportTests.cpp","coverage":"Partial","rustWitnesses":["geometry::tests::rect_uses_exclusive_right_and_bottom_edges","geometry::tests::inclusive_rect_counts_both_edges"],"notes":"Rust preserves exclusive/inclusive rectangle geometry used by viewports, but does not yet expose the full Viewport factory, bounds, clamp, convert, increment/decrement and compare API exercised by all 23 methods."},
+    {"suite":"host","source":"ViewportTests.cpp","coverage":"Partial","rustWitnesses":["microsoft_host_viewport_create_empty"],"notes":"H06 ports the deterministic Viewport owner and explicitly promotes all 23 frozen source methods to Exact. This fallback remains conservative for any future source method, which would also trip the frozen source fingerprint until reconciled."},
     {"suite":"host","source":"VtIoTests.cpp","coverage":"Partial","rustWitnesses":["vt_writer_sequences::tests::cup_is_one_based","vt_writer_sequences::tests::boolean_private_modes_match_writer_bytes","vt_io_protocol::tests::sanitize_ucs2_matches_legacy_display_contract","attribute_format::tests::legacy_windows_color_order_is_transposed_before_formatting"],"notes":"Rust owns deterministic VT sequence, sanitization, attribute and CHAR_INFO serialization logic; Microsoft also drives ApiRoutines, pipes and live screen-buffer mutation. Four pure byte-format contracts are promoted Exact above."}
   ]
 }

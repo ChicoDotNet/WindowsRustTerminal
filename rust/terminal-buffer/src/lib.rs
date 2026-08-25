@@ -16,4 +16,5 @@ pub mod sixel_store;
 pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;
+pub mod viewport;
 pub mod width_detector;
