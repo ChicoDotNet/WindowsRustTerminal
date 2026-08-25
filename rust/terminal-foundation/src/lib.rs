@@ -55,22 +55,40 @@ impl Size {
 
     pub fn checked_add(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
-            width: self.width.checked_add(other.width).ok_or(SizeError::Overflow)?,
-            height: self.height.checked_add(other.height).ok_or(SizeError::Overflow)?,
+            width: self
+                .width
+                .checked_add(other.width)
+                .ok_or(SizeError::Overflow)?,
+            height: self
+                .height
+                .checked_add(other.height)
+                .ok_or(SizeError::Overflow)?,
         })
     }
 
     pub fn checked_sub(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
-            width: self.width.checked_sub(other.width).ok_or(SizeError::Overflow)?,
-            height: self.height.checked_sub(other.height).ok_or(SizeError::Overflow)?,
+            width: self
+                .width
+                .checked_sub(other.width)
+                .ok_or(SizeError::Overflow)?,
+            height: self
+                .height
+                .checked_sub(other.height)
+                .ok_or(SizeError::Overflow)?,
         })
     }
 
     pub fn checked_mul(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
-            width: self.width.checked_mul(other.width).ok_or(SizeError::Overflow)?,
-            height: self.height.checked_mul(other.height).ok_or(SizeError::Overflow)?,
+            width: self
+                .width
+                .checked_mul(other.width)
+                .ok_or(SizeError::Overflow)?,
+            height: self
+                .height
+                .checked_mul(other.height)
+                .ok_or(SizeError::Overflow)?,
         })
     }
 
@@ -80,8 +98,14 @@ impl Size {
         }
 
         Ok(Self {
-            width: self.width.checked_div(other.width).ok_or(SizeError::Overflow)?,
-            height: self.height.checked_div(other.height).ok_or(SizeError::Overflow)?,
+            width: self
+                .width
+                .checked_div(other.width)
+                .ok_or(SizeError::Overflow)?,
+            height: self
+                .height
+                .checked_div(other.height)
+                .ok_or(SizeError::Overflow)?,
         })
     }
 
@@ -131,6 +155,7 @@ impl Size {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn round_coord(round: SizeRound, value: f64) -> Result<CoordType, SizeError> {
     if !value.is_finite() {
         return Err(SizeError::Narrowing);
@@ -334,14 +359,8 @@ mod tests {
 
     #[test]
     fn microsoft_til_size_scale_by_float() {
-        assert_eq!(
-            Ok(Size::new(9, 18)),
-            Size::new(5, 10).scale_ceil(1.783)
-        );
-        assert_eq!(
-            Err(SizeError::Narrowing),
-            Size::new(5, 10).scale_ceil(1e12)
-        );
+        assert_eq!(Ok(Size::new(9, 18)), Size::new(5, 10).scale_ceil(1.783));
+        assert_eq!(Err(SizeError::Narrowing), Size::new(5, 10).scale_ceil(1e12));
     }
 
     #[test]
@@ -407,7 +426,10 @@ mod tests {
             (5.0, 6.0, Size::new(5, 6)),
             (5.6, 6.4, Size::new(6, 7)),
         ] {
-            assert_eq!(expected, Size::from_f64(SizeRound::Ceiling, width, height).unwrap());
+            assert_eq!(
+                expected,
+                Size::from_f64(SizeRound::Ceiling, width, height).unwrap()
+            );
         }
 
         for (width, height, expected) in [
@@ -418,7 +440,10 @@ mod tests {
             (5.0, 6.0, Size::new(5, 6)),
             (5.6, 6.4, Size::new(5, 6)),
         ] {
-            assert_eq!(expected, Size::from_f64(SizeRound::Flooring, width, height).unwrap());
+            assert_eq!(
+                expected,
+                Size::from_f64(SizeRound::Flooring, width, height).unwrap()
+            );
         }
 
         for (width, height, expected) in [
@@ -429,7 +454,10 @@ mod tests {
             (5.0, 6.0, Size::new(5, 6)),
             (5.6, 6.4, Size::new(6, 6)),
         ] {
-            assert_eq!(expected, Size::from_f64(SizeRound::Rounding, width, height).unwrap());
+            assert_eq!(
+                expected,
+                Size::from_f64(SizeRound::Rounding, width, height).unwrap()
+            );
         }
     }
 
