@@ -11,6 +11,8 @@ on:
       - "rust/**"
       - "tools/rust/**"
       - "doc/rust-migration/**"
+      - "src/cascadia/fzf/**"
+      - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
   pull_request:
     paths:
@@ -20,6 +22,8 @@ on:
       - "rust/**"
       - "tools/rust/**"
       - "doc/rust-migration/**"
+      - "src/cascadia/fzf/**"
+      - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
   workflow_dispatch:
 
@@ -84,3 +88,6 @@ jobs:
       - name: Validate R07 renderer seams
         shell: pwsh
         run: ./tools/rust/Test-RustRendererSourceMap.ps1
+      - name: Validate H09 TerminalApp FZF seam
+        shell: pwsh
+        run: ./tools/rust/Test-RustTerminalAppFzfSourceMap.ps1
