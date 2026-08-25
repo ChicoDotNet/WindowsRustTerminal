@@ -93,7 +93,7 @@ impl TerminalLayout {
                 .saturating_add(2)
                 .saturating_sub(viewport_height);
             let top = unclamped_top.min(u32::from(self.configured_history_rows));
-            let top = u16::try_from(top).expect("history policy keeps viewport top in u16 range");
+            let top = u16::try_from(top).unwrap_or(self.configured_history_rows);
             ScrollBarNotification {
                 viewport_top: top,
                 viewport_height: self.viewport.height,
