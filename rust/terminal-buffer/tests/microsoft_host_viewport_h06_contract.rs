@@ -11,7 +11,10 @@ fn assert_shape(view: Viewport, left: i32, top: i32, right: i32, bottom: i32) {
     assert_eq!(view.width(), right - left + 1);
     assert_eq!(view.height(), bottom - top + 1);
     assert_eq!(view.origin(), Point::new(left, top));
-    assert_eq!(view.dimensions(), Size::new(right - left + 1, bottom - top + 1));
+    assert_eq!(
+        view.dimensions(),
+        Size::new(right - left + 1, bottom - top + 1)
+    );
 }
 
 #[test]
@@ -119,7 +122,10 @@ fn microsoft_host_viewport_clamp_coord() {
     }
 
     let mut point = Point::new(21, 6);
-    assert_eq!(Viewport::empty().clamp_point(&mut point), Err(InvalidViewport));
+    assert_eq!(
+        Viewport::empty().clamp_point(&mut point),
+        Err(InvalidViewport)
+    );
 }
 
 #[test]
@@ -190,10 +196,22 @@ fn microsoft_host_viewport_move_in_bounds() {
 #[test]
 fn microsoft_host_viewport_compare_in_bounds() {
     let view = Viewport::from_inclusive(InclusiveRect::new(10, 20, 19, 29));
-    assert_eq!(view.compare_in_bounds(Point::new(12, 24), Point::new(14, 24)), -2);
-    assert_eq!(view.compare_in_bounds(Point::new(14, 24), Point::new(12, 24)), 2);
-    assert_eq!(view.compare_in_bounds(Point::new(10, 24), Point::new(19, 23)), 1);
-    assert_eq!(view.compare_in_bounds(Point::new(19, 23), Point::new(10, 24)), -1);
+    assert_eq!(
+        view.compare_in_bounds(Point::new(12, 24), Point::new(14, 24)),
+        -2
+    );
+    assert_eq!(
+        view.compare_in_bounds(Point::new(14, 24), Point::new(12, 24)),
+        2
+    );
+    assert_eq!(
+        view.compare_in_bounds(Point::new(10, 24), Point::new(19, 23)),
+        1
+    );
+    assert_eq!(
+        view.compare_in_bounds(Point::new(19, 23), Point::new(10, 24)),
+        -1
+    );
 }
 
 #[test]
