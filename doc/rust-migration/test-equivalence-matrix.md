@@ -8,7 +8,7 @@ The matrix is deliberately conservative: until an individual Microsoft contract 
 
 The fully integrated R07 checkpoint (`33190ef8d43626adabc7286e2ffe09ea383300fe`) contains **418 distinct Rust tests**. The same 418 contracts run on Linux and Windows, so the CI matrix performs 836 executions but represents 418 distinct test definitions. R07 reported zero ignored tests.
 
-R08a added four `terminal-parser-ffi` tests. R08c has now added twenty-two explicit Microsoft-contract tests, bringing the current branch inventory to **444 distinct Rust tests**.
+R08 has expanded the portable contract surface to **525 distinct Rust tests** on audited head `a199ab95bb26db11a11127a567422f5fb2ae6d1b`. Rust CI #781 executed that complete inventory successfully on both Linux and Windows.
 
 `tools/rust/contract-baseline.json` records the Microsoft `terminal` suite at **760 total**, with zero failed/blocked/not-run allowed and at most one skipped. The full suite remains the certification oracle; its approximately 24-minute runtime is not used as a reason to weaken a gate.
 
@@ -33,9 +33,9 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 
 | Area | Rust crate | Stage | R07 stable tests | Current R08 tests | Initial equivalence status | C# retained? | Default CI tier |
 |---|---|---:|---:|---:|---|---|---|
-| VT parser | `terminal-parser` | R01 | 39 | 60 | Partial overall; Base64 + StateMachine complete and all 25 InputEngine methods classified | No | Fast + affected boundary |
-| Terminal input | `terminal-input` | R02 | 28 | 29 | Partial pending method mapping; one R01/R02 round-trip contract added | No | Fast + affected boundary |
-| Adapter / dispatch / Sixel | `terminal-adapter` | R03 | 77 | 77 | Partial pending method mapping | No | Fast + affected boundary |
+| VT parser | `terminal-parser` | R01 | 39 | 124 | Partial overall; Base64 + StateMachine complete, all 25 InputEngine methods classified, and OutputEngine XParse color gaps closed | No | Fast + affected boundary |
+| Terminal input | `terminal-input` | R02 | 28 | 39 | Partial pending remaining source-method mapping; fixed-key, key-up, and R01/R02 round-trip evidence present | No | Fast + affected boundary |
+| Adapter / dispatch / Sixel | `terminal-adapter` | R03 | 77 | 84 | Partial pending method mapping | No | Fast + affected boundary |
 | TextBuffer / foundational types | `terminal-buffer` | R04 | 68 | 68 | Partial pending method mapping | No | Fast + affected boundary |
 | TerminalCore | `terminal-core` | R05 | 38 | 38 | Partial pending method mapping | No | Fast + affected boundary |
 | Host / server / interactivity / ConPTY | `terminal-host` | R06 | 118 | 118 | Partial pending method mapping | No | Fast + affected boundary |
@@ -44,7 +44,7 @@ Leaving the per-change set does **not** remove a Microsoft test from full certif
 | XAML code-behind / bindings / view models | existing managed projects | R08 | n/a | n/a | UI-managed where already owned by C# | Yes | Managed/UI contract |
 | WinRT/COM/XAML native boundary | existing platform layer | R08 | n/a | n/a | Platform-only until narrowed | Where applicable | Boundary + Stage |
 
-**Current total:** 418 stable R07 tests; **444** on the current R08 branch. Rust CI #703 passed the complete fast Rust gate on the exact semantic checkpoint containing the ten newest InputEngine/R02 contracts: fmt, Clippy with `-D warnings`, Ubuntu, Windows, TAEF harness self-test, and Microsoft source-inventory self-test.
+**Current total:** 418 stable R07 tests; **525** on audited R08 head `a199ab95bb26db11a11127a567422f5fb2ae6d1b`. Rust CI #781 passed fmt, Clippy with `-D warnings`, Ubuntu, Windows, TAEF harness self-test, and Microsoft source-inventory self-test on that exact head.
 
 ## Evidence rows
 
@@ -116,6 +116,18 @@ Four methods intentionally remain in the Microsoft/platform gate because Windows
 
 All 25 `InputEngineTest` source methods are now classified. Twenty-one have Exact/Stronger portable evidence; four remain explicitly platform-bound. None leave full R08/R09 certification.
 
+### R01 OutputEngine — XParse color gap closure
+
+`OutputEngineTest.cpp` locks 64 source methods. The three methods below were the final external-dispatch rows still classified Partial. The R08 compatibility facade now normalizes Microsoft XParse color forms before dispatch, including high-bit `#hhh/#hhhhhh/#hhhhhhhhh/#hhhhhhhhhhhh` semantics and case-insensitive X11 names used by the Microsoft vectors. Dedicated Rust contracts reproduce the valid, partial, invalid, multi-resource, and color-table cases.
+
+| Microsoft suite/test | Area | Behavior | Rust equivalent | Vector evidence | Coverage | Windows dependency | FFI dependency | CI tier | Stage | Notes |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `terminal / OutputEngineTest.TestOscSetDefaultForeground` | Parser/output OSC | Set default foreground and following dynamic resources from XParse color specifications | `output_engine_microsoft_color_contract::microsoft_output_osc_set_default_foreground_matches_all_reference_vectors`; `output_engine::tests::xparse_hash_uses_high_bits_instead_of_rgb_component_scaling`; `microsoft_output_engine_xorg_names_are_ascii_case_insensitive` | Same `rgb:`/`#111`/`#123456`/`DarkOrange` vectors, multi-resource progression, empty/invalid fields, and Microsoft high-bit component semantics | Exact | No | No | Fast + Full certification | R01/R08 | Product parser correction closes the former `#hhh` and X11-name gap |
+| `terminal / OutputEngineTest.TestOscSetDefaultBackground` | Parser/output OSC | Set default background and following dynamic resources from XParse color specifications | `output_engine_microsoft_color_contract::microsoft_output_osc_set_default_background_matches_all_reference_vectors`; XParse facade unit tests | Same foreground-equivalent vector family rooted at OSC 11, including multi-resource progression and invalid fields | Exact | No | No | Fast + Full certification | R01/R08 | Uses the same normalized XParse path as OSC 10 |
+| `terminal / OutputEngineTest.TestOscSetColorTableEntry` | Parser/output OSC | Parse indexed color-table assignments, multiple entries, partial and invalid payloads | `output_engine_microsoft_color_contract::microsoft_output_osc_set_color_table_entry_matches_valid_partial_and_invalid_vectors` | Same indexed `rgb:`/`#111`/`orange` vectors, multiple assignments, truncation at malformed data, and invalid payload rejection | Exact | No | No | Fast + Full certification | R01/R08 | X11 `orange` and high-bit hash semantics now match Microsoft |
+
+These three rows are now Exact. Together with the 30 external-dispatch methods already carrying direct portable evidence, all 33 OutputEngine external-dispatch source methods have portable Rust evidence. They remain part of full R08/R09 Microsoft certification.
+
 ## Per-test row schema
 
 The area-level inventory above is only the bootstrap. The matrix becomes authoritative for CI reduction only when the Microsoft suite is expanded into one row per source method or independently meaningful runtime case using this schema:
@@ -138,7 +150,7 @@ The area-level inventory above is only the bootstrap. The matrix becomes authori
 
 ## CI selection rule
 
-1. **Fast** runs on every change: Rust fmt, Clippy with `-D warnings`, Linux/Windows workspace check+test, repository quality/spelling, TAEF harness self-test, and the Microsoft source-inventory self-test.
+1. **Fast** runs on every active R08 change: Rust fmt, Clippy with `-D warnings`, Linux/Windows workspace check+test, TAEF harness self-test, and the Microsoft source-inventory self-test. Repository spelling is intentionally deferred while a pull request is draft to avoid paying a repository-wide pass on every synchronization; `ready_for_review` restores the spelling gate before integration, and push/final certification still require it.
 2. **Boundary** is added when C++/FFI/platform code changes. Run every affected Microsoft row still classified Partial, Platform-only, or Missing, plus any Exact/Stronger row whose boundary representation itself changed.
 3. **Stage** runs before R08 merge for all R08 contracts that have not been proven sufficiently equivalent.
 4. **Full certification** runs the complete Microsoft Terminal Suite at R08 exit and again in R09.
@@ -161,4 +173,4 @@ where that ownership already exists, while native WinRT/COM/Win32 boundaries rem
 
 ## Next matrix increment
 
-Map `OutputEngineTest` next, beginning with its pure parser state/parameter contracts, then continue through R02-R07. Runtime-expanded TAEF identities are captured automatically by the contract harness when certification is required. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
+Map the remaining `TerminalInputTests`/R02 source-method surface next, then continue through R03-R07. Runtime-expanded TAEF identities are captured automatically by the contract harness when certification is required. Until a method has concrete evidence, it remains Partial and does not justify relaxing the Microsoft boundary gate.
