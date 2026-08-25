@@ -5,7 +5,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot '../..')
 $mapPath = Join-Path $PSScriptRoot 'r06b-server-source-map.json'
 $map = Get-Content -Raw $mapPath | ConvertFrom-Json -AsHashtable
 
-if ([int]$map.schemaVersion -ne 1) {
+if ([int]$map.schemaVersion -ne 2) {
     throw "Unsupported R06-B server source-map schema: $($map.schemaVersion)"
 }
 
@@ -14,6 +14,7 @@ $seenSources = @{}
 $splitCount = 0
 $nativeCount = 0
 $witnessCount = 0
+$blobCount = 0
 
 foreach ($entry in @($map.entries)) {
     $sourcePath = [string]$entry.sourcePath
@@ -29,6 +30,19 @@ foreach ($entry in @($map.entries)) {
     if (-not (Test-Path -LiteralPath $sourceFullPath -PathType Leaf)) {
         throw "R06-B server source no longer exists: $sourcePath"
     }
+
+    $expectedBlobSha = [string]$entry.sourceBlobSha
+    if ($expectedBlobSha -notmatch '^[0-9a-f]{40}$') {
+        throw "R06-B server entry must pin a 40-character Git blob SHA: $sourcePath"
+    }
+    $actualBlobSha = ((& git -C $repoRoot rev-parse "HEAD:$sourcePath") | Out-String).Trim()
+    if ($LASTEXITCODE -ne 0 -or $actualBlobSha -notmatch '^[0-9a-f]{40}$') {
+        throw "Unable to resolve current Git blob for R06-B server source: $sourcePath"
+    }
+    if ($actualBlobSha -ne $expectedBlobSha) {
+        throw "R06-B server source drift requires ownership re-audit: $sourcePath expected=$expectedBlobSha actual=$actualBlobSha"
+    }
+    $blobCount++
 
     $ownership = [string]$entry.ownership
     if ($ownership -notin $allowedOwnership) {
@@ -74,8 +88,8 @@ foreach ($entry in @($map.entries)) {
     }
 }
 
-if ($splitCount -ne 3 -or $nativeCount -ne 3 -or $witnessCount -ne 16) {
-    throw "R06-B server source-map summary changed unexpectedly: split=$splitCount native=$nativeCount witnesses=$witnessCount"
+if ($splitCount -ne 3 -or $nativeCount -ne 3 -or $witnessCount -ne 16 -or $blobCount -ne 6) {
+    throw "R06-B server source-map summary changed unexpectedly: split=$splitCount native=$nativeCount witnesses=$witnessCount blobs=$blobCount"
 }
 
-Write-Host "R06-B server seam gate passed (split=$splitCount, native=$nativeCount, Rust witnesses=$witnessCount)."
+Write-Host "R06-B server seam gate passed (split=$splitCount, native=$nativeCount, Rust witnesses=$witnessCount, pinned source blobs=$blobCount)."
