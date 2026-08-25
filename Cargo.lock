@@ -11,6 +11,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal-app"
+version = "0.0.0"
+
+[[package]]
 name = "terminal-buffer"
 version = "0.0.0"
 
