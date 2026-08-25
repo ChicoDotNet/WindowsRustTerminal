@@ -1,8 +1,8 @@
 #![forbid(unsafe_code)]
 
+mod env;
 #[path = "lib.rs"]
 mod foundation;
-mod env;
 mod uuid;
 
 pub use env::Environment;
