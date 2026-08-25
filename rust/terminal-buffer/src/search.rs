@@ -52,9 +52,8 @@ impl TextBuffer {
                 let start_x = row.leading_column_at_char_offset(
                     isize::try_from(char_begin).unwrap_or(isize::MAX),
                 );
-                let end_x = row.leading_column_at_char_offset(
-                    isize::try_from(char_end).unwrap_or(isize::MAX),
-                );
+                let end_x = row
+                    .leading_column_at_char_offset(isize::try_from(char_end).unwrap_or(isize::MAX));
                 matches.push(TextSearchSpan::new(
                     TextBufferPoint::new(start_x, y),
                     TextBufferPoint::new(end_x, y),
@@ -82,12 +81,8 @@ mod tests {
     #[test]
     fn microsoft_utext_adapter_unicode_matches_source_contract() {
         let mut buffer = TextBuffer::new(24, 1, TextAttribute::default()).expect("valid buffer");
-        replace_text(
-            buffer.row_mut(0),
-            0,
-            &utf16("abc 𝒶𝒷𝒸 abc ネコちゃん"),
-        )
-        .expect("Microsoft source text fits the 24-cell row");
+        replace_text(buffer.row_mut(0), 0, &utf16("abc 𝒶𝒷𝒸 abc ネコちゃん"))
+            .expect("Microsoft source text fits the 24-cell row");
 
         assert_eq!(
             buffer.search_text(&utf16("abc")),
