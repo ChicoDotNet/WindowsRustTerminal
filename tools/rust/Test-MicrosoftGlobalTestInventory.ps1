@@ -126,7 +126,7 @@ foreach ($suite in $expectedSuites) {
             $coverage = $ledger.suites[$suite].defaultCoverage
         }
 
-        if ($suite -in @('textBuffer', 'types', 'til', 'terminalCore') -and -not $entryKeys.ContainsKey($key) -and -not $sourceRules.ContainsKey($sourceKey)) {
+        if ($suite -in @('textBuffer', 'types', 'til', 'terminalCore', 'host') -and -not $entryKeys.ContainsKey($key) -and -not $sourceRules.ContainsKey($sourceKey)) {
             throw "Reconciled-stage contract has not been deliberately classified: $key"
         }
 
