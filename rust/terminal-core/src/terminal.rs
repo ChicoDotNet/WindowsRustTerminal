@@ -1,8 +1,8 @@
-//! Portable aggregate policy for TerminalCore sizing and history capacity.
+//! Portable aggregate policy for `TerminalCore` sizing and history capacity.
 //!
 //! Microsoft Terminal clamps visible dimensions and total backing rows to the
 //! signed 16-bit coordinate domain used by the native product. Keeping that
-//! policy here gives Rust a real aggregate owner without pulling WinRT or
+//! policy here gives Rust a real aggregate owner without pulling `WinRT` or
 //! renderer concerns into the semantic core.
 
 const MAX_COORD: i32 = i16::MAX as i32;
@@ -48,7 +48,7 @@ impl TerminalLayout {
         self.configured_history_rows
     }
 
-    /// Applies the same user-resize capacity rule as TerminalCore: viewport
+    /// Applies the same user-resize capacity rule as `TerminalCore`: viewport
     /// dimensions remain in range and the backing row count is clamped to
     /// `SHRT_MAX` without mutating the configured history allowance. Shrinking
     /// the viewport can therefore restore rows that a larger viewport had
@@ -57,33 +57,41 @@ impl TerminalLayout {
         let height = clamp_dimension(rows);
         let width = clamp_dimension(columns);
         let requested_total = i32::from(height) + i32::from(self.configured_history_rows);
-        self.total_rows = requested_total.min(MAX_COORD) as u16;
+        self.total_rows = coord_to_u16(requested_total.min(MAX_COORD));
         self.viewport = TerminalDimensions { width, height };
     }
 }
 
+fn coord_to_u16(value: i32) -> u16 {
+    u16::try_from(value).expect("terminal coordinate policy keeps values in u16 range")
+}
+
 fn clamp_dimension(value: i32) -> u16 {
-    value.clamp(1, MAX_COORD) as u16
+    coord_to_u16(value.clamp(1, MAX_COORD))
 }
 
 fn clamp_history(history_size: i32, visible_rows: u16) -> u16 {
     let available = MAX_COORD - i32::from(visible_rows);
-    history_size.clamp(0, available) as u16
+    coord_to_u16(history_size.clamp(0, available))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn max_coord_u16() -> u16 {
+        u16::try_from(i16::MAX).expect("i16::MAX is positive and representable as u16")
+    }
+
     #[test]
     fn microsoft_screen_size_limits_width_and_height_are_clamped_to_bounds() {
         let negative_columns = TerminalLayout::from_settings(10_000, 9_999_999, -1_234);
-        assert_eq!(negative_columns.viewport().height, i16::MAX as u16);
+        assert_eq!(negative_columns.viewport().height, max_coord_u16());
         assert_eq!(negative_columns.viewport().width, 1);
 
         let zero_rows = TerminalLayout::from_settings(10_000, 0, 9_999_999);
         assert_eq!(zero_rows.viewport().height, 1);
-        assert_eq!(zero_rows.viewport().width, i16::MAX as u16);
+        assert_eq!(zero_rows.viewport().width, max_coord_u16());
     }
 
     #[test]
@@ -99,16 +107,16 @@ mod tests {
         );
         assert_eq!(
             TerminalLayout::from_settings(i32::from(i16::MAX) - VISIBLE, VISIBLE, 100).total_rows(),
-            i16::MAX as u16
+            max_coord_u16()
         );
         assert_eq!(
             TerminalLayout::from_settings(i32::from(i16::MAX) - VISIBLE + 1, VISIBLE, 100)
                 .total_rows(),
-            i16::MAX as u16
+            max_coord_u16()
         );
         assert_eq!(
             TerminalLayout::from_settings(99_999_999, VISIBLE, 100).total_rows(),
-            i16::MAX as u16
+            max_coord_u16()
         );
     }
 
@@ -117,16 +125,18 @@ mod tests {
         const COLS: i32 = 50;
         const ROWS: i32 = 50;
         let history = i32::from(i16::MAX) - ROWS * 2;
+        let expected_total =
+            u16::try_from(history + ROWS).expect("test total remains in the coordinate domain");
         let mut terminal = TerminalLayout::from_settings(history, ROWS, COLS);
-        assert_eq!(terminal.total_rows(), (history + ROWS) as u16);
+        assert_eq!(terminal.total_rows(), expected_total);
 
         terminal.user_resize(COLS, ROWS * 2);
-        assert_eq!(terminal.total_rows(), i16::MAX as u16);
+        assert_eq!(terminal.total_rows(), max_coord_u16());
 
         terminal.user_resize(COLS, ROWS * 3);
-        assert_eq!(terminal.total_rows(), i16::MAX as u16);
+        assert_eq!(terminal.total_rows(), max_coord_u16());
 
         terminal.user_resize(COLS, ROWS);
-        assert_eq!(terminal.total_rows(), (history + ROWS) as u16);
+        assert_eq!(terminal.total_rows(), expected_total);
     }
 }
