@@ -190,3 +190,16 @@ fn microsoft_terminal_input_tests_all_key_up_events_are_silent() {
         );
     }
 }
+
+#[test]
+fn microsoft_test_focus_events_matches_focus_mode_contract() {
+    let mut input = TerminalInput::new();
+
+    assert_eq!(input.handle_focus(false), None);
+    assert_eq!(input.handle_focus(true), None);
+
+    input.set_input_mode(terminal_input::Mode::FocusEvent, true);
+
+    assert_eq!(input.handle_focus(false), Some("\u{1b}[O".to_string()));
+    assert_eq!(input.handle_focus(true), Some("\u{1b}[I".to_string()));
+}
