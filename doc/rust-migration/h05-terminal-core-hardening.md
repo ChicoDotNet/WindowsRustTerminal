@@ -25,23 +25,30 @@ UI-managed      1
 Total          53
 
 After H05
-Exact          16
-Partial        25
+Exact          15
+Partial        26
 Missing         4
 Platform-only   7
 UI-managed      1
 Total          53
 ```
 
-Seven source methods move from `Partial` to `Exact`. No `Missing` row is hidden or converted merely to improve the number.
+Six source methods move from `Partial` to `Exact`. No `Missing` row is hidden or converted merely to improve the number.
 
-## Exact promotion: InputTest::InvalidKeyEvent
+## InputTest remains Partial — CI found a real discrepancy
 
-Microsoft verifies that virtual keys `0` and `255`, both with scan code `123`, are unhandled.
+Microsoft `InputTest.cpp` contains two methods:
 
-The migrated `terminal-input::TerminalInput` is the real deterministic owner for VT keyboard output. H05 adds a direct witness covering both exact source vectors and verifies that neither emits VT output.
+- `AltShiftKey`
+- `InvalidKeyEvent`
 
-`InputTest::AltShiftKey` remains `Partial`. Microsoft exercises `Terminal::SendCharEvent` and expects Alt+`a` / Alt+Shift+`A` to produce ESC-prefixed character output. Rust `TerminalInput` does not yet expose that aggregate char-event path with the same observable, so H05 deliberately does not promote it.
+Neither is promoted in H05.
+
+`AltShiftKey` exercises `Terminal::SendCharEvent` and expects Alt+`a` / Alt+Shift+`A` to produce ESC-prefixed character output. Rust `TerminalInput` does not yet expose that aggregate char-event path with the same observable.
+
+H05 also directly attempted the Microsoft `InvalidKeyEvent` vectors: virtual keys `0` and `255`, both with scan code `123`, should be unhandled. The first CI pass found that Rust emits a NUL (`"\0"`) for at least one of those vectors instead of emitting no output. The candidate Exact witness was therefore removed and the source family remains `Partial`.
+
+This is intentional hardening behavior: CI evidence overrides the desired coverage number.
 
 ## Six Exact selection promotions
 
@@ -92,13 +99,14 @@ The source-family classifications remain `Partial`.
 
 ## Safety
 
-H05 changes only Rust contract tests, parity metadata/global snapshot, and migration documentation.
+H05 changes only Rust contract tests, parity metadata/global snapshot/gate, and migration documentation.
 
 - Microsoft C++ product changed: 0
+- Rust product implementation changed: 0
 - Microsoft tests removed or weakened: 0
 - FFI changed: 0
 - managed/XAML changed: 0
 - certification gates relaxed: 0
 - new test-only Terminal aggregate abstractions: 0
 
-The Rust product implementation itself is intentionally unchanged in H05; the known right-exclusive and wide-glyph selection gaps remain visible rather than patched through parity-only APIs.
+The known invalid-key, right-exclusive and wide-glyph selection gaps remain visible rather than patched through parity-only APIs.
