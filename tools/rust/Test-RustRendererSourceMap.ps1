@@ -32,7 +32,8 @@ foreach ($entry in @($map.entries)) {
         throw "R07 renderer source no longer exists: $sourcePath"
     }
     $sourceContent = Get-Content -Raw $sourceFullPath
-    foreach ($pattern in @($entry.sourcePatterns)) {
+    $sourcePatterns = if ($entry.ContainsKey('sourcePatterns')) { @($entry.sourcePatterns) } else { @() }
+    foreach ($pattern in $sourcePatterns) {
         if (-not $sourceContent.Contains([string]$pattern)) {
             throw "R07 renderer source pattern '$pattern' is missing from $sourcePath"
         }
@@ -46,7 +47,7 @@ foreach ($entry in @($map.entries)) {
         throw "R07 renderer entry must document its native boundary: $sourcePath"
     }
 
-    $owners = @($entry.rustOwners)
+    $owners = if ($entry.ContainsKey('rustOwners')) { @($entry.rustOwners) } else { @() }
     if ($ownership -eq 'split') {
         $splitCount++
         if ($owners.Count -eq 0) {
@@ -65,7 +66,7 @@ foreach ($entry in @($map.entries)) {
             }
 
             $rustContent = Get-Content -Raw $rustFullPath
-            $witnesses = @($owner.rustWitnesses)
+            $witnesses = if ($owner.ContainsKey('rustWitnesses')) { @($owner.rustWitnesses) } else { @() }
             if ($witnesses.Count -eq 0) {
                 throw "R07 renderer Rust owner requires witnesses: $rustPath"
             }
