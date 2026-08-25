@@ -88,7 +88,8 @@ fn microsoft_r04_reflow_contract_preserves_wrap_chain_and_wide_glyph_boundary() 
     assert_eq!(buffer.row(0).glyph_at(1), &[0x4e00]);
     assert!(buffer.row(0).was_wrap_forced());
     assert_eq!(buffer.row(1).glyph_at(0), &[u16::from(b'B')]);
-    assert_eq!(buffer.row(1).glyph_at(1), &[u16::from(b'C')]);
+    assert_eq!(buffer.row(1).glyph_at(1), &[u16::from(b' ')]);
+    assert_eq!(buffer.row(1).glyph_at(2), &[u16::from(b'C')]);
 }
 
 #[test]
@@ -198,12 +199,12 @@ fn microsoft_r04_utf16_replacement_contract_matches_surrogates_and_replacement_b
 
 #[test]
 fn microsoft_r04_math_replacement_contract_covers_floor_ceiling_rounding_and_integer_division() {
-    assert_eq!(3.25_f64.floor(), 3.0);
-    assert_eq!((-3.25_f64).floor(), -4.0);
-    assert_eq!(3.25_f64.ceil(), 4.0);
-    assert_eq!((-3.25_f64).ceil(), -3.0);
-    assert_eq!(3.5_f64.round(), 4.0);
-    assert_eq!((-3.5_f64).round(), -4.0);
+    assert_eq!(3.25_f64.floor().to_bits(), 3.0_f64.to_bits());
+    assert_eq!((-3.25_f64).floor().to_bits(), (-4.0_f64).to_bits());
+    assert_eq!(3.25_f64.ceil().to_bits(), 4.0_f64.to_bits());
+    assert_eq!((-3.25_f64).ceil().to_bits(), (-3.0_f64).to_bits());
+    assert_eq!(3.5_f64.round().to_bits(), 4.0_f64.to_bits());
+    assert_eq!((-3.5_f64).round().to_bits(), (-4.0_f64).to_bits());
     assert_eq!(10_i32.div_euclid(3), 3);
     assert_eq!((10_i32 + 3 - 1) / 3, 4);
 }
