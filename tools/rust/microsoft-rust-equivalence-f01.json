@@ -1,19 +1,19 @@
 {
   "schemaVersion": 1,
-  "description": "F01 foundation-value burn-down. Rust owns til::generational, portable til::env table/serialization/expansion semantics, the complete portable til::size value/arithmetic surface, and portable RFC 4122 UUID-v5 generation over arbitrary name bytes; Win32 environment regeneration, COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
+  "description": "F01 foundation-value burn-down. Rust owns til::generational, portable til::env table/serialization/expansion semantics, portable throttled callback scheduling policy, the complete portable til::size value/arithmetic surface, and portable RFC 4122 UUID-v5 generation over arbitrary name bytes; Win32 environment regeneration, thread-pool timer implementation, COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
   "expectedCoveragePriority": 20,
   "expectedCoverage": {
-    "til": { "Exact": 25, "Partial": 168, "Missing": 1, "Platform-only": 5 },
+    "til": { "Exact": 26, "Partial": 168, "Missing": 0, "Platform-only": 5 },
     "types": { "Exact": 2, "Partial": 14 }
   },
   "expectedGlobalCoveragePriority": 20,
   "expectedGlobalCoverage": {
-    "Exact": 227,
+    "Exact": 228,
     "Stronger": 11,
     "Partial": 351,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 424
+    "Missing": 423
   },
   "entries": [
     {
@@ -27,6 +27,7 @@
     {"suite":"til","source":"EnvTests.cpp","method":"Construct","coverage":"Exact","rustWitnesses":["microsoft_til_env_construct"],"notes":"Rust Environment has a deterministic empty construction and serializes the empty table as the required terminating NUL environment block."},
     {"suite":"til","source":"EnvTests.cpp","method":"ToString","coverage":"Exact","rustWitnesses":["microsoft_til_env_to_string"],"notes":"Rust Environment serializes sorted name=value entries as UTF-16, NUL-terminates each entry and adds the final extra NUL exactly like til::env::to_string."},
     {"suite":"til","source":"EnvTests.cpp","method":"TestExpandEnvironmentStrings","coverage":"Exact","rustWitnesses":["microsoft_til_env_expand_environment_strings"],"notes":"Rust Environment reproduces Microsoft's percent-delimited expansion state machine, including known variables, unknown variables and unmatched opening percent signs. Windows shell32 regeneration remains separately Platform-only."},
+    {"suite":"til","source":"throttled_func.cpp","method":"Basic","coverage":"Exact","rustWitnesses":["microsoft_til_throttled_func_basic"],"notes":"Rust Throttled reproduces Microsoft's trailing-edge Basic contract, including a callback that safely re-enters the same scheduler and produces a second delayed callback. Windows thread-pool timers are replaced by safe standard-library threads while preserving the observable scheduling policy."},
     {"suite":"til","source":"SizeTests.cpp","method":"DefaultConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_default_construct"],"notes":"Rust Size defaults width and height to zero."},
     {"suite":"til","source":"SizeTests.cpp","method":"RawConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_raw_construct"],"notes":"Rust Size preserves explicit integer width and height."},
     {"suite":"til","source":"SizeTests.cpp","method":"RawFloatingConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_raw_floating_construct"],"notes":"Rust floating construction applies the same rounding policy and checked coordinate narrowing."},
