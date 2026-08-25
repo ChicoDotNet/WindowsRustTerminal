@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "description": "F01 foundation-value burn-down. The first vertical slice gives til::generational a real safe Rust owner and direct Microsoft source-contract evidence.",
+  "expectedCoveragePriority": 20,
+  "expectedCoverage": {
+    "til": { "Exact": 4, "Partial": 168, "Missing": 22, "Platform-only": 5 }
+  },
+  "expectedGlobalCoveragePriority": 20,
+  "expectedGlobalCoverage": {
+    "Exact": 204,
+    "Stronger": 11,
+    "Partial": 351,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 447
+  },
+  "entries": [
+    {
+      "suite": "til",
+      "source": "GenerationalTests.cpp",
+      "method": "Basic",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_til_generational_basic_matches_source_contract"],
+      "notes": "Rust Generational<T> reproduces the Microsoft Basic contract: default reads, write-triggered generation inequality, clone synchronization and copied wrapped value. Equality intentionally compares generation rather than T, matching til::generational."
+    }
+  ]
+}
