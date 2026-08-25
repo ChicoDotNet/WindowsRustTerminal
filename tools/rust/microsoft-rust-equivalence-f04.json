@@ -1,9 +1,18 @@
 {
   "schemaVersion": 1,
-  "description": "F04 begins the TextAttribute/rendition burn-down with method-level evidence. Only contracts whose complete portable observables are directly reproduced are promoted; RenderSettings-dependent color projection remains Partial until the renderer integration owner is completed.",
-  "priority": 14,
+  "description": "F04 TextAttribute method-level equivalence evidence.",
+  "expectedCoveragePriority": 24,
   "expectedCoverage": {
     "textBuffer": { "Exact": 7, "Partial": 7, "Missing": 0 }
+  },
+  "expectedGlobalCoveragePriority": 24,
+  "expectedGlobalCoverage": {
+    "Exact": 234,
+    "Stronger": 11,
+    "Partial": 350,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 418
   },
   "entries": [
     {
@@ -11,10 +20,8 @@
       "source": "TextAttributeTests.cpp",
       "method": "TestRoundtripExhaustive",
       "coverage": "Exact",
-      "rustWitnesses": [
-        "microsoft_f04_text_attribute_exhaustive_legacy_roundtrip_matches_source_contract"
-      ],
-      "notes": "Rust iterates the same 0..0xdfff legacy attribute domain and skips the same reserved 0x2000 and leading/trailing DBCS bits. Every remaining attribute must round-trip through the production TextAttribute owner exactly."
+      "rustWitnesses": ["microsoft_f04_text_attribute_exhaustive_legacy_roundtrip_matches_source_contract"],
+      "notes": "Rust iterates the Microsoft legacy attribute domain, skips the same reserved and DBCS bits, and requires exact round-trip through the production TextAttribute owner."
     }
   ]
 }
