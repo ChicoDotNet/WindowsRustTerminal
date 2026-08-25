@@ -225,10 +225,7 @@ mod tests {
                 );
 
                 if let Some(notification) = update.scroll_bar {
-                    let expected_top = current_row
-                        .saturating_add(2)
-                        .saturating_sub(32)
-                        .min(9_001);
+                    let expected_top = current_row.saturating_add(2).saturating_sub(32).min(9_001);
                     assert_eq!(u32::from(notification.viewport_top), expected_top);
                     assert_eq!(notification.viewport_height, 32);
                     assert_eq!(
