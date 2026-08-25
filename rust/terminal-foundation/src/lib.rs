@@ -41,6 +41,12 @@ impl Size {
         Self { width, height }
     }
 
+    /// Converts floating-point dimensions using the requested rounding policy.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` if either rounded dimension is non-finite or outside the
+    /// `CoordType` range.
     pub fn from_f64(round: SizeRound, width: f64, height: f64) -> Result<Self, SizeError> {
         Ok(Self {
             width: round_coord(round, width)?,
@@ -53,6 +59,11 @@ impl Size {
         self.width > 0 && self.height > 0
     }
 
+    /// Adds both dimensions using checked coordinate arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Overflow` if either component exceeds the `CoordType` range.
     pub fn checked_add(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
             width: self
@@ -66,6 +77,11 @@ impl Size {
         })
     }
 
+    /// Subtracts both dimensions using checked coordinate arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Overflow` if either component exceeds the `CoordType` range.
     pub fn checked_sub(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
             width: self
@@ -79,6 +95,11 @@ impl Size {
         })
     }
 
+    /// Multiplies both dimensions using checked coordinate arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Overflow` if either component exceeds the `CoordType` range.
     pub fn checked_mul(self, other: Self) -> Result<Self, SizeError> {
         Ok(Self {
             width: self
@@ -92,6 +113,12 @@ impl Size {
         })
     }
 
+    /// Divides both dimensions using checked integer arithmetic.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::DivideByZero` if either divisor is zero, or `SizeError::Overflow` for
+    /// the signed minimum divided by negative one case.
     pub fn checked_div(self, other: Self) -> Result<Self, SizeError> {
         if other.width == 0 || other.height == 0 {
             return Err(SizeError::DivideByZero);
@@ -109,6 +136,12 @@ impl Size {
         })
     }
 
+    /// Scales both dimensions and rounds each result toward positive infinity.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` when a scaled dimension is non-finite or outside the
+    /// `CoordType` range.
     pub fn scale_ceil(self, scale: f64) -> Result<Self, SizeError> {
         Self::from_f64(
             SizeRound::Ceiling,
@@ -117,6 +150,12 @@ impl Size {
         )
     }
 
+    /// Divides positive dimensions and rounds each quotient upward.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::InvalidArgument` when the dividend has a negative dimension or the
+    /// divisor has a non-positive dimension.
     pub fn divide_ceil(self, other: Self) -> Result<Self, SizeError> {
         if self.width < 0 || self.height < 0 || other.width <= 0 || other.height <= 0 {
             return Err(SizeError::InvalidArgument);
@@ -136,19 +175,39 @@ impl Size {
         })
     }
 
+    /// Narrows the width to the Win32-compatible signed 16-bit coordinate width.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` if the width does not fit in `i16`.
     pub fn narrow_width_i16(self) -> Result<i16, SizeError> {
         i16::try_from(self.width).map_err(|_| SizeError::Narrowing)
     }
 
+    /// Narrows the height to the Win32-compatible signed 16-bit coordinate width.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` if the height does not fit in `i16`.
     pub fn narrow_height_i16(self) -> Result<i16, SizeError> {
         i16::try_from(self.height).map_err(|_| SizeError::Narrowing)
     }
 
+    /// Computes the area and narrows it back to `CoordType`.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` if the product does not fit in `CoordType`.
     pub fn area(self) -> Result<CoordType, SizeError> {
         let area = i64::from(self.width) * i64::from(self.height);
         CoordType::try_from(area).map_err(|_| SizeError::Narrowing)
     }
 
+    /// Computes the area and narrows it to a signed 16-bit value.
+    ///
+    /// # Errors
+    ///
+    /// Returns `SizeError::Narrowing` if the product does not fit in `i16`.
     pub fn area_i16(self) -> Result<i16, SizeError> {
         let area = i64::from(self.width) * i64::from(self.height);
         i16::try_from(area).map_err(|_| SizeError::Narrowing)
@@ -293,10 +352,10 @@ mod tests {
     #[test]
     fn microsoft_til_size_inequality() {
         assert!(!(Size::new(5, 10) != Size::new(5, 10)));
-        assert!(Size::new(4, 10) != Size::new(5, 10));
-        assert!(Size::new(5, 10) != Size::new(6, 10));
-        assert!(Size::new(5, 9) != Size::new(5, 10));
-        assert!(Size::new(5, 10) != Size::new(5, 11));
+        assert_ne!(Size::new(4, 10), Size::new(5, 10));
+        assert_ne!(Size::new(5, 10), Size::new(6, 10));
+        assert_ne!(Size::new(5, 9), Size::new(5, 10));
+        assert_ne!(Size::new(5, 10), Size::new(5, 11));
     }
 
     #[test]
