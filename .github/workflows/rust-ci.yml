@@ -72,3 +72,6 @@ jobs:
       - name: Validate Microsoft source inventory
         shell: pwsh
         run: ./tools/rust/Test-MicrosoftTestInventory.ps1
+      - name: Validate global Microsoft source census
+        shell: pwsh
+        run: ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1
