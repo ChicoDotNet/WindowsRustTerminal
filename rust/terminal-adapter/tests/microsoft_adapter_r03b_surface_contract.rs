@@ -43,7 +43,7 @@ fn assert_sgr_subparameters(sequence: &str, expected_main: i32, expected_sub: &[
 }
 
 #[test]
-fn microsoft_adapter_osc4_palette_report_preserves_all_sixteen_query_indices() {
+fn microsoft_adapter_osc4_palette_report_preserves_query_indices() {
     assert_deferred_sequence(
         (0usize..=15)
             .map(OutputAction::RequestColorTableEntry)
@@ -170,7 +170,7 @@ fn microsoft_adapter_mouse_modes_preserve_all_six_input_mode_boundaries() {
 }
 
 #[test]
-fn microsoft_adapter_xterm_256_color_preserves_all_five_indexed_sgr_vectors() {
+fn microsoft_adapter_xterm_256_color_preserves_indexed_sgr_vectors() {
     for values in [
         vec![Some(38), Some(5), Some(2)],
         vec![Some(48), Some(5), Some(9)],
@@ -185,7 +185,7 @@ fn microsoft_adapter_xterm_256_color_preserves_all_five_indexed_sgr_vectors() {
 }
 
 #[test]
-fn microsoft_adapter_extended_color_default_parameters_preserve_all_seven_vectors() {
+fn microsoft_adapter_extended_color_default_parameters_preserve_omissions() {
     for values in [
         vec![Some(38), Some(5)],
         vec![Some(48), Some(5), None],
@@ -202,7 +202,7 @@ fn microsoft_adapter_extended_color_default_parameters_preserve_all_seven_vector
 }
 
 #[test]
-fn microsoft_adapter_extended_subparameter_color_preserves_all_eight_source_shapes() {
+fn microsoft_adapter_extended_subparameter_color_preserves_subparameter_shape() {
     for (sequence, main, subparameters) in [
         ("\u{1b}[38:5m", 38, vec![Some(5)]),
         ("\u{1b}[48:5:m", 48, vec![Some(5), None]),
@@ -230,7 +230,7 @@ fn microsoft_adapter_extended_subparameter_color_preserves_all_eight_source_shap
 }
 
 #[test]
-fn microsoft_adapter_set_color_table_value_preserves_all_256_indices() {
+fn microsoft_adapter_set_color_table_value_preserves_full_index_domain_edges() {
     for index in 0usize..256 {
         assert_deferred(OutputAction::SetColorTableEntry {
             index,
@@ -240,9 +240,9 @@ fn microsoft_adapter_set_color_table_value_preserves_all_256_indices() {
 }
 
 #[test]
-fn microsoft_adapter_soft_font_size_detection_preserves_decdld_parameter_families() {
-    // These cover the source contract's matrix-size, explicit-size, font-set and usage families.
-    // The computed FontBuffer cell size and bitmap inference remain downstream migration debt.
+fn microsoft_adapter_soft_font_size_detection_preserves_decdld_parameters_boundary() {
+    // Cover the source contract's matrix-size, explicit-size, font-set and usage families.
+    // Computed FontBuffer cell sizes and bitmap inference remain downstream migration debt.
     for values in [
         vec![Some(5), Some(0), Some(0), Some(0)],
         vec![Some(6), Some(0), Some(1), Some(0)],
