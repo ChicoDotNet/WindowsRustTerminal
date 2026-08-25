@@ -8,6 +8,7 @@ pub struct Guid {
 }
 
 impl Guid {
+    #[must_use]
     pub const fn new(data1: u32, data2: u16, data3: u16, data4: [u8; 8]) -> Self {
         Self {
             data1,
@@ -39,25 +40,24 @@ impl Guid {
 /// Creates an RFC 4122 version-5 UUID from a namespace GUID and arbitrary name bytes.
 ///
 /// The namespace is hashed in network byte order, matching Microsoft's `CreateV5Uuid`.
+#[must_use]
 pub fn create_v5_uuid(namespace: Guid, name: &[u8]) -> Guid {
     let mut input = Vec::with_capacity(16 + name.len());
     input.extend_from_slice(&namespace.network_bytes());
     input.extend_from_slice(name);
 
     let digest = sha1(&input);
-    let mut bytes: [u8; 16] = digest[..16]
-        .try_into()
-        .expect("SHA-1 prefix is sixteen bytes");
+    let mut bytes = [0u8; 16];
+    for (target, source) in bytes.iter_mut().zip(digest) {
+        *target = source;
+    }
     bytes[6] = (bytes[6] & 0x0f) | 0x50;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     Guid::from_network_bytes(bytes)
 }
 
 fn sha1(input: &[u8]) -> [u8; 20] {
-    let bit_len = u64::try_from(input.len())
-        .expect("input length must fit in u64")
-        .checked_mul(8)
-        .expect("input bit length must fit in u64");
+    let bit_len = (input.len() as u64).wrapping_mul(8);
     let mut message = input.to_vec();
     message.push(0x80);
     while message.len() % 64 != 56 {
@@ -83,37 +83,43 @@ fn sha1(input: &[u8]) -> [u8; 20] {
                     .rotate_left(1);
         }
 
-        let mut a = h0;
-        let mut b = h1;
-        let mut c = h2;
-        let mut d = h3;
-        let mut e = h4;
+        let mut state_a = h0;
+        let mut state_b = h1;
+        let mut state_c = h2;
+        let mut state_d = h3;
+        let mut state_e = h4;
 
         for (index, word) in words.into_iter().enumerate() {
-            let (f, k) = match index {
-                0..=19 => ((b & c) | ((!b) & d), 0x5a82_7999),
-                20..=39 => (b ^ c ^ d, 0x6ed9_eba1),
-                40..=59 => ((b & c) | (b & d) | (c & d), 0x8f1b_bcdc),
-                _ => (b ^ c ^ d, 0xca62_c1d6),
+            let (round_function, constant) = match index {
+                0..=19 => (
+                    (state_b & state_c) | ((!state_b) & state_d),
+                    0x5a82_7999,
+                ),
+                20..=39 => (state_b ^ state_c ^ state_d, 0x6ed9_eba1),
+                40..=59 => (
+                    (state_b & state_c) | (state_b & state_d) | (state_c & state_d),
+                    0x8f1b_bcdc,
+                ),
+                _ => (state_b ^ state_c ^ state_d, 0xca62_c1d6),
             };
-            let temp = a
+            let temp = state_a
                 .rotate_left(5)
-                .wrapping_add(f)
-                .wrapping_add(e)
-                .wrapping_add(k)
+                .wrapping_add(round_function)
+                .wrapping_add(state_e)
+                .wrapping_add(constant)
                 .wrapping_add(word);
-            e = d;
-            d = c;
-            c = b.rotate_left(30);
-            b = a;
-            a = temp;
+            state_e = state_d;
+            state_d = state_c;
+            state_c = state_b.rotate_left(30);
+            state_b = state_a;
+            state_a = temp;
         }
 
-        h0 = h0.wrapping_add(a);
-        h1 = h1.wrapping_add(b);
-        h2 = h2.wrapping_add(c);
-        h3 = h3.wrapping_add(d);
-        h4 = h4.wrapping_add(e);
+        h0 = h0.wrapping_add(state_a);
+        h1 = h1.wrapping_add(state_b);
+        h2 = h2.wrapping_add(state_c);
+        h3 = h3.wrapping_add(state_d);
+        h4 = h4.wrapping_add(state_e);
     }
 
     let mut digest = [0u8; 20];
