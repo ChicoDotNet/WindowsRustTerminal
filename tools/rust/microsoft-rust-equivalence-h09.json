@@ -41,7 +41,7 @@
     { "suite": "terminalApp", "source": "FzfTests.cpp", "method": "SurrogatePair_ToUtf16Pos_PreferConsecutiveChars", "coverage": "Exact", "rustWitnesses": ["microsoft_terminal_app_fzf_surrogate_pair_utf16_prefer_consecutive"], "notes": "The Rust terminal-app matcher reproduces this active Microsoft FZF score and UTF-16 run observable through the migrated product owner." },
     { "suite": "terminalApp", "source": "FzfTests.cpp", "method": "SurrogatePair_ToUtf16Pos_GapAndBoundary", "coverage": "Exact", "rustWitnesses": ["microsoft_terminal_app_fzf_surrogate_pair_utf16_gap_boundary"], "notes": "The Rust terminal-app matcher reproduces this active Microsoft FZF score and UTF-16 run observable through the migrated product owner." }
   ],
-  "expectedGlobalCoveragePriority": 8,
+  "expectedGlobalCoveragePriority": 9,
   "expectedGlobalCoverage": {
     "Exact": 202,
     "Stronger": 11,
