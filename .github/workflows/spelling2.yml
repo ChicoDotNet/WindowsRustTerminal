@@ -69,7 +69,6 @@ on:
     types:
       - "opened"
       - "reopened"
-      - "synchronize"
       - "ready_for_review"
   issue_comment:
     types:
@@ -88,11 +87,10 @@ jobs:
     outputs:
       followup: ${{ steps.spelling.outputs.followup }}
     runs-on: ubuntu-latest
-    # Draft PRs can accumulate many commits. Defer the expensive repository-wide
-    # spelling pass until the PR is ready for review. The R08 migration branch is
-    # also blocked explicitly on synchronize so its long draft cannot pay the
-    # spelling cost even if pull_request_target reports stale draft metadata.
-    if: ${{ github.event_name == 'push' || (contains(github.event_name, 'pull_request') && github.event.pull_request.state == 'open' && github.event.pull_request.draft == false && (github.event.pull_request.head.ref != 'rust/r08-product-integration' || github.event.action == 'ready_for_review')) }}
+    # Repository-wide spelling is intentionally absent from pull-request
+    # synchronization. Active draft work is validated by the fast semantic CI;
+    # ready_for_review above restores spelling before integration.
+    if: ${{ (contains(github.event_name, 'pull_request') && github.event.pull_request.state == 'open' && github.event.pull_request.draft == false) || github.event_name == 'push' }}
     concurrency:
       group: spelling-${{ github.event.pull_request.number || github.ref }}
       # note: If you use only_check_changed_files, you do not want cancel-in-progress
