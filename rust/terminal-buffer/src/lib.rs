@@ -12,6 +12,7 @@ pub mod output_cell;
 pub mod rle;
 pub mod row;
 pub mod row_writer;
+pub mod search;
 pub mod sixel_store;
 pub mod text_attribute;
 pub mod text_buffer;
