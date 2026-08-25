@@ -29,10 +29,8 @@ impl Environment {
     pub fn insert(&mut self, name: impl Into<String>, value: impl Into<String>) {
         let name = name.into();
         let value = value.into();
-        self.entries.insert(
-            canonical_key(&name),
-            EnvironmentEntry { name, value },
-        );
+        self.entries
+            .insert(canonical_key(&name), EnvironmentEntry { name, value });
     }
 
     /// Serializes the table as a Windows-compatible UTF-16 environment block.
@@ -113,7 +111,9 @@ mod tests {
         environment.insert("B", "Banana");
         environment.insert("C", "Cassowary");
 
-        let mut expected: Vec<u16> = "A=Apple\0B=Banana\0C=Cassowary\0".encode_utf16().collect();
+        let mut expected: Vec<u16> = "A=Apple\0B=Banana\0C=Cassowary\0"
+            .encode_utf16()
+            .collect();
         expected.push(0);
         assert_eq!(expected, environment.to_utf16_block());
     }
