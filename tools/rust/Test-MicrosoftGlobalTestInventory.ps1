@@ -106,6 +106,12 @@ foreach ($suite in $expectedSuites) {
         throw "$suite Microsoft source contract changed: expected $($frozen.sourceMethodCount) methods / $($frozen.identitySha256), got $($items.Count) / $hash. Reconcile the ledger before updating the census."
     }
 
+    if ($suite -eq 'host') {
+        @($items | Group-Object source | Sort-Object Name) | ForEach-Object {
+            Write-Host "Microsoft host source census: $($_.Name)=$($_.Count)"
+        }
+    }
+
     $coverageCounts = @{}
     foreach ($item in $items) {
         $key = "$($item.suite)|$($item.source)|$($item.method)"
