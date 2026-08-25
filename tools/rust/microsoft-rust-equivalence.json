@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "description": "Machine-readable Microsoft-to-Rust contract ledger. Suite defaults are deliberately conservative until individual source methods are reconciled with concrete Rust witnesses.",
+  "coverageClasses": [
+    "Exact",
+    "Stronger",
+    "Partial",
+    "Platform-only",
+    "UI-managed",
+    "Missing"
+  ],
+  "suites": {
+    "host": { "stage": "R06", "defaultCoverage": "Missing", "rustOwner": "terminal-host" },
+    "textBuffer": { "stage": "R04", "defaultCoverage": "Missing", "rustOwner": "terminal-buffer" },
+    "terminalCore": { "stage": "R05", "defaultCoverage": "Missing", "rustOwner": "terminal-core" },
+    "terminalApp": { "stage": "R08", "defaultCoverage": "Missing", "rustOwner": "product-or-managed-boundary" },
+    "localTerminalApp": { "stage": "R08", "defaultCoverage": "Missing", "rustOwner": "product-or-managed-boundary" },
+    "unitSettingsModel": { "stage": "R08", "defaultCoverage": "Missing", "rustOwner": "settings-or-managed-boundary" },
+    "unitControl": { "stage": "R08", "defaultCoverage": "Missing", "rustOwner": "control-or-managed-boundary" },
+    "interactivityWin32": { "stage": "R06", "defaultCoverage": "Missing", "rustOwner": "terminal-host-or-platform-boundary" },
+    "terminal": { "stage": "R01", "defaultCoverage": "Missing", "rustOwner": "terminal-parser" },
+    "adapter": { "stage": "R02-R03", "defaultCoverage": "Missing", "rustOwner": "terminal-input-or-terminal-adapter" },
+    "types": { "stage": "R04-R07", "defaultCoverage": "Missing", "rustOwner": "terminal-buffer-or-terminal-renderer-or-platform-boundary" },
+    "til": { "stage": "R04-R07", "defaultCoverage": "Missing", "rustOwner": "shared-foundation-or-platform-boundary" }
+  },
+  "entries": [
+    {
+      "suite": "terminal",
+      "source": "Base64Test.cpp",
+      "method": "DecodeUTF8",
+      "coverage": "Exact",
+      "rustWitnesses": ["base64::tests::matches_windows_terminal_unicode_vectors"]
+    },
+    {
+      "suite": "terminal",
+      "source": "Base64Test.cpp",
+      "method": "DecodeFuzz",
+      "coverage": "Stronger",
+      "rustWitnesses": [
+        "base64::tests::deterministic_ascii_round_trips_match_reference_encoding",
+        "base64::tests::decodes_rfc_4648_vectors_with_and_without_padding"
+      ]
+    }
+  ]
+}
