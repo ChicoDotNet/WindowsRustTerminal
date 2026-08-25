@@ -24,173 +24,57 @@
     "til": { "stage": "R04-R07", "defaultCoverage": "Missing", "rustOwner": "shared-foundation-or-platform-boundary" }
   },
   "entries": [
-    {
-      "suite": "terminal",
-      "source": "Base64Test.cpp",
-      "method": "DecodeUTF8",
-      "coverage": "Exact",
-      "rustWitnesses": ["base64::tests::matches_windows_terminal_unicode_vectors"]
-    },
-    {
-      "suite": "terminal",
-      "source": "Base64Test.cpp",
-      "method": "DecodeFuzz",
-      "coverage": "Stronger",
-      "rustWitnesses": [
-        "base64::tests::deterministic_ascii_round_trips_match_reference_encoding",
-        "base64::tests::decodes_rfc_4648_vectors_with_and_without_padding"
-      ]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "TerminalInputTests",
-      "coverage": "Partial",
-      "rustWitnesses": [
-        "microsoft_terminal_input_tests_fixed_special_key_table",
-        "microsoft_terminal_input_tests_all_key_up_events_are_silent"
-      ],
-      "notes": "Fixed VT key-down vectors and the complete key-up VKEY range are portable Rust evidence. Microsoft default-character branches depend on MapVirtualKeyW, and non-KEY INPUT_RECORD dispatch belongs to the native boundary."
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "TestFocusEvents",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_terminal_input_focus_events_match_disabled_and_enabled_contract"]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "TerminalInputModifierKeyTests",
-      "coverage": "Partial",
-      "rustWitnesses": ["microsoft_terminal_input_modifier_fixed_vt_table_matches_all_fifteen_states"],
-      "notes": "All fifteen Microsoft modifier states are covered for deterministic VT special-key sequences. Generic and OEM character branches depend on ToUnicodeEx and the active Windows keyboard layout."
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "TerminalInputNullKeyTests",
-      "coverage": "Partial",
-      "rustWitnesses": ["microsoft_terminal_input_null_key_portable_subset_matches_ctrl_space_contract"],
-      "notes": "The portable Ctrl-Space and Ctrl-Alt-Space semantics are exact. Microsoft's additional NUL virtual-key lookup is produced by VkKeyScanExW under an explicitly selected Windows layout."
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "DifferentModifiersTest",
-      "coverage": "Exact",
-      "rustWitnesses": [
-        "microsoft_terminal_input_different_modifiers_backspace_delete_and_tab",
-        "microsoft_terminal_input_different_modifiers_slash_and_question"
-      ]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "CtrlNumTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_terminal_input_ctrl_num_contract_matches_one_through_nine"]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "BackarrowKeyModeTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_terminal_input_backarrow_mode_matches_all_sixteen_combinations"]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "AutoRepeatModeTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_terminal_input_auto_repeat_mode_matches_three_downs_then_release"]
-    },
-    {
-      "suite": "adapter",
-      "source": "inputTest.cpp",
-      "method": "SendC1ControlTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_terminal_input_send_c1_control_switches_home_and_f1_prefixes"]
-    },
-    {
-      "suite": "adapter",
-      "source": "MouseInputTest.cpp",
-      "method": "DefaultModeTests",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_mouse_default_mode_tests_match_full_button_modifier_coordinate_matrix"]
-    },
-    {
-      "suite": "adapter",
-      "source": "MouseInputTest.cpp",
-      "method": "Utf8ModeTests",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_mouse_utf8_mode_tests_match_full_button_modifier_coordinate_matrix"]
-    },
-    {
-      "suite": "adapter",
-      "source": "MouseInputTest.cpp",
-      "method": "SgrModeTests",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_mouse_sgr_mode_tests_match_tracking_button_modifier_coordinate_matrix"]
-    },
-    {
-      "suite": "adapter",
-      "source": "MouseInputTest.cpp",
-      "method": "ScrollWheelTests",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_mouse_scroll_wheel_tests_match_all_recorded_deltas_modifiers_and_encodings"]
-    },
-    {
-      "suite": "adapter",
-      "source": "MouseInputTest.cpp",
-      "method": "AlternateScrollModeTests",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_mouse_alternate_scroll_mode_tests_match_buffer_mode_and_direction_contract"]
-    },
-    {
-      "suite": "adapter",
-      "source": "kittyKeyboardProtocol.cpp",
-      "method": "KeyPressTests",
-      "coverage": "Partial",
-      "rustWitnesses": [
-        "keyboard::tests::disambiguation_and_altgr_match_microsoft_cases",
-        "keyboard::tests::all_keys_modifiers_locks_and_associated_text_match_microsoft",
-        "keyboard::tests::alternate_keys_use_layout_mapper",
-        "keyboard::tests::keypad_pua_and_modifier_keys_match_microsoft",
-        "keyboard::tests::legacy_function_keys_use_kitty_csi_rules",
-        "keyboard::tests::navigation_release_uses_regular_csi_event_type"
-      ],
-      "notes": "Rust covers every major semantic family in Microsoft's exported data table, including a deterministic layout mapper, but this increment does not yet reproduce every individual data-source row one-for-one."
-    },
-    {
-      "suite": "adapter",
-      "source": "kittyKeyboardProtocol.cpp",
-      "method": "KeyRepeatEvents",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_kitty_key_repeat_events_match_press_repeat_release_reset_contract"]
-    },
-    {
-      "suite": "adapter",
-      "source": "kittyKeyboardProtocol.cpp",
-      "method": "KeyRepeatWithModifiers",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_kitty_key_repeat_with_modifiers_preserves_modifier_contract"]
-    },
-    {
-      "suite": "adapter",
-      "source": "kittyKeyboardProtocol.cpp",
-      "method": "KeyRepeatResetOnDifferentKey",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_kitty_key_repeat_resets_on_different_key_contract"]
-    },
-    {
-      "suite": "adapter",
-      "source": "kittyKeyboardProtocol.cpp",
-      "method": "IgnoreDeadKey",
-      "coverage": "Partial",
-      "rustWitnesses": ["microsoft_kitty_ignore_dead_key_release_contract"],
-      "notes": "The Rust core exactly preserves the no-output result when KeyboardMapper reports the Windows dead-key translation as non-representable. Full equivalence remains platform-bound until the Windows ToUnicodeEx KeyboardMapper adapter is present."
-    }
+    {"suite":"terminal","source":"Base64Test.cpp","method":"DecodeUTF8","coverage":"Exact","rustWitnesses":["base64::tests::matches_windows_terminal_unicode_vectors"]},
+    {"suite":"terminal","source":"Base64Test.cpp","method":"DecodeFuzz","coverage":"Stronger","rustWitnesses":["base64::tests::deterministic_ascii_round_trips_match_reference_encoding","base64::tests::decodes_rfc_4648_vectors_with_and_without_padding"]},
+
+    {"suite":"adapter","source":"inputTest.cpp","method":"TerminalInputTests","coverage":"Partial","rustWitnesses":["microsoft_terminal_input_tests_fixed_special_key_table","microsoft_terminal_input_tests_all_key_up_events_are_silent"],"notes":"Fixed VT key-down vectors and the complete key-up VKEY range are portable Rust evidence. Microsoft default-character branches depend on MapVirtualKeyW, and non-KEY INPUT_RECORD dispatch belongs to the native boundary."},
+    {"suite":"adapter","source":"inputTest.cpp","method":"TestFocusEvents","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_focus_events_match_disabled_and_enabled_contract"]},
+    {"suite":"adapter","source":"inputTest.cpp","method":"TerminalInputModifierKeyTests","coverage":"Partial","rustWitnesses":["microsoft_terminal_input_modifier_fixed_vt_table_matches_all_fifteen_states"],"notes":"All fifteen Microsoft modifier states are covered for deterministic VT special-key sequences. Generic and OEM character branches depend on ToUnicodeEx and the active Windows keyboard layout."},
+    {"suite":"adapter","source":"inputTest.cpp","method":"TerminalInputNullKeyTests","coverage":"Partial","rustWitnesses":["microsoft_terminal_input_null_key_portable_subset_matches_ctrl_space_contract"],"notes":"The portable Ctrl-Space and Ctrl-Alt-Space semantics are exact. Microsoft's additional NUL virtual-key lookup is produced by VkKeyScanExW under an explicitly selected Windows layout."},
+    {"suite":"adapter","source":"inputTest.cpp","method":"DifferentModifiersTest","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_different_modifiers_backspace_delete_and_tab","microsoft_terminal_input_different_modifiers_slash_and_question"]},
+    {"suite":"adapter","source":"inputTest.cpp","method":"CtrlNumTest","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_ctrl_num_contract_matches_one_through_nine"]},
+    {"suite":"adapter","source":"inputTest.cpp","method":"BackarrowKeyModeTest","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_backarrow_mode_matches_all_sixteen_combinations"]},
+    {"suite":"adapter","source":"inputTest.cpp","method":"AutoRepeatModeTest","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_auto_repeat_mode_matches_three_downs_then_release"]},
+    {"suite":"adapter","source":"inputTest.cpp","method":"SendC1ControlTest","coverage":"Exact","rustWitnesses":["microsoft_terminal_input_send_c1_control_switches_home_and_f1_prefixes"]},
+
+    {"suite":"adapter","source":"MouseInputTest.cpp","method":"DefaultModeTests","coverage":"Exact","rustWitnesses":["microsoft_mouse_default_mode_tests_match_full_button_modifier_coordinate_matrix"]},
+    {"suite":"adapter","source":"MouseInputTest.cpp","method":"Utf8ModeTests","coverage":"Exact","rustWitnesses":["microsoft_mouse_utf8_mode_tests_match_full_button_modifier_coordinate_matrix"]},
+    {"suite":"adapter","source":"MouseInputTest.cpp","method":"SgrModeTests","coverage":"Exact","rustWitnesses":["microsoft_mouse_sgr_mode_tests_match_tracking_button_modifier_coordinate_matrix"]},
+    {"suite":"adapter","source":"MouseInputTest.cpp","method":"ScrollWheelTests","coverage":"Exact","rustWitnesses":["microsoft_mouse_scroll_wheel_tests_match_all_recorded_deltas_modifiers_and_encodings"]},
+    {"suite":"adapter","source":"MouseInputTest.cpp","method":"AlternateScrollModeTests","coverage":"Exact","rustWitnesses":["microsoft_mouse_alternate_scroll_mode_tests_match_buffer_mode_and_direction_contract"]},
+
+    {"suite":"adapter","source":"kittyKeyboardProtocol.cpp","method":"KeyPressTests","coverage":"Partial","rustWitnesses":["keyboard::tests::disambiguation_and_altgr_match_microsoft_cases","keyboard::tests::all_keys_modifiers_locks_and_associated_text_match_microsoft","keyboard::tests::alternate_keys_use_layout_mapper","keyboard::tests::keypad_pua_and_modifier_keys_match_microsoft","keyboard::tests::legacy_function_keys_use_kitty_csi_rules","keyboard::tests::navigation_release_uses_regular_csi_event_type"],"notes":"Rust covers every major semantic family in Microsoft's exported data table, including a deterministic layout mapper, but this increment does not yet reproduce every individual data-source row one-for-one."},
+    {"suite":"adapter","source":"kittyKeyboardProtocol.cpp","method":"KeyRepeatEvents","coverage":"Exact","rustWitnesses":["microsoft_kitty_key_repeat_events_match_press_repeat_release_reset_contract"]},
+    {"suite":"adapter","source":"kittyKeyboardProtocol.cpp","method":"KeyRepeatWithModifiers","coverage":"Exact","rustWitnesses":["microsoft_kitty_key_repeat_with_modifiers_preserves_modifier_contract"]},
+    {"suite":"adapter","source":"kittyKeyboardProtocol.cpp","method":"KeyRepeatResetOnDifferentKey","coverage":"Exact","rustWitnesses":["microsoft_kitty_key_repeat_resets_on_different_key_contract"]},
+    {"suite":"adapter","source":"kittyKeyboardProtocol.cpp","method":"IgnoreDeadKey","coverage":"Partial","rustWitnesses":["microsoft_kitty_ignore_dead_key_release_contract"],"notes":"The Rust core exactly preserves the no-output result when KeyboardMapper reports the Windows dead-key translation as non-representable. Full equivalence remains platform-bound until the Windows ToUnicodeEx KeyboardMapper adapter is present."},
+
+    {"suite":"adapter","source":"adapterTest.cpp","method":"CursorMovementTest","coverage":"Exact","rustWitnesses":["microsoft_adapter_cursor_movement_matches_six_directions_and_bounds"]},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"CursorPositionTest","coverage":"Exact","rustWitnesses":["microsoft_adapter_cursor_position_matches_viewport_relative_rows_and_buffer_columns"]},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"CursorSingleDimensionMoveTest","coverage":"Exact","rustWitnesses":["microsoft_adapter_single_dimension_absolute_positioning_matches_reference_bounds"]},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"CursorSaveRestoreTest","coverage":"Partial","rustWitnesses":["microsoft_adapter_cursor_save_restore_ported_subset_preserves_cursor_state"],"notes":"Position, delayed-wrap and origin-state semantics are represented in Rust; Microsoft also saves/restores TextAttribute state, which remains outside AdaptDispatchCore."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"CursorHideShowTest","coverage":"Partial","rustWitnesses":["microsoft_adapter_cursor_hide_show_preserves_dectcem_boundary_action"],"notes":"DECTCEM routing is retained exactly, but concrete cursor visibility remains on the external TextBuffer cursor surface."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"GraphicsBaseTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_graphics_base_preserves_sgr_reset_boundary_action"],"notes":"Rust preserves the SGR action; TextAttribute mutation is still deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"GraphicsSingleTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_graphics_single_preserves_single_sgr_parameter_boundary_action"],"notes":"Representative Microsoft SGR parameter classes reach the Rust adapter boundary unchanged; TextAttribute mutation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"GraphicsSingleWithSubParamTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_graphics_single_with_subparams_preserves_parser_shape"],"notes":"The parser-to-adapter path preserves SGR subparameter shape, including underline style. Attribute application is not yet owned by AdaptDispatchCore."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"GraphicsPushPopTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_graphics_push_pop_preserves_stack_boundary_actions_in_order"],"notes":"Push/pop ordering and parameters are preserved, while the concrete rendition stack still belongs to the deferred terminal surface."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"GraphicsPersistBrightnessTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_graphics_persist_brightness_preserves_sgr_ordering_boundary"],"notes":"Rust preserves the ordered SGR stream but does not yet mutate persistent TextAttribute intensity state."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_OperatingStatusTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_operating_status_preserves_dsr_boundary"],"notes":"Typed DSR request is preserved; response formatting/ReturnResponse remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_CursorPositionReportTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_cursor_position_preserves_cpr_boundary"],"notes":"CPR request identity is preserved; live TextBuffer cursor response formatting remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_ExtendedCursorPositionReportTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_extended_cursor_position_preserves_decxcpr_boundary"],"notes":"DECXCPR request identity is preserved; page/cursor response formatting remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_MacroSpaceReportTest","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_macro_space_preserves_private_62_boundary"],"notes":"Private DSR 62 routing is preserved; MacroBuffer-space response formatting is not yet in AdaptDispatchCore."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_MemoryChecksumReportTest","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_memory_checksum_preserves_private_63_and_id_boundary"],"notes":"Private DSR 63 plus request ID is preserved; checksum response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceStatus_PrivateStatusTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_device_status_private_status_preserves_all_microsoft_status_codes"],"notes":"All Microsoft private status request codes are preserved at the Rust boundary; concrete responses remain deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"DeviceAttributesTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_primary_device_attributes_preserves_primary_da_boundary"],"notes":"Primary DA request is typed and retained; terminal response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"SecondaryDeviceAttributesTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_secondary_device_attributes_preserves_secondary_da_boundary"],"notes":"Secondary DA request is typed and retained; terminal response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"TertiaryDeviceAttributesTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_tertiary_device_attributes_preserves_tertiary_da_boundary"],"notes":"Tertiary DA request is typed and retained; terminal response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestDisplayedExtentTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_displayed_extent_preserves_decrqde_boundary"],"notes":"DECRQDE request is retained; displayed extent/page response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestTerminalParametersTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_terminal_parameters_preserves_permission_parameter"],"notes":"Both permission values reach the Rust boundary; DECREPTPARM response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestSettingsTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_settings_preserves_decrqss_dcs_boundary"],"notes":"DECRQSS is retained as a typed DCS boundary action; streamed setting ID and response generation remain deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestStandardModeTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_standard_mode_preserves_decrqm_boundary"],"notes":"ANSI mode request identity is retained; DECRPM response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestPrivateModeTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_private_mode_preserves_dec_private_decrqm_boundary"],"notes":"The complete Microsoft private-mode request list is retained; per-mode response generation remains deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestPermanentModeTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_permanent_mode_preserves_2027_boundary"],"notes":"Permanent mode 2027 request is retained; permanent-mode response semantics remain deferred."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"RequestChecksumReportTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_request_checksum_report_preserves_decrqcra_advanced_csi_boundary"],"notes":"DECRQCRA remains visible at the Rust advanced-CSI boundary; TextBuffer checksum computation and formatted response are not yet migrated."},
+    {"suite":"adapter","source":"adapterTest.cpp","method":"ColorTableReportTests","coverage":"Partial","rustWitnesses":["microsoft_adapter_color_table_report_preserves_terminal_state_report_boundary"],"notes":"Terminal-state report request parameters for HLS/RGB are preserved at the Rust boundary; renderer color-table projection and response formatting remain deferred."}
   ]
 }
