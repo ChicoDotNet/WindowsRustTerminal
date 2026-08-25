@@ -1,6 +1,4 @@
-use terminal_input::{
-    Mode, MouseButtonState, MouseMessage, Point, TerminalInput, control_state,
-};
+use terminal_input::{Mode, MouseButtonState, MouseMessage, Point, TerminalInput, control_state};
 
 const TEST_COORDS: [Point; 11] = [
     Point { x: 0, y: 0 },
@@ -13,12 +11,12 @@ const TEST_COORDS: [Point; 11] = [
     Point { x: 127, y: 127 },
     Point { x: 128, y: 128 },
     Point {
-        x: i32::from(i16::MAX) - 33,
-        y: i32::from(i16::MAX) - 33,
+        x: i16::MAX as i32 - 33,
+        y: i16::MAX as i32 - 33,
     },
     Point {
-        x: i32::from(i16::MAX) - 32,
-        y: i32::from(i16::MAX) - 32,
+        x: i16::MAX as i32 - 32,
+        y: i16::MAX as i32 - 32,
     },
 ];
 
@@ -60,10 +58,18 @@ fn x10_button(message: MouseMessage, modifiers: u32, delta: i16) -> u32 {
         MouseMessage::RightDown | MouseMessage::RightDoubleClick => 2,
         MouseMessage::LeftUp | MouseMessage::MiddleUp | MouseMessage::RightUp => 3,
         MouseMessage::Wheel => {
-            if delta > 0 { 64 } else { 65 }
+            if delta > 0 {
+                64
+            } else {
+                65
+            }
         }
         MouseMessage::HorizontalWheel => {
-            if delta > 0 { 67 } else { 66 }
+            if delta > 0 {
+                67
+            } else {
+                66
+            }
         }
         MouseMessage::Move => 0,
     };
@@ -77,10 +83,18 @@ fn sgr_button(message: MouseMessage, modifiers: u32, delta: i16, hover: bool) ->
         MouseMessage::RightDown | MouseMessage::RightUp | MouseMessage::RightDoubleClick => 2,
         MouseMessage::Move => 3,
         MouseMessage::Wheel => {
-            if delta > 0 { 64 } else { 65 }
+            if delta > 0 {
+                64
+            } else {
+                65
+            }
         }
         MouseMessage::HorizontalWheel => {
-            if delta > 0 { 67 } else { 66 }
+            if delta > 0 {
+                67
+            } else {
+                66
+            }
         }
     };
     base | modifier_bits(modifiers) | if hover { 0x20 } else { 0 }
@@ -232,15 +246,10 @@ fn microsoft_mouse_sgr_mode_tests_match_tracking_button_modifier_coordinate_matr
                 input.set_input_mode(mode, true);
 
                 for point in TEST_COORDS {
-                    let should_emit = message != MouseMessage::Move || mode == Mode::AnyEventMouseTracking;
+                    let should_emit =
+                        message != MouseMessage::Move || mode == Mode::AnyEventMouseTracking;
                     let expected = should_emit.then(|| {
-                        sgr_expected(
-                            message,
-                            modifiers,
-                            0,
-                            point,
-                            message == MouseMessage::Move,
-                        )
+                        sgr_expected(message, modifiers, 0, point, message == MouseMessage::Move)
                     });
                     assert_eq!(
                         input.handle_mouse(
