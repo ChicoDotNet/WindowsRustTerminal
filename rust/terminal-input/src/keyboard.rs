@@ -129,7 +129,7 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
         return output;
     }
 
-    if event.virtual_key == virtual_key::PACKET || event.virtual_key == 0 {
+    if event.key_down && (event.virtual_key == virtual_key::PACKET || event.virtual_key == 0) {
         return codepoint_string(event.codepoint);
     }
 
