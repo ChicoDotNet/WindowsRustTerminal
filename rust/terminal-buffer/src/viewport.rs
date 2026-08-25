@@ -214,8 +214,8 @@ impl Viewport {
             .saturating_add(i64::from(delta));
         let clamped = offset.clamp(0, max);
 
-        point.x = i32::try_from(clamped % width + left).expect("clamped x remains i32");
-        point.y = i32::try_from(clamped / width + top).expect("clamped y remains i32");
+        point.x = saturating_i32(clamped % width + left);
+        point.y = saturating_i32(clamped / width + top);
         offset == clamped
     }
 
@@ -351,5 +351,13 @@ impl Viewport {
                 .filter(|viewport| viewport.is_valid()),
         );
         result
+    }
+}
+
+fn saturating_i32(value: i64) -> i32 {
+    match i32::try_from(value) {
+        Ok(value) => value,
+        Err(_) if value < 0 => i32::MIN,
+        Err(_) => i32::MAX,
     }
 }
