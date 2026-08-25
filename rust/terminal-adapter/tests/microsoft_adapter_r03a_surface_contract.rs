@@ -39,10 +39,12 @@ fn microsoft_adapter_graphics_base_preserves_sgr_reset_boundary_action() {
 
 #[test]
 fn microsoft_adapter_graphics_single_preserves_single_sgr_parameter_boundary_action() {
-    for parameter in [0, 1, 4, 7, 22, 24, 27, 30, 31, 37, 39, 40, 47, 49, 90, 97, 100, 107] {
-        assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![
-            Some(parameter),
-        ])));
+    for parameter in [
+        0, 1, 4, 7, 22, 24, 27, 30, 31, 37, 39, 40, 47, 49, 90, 97, 100, 107,
+    ] {
+        assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(
+            vec![Some(parameter)],
+        )));
     }
 }
 
@@ -61,7 +63,8 @@ fn microsoft_adapter_graphics_single_with_subparams_preserves_parser_shape() {
 #[test]
 fn microsoft_adapter_graphics_push_pop_preserves_stack_boundary_actions_in_order() {
     let mut dispatch = core();
-    let push = OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(1), Some(10)]));
+    let push =
+        OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(1), Some(10)]));
     dispatch.dispatch(push.clone());
     dispatch.dispatch(OutputAction::PopGraphicsRendition);
     assert_eq!(
@@ -149,17 +152,23 @@ fn microsoft_adapter_device_status_private_status_preserves_all_microsoft_status
 
 #[test]
 fn microsoft_adapter_primary_device_attributes_preserves_primary_da_boundary() {
-    assert_deferred(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary));
+    assert_deferred(OutputAction::DeviceAttributes(
+        DeviceAttributesKind::Primary,
+    ));
 }
 
 #[test]
 fn microsoft_adapter_secondary_device_attributes_preserves_secondary_da_boundary() {
-    assert_deferred(OutputAction::DeviceAttributes(DeviceAttributesKind::Secondary));
+    assert_deferred(OutputAction::DeviceAttributes(
+        DeviceAttributesKind::Secondary,
+    ));
 }
 
 #[test]
 fn microsoft_adapter_tertiary_device_attributes_preserves_tertiary_da_boundary() {
-    assert_deferred(OutputAction::DeviceAttributes(DeviceAttributesKind::Tertiary));
+    assert_deferred(OutputAction::DeviceAttributes(
+        DeviceAttributesKind::Tertiary,
+    ));
 }
 
 #[test]
@@ -191,7 +200,10 @@ fn microsoft_adapter_request_standard_mode_preserves_decrqm_boundary() {
 
 #[test]
 fn microsoft_adapter_request_private_mode_preserves_dec_private_decrqm_boundary() {
-    for mode in [1, 3, 5, 6, 7, 8, 12, 25, 40, 66, 67, 69, 117, 1000, 1002, 1003, 1004, 1005, 1006, 1007, 1049, 2004, 9001] {
+    for mode in [
+        1, 3, 5, 6, 7, 8, 12, 25, 40, 66, 67, 69, 117, 1000, 1002, 1003, 1004, 1005, 1006, 1007,
+        1049, 2004, 9001,
+    ] {
         assert_deferred(OutputAction::RequestMode {
             private: true,
             mode,
