@@ -117,10 +117,7 @@ impl<T: Send + 'static> Throttled<T> {
 
 fn run_trailing<T>(inner: &Arc<Inner<T>>, generation: u64) {
     let pending = {
-        let mut state = inner
-            .state
-            .lock()
-            .unwrap_or_else(PoisonError::into_inner);
+        let mut state = inner.state.lock().unwrap_or_else(PoisonError::into_inner);
         if generation != state.timer_generation {
             return;
         }
