@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "description": "F01 foundation-value burn-down. Rust now owns til::generational plus the complete portable til::size value/arithmetic surface; Win32 COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
+  "description": "F01 foundation-value burn-down. Rust owns til::generational, the complete portable til::size value/arithmetic surface, and portable RFC 4122 UUID-v5 generation over arbitrary name bytes; Win32 COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
   "expectedCoveragePriority": 20,
   "expectedCoverage": {
     "til": { "Exact": 22, "Partial": 168, "Missing": 4, "Platform-only": 5 }
   },
   "expectedGlobalCoveragePriority": 20,
   "expectedGlobalCoverage": {
-    "Exact": 222,
+    "Exact": 224,
     "Stronger": 11,
     "Partial": 351,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 429
+    "Missing": 427
   },
   "entries": [
     {
@@ -40,6 +40,8 @@
     {"suite":"til","source":"SizeTests.cpp","method":"HeightCast","coverage":"Exact","rustWitnesses":["microsoft_til_size_height_cast"],"notes":"Height narrowing to i16 is checked."},
     {"suite":"til","source":"SizeTests.cpp","method":"Area","coverage":"Exact","rustWitnesses":["microsoft_til_size_area"],"notes":"Area multiplies in a wider integer and rejects narrowing overflow."},
     {"suite":"til","source":"SizeTests.cpp","method":"AreaCast","coverage":"Exact","rustWitnesses":["microsoft_til_size_area_cast"],"notes":"Typed area narrowing reproduces the Microsoft SHORT success and overflow vectors."},
-    {"suite":"til","source":"SizeTests.cpp","method":"CastFromFloatWithMathTypes","coverage":"Exact","rustWitnesses":["microsoft_til_size_cast_from_float_with_math_types"],"notes":"Ceiling, flooring and rounding conversions reproduce all Microsoft float/double vectors."}
+    {"suite":"til","source":"SizeTests.cpp","method":"CastFromFloatWithMathTypes","coverage":"Exact","rustWitnesses":["microsoft_til_size_cast_from_float_with_math_types"],"notes":"Ceiling, flooring and rounding conversions reproduce all Microsoft float/double vectors."},
+    {"suite":"types","source":"UuidTests.cpp","method":"TestV5UuidU8String","coverage":"Exact","rustWitnesses":["microsoft_types_v5_uuid_u8_string_matches_source_contract"],"notes":"Rust hashes the namespace GUID in RFC network byte order plus the exact UTF-8 name bytes, then applies version-5 and RFC variant bits."},
+    {"suite":"types","source":"UuidTests.cpp","method":"TestV5UuidU16String","coverage":"Exact","rustWitnesses":["microsoft_types_v5_uuid_u16_string_matches_source_contract"],"notes":"Rust hashes the same little-endian UTF-16 name bytes as Windows wchar_t and reproduces Microsoft's reference UUID."}
   ]
 }
