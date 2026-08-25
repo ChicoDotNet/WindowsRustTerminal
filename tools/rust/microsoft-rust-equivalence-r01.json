@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "description": "Delivery 11 imports the already-audited R01 parser evidence into the machine ledger. OutputEngine is deliberately conservative at source-rule Partial: dedicated Rust contract suites cover the complete source family, while method-level Exact/Stronger distinctions remain documented in test-equivalence-matrix.md until individually promoted.",
+  "sourceRules": [
+    {
+      "suite": "terminal",
+      "source": "StateMachineTest.cpp",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "two_state_machines_do_not_interfere",
+        "microsoft_passthrough_unhandled_sequence_before_printable_text",
+        "unhandled_csi_is_passed_through_without_losing_prior_text",
+        "bulk_text_is_printed_as_one_run",
+        "unhandled_sequences_survive_split_writes",
+        "dcs_data_is_delivered_and_st_can_terminate_it",
+        "dcs_can_be_terminated_by_csi_can_or_sub",
+        "parameter_subspan_matches_terminal_semantics"
+      ],
+      "notes": "All seven Microsoft StateMachine source methods have direct R01 evidence; the DCS method maps to two Rust witnesses because it covers four terminator families."
+    },
+    {
+      "suite": "terminal",
+      "source": "OutputEngineTest.cpp",
+      "coverage": "Partial",
+      "rustWitnesses": [
+        "file:rust/terminal-parser/tests/output_engine_microsoft_color_contract.rs",
+        "file:rust/terminal-parser/tests/output_engine_microsoft_dispatch_contract.rs",
+        "file:rust/terminal-parser/tests/output_engine_microsoft_remaining_contract.rs",
+        "file:rust/terminal-parser/tests/output_engine_microsoft_report_contract.rs",
+        "file:rust/terminal-parser/tests/output_engine_microsoft_state_contract.rs",
+        "file:rust/terminal-parser/tests/output_engine_microsoft_string_contract.rs"
+      ],
+      "notes": "All 64 Microsoft OutputEngine source methods have dedicated portable Rust contract evidence. This source-family rule remains conservatively Partial rather than mass-promoting methods to Exact without importing the older row-level distinctions one by one."
+    }
+  ],
+  "entries": [
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"TestWin32InputOptionals","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"TestWin32InputParsing","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_contract::microsoft_win32_input_optionals_matrix"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_ButtonClick","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_button_click_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_Modifiers","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_modifier_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_Movement","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_movement_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_Scroll","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_scroll_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_DoubleClick","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_double_click_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SGRMouseTest_Hover","coverage":"Exact","rustWitnesses":["input_engine_microsoft_contract::microsoft_sgr_mouse_hover_table"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"ChunkedSequence","coverage":"Exact","rustWitnesses":["state_machine_microsoft_contract::microsoft_chunked_csi_remains_in_parameter_state"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"TestSs3Entry","coverage":"Exact","rustWitnesses":["state_machine_microsoft_contract::microsoft_ss3_entry_transitions_to_ground_after_dispatch"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"TestSs3Immediate","coverage":"Exact","rustWitnesses":["state_machine_microsoft_contract::microsoft_ss3_immediates_dispatch_directly_from_entry"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"TestSs3Param","coverage":"Exact","rustWitnesses":["state_machine_microsoft_contract::microsoft_ss3_parameters_remain_parameter_state_until_final_byte"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"CursorPositioningTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_cursor_positioning_consumes_once_then_reverts_to_f3"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"CSICursorBackTabTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_csi_cursor_backtab_matches_shift_tab"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"EnhancedKeysTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_enhanced_keys_table_matches_all_ten_sequences"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"SS3CursorKeyTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_ss3_cursor_key_table_matches_all_six_sequences"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"AltBackspaceTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_alt_backspace_matches_escape_delete"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"AltCtrlDTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_alt_ctrl_d_matches_escape_eot"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"CtrlAltZCtrlAltXTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_ctrl_alt_z_and_x_execute_from_escape_in_input_mode"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"AltBackspaceEnterTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_alt_backspace_then_enter_returns_to_ground_between_keys"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"AltIntermediateTest","coverage":"Stronger","rustWitnesses":["input_engine_microsoft_key_contract::microsoft_alt_intermediate_parser_half_preserves_alt_slash_then_ctrl_e","microsoft_alt_intermediate_roundtrip_preserves_alt_slash_then_ctrl_e"]},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"RoundTripTest","coverage":"Platform-only","rustWitnesses":[],"notes":"Upstream-skipped GH#4405 contract depends on Windows virtual-key/scan-code translation."},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"AlphanumericTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft derives modifier/Unicode observations through VkKeyScanW/CharToKeyEvents."},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"NonAsciiTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft exercises Windows CharToKeyEvents synthesis for non-ASCII UTF-16."},
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"C0Test","coverage":"Partial","rustWitnesses":["c0_and_alt_controls_match_input_contract"],"notes":"Rust covers core C0/Alt semantics; Microsoft also observes VkKeyScanW-derived modifier equivalence across the full C0 table."}
+  ],
+  "expectedCoverage": {
+    "terminal": {
+      "Exact": 19,
+      "Stronger": 11,
+      "Partial": 65,
+      "Platform-only": 3,
+      "UI-managed": 0,
+      "Missing": 0
+    }
+  },
+  "expectedGlobalCoverage": {
+    "Exact": 64,
+    "Stronger": 11,
+    "Partial": 447,
+    "Platform-only": 62,
+    "UI-managed": 22,
+    "Missing": 492
+  }
+}
