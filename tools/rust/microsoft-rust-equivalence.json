@@ -40,6 +40,156 @@
         "base64::tests::deterministic_ascii_round_trips_match_reference_encoding",
         "base64::tests::decodes_rfc_4648_vectors_with_and_without_padding"
       ]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "TerminalInputTests",
+      "coverage": "Partial",
+      "rustWitnesses": [
+        "microsoft_terminal_input_tests_fixed_special_key_table",
+        "microsoft_terminal_input_tests_all_key_up_events_are_silent"
+      ],
+      "notes": "Fixed VT key-down vectors and the complete key-up VKEY range are portable Rust evidence. Microsoft default-character branches depend on MapVirtualKeyW, and non-KEY INPUT_RECORD dispatch belongs to the native boundary."
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "TestFocusEvents",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_terminal_input_focus_events_match_disabled_and_enabled_contract"]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "TerminalInputModifierKeyTests",
+      "coverage": "Partial",
+      "rustWitnesses": ["microsoft_terminal_input_modifier_fixed_vt_table_matches_all_fifteen_states"],
+      "notes": "All fifteen Microsoft modifier states are covered for deterministic VT special-key sequences. Generic and OEM character branches depend on ToUnicodeEx and the active Windows keyboard layout."
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "TerminalInputNullKeyTests",
+      "coverage": "Partial",
+      "rustWitnesses": ["microsoft_terminal_input_null_key_portable_subset_matches_ctrl_space_contract"],
+      "notes": "The portable Ctrl-Space and Ctrl-Alt-Space semantics are exact. Microsoft's additional NUL virtual-key lookup is produced by VkKeyScanExW under an explicitly selected Windows layout."
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "DifferentModifiersTest",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_terminal_input_different_modifiers_backspace_delete_and_tab",
+        "microsoft_terminal_input_different_modifiers_slash_and_question"
+      ]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "CtrlNumTest",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_terminal_input_ctrl_num_contract_matches_one_through_nine"]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "BackarrowKeyModeTest",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_terminal_input_backarrow_mode_matches_all_sixteen_combinations"]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "AutoRepeatModeTest",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_terminal_input_auto_repeat_mode_matches_three_downs_then_release"]
+    },
+    {
+      "suite": "adapter",
+      "source": "inputTest.cpp",
+      "method": "SendC1ControlTest",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_terminal_input_send_c1_control_switches_home_and_f1_prefixes"]
+    },
+    {
+      "suite": "adapter",
+      "source": "MouseInputTest.cpp",
+      "method": "DefaultModeTests",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_mouse_default_mode_tests_match_full_button_modifier_coordinate_matrix"]
+    },
+    {
+      "suite": "adapter",
+      "source": "MouseInputTest.cpp",
+      "method": "Utf8ModeTests",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_mouse_utf8_mode_tests_match_full_button_modifier_coordinate_matrix"]
+    },
+    {
+      "suite": "adapter",
+      "source": "MouseInputTest.cpp",
+      "method": "SgrModeTests",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_mouse_sgr_mode_tests_match_tracking_button_modifier_coordinate_matrix"]
+    },
+    {
+      "suite": "adapter",
+      "source": "MouseInputTest.cpp",
+      "method": "ScrollWheelTests",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_mouse_scroll_wheel_tests_match_all_recorded_deltas_modifiers_and_encodings"]
+    },
+    {
+      "suite": "adapter",
+      "source": "MouseInputTest.cpp",
+      "method": "AlternateScrollModeTests",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_mouse_alternate_scroll_mode_tests_match_buffer_mode_and_direction_contract"]
+    },
+    {
+      "suite": "adapter",
+      "source": "kittyKeyboardProtocol.cpp",
+      "method": "KeyPressTests",
+      "coverage": "Partial",
+      "rustWitnesses": [
+        "keyboard::tests::disambiguation_and_altgr_match_microsoft_cases",
+        "keyboard::tests::all_keys_modifiers_locks_and_associated_text_match_microsoft",
+        "keyboard::tests::alternate_keys_use_layout_mapper",
+        "keyboard::tests::keypad_pua_and_modifier_keys_match_microsoft",
+        "keyboard::tests::legacy_function_keys_use_kitty_csi_rules",
+        "keyboard::tests::navigation_release_uses_regular_csi_event_type"
+      ],
+      "notes": "Rust covers every major semantic family in Microsoft's exported data table, including a deterministic layout mapper, but this increment does not yet reproduce every individual data-source row one-for-one."
+    },
+    {
+      "suite": "adapter",
+      "source": "kittyKeyboardProtocol.cpp",
+      "method": "KeyRepeatEvents",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_kitty_key_repeat_events_match_press_repeat_release_reset_contract"]
+    },
+    {
+      "suite": "adapter",
+      "source": "kittyKeyboardProtocol.cpp",
+      "method": "KeyRepeatWithModifiers",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_kitty_key_repeat_with_modifiers_preserves_modifier_contract"]
+    },
+    {
+      "suite": "adapter",
+      "source": "kittyKeyboardProtocol.cpp",
+      "method": "KeyRepeatResetOnDifferentKey",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_kitty_key_repeat_resets_on_different_key_contract"]
+    },
+    {
+      "suite": "adapter",
+      "source": "kittyKeyboardProtocol.cpp",
+      "method": "IgnoreDeadKey",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_kitty_ignore_dead_key_release_contract"]
     }
   ]
 }
