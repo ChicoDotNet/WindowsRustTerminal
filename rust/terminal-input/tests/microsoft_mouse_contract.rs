@@ -53,7 +53,7 @@ fn modifier_bits(state: u32) -> u32 {
 
 fn x10_button(message: MouseMessage, modifiers: u32, delta: i16) -> u32 {
     let base = match message {
-        MouseMessage::LeftDown | MouseMessage::LeftDoubleClick => 0,
+        MouseMessage::LeftDown | MouseMessage::LeftDoubleClick | MouseMessage::Move => 0,
         MouseMessage::MiddleDown | MouseMessage::MiddleDoubleClick => 1,
         MouseMessage::RightDown | MouseMessage::RightDoubleClick => 2,
         MouseMessage::LeftUp | MouseMessage::MiddleUp | MouseMessage::RightUp => 3,
@@ -71,7 +71,6 @@ fn x10_button(message: MouseMessage, modifiers: u32, delta: i16) -> u32 {
                 66
             }
         }
-        MouseMessage::Move => 0,
     };
     base | modifier_bits(modifiers)
 }
