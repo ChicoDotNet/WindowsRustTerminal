@@ -11,16 +11,16 @@ H05 makes that history explicit.
 - Per-suite `expectedCoverage` remains unique across overlays and unchanged.
 - Source fingerprints, deliberate reconciliation, stale-entry detection, witness validation, and all coverage-class checks remain unchanged.
 
-H05 uses priority `5` and freezes:
+H05 uses priority `5` and freezes the corrected distribution after CI rejected the attempted `InvalidKeyEvent` promotion:
 
 ```text
-Exact         137
+Exact         136
 Stronger       11
-Partial       373
+Partial       374
 Platform-only  68
 UI-managed     22
 Missing       487
 Total        1098
 ```
 
-This is a bookkeeping hardening only: it does not infer coverage from the expected snapshot, and it does not permit a mismatch. The calculated source-method distribution must still exactly equal the selected snapshot or CI fails.
+This is bookkeeping hardening only: it does not infer coverage from the expected snapshot, and it does not permit a mismatch. The calculated source-method distribution must still exactly equal the selected snapshot or CI fails.
