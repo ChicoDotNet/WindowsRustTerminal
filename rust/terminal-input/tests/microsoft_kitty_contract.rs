@@ -1,5 +1,6 @@
 use terminal_input::{
-    KeyEvent, KittyKeyboardProtocolFlags, KittyKeyboardProtocolMode, TerminalInput, control_state,
+    KeyEvent, KeyboardMapper, KittyKeyboardProtocolFlags, KittyKeyboardProtocolMode, TerminalInput,
+    control_state,
 };
 
 fn key(
@@ -23,6 +24,27 @@ fn kitty_input(flags: u8) -> TerminalInput {
     let mut input = TerminalInput::new();
     input.set_kitty_keyboard_protocol(flags, KittyKeyboardProtocolMode::Replace);
     input
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct DeadKeyMapper;
+
+impl KeyboardMapper for DeadKeyMapper {
+    fn unmodified_key(&self, _event: &KeyEvent) -> Option<u32> {
+        None
+    }
+
+    fn kitty_base_key(&self, _event: &KeyEvent, _alt_gr: bool) -> Option<u32> {
+        None
+    }
+
+    fn kitty_shifted_key(&self, _event: &KeyEvent, _alt_gr: bool) -> Option<u32> {
+        None
+    }
+
+    fn kitty_us_base_key(&self, _event: &KeyEvent) -> Option<u32> {
+        None
+    }
 }
 
 #[test]
@@ -80,9 +102,10 @@ fn microsoft_kitty_key_repeat_resets_on_different_key_contract() {
 #[test]
 fn microsoft_kitty_ignore_dead_key_release_contract() {
     let mut input = kitty_input(KittyKeyboardProtocolFlags::REPORT_EVENT_TYPES);
-    // VK_OEM_6 = 0xDD. Microsoft runs this under its French keyboard layout
-    // guard with U+00A8 and Shift; the observable TerminalInput contract is
-    // that the dead-key release emits nothing.
+    // Microsoft runs this under French (Standard, AZERTY). Its KeyboardHelper
+    // calls ToUnicodeEx, whose dead-key result cannot be represented as one
+    // codepoint and is therefore rejected. The Rust core models that platform
+    // result through KeyboardMapper rather than hard-coding a layout-specific VK.
     let dead_key_release = key(
         false,
         0x00dd,
@@ -90,5 +113,8 @@ fn microsoft_kitty_ignore_dead_key_release_contract() {
         u32::from('¨'),
         control_state::SHIFT_PRESSED,
     );
-    assert_eq!(input.handle_key(dead_key_release), "");
+    assert_eq!(
+        input.handle_key_with_mapper(dead_key_release, &DeadKeyMapper),
+        ""
+    );
 }
