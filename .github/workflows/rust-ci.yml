@@ -78,3 +78,6 @@ jobs:
       - name: Validate R06-B server seams
         shell: pwsh
         run: ./tools/rust/Test-RustServerSourceMap.ps1
+      - name: Validate R07 renderer seams
+        shell: pwsh
+        run: ./tools/rust/Test-RustRendererSourceMap.ps1
