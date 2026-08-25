@@ -142,6 +142,48 @@ fn microsoft_r04_rle_contract_covers_construction_lookup_replace_and_canonicaliz
 }
 
 #[test]
+fn microsoft_r04_rle_construct_with_length_and_value_matches_source_contract() {
+    let values = Rle::new(5, 1u16);
+    assert_eq!(values.len(), 5);
+    assert!(!values.is_empty());
+    assert_eq!(values.expanded(), vec![1; 5]);
+}
+
+#[test]
+fn microsoft_r04_rle_copy_swap_and_move_observables_match_source_contract() {
+    let mut full = Rle::new(8, 1u16);
+    full.replace(3, 5, 2);
+    assert_eq!(full.expanded(), vec![1, 1, 1, 2, 2, 1, 1, 1]);
+
+    let mut rle1 = full.clone();
+    let mut rle2 = Rle::<u16>::default();
+    std::mem::swap(&mut rle1, &mut rle2);
+    assert!(rle1.is_empty());
+    assert_eq!(rle2, full);
+
+    rle1 = rle2.clone();
+    assert_eq!(rle1, full);
+    assert_eq!(rle2, full);
+
+    rle1 = Rle::new(1, 1);
+    assert_eq!(rle1.expanded(), vec![1]);
+    rle1 = rle2;
+    assert_eq!(rle1, full);
+}
+
+#[test]
+fn microsoft_r04_rle_comparison_matches_source_contract() {
+    let mut rle1 = Rle::new(4, 1u16);
+    rle1.replace(1, 3, 3);
+    rle1.replace(3, 4, 2);
+    let mut rle2 = rle1.clone();
+
+    assert_eq!(rle1, rle2);
+    rle2.replace(0, 1, 2);
+    assert_ne!(rle1, rle2);
+}
+
+#[test]
 fn microsoft_r04_option_and_collection_replacements_preserve_foundation_observables() {
     let first = Some(11).or(Some(22));
     let defaulted = None::<i32>.or(Some(33));
