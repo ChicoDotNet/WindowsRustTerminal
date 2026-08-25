@@ -34,34 +34,40 @@ $overlayExpectations = @{}
 $overlayFiles = @(Get-ChildItem -Path $PSScriptRoot -Filter 'microsoft-rust-equivalence-*.json' -File | Sort-Object Name)
 foreach ($overlayFile in $overlayFiles) {
     $overlay = Get-Content -Raw $overlayFile.FullName | ConvertFrom-Json -AsHashtable
-    foreach ($entry in @($overlay.entries)) {
-        if ($entry.coverage -notin $allowedCoverage) {
-            throw "Unknown coverage '$($entry.coverage)' in $($overlayFile.Name)."
+    if ($overlay.ContainsKey('entries')) {
+        foreach ($entry in @($overlay.entries)) {
+            if ($entry.coverage -notin $allowedCoverage) {
+                throw "Unknown coverage '$($entry.coverage)' in $($overlayFile.Name)."
+            }
+            $key = "$($entry.suite)|$($entry.source)|$($entry.method)"
+            if ($entryKeys.ContainsKey($key)) {
+                throw "Duplicate equivalence ledger entry across overlays: $key"
+            }
+            $entryKeys[$key] = $entry
         }
-        $key = "$($entry.suite)|$($entry.source)|$($entry.method)"
-        if ($entryKeys.ContainsKey($key)) {
-            throw "Duplicate equivalence ledger entry across overlays: $key"
-        }
-        $entryKeys[$key] = $entry
     }
-    foreach ($rule in @($overlay.sourceRules)) {
-        if ($rule.coverage -notin $allowedCoverage) {
-            throw "Unknown coverage '$($rule.coverage)' in $($overlayFile.Name)."
+    if ($overlay.ContainsKey('sourceRules')) {
+        foreach ($rule in @($overlay.sourceRules)) {
+            if ($rule.coverage -notin $allowedCoverage) {
+                throw "Unknown coverage '$($rule.coverage)' in $($overlayFile.Name)."
+            }
+            if ($rule.coverage -notin @('Missing', 'Platform-only', 'UI-managed') -and @($rule.rustWitnesses).Count -eq 0) {
+                throw "Non-missing source rule requires at least one Rust witness: $($rule.suite)|$($rule.source)"
+            }
+            $key = "$($rule.suite)|$($rule.source)"
+            if ($sourceRules.ContainsKey($key)) {
+                throw "Duplicate source equivalence rule across overlays: $key"
+            }
+            $sourceRules[$key] = $rule
         }
-        if ($rule.coverage -notin @('Missing', 'Platform-only', 'UI-managed') -and @($rule.rustWitnesses).Count -eq 0) {
-            throw "Non-missing source rule requires at least one Rust witness: $($rule.suite)|$($rule.source)"
-        }
-        $key = "$($rule.suite)|$($rule.source)"
-        if ($sourceRules.ContainsKey($key)) {
-            throw "Duplicate source equivalence rule across overlays: $key"
-        }
-        $sourceRules[$key] = $rule
     }
-    foreach ($suite in @($overlay.expectedCoverage.Keys)) {
-        if ($overlayExpectations.ContainsKey($suite)) {
-            throw "Duplicate expectedCoverage suite across overlays: $suite"
+    if ($overlay.ContainsKey('expectedCoverage')) {
+        foreach ($suite in @($overlay.expectedCoverage.Keys)) {
+            if ($overlayExpectations.ContainsKey($suite)) {
+                throw "Duplicate expectedCoverage suite across overlays: $suite"
+            }
+            $overlayExpectations[$suite] = $overlay.expectedCoverage[$suite]
         }
-        $overlayExpectations[$suite] = $overlay.expectedCoverage[$suite]
     }
 }
 
