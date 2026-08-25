@@ -104,11 +104,11 @@
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscSetColorTableEntry","coverage":"Exact","rustWitnesses":["microsoft_output_osc_set_color_table_entry_matches_valid_partial_and_invalid_vectors"]},
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscGetColorTableEntry","coverage":"Exact","rustWitnesses":["microsoft_output_osc_get_color_table_entry_matches_set_query_and_truncation_rules"]},
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscXtermResourceReport","coverage":"Exact","rustWitnesses":["microsoft_output_osc_xterm_resource_report_matches_skip_set_and_query_vectors"]},
-    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscXtermResourceReset","coverage":"Exact","rustWitnesses":["microsoft_output_osc_xterm_resource_reset_matches_valid_default_and_invalid_vectors"]},
-    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscColorTableReset","coverage":"Exact","rustWitnesses":["microsoft_output_osc_color_table_reset_matches_valid_default_and_invalid_vectors"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscXtermResourceReset","coverage":"Exact","rustWitnesses":["microsoft_output_osc_xterm_resource_reset_requires_empty_payload"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscColorTableReset","coverage":"Exact","rustWitnesses":["microsoft_output_osc_color_table_reset_stops_at_first_unparseable_index"]},
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscSetWindowTitle","coverage":"Exact","rustWitnesses":["microsoft_output_osc_window_title_covers_all_four_data_driven_numbers"]},
-    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestSetClipboard","coverage":"Exact","rustWitnesses":["microsoft_output_osc_clipboard_matches_valid_invalid_and_query_contract"]},
-    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestAddHyperlink","coverage":"Exact","rustWitnesses":["microsoft_output_osc_hyperlink_matches_uri_id_and_empty_uri_contract"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestSetClipboard","coverage":"Exact","rustWitnesses":["microsoft_output_osc_clipboard_matches_unicode_and_invalid_payload_contract"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestAddHyperlink","coverage":"Exact","rustWitnesses":["microsoft_output_osc_hyperlink_matches_ids_parameters_queries_and_close"]},
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1ParserMode","coverage":"Exact","rustWitnesses":["microsoft_output_c1_parser_mode_matches_disabled_and_enabled_sequences"]}
   ],
   "expectedCoverage": {
