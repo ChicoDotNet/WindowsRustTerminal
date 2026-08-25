@@ -122,11 +122,11 @@
     }
   },
   "expectedGlobalCoverage": {
-    "Exact": 127,
+    "Exact": 130,
     "Stronger": 11,
-    "Partial": 383,
-    "Platform-only": 63,
+    "Partial": 380,
+    "Platform-only": 68,
     "UI-managed": 22,
-    "Missing": 492
+    "Missing": 487
   }
 }
