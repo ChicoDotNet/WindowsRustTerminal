@@ -15,6 +15,7 @@ on:
       - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "Cargo.toml"
       - "Cargo.lock"
@@ -79,6 +80,13 @@ jobs:
       - name: Validate global Microsoft source census
         shell: pwsh
         run: ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1
+      - name: Validate R08 functional-debt classification
+        shell: pwsh
+        run: ./tools/rust/Test-R08FunctionalDebt.ps1
+      - name: Enforce R08 functional-debt exit gate
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        shell: pwsh
+        run: ./tools/rust/Test-R08FunctionalDebt.ps1 -RequireZero
       - name: Validate global Rust witnesses
         shell: pwsh
         run: ./tools/rust/Test-RustGlobalWitnesses.ps1
