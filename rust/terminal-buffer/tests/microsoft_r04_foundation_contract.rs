@@ -21,7 +21,10 @@ fn microsoft_r04_text_color_contract_covers_default_index_rgb_and_mutation() {
 
     let mut color = TextColor::default();
     assert!(color.is_default());
-    assert_eq!(color.resolve(&table, DEFAULT_FOREGROUND, false), Rgb::new(21, 22, 23));
+    assert_eq!(
+        color.resolve(&table, DEFAULT_FOREGROUND, false),
+        Rgb::new(21, 22, 23)
+    );
 
     color.set_index(7, false);
     assert!(color.is_index16());
@@ -58,13 +61,27 @@ fn microsoft_r04_text_attribute_legacy_roundtrip_covers_legacy_and_meta_bits() {
 fn microsoft_r04_reflow_contract_preserves_wrap_chain_and_wide_glyph_boundary() {
     let fill = TextAttribute::default();
     let mut buffer = TextBuffer::new(5, 4, fill).expect("valid buffer");
-    buffer.row_mut(0).replace_glyph(0, 1, &[u16::from(b'A')]).expect("glyph fits");
-    buffer.row_mut(0).replace_glyph(1, 2, &[0x4e00]).expect("wide glyph fits");
-    buffer.row_mut(0).replace_glyph(3, 1, &[u16::from(b'B')]).expect("glyph fits");
+    buffer
+        .row_mut(0)
+        .replace_glyph(0, 1, &[u16::from(b'A')])
+        .expect("glyph fits");
+    buffer
+        .row_mut(0)
+        .replace_glyph(1, 2, &[0x4e00])
+        .expect("wide glyph fits");
+    buffer
+        .row_mut(0)
+        .replace_glyph(3, 1, &[u16::from(b'B')])
+        .expect("glyph fits");
     buffer.row_mut(0).set_wrap_forced(true);
-    buffer.row_mut(1).replace_glyph(0, 1, &[u16::from(b'C')]).expect("glyph fits");
+    buffer
+        .row_mut(1)
+        .replace_glyph(0, 1, &[u16::from(b'C')])
+        .expect("glyph fits");
 
-    buffer.resize_width_reflow(3, fill).expect("reflow succeeds");
+    buffer
+        .resize_width_reflow(3, fill)
+        .expect("reflow succeeds");
 
     assert_eq!(buffer.width(), 3);
     assert_eq!(buffer.row(0).glyph_at(0), &[u16::from(b'A')]);
