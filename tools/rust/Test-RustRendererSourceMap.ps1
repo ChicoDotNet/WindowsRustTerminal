@@ -95,7 +95,7 @@ foreach ($entry in @($map.entries)) {
 $rendererRoot = Join-Path $repoRoot 'rust/terminal-renderer/src'
 $actualTests = @{}
 foreach ($rustFile in Get-ChildItem -LiteralPath $rendererRoot -Filter '*.rs' -File) {
-    $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $rustFile.FullName).Replace('\\', '/')
+    $relativePath = [System.IO.Path]::GetRelativePath($repoRoot, $rustFile.FullName).Replace([System.IO.Path]::DirectorySeparatorChar, [char]'/')
     $content = Get-Content -Raw $rustFile.FullName
     foreach ($match in [regex]::Matches($content, '(?ms)#\[test\]\s*fn\s+([A-Za-z0-9_]+)')) {
         $testName = $match.Groups[1].Value
