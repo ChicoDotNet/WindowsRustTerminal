@@ -9,7 +9,12 @@ pub struct Guid {
 
 impl Guid {
     pub const fn new(data1: u32, data2: u16, data3: u16, data4: [u8; 8]) -> Self {
-        Self { data1, data2, data3, data4 }
+        Self {
+            data1,
+            data2,
+            data3,
+            data4,
+        }
     }
 
     fn network_bytes(self) -> [u8; 16] {
@@ -40,7 +45,9 @@ pub fn create_v5_uuid(namespace: Guid, name: &[u8]) -> Guid {
     input.extend_from_slice(name);
 
     let digest = sha1(&input);
-    let mut bytes: [u8; 16] = digest[..16].try_into().expect("SHA-1 prefix is sixteen bytes");
+    let mut bytes: [u8; 16] = digest[..16]
+        .try_into()
+        .expect("SHA-1 prefix is sixteen bytes");
     bytes[6] = (bytes[6] & 0x0f) | 0x50;
     bytes[8] = (bytes[8] & 0x3f) | 0x80;
     Guid::from_network_bytes(bytes)
@@ -71,7 +78,9 @@ fn sha1(input: &[u8]) -> [u8; 20] {
             *word = u32::from_be_bytes(chunk[start..start + 4].try_into().expect("SHA-1 word"));
         }
         for index in 16..80 {
-            words[index] = (words[index - 3] ^ words[index - 8] ^ words[index - 14] ^ words[index - 16]).rotate_left(1);
+            words[index] =
+                (words[index - 3] ^ words[index - 8] ^ words[index - 14] ^ words[index - 16])
+                    .rotate_left(1);
         }
 
         let mut a = h0;

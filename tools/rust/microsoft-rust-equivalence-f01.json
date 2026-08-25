@@ -3,7 +3,8 @@
   "description": "F01 foundation-value burn-down. Rust owns til::generational, the complete portable til::size value/arithmetic surface, and portable RFC 4122 UUID-v5 generation over arbitrary name bytes; Win32 COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
   "expectedCoveragePriority": 20,
   "expectedCoverage": {
-    "til": { "Exact": 22, "Partial": 168, "Missing": 4, "Platform-only": 5 }
+    "til": { "Exact": 22, "Partial": 168, "Missing": 4, "Platform-only": 5 },
+    "types": { "Exact": 2, "Partial": 14 }
   },
   "expectedGlobalCoveragePriority": 20,
   "expectedGlobalCoverage": {
