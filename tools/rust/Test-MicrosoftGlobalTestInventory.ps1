@@ -5,8 +5,16 @@ $globalScript = Join-Path $PSScriptRoot 'Get-MicrosoftGlobalTestInventory.ps1'
 $census = Get-Content -Raw (Join-Path $PSScriptRoot 'microsoft-test-source-census.json') | ConvertFrom-Json -AsHashtable
 $ledger = Get-Content -Raw (Join-Path $PSScriptRoot 'microsoft-rust-equivalence.json') | ConvertFrom-Json -AsHashtable
 $baseline = Get-Content -Raw (Join-Path $PSScriptRoot 'contract-baseline.json') | ConvertFrom-Json -AsHashtable
+$deferredMissing = Get-Content -Raw (Join-Path $PSScriptRoot 'microsoft-rust-deferred-missing.json') | ConvertFrom-Json -AsHashtable
 $raw = (& $globalScript | Out-String).Trim()
 $inventory = @($raw | ConvertFrom-Json)
+
+if ([int]$deferredMissing.schemaVersion -ne 1) {
+    throw 'Unsupported deferred-Missing manifest schema.'
+}
+if (-not $deferredMissing.ContainsKey('expectedMissingTotal') -or -not $deferredMissing.ContainsKey('sources')) {
+    throw 'Deferred-Missing manifest requires expectedMissingTotal and sources.'
+}
 
 $expectedSuites = @($baseline.suites.Keys | Sort-Object)
 if (($expectedSuites -join ',') -ne (@($census.suites.Keys | Sort-Object) -join ',')) {
@@ -27,6 +35,23 @@ foreach ($entry in @($ledger.entries)) {
         throw "Duplicate equivalence ledger entry: $key"
     }
     $entryKeys[$key] = $entry
+}
+
+$deferredMissingSources = @{}
+foreach ($source in @($deferredMissing.sources)) {
+    $key = "$($source.suite)|$($source.source)"
+    if ([string]::IsNullOrWhiteSpace([string]$source.suite) -or
+        [string]::IsNullOrWhiteSpace([string]$source.source) -or
+        [string]::IsNullOrWhiteSpace([string]$source.reason)) {
+        throw "Deferred-Missing source requires suite, source and reason: $key"
+    }
+    if ($deferredMissingSources.ContainsKey($key)) {
+        throw "Duplicate deferred-Missing source: $key"
+    }
+    if ($source.ContainsKey('expectedMissing') -and [int]$source.expectedMissing -lt 1) {
+        throw "Deferred-Missing expectedMissing must be positive: $key"
+    }
+    $deferredMissingSources[$key] = $source
 }
 
 $sourceRules = @{}
@@ -65,11 +90,27 @@ foreach ($overlayFile in $overlayFiles) {
         }
     }
     if ($overlay.ContainsKey('expectedCoverage')) {
+        $priority = if ($overlay.ContainsKey('expectedCoveragePriority')) {
+            [int]$overlay.expectedCoveragePriority
+        }
+        else {
+            0
+        }
+
         foreach ($suite in @($overlay.expectedCoverage.Keys)) {
-            if ($overlayExpectations.ContainsKey($suite)) {
-                throw "Duplicate expectedCoverage suite across overlays: $suite"
+            $candidate = @{
+                coverage = $overlay.expectedCoverage[$suite]
+                priority = $priority
+                source = $overlayFile.Name
             }
-            $overlayExpectations[$suite] = $overlay.expectedCoverage[$suite]
+
+            if (-not $overlayExpectations.ContainsKey($suite) -or
+                $priority -gt [int]($overlayExpectations[$suite].priority)) {
+                $overlayExpectations[$suite] = $candidate
+            }
+            elseif ($priority -eq [int]($overlayExpectations[$suite].priority)) {
+                throw "Duplicate expectedCoverage priority $priority for suite ${suite}: $($overlayExpectations[$suite].source) and $($overlayFile.Name)"
+            }
         }
     }
     if ($overlay.ContainsKey('expectedGlobalCoverage')) {
@@ -94,6 +135,7 @@ foreach ($overlayFile in $overlayFiles) {
 $currentKeys = @{}
 $currentSources = @{}
 $suiteCoverage = @{}
+$observedDeferredMissing = @{}
 $bootstrapRequired = $false
 $reconciledSuites = @(
     'terminal',
@@ -103,6 +145,7 @@ $reconciledSuites = @(
     'til',
     'terminalCore',
     'host',
+    'interactivityWin32',
     'localTerminalApp',
     'terminalApp',
     'unitControl',
@@ -163,6 +206,16 @@ foreach ($suite in $expectedSuites) {
             throw "Reconciled-stage contract has not been deliberately classified: $key"
         }
 
+        if ($coverage -eq 'Missing') {
+            if (-not $deferredMissingSources.ContainsKey($sourceKey)) {
+                throw "Missing Microsoft contract is not explicitly deferred: $key"
+            }
+            if (-not $observedDeferredMissing.ContainsKey($sourceKey)) {
+                $observedDeferredMissing[$sourceKey] = 0
+            }
+            $observedDeferredMissing[$sourceKey]++
+        }
+
         if (-not $coverageCounts.ContainsKey($coverage)) { $coverageCounts[$coverage] = 0 }
         $coverageCounts[$coverage]++
     }
@@ -181,14 +234,34 @@ foreach ($key in $sourceRules.Keys) {
         throw "Source equivalence rule references a removed Microsoft source: $key"
     }
 }
+foreach ($key in $deferredMissingSources.Keys) {
+    if (-not $currentSources.ContainsKey($key)) {
+        throw "Deferred-Missing manifest references a removed Microsoft source: $key"
+    }
+    $actualMissing = if ($observedDeferredMissing.ContainsKey($key)) {
+        [int]$observedDeferredMissing[$key]
+    }
+    else {
+        0
+    }
+    if ($actualMissing -eq 0) {
+        throw "Deferred-Missing source no longer contains Missing contracts; remove it from the manifest: $key"
+    }
+    $deferredSource = $deferredMissingSources[$key]
+    if ($deferredSource.ContainsKey('expectedMissing') -and
+        [int]$deferredSource.expectedMissing -ne $actualMissing) {
+        throw "Deferred-Missing count changed for ${key}: expected $($deferredSource.expectedMissing), got $actualMissing."
+    }
+}
 foreach ($suite in $overlayExpectations.Keys) {
-    $expected = $overlayExpectations[$suite]
+    $expectation = $overlayExpectations[$suite]
+    $expected = $expectation.coverage
     $actual = $suiteCoverage[$suite]
     foreach ($coverage in $allowedCoverage) {
         $expectedCount = if ($expected.ContainsKey($coverage)) { [int]$expected[$coverage] } else { 0 }
         $actualCount = if ($actual.ContainsKey($coverage)) { [int]$actual[$coverage] } else { 0 }
         if ($expectedCount -ne $actualCount) {
-            throw "$suite expectedCoverage mismatch for ${coverage}: expected $expectedCount, got $actualCount."
+            throw "$suite expectedCoverage mismatch for ${coverage}: expected $expectedCount, got $actualCount ($($expectation.source), priority $($expectation.priority))."
         }
     }
 }
@@ -205,6 +278,9 @@ foreach ($suite in $expectedSuites) {
 $globalSummary = @($allowedCoverage | ForEach-Object { "$_=$($globalCoverage[$_])" }) -join ', '
 Write-Host "Microsoft global coverage: $globalSummary"
 
+if ([int]$deferredMissing.expectedMissingTotal -ne [int]$globalCoverage['Missing']) {
+    throw "Deferred-Missing total mismatch: expected $($deferredMissing.expectedMissingTotal), got $($globalCoverage['Missing'])."
+}
 if ($null -ne $globalCoverageExpectation) {
     foreach ($coverage in $allowedCoverage) {
         $expectedCount = if ($globalCoverageExpectation.ContainsKey($coverage)) { [int]$globalCoverageExpectation[$coverage] } else { 0 }
@@ -219,4 +295,4 @@ if ($bootstrapRequired) {
     throw 'Global Microsoft source census requires bootstrap fingerprints. Copy all CENSUS_BOOTSTRAP values into microsoft-test-source-census.json.'
 }
 
-Write-Host "Microsoft global source inventory gate passed ($($inventory.Count) source methods across $($expectedSuites.Count) suites)."
+Write-Host "Microsoft global source inventory gate passed ($($inventory.Count) source methods across $($expectedSuites.Count) suites; deferred Missing=$($globalCoverage['Missing']))."
