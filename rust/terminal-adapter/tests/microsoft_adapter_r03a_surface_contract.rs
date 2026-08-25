@@ -39,8 +39,12 @@ fn microsoft_adapter_graphics_base_preserves_sgr_reset_boundary_action() {
 
 #[test]
 fn microsoft_adapter_graphics_single_preserves_single_sgr_parameter_boundary_action() {
+    // Exact data source from AdapterTest::GraphicsSingleTests. This witness deliberately
+    // proves the complete parser/adapter boundary matrix, not TextAttribute application.
     for parameter in [
-        0, 1, 4, 7, 22, 24, 27, 30, 31, 37, 39, 40, 47, 49, 90, 97, 100, 107,
+        0, 1, 2, 4, 7, 8, 9, 21, 22, 24, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41,
+        42, 43, 44, 45, 46, 47, 49, 53, 55, 90, 91, 92, 93, 94, 95, 96, 97, 100, 101, 102, 103,
+        104, 105, 106, 107,
     ] {
         assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(
             vec![Some(parameter)],
@@ -50,41 +54,85 @@ fn microsoft_adapter_graphics_single_preserves_single_sgr_parameter_boundary_act
 
 #[test]
 fn microsoft_adapter_graphics_single_with_subparams_preserves_parser_shape() {
-    let dispatch = parse("\u{1b}[4:3m");
-    let actions = dispatch.deferred_actions();
-    assert_eq!(actions.len(), 1);
-    let OutputAction::SetGraphicsRendition(parameters) = &actions[0] else {
-        panic!("expected SGR action");
-    };
-    assert_eq!(parameters.at(0), Some(4));
-    assert_eq!(parameters.sub_params_for(0), &[Some(3)]);
+    // Exact four data-driven vectors from AdapterTest::GraphicsSingleWithSubParamTests:
+    // curly underline and indexed foreground/background/underline colors.
+    let cases = [
+        ("\u{1b}[4:3m", 4, vec![Some(3)]),
+        ("\u{1b}[38:5:1m", 38, vec![Some(5), Some(1)]),
+        ("\u{1b}[48:5:15m", 48, vec![Some(5), Some(15)]),
+        ("\u{1b}[58:5:1m", 58, vec![Some(5), Some(1)]),
+    ];
+
+    for (sequence, expected_parameter, expected_subparams) in cases {
+        let dispatch = parse(sequence);
+        let actions = dispatch.deferred_actions();
+        assert_eq!(actions.len(), 1, "sequence={sequence:?}");
+        let OutputAction::SetGraphicsRendition(parameters) = &actions[0] else {
+            panic!("expected SGR action for {sequence:?}");
+        };
+        assert_eq!(parameters.at(0), Some(expected_parameter));
+        assert_eq!(parameters.sub_params_for(0), expected_subparams.as_slice());
+    }
 }
 
 #[test]
 fn microsoft_adapter_graphics_push_pop_preserves_stack_boundary_actions_in_order() {
+    // AdapterTest::GraphicsPushPopTests exercises empty stacks, nesting, a partial
+    // attribute save (intense/background/double underline), and underline-only saves.
+    // Rust does not yet apply the TextAttribute stack, but every stack action shape is
+    // retained in the same source order at the adapter boundary.
+    let empty = Parameters::default();
+    let partial = Parameters::from_values(vec![Some(1), Some(10), Some(21)]);
+    let underline_only = Parameters::from_values(vec![Some(4)]);
+
+    let expected = vec![
+        OutputAction::PushGraphicsRendition(empty.clone()),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(empty.clone()),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(empty.clone()),
+        OutputAction::PushGraphicsRendition(empty),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(partial),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(underline_only.clone()),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(underline_only.clone()),
+        OutputAction::PopGraphicsRendition,
+        OutputAction::PushGraphicsRendition(underline_only),
+        OutputAction::PopGraphicsRendition,
+    ];
+
     let mut dispatch = core();
-    let push =
-        OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(1), Some(10)]));
-    dispatch.dispatch(push.clone());
-    dispatch.dispatch(OutputAction::PopGraphicsRendition);
-    assert_eq!(
-        dispatch.take_deferred_actions(),
-        vec![push, OutputAction::PopGraphicsRendition]
-    );
+    for action in expected.clone() {
+        dispatch.dispatch(action);
+    }
+    assert_eq!(dispatch.take_deferred_actions(), expected);
 }
 
 #[test]
 fn microsoft_adapter_graphics_persist_brightness_preserves_sgr_ordering_boundary() {
-    let mut dispatch = core();
-    let actions = [
-        OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(34)])),
-        OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(1)])),
-        OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])),
+    // Full SGR command traces from AdapterTest::GraphicsPersistBrightnessTests.
+    // The downstream intensity mutation remains outside AdaptDispatchCore, so this is
+    // exhaustive boundary evidence while the Microsoft source contract stays Partial.
+    let parameters = [
+        0, 34, 1, 32, // reset, dark blue, intense, dark green
+        0, 94, 34, // reset, bright blue, dark blue
+        0, 34, 1, 94, 34, 32, // reset, dark blue, intense, bright blue, dark blue, dark green
     ];
-    for action in actions.clone() {
+    let expected = parameters
+        .into_iter()
+        .map(|parameter| {
+            OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(parameter)]))
+        })
+        .collect::<Vec<_>>();
+
+    let mut dispatch = core();
+    for action in expected.clone() {
         dispatch.dispatch(action);
     }
-    assert_eq!(dispatch.take_deferred_actions(), actions);
+    assert_eq!(dispatch.take_deferred_actions(), expected);
 }
 
 #[test]

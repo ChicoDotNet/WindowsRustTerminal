@@ -33,6 +33,7 @@ $sourceRules = @{}
 $overlayExpectations = @{}
 $globalCoverageExpectation = $null
 $globalCoverageExpectationSource = $null
+$globalCoverageExpectationPriority = $null
 $overlayFiles = @(Get-ChildItem -Path $PSScriptRoot -Filter 'microsoft-rust-equivalence-*.json' -File | Sort-Object Name)
 foreach ($overlayFile in $overlayFiles) {
     $overlay = Get-Content -Raw $overlayFile.FullName | ConvertFrom-Json -AsHashtable
@@ -72,11 +73,21 @@ foreach ($overlayFile in $overlayFiles) {
         }
     }
     if ($overlay.ContainsKey('expectedGlobalCoverage')) {
-        if ($null -ne $globalCoverageExpectation) {
-            throw "Duplicate expectedGlobalCoverage across overlays: $globalCoverageExpectationSource and $($overlayFile.Name)"
+        $priority = if ($overlay.ContainsKey('expectedGlobalCoveragePriority')) {
+            [int]$overlay.expectedGlobalCoveragePriority
         }
-        $globalCoverageExpectation = $overlay.expectedGlobalCoverage
-        $globalCoverageExpectationSource = $overlayFile.Name
+        else {
+            0
+        }
+
+        if ($null -eq $globalCoverageExpectation -or $priority -gt $globalCoverageExpectationPriority) {
+            $globalCoverageExpectation = $overlay.expectedGlobalCoverage
+            $globalCoverageExpectationSource = $overlayFile.Name
+            $globalCoverageExpectationPriority = $priority
+        }
+        elseif ($priority -eq $globalCoverageExpectationPriority) {
+            throw "Duplicate expectedGlobalCoverage priority $priority across overlays: $globalCoverageExpectationSource and $($overlayFile.Name)"
+        }
     }
 }
 
@@ -199,7 +210,7 @@ if ($null -ne $globalCoverageExpectation) {
         $expectedCount = if ($globalCoverageExpectation.ContainsKey($coverage)) { [int]$globalCoverageExpectation[$coverage] } else { 0 }
         $actualCount = [int]$globalCoverage[$coverage]
         if ($expectedCount -ne $actualCount) {
-            throw "Global expectedCoverage mismatch for ${coverage}: expected $expectedCount, got $actualCount ($globalCoverageExpectationSource)."
+            throw "Global expectedCoverage mismatch for ${coverage}: expected $expectedCount, got $actualCount ($globalCoverageExpectationSource, priority $globalCoverageExpectationPriority)."
         }
     }
 }

@@ -32,11 +32,20 @@ fn parse_core(text: &str) -> AdaptDispatchCore {
     machine.engine().dispatch().clone()
 }
 
+fn assert_sgr_subparameters(sequence: &str, expected_main: i32, expected_sub: &[Option<i32>]) {
+    let dispatch = parse_core(sequence);
+    assert_eq!(dispatch.deferred_actions().len(), 1);
+    let OutputAction::SetGraphicsRendition(parameters) = &dispatch.deferred_actions()[0] else {
+        panic!("expected SGR action");
+    };
+    assert_eq!(parameters.at(0), Some(expected_main));
+    assert_eq!(parameters.sub_params_for(0), expected_sub);
+}
+
 #[test]
 fn microsoft_adapter_osc4_palette_report_preserves_query_indices() {
     assert_deferred_sequence(
-        [0usize, 1, 2, 15]
-            .into_iter()
+        (0usize..=15)
             .map(OutputAction::RequestColorTableEntry)
             .collect(),
     );
@@ -167,6 +176,7 @@ fn microsoft_adapter_xterm_256_color_preserves_indexed_sgr_vectors() {
         vec![Some(48), Some(5), Some(9)],
         vec![Some(38), Some(5), Some(42)],
         vec![Some(48), Some(5), Some(142)],
+        vec![Some(38), Some(5), Some(9)],
     ] {
         assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(
             values,
@@ -182,6 +192,7 @@ fn microsoft_adapter_extended_color_default_parameters_preserve_omissions() {
         vec![Some(38), Some(2)],
         vec![Some(48), Some(2), Some(123)],
         vec![Some(38), Some(2), None, None, Some(123)],
+        vec![Some(38), Some(2), Some(283), Some(182), Some(123)],
         vec![Some(38), Some(5), Some(283)],
     ] {
         assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(
@@ -192,28 +203,35 @@ fn microsoft_adapter_extended_color_default_parameters_preserve_omissions() {
 
 #[test]
 fn microsoft_adapter_extended_subparameter_color_preserves_subparameter_shape() {
-    let dispatch = parse_core("\u{1b}[38:5:42m\u{1b}[48:2::123:45m");
-    assert_eq!(dispatch.deferred_actions().len(), 2);
-
-    let OutputAction::SetGraphicsRendition(foreground) = &dispatch.deferred_actions()[0] else {
-        panic!("expected foreground SGR action");
-    };
-    assert_eq!(foreground.at(0), Some(38));
-    assert_eq!(foreground.sub_params_for(0), &[Some(5), Some(42)]);
-
-    let OutputAction::SetGraphicsRendition(background) = &dispatch.deferred_actions()[1] else {
-        panic!("expected background SGR action");
-    };
-    assert_eq!(background.at(0), Some(48));
-    assert_eq!(
-        background.sub_params_for(0),
-        &[Some(2), None, Some(123), Some(45)]
-    );
+    for (sequence, main, subparameters) in [
+        ("\u{1b}[38:5m", 38, vec![Some(5)]),
+        ("\u{1b}[48:5:m", 48, vec![Some(5), None]),
+        ("\u{1b}[38:2m", 38, vec![Some(2)]),
+        ("\u{1b}[48:2::123m", 48, vec![Some(2), None, Some(123)]),
+        (
+            "\u{1b}[38:2::::123m",
+            38,
+            vec![Some(2), None, None, None, Some(123)],
+        ),
+        (
+            "\u{1b}[38:2:7:182:182:123m",
+            38,
+            vec![Some(2), Some(7), Some(182), Some(182), Some(123)],
+        ),
+        (
+            "\u{1b}[48:2::128:283:155m",
+            48,
+            vec![Some(2), None, Some(128), Some(283), Some(155)],
+        ),
+        ("\u{1b}[38:5:283m", 38, vec![Some(5), Some(283)]),
+    ] {
+        assert_sgr_subparameters(sequence, main, &subparameters);
+    }
 }
 
 #[test]
 fn microsoft_adapter_set_color_table_value_preserves_full_index_domain_edges() {
-    for index in [0usize, 1, 15, 255] {
+    for index in 0usize..256 {
         assert_deferred(OutputAction::SetColorTableEntry {
             index,
             color: 0x0003_0201,
@@ -223,10 +241,17 @@ fn microsoft_adapter_set_color_table_value_preserves_full_index_domain_edges() {
 
 #[test]
 fn microsoft_adapter_soft_font_size_detection_preserves_decdld_parameters_boundary() {
+    // Cover the source contract's matrix-size, explicit-size, font-set and usage families.
+    // Computed FontBuffer cell sizes and bitmap inference remain downstream migration debt.
     for values in [
-        vec![Some(0), Some(0), Some(0), Some(0)],
-        vec![Some(5), None, Some(0), Some(0)],
+        vec![Some(5), Some(0), Some(0), Some(0)],
+        vec![Some(6), Some(0), Some(1), Some(0)],
+        vec![Some(7), Some(20), Some(0), Some(0)],
         vec![Some(13), Some(17), Some(0), Some(1)],
+        vec![Some(9), Some(25), Some(1), Some(1)],
+        vec![Some(18), Some(38), Some(0), Some(1)],
+        vec![Some(0), Some(0), Some(2), Some(0)],
+        vec![Some(0), Some(0), Some(3), Some(1)],
     ] {
         assert_deferred(OutputAction::DcsBegin(DcsAction::DownloadDrcs(
             Parameters::from_values(values),
