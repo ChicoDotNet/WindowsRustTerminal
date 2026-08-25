@@ -81,7 +81,11 @@ impl<T: Send + 'static> Throttled<T> {
         let mut scheduled_generation = None;
 
         {
-            let mut state = self.inner.state.lock().unwrap_or_else(|error| error.into_inner());
+            let mut state = self
+                .inner
+                .state
+                .lock()
+                .unwrap_or_else(|error| error.into_inner());
             let timer_was_running = state.timer_running;
             state.timer_running = true;
 
@@ -113,7 +117,10 @@ impl<T: Send + 'static> Throttled<T> {
 
 fn run_trailing<T>(inner: Arc<Inner<T>>, generation: u64) {
     let pending = {
-        let mut state = inner.state.lock().unwrap_or_else(|error| error.into_inner());
+        let mut state = inner
+            .state
+            .lock()
+            .unwrap_or_else(|error| error.into_inner());
         if generation != state.timer_generation {
             return;
         }
