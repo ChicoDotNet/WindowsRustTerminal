@@ -3,7 +3,7 @@
   "description": "F03 Terminal aggregate sizing slice. Rust terminal-core now owns viewport dimension clamping, configured-history capacity and user-resize total-row clamping in a platform-neutral aggregate. The three Microsoft ScreenSizeLimits contracts are exercised directly against that product owner.",
   "expectedCoveragePriority": 22,
   "expectedCoverage": {
-    "terminalCore": { "Missing": 1 }
+    "terminalCore": { "Exact": 19, "Missing": 1, "Partial": 25, "Platform-only": 7, "UI-managed": 1 }
   },
   "expectedGlobalCoveragePriority": 22,
   "expectedGlobalCoverage": {
