@@ -31,6 +31,8 @@ foreach ($entry in @($ledger.entries)) {
 
 $sourceRules = @{}
 $overlayExpectations = @{}
+$globalCoverageExpectation = $null
+$globalCoverageExpectationSource = $null
 $overlayFiles = @(Get-ChildItem -Path $PSScriptRoot -Filter 'microsoft-rust-equivalence-*.json' -File | Sort-Object Name)
 foreach ($overlayFile in $overlayFiles) {
     $overlay = Get-Content -Raw $overlayFile.FullName | ConvertFrom-Json -AsHashtable
@@ -69,6 +71,13 @@ foreach ($overlayFile in $overlayFiles) {
             $overlayExpectations[$suite] = $overlay.expectedCoverage[$suite]
         }
     }
+    if ($overlay.ContainsKey('expectedGlobalCoverage')) {
+        if ($null -ne $globalCoverageExpectation) {
+            throw "Duplicate expectedGlobalCoverage across overlays: $globalCoverageExpectationSource and $($overlayFile.Name)"
+        }
+        $globalCoverageExpectation = $overlay.expectedGlobalCoverage
+        $globalCoverageExpectationSource = $overlayFile.Name
+    }
 }
 
 $currentKeys = @{}
@@ -76,6 +85,8 @@ $currentSources = @{}
 $suiteCoverage = @{}
 $bootstrapRequired = $false
 $reconciledSuites = @(
+    'terminal',
+    'adapter',
     'textBuffer',
     'types',
     'til',
@@ -170,6 +181,29 @@ foreach ($suite in $overlayExpectations.Keys) {
         }
     }
 }
+
+$globalCoverage = @{}
+foreach ($coverage in $allowedCoverage) { $globalCoverage[$coverage] = 0 }
+foreach ($suite in $expectedSuites) {
+    foreach ($coverage in $allowedCoverage) {
+        if ($suiteCoverage[$suite].ContainsKey($coverage)) {
+            $globalCoverage[$coverage] += [int]$suiteCoverage[$suite][$coverage]
+        }
+    }
+}
+$globalSummary = @($allowedCoverage | ForEach-Object { "$_=$($globalCoverage[$_])" }) -join ', '
+Write-Host "Microsoft global coverage: $globalSummary"
+
+if ($null -ne $globalCoverageExpectation) {
+    foreach ($coverage in $allowedCoverage) {
+        $expectedCount = if ($globalCoverageExpectation.ContainsKey($coverage)) { [int]$globalCoverageExpectation[$coverage] } else { 0 }
+        $actualCount = [int]$globalCoverage[$coverage]
+        if ($expectedCount -ne $actualCount) {
+            throw "Global expectedCoverage mismatch for ${coverage}: expected $expectedCount, got $actualCount ($globalCoverageExpectationSource)."
+        }
+    }
+}
+
 if ($bootstrapRequired) {
     throw 'Global Microsoft source census requires bootstrap fingerprints. Copy all CENSUS_BOOTSTRAP values into microsoft-test-source-census.json.'
 }
