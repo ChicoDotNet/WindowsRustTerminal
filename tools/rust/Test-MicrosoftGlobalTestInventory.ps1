@@ -8,6 +8,10 @@ $baseline = Get-Content -Raw (Join-Path $PSScriptRoot 'contract-baseline.json') 
 $raw = (& $globalScript | Out-String).Trim()
 $inventory = @($raw | ConvertFrom-Json)
 
+foreach ($item in @($inventory | Where-Object { $_.suite -in @('textBuffer', 'types', 'til') })) {
+    Write-Host "R04_ID|$($item.suite)|$($item.source)|$($item.method)"
+}
+
 $expectedSuites = @($baseline.suites.Keys | Sort-Object)
 if (($expectedSuites -join ',') -ne (@($census.suites.Keys | Sort-Object) -join ',')) {
     throw 'Microsoft source census suites do not match contract-baseline.json.'
