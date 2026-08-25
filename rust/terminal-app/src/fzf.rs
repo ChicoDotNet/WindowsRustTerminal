@@ -325,12 +325,12 @@ fn fuzzy_match_v2(text: &[char], pattern: &[char], positions: &mut Vec<usize>) -
         let row_start = pattern_index * width;
         let column_offset = current_column - first_occurrence_of_first_char;
         let cell_score = score_matrix[row_start + column_offset];
-        let diagonal_score = if pattern_index > 0 && current_column >= first_occurrence[pattern_index]
-        {
-            score_matrix[row_start - width + column_offset - 1]
-        } else {
-            0
-        };
+        let diagonal_score =
+            if pattern_index > 0 && current_column >= first_occurrence[pattern_index] {
+                score_matrix[row_start - width + column_offset - 1]
+            } else {
+                0
+            };
         let left_score = if current_column > first_occurrence[pattern_index] {
             score_matrix[row_start + column_offset - 1]
         } else {
