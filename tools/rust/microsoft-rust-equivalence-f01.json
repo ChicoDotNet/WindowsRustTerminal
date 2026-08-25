@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "description": "F01 foundation-value burn-down. The first vertical slice gives til::generational a real safe Rust owner and direct Microsoft source-contract evidence.",
+  "description": "F01 foundation-value burn-down. Rust now owns til::generational plus the complete portable til::size value/arithmetic surface; Win32 COORD/SIZE and Direct2D conversion methods remain native platform boundaries.",
   "expectedCoveragePriority": 20,
   "expectedCoverage": {
-    "til": { "Exact": 4, "Partial": 168, "Missing": 22, "Platform-only": 5 }
+    "til": { "Exact": 22, "Partial": 168, "Missing": 4, "Platform-only": 5 }
   },
   "expectedGlobalCoveragePriority": 20,
   "expectedGlobalCoverage": {
-    "Exact": 204,
+    "Exact": 222,
     "Stronger": 11,
     "Partial": 351,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 447
+    "Missing": 429
   },
   "entries": [
     {
@@ -22,6 +22,24 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_til_generational_basic_matches_source_contract"],
       "notes": "Rust Generational<T> reproduces the Microsoft Basic contract: default reads, write-triggered generation inequality, clone synchronization and copied wrapped value. Equality intentionally compares generation rather than T, matching til::generational."
-    }
+    },
+    {"suite":"til","source":"SizeTests.cpp","method":"DefaultConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_default_construct"],"notes":"Rust Size defaults width and height to zero."},
+    {"suite":"til","source":"SizeTests.cpp","method":"RawConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_raw_construct"],"notes":"Rust Size preserves explicit integer width and height."},
+    {"suite":"til","source":"SizeTests.cpp","method":"RawFloatingConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_raw_floating_construct"],"notes":"Rust floating construction applies the same rounding policy and checked coordinate narrowing."},
+    {"suite":"til","source":"SizeTests.cpp","method":"SignedConstruct","coverage":"Exact","rustWitnesses":["microsoft_til_size_signed_construct"],"notes":"Signed dimensions are preserved exactly."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Equality","coverage":"Exact","rustWitnesses":["microsoft_til_size_equality"],"notes":"Value equality compares both dimensions."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Inequality","coverage":"Exact","rustWitnesses":["microsoft_til_size_inequality"],"notes":"Value inequality changes when either dimension changes."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Boolean","coverage":"Exact","rustWitnesses":["microsoft_til_size_boolean"],"notes":"A size is valid only when both dimensions are strictly positive across min/-1/0/1/max vectors."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Addition","coverage":"Exact","rustWitnesses":["microsoft_til_size_addition"],"notes":"Component-wise addition succeeds in range and reports overflow on either dimension."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Subtraction","coverage":"Exact","rustWitnesses":["microsoft_til_size_subtraction"],"notes":"Component-wise subtraction succeeds in range and reports overflow on either dimension."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Multiplication","coverage":"Exact","rustWitnesses":["microsoft_til_size_multiplication"],"notes":"Component-wise multiplication succeeds in range and reports overflow on either dimension."},
+    {"suite":"til","source":"SizeTests.cpp","method":"ScaleByFloat","coverage":"Exact","rustWitnesses":["microsoft_til_size_scale_by_float"],"notes":"Ceiling scale reproduces Microsoft vectors and rejects coordinate overflow."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Division","coverage":"Exact","rustWitnesses":["microsoft_til_size_division"],"notes":"Component-wise integer division reproduces Microsoft values and reports division by zero."},
+    {"suite":"til","source":"SizeTests.cpp","method":"DivisionRoundingUp","coverage":"Exact","rustWitnesses":["microsoft_til_size_division_rounding_up"],"notes":"Positive ceil division matches Microsoft and rejects unsupported negative/non-positive inputs."},
+    {"suite":"til","source":"SizeTests.cpp","method":"WidthCast","coverage":"Exact","rustWitnesses":["microsoft_til_size_width_cast"],"notes":"Width narrowing to i16 is checked."},
+    {"suite":"til","source":"SizeTests.cpp","method":"HeightCast","coverage":"Exact","rustWitnesses":["microsoft_til_size_height_cast"],"notes":"Height narrowing to i16 is checked."},
+    {"suite":"til","source":"SizeTests.cpp","method":"Area","coverage":"Exact","rustWitnesses":["microsoft_til_size_area"],"notes":"Area multiplies in a wider integer and rejects narrowing overflow."},
+    {"suite":"til","source":"SizeTests.cpp","method":"AreaCast","coverage":"Exact","rustWitnesses":["microsoft_til_size_area_cast"],"notes":"Typed area narrowing reproduces the Microsoft SHORT success and overflow vectors."},
+    {"suite":"til","source":"SizeTests.cpp","method":"CastFromFloatWithMathTypes","coverage":"Exact","rustWitnesses":["microsoft_til_size_cast_from_float_with_math_types"],"notes":"Ceiling, flooring and rounding conversions reproduce all Microsoft float/double vectors."}
   ]
 }
