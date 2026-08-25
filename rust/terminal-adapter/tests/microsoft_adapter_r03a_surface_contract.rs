@@ -163,6 +163,11 @@ fn microsoft_adapter_tertiary_device_attributes_preserves_tertiary_da_boundary()
 }
 
 #[test]
+fn microsoft_adapter_request_displayed_extent_preserves_decrqde_boundary() {
+    assert_deferred(OutputAction::RequestDisplayedExtent);
+}
+
+#[test]
 fn microsoft_adapter_request_terminal_parameters_preserves_permission_parameter() {
     for permission in [0, 1] {
         assert_deferred(OutputAction::RequestTerminalParameters(permission));
