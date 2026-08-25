@@ -192,7 +192,8 @@ fn microsoft_r04_utf16_replacement_contract_matches_surrogates_and_replacement_b
 
     let source = "a𐐁ネコ🚀";
     let encoded = source.encode_utf16().collect::<Vec<_>>();
-    assert_eq!(String::from_utf16(&encoded).as_deref(), Ok(source));
+    let decoded = String::from_utf16(&encoded).expect("valid UTF-16 must decode");
+    assert_eq!(decoded, source);
 }
 
 #[test]
