@@ -83,6 +83,12 @@ fn microsoft_kitty_ignore_dead_key_release_contract() {
     // VK_OEM_6 = 0xDD. Microsoft runs this under its French keyboard layout
     // guard with U+00A8 and Shift; the observable TerminalInput contract is
     // that the dead-key release emits nothing.
-    let dead_key_release = key(false, 0x00dd, 0x0d, u32::from('¨'), control_state::SHIFT_PRESSED);
+    let dead_key_release = key(
+        false,
+        0x00dd,
+        0x0d,
+        u32::from('¨'),
+        control_state::SHIFT_PRESSED,
+    );
     assert_eq!(input.handle_key(dead_key_release), "");
 }
