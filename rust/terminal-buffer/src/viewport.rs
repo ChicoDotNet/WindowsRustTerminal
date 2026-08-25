@@ -345,7 +345,11 @@ impl Viewport {
             )),
         ];
 
-        result.extend(candidates.into_iter().filter(|viewport| viewport.is_valid()));
+        result.extend(
+            candidates
+                .into_iter()
+                .filter(|viewport| viewport.is_valid()),
+        );
         result
     }
 }
