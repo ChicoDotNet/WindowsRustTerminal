@@ -1,12 +1,11 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 448,
+  "expectedMissingTotal": 447,
   "sources": [
     {"suite":"textBuffer","source":"UTextAdapterTests.cpp","expectedMissing":1,"reason":"ICU-backed/search-equivalent Unicode substring search has no migrated Rust TextBuffer owner."},
     {"suite":"types","source":"UuidTests.cpp","expectedMissing":2,"reason":"UUID-v5 generation is not consumed by the migrated Rust product surface."},
     {"suite":"til","source":"EnvTests.cpp","expectedMissing":3,"reason":"Portable environment table construction, serialization and percent expansion remain unported; Generate is separately Platform-only."},
-    {"suite":"til","source":"GenerationalTests.cpp","expectedMissing":1,"reason":"No migrated generational/value-version wrapper owns this contract."},
     {"suite":"til","source":"SizeTests.cpp","expectedMissing":18,"reason":"No standalone Rust til::size-equivalent owns the full portable arithmetic/value surface; four interop methods are separately Platform-only."},
     {"suite":"til","source":"throttled_func.cpp","expectedMissing":1,"reason":"No migrated throttled scheduling primitive is consumed by the Rust product surface."},
     {"suite":"terminalCore","source":"ScreenSizeLimitsTest.cpp","expectedMissing":3,"reason":"Settings/history/user-resize clamping requires a Rust Terminal aggregate that has not migrated."},
