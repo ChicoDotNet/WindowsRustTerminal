@@ -71,7 +71,7 @@ foreach ($entry in @($map.entries)) {
             throw "Split R07 renderer entry requires sourcePatterns: $sourcePath"
         }
         if ($contracts.Count -ne $sourcePatterns.Count) {
-            throw "R07 renderer contract count must match sourcePatterns for $sourcePath: patterns=$($sourcePatterns.Count) contracts=$($contracts.Count)"
+            throw "R07 renderer contract count must match sourcePatterns for ${sourcePath}: patterns=$($sourcePatterns.Count) contracts=$($contracts.Count)"
         }
         if ($owners.Count -eq 0) {
             throw "Split R07 renderer entry requires at least one Rust owner: $sourcePath"
@@ -104,17 +104,17 @@ foreach ($entry in @($map.entries)) {
 
             $coverage = [string]$contract.coverage
             if ($coverage -notin $allowedCoverage) {
-                throw "Unsupported R07 renderer contract coverage '$coverage' for $sourcePath::$pattern"
+                throw "Unsupported R07 renderer contract coverage '$coverage' for ${sourcePath}::$pattern"
             }
             if ([string]::IsNullOrWhiteSpace([string]$contract.notes)) {
-                throw "R07 renderer contract must explain its classification: $sourcePath::$pattern"
+                throw "R07 renderer contract must explain its classification: ${sourcePath}::$pattern"
             }
             $coverageCounts[$coverage]++
         }
 
         foreach ($pattern in $seenPatterns.Keys) {
             if (-not $seenPatterns[$pattern]) {
-                throw "R07 renderer source pattern has no deliberate contract classification: $sourcePath::$pattern"
+                throw "R07 renderer source pattern has no deliberate contract classification: ${sourcePath}::$pattern"
             }
         }
 
