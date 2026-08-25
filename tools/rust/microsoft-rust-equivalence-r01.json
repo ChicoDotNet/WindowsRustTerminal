@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "description": "Delivery 11 imports the already-audited R01 parser evidence into the machine ledger. OutputEngine is deliberately conservative at source-rule Partial: dedicated Rust contract suites cover the complete source family, while method-level Exact/Stronger distinctions remain documented in test-equivalence-matrix.md until individually promoted.",
+  "description": "R01 machine ledger with method-level hardening for parser/state contracts. H01 promotes directly witnessed OutputEngine contracts while retaining a conservative Partial source rule for the residual methods not yet promoted individually.",
   "sourceRules": [
     {
       "suite": "terminal",
@@ -30,7 +30,7 @@
         "file:rust/terminal-parser/tests/output_engine_microsoft_state_contract.rs",
         "file:rust/terminal-parser/tests/output_engine_microsoft_string_contract.rs"
       ],
-      "notes": "All 64 Microsoft OutputEngine source methods have dedicated portable Rust contract evidence. This source-family rule remains conservatively Partial rather than mass-promoting methods to Exact without importing the older row-level distinctions one by one."
+      "notes": "H01 promotes 35 directly audited OutputEngine methods to Exact. This source-family Partial rule now applies only to the residual 29 methods until each receives the same row-level audit."
     }
   ],
   "entries": [
@@ -58,23 +58,59 @@
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"RoundTripTest","coverage":"Platform-only","rustWitnesses":[],"notes":"Upstream-skipped GH#4405 contract depends on Windows virtual-key/scan-code translation."},
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"AlphanumericTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft derives modifier/Unicode observations through VkKeyScanW/CharToKeyEvents."},
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"NonAsciiTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft exercises Windows CharToKeyEvents synthesis for non-ASCII UTF-16."},
-    {"suite":"terminal","source":"InputEngineTest.cpp","method":"C0Test","coverage":"Partial","rustWitnesses":["c0_and_alt_controls_match_input_contract"],"notes":"Rust covers core C0/Alt semantics; Microsoft also observes VkKeyScanW-derived modifier equivalence across the full C0 table."}
+    {"suite":"terminal","source":"InputEngineTest.cpp","method":"C0Test","coverage":"Partial","rustWitnesses":["c0_and_alt_controls_match_input_contract"],"notes":"Rust covers core C0/Alt semantics; Microsoft also observes VkKeyScanW-derived modifier equivalence across the full C0 table."},
+
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestEscapePath","coverage":"Exact","rustWitnesses":["microsoft_output_escape_path_covers_all_eighteen_source_states"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestEscapeImmediatePath","coverage":"Exact","rustWitnesses":["microsoft_output_escape_immediate_path_matches_state_trace"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestEscapeThenC0Path","coverage":"Exact","rustWitnesses":["microsoft_output_escape_then_c0_executes_without_interrupting_sequence"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestGroundPrint","coverage":"Exact","rustWitnesses":["microsoft_output_ground_print_remains_ground"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiEntry","coverage":"Exact","rustWitnesses":["microsoft_output_csi_entry_dispatches_immediate_final"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1CsiEntry","coverage":"Exact","rustWitnesses":["microsoft_output_c1_csi_entry_matches_seven_bit_form"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiImmediate","coverage":"Exact","rustWitnesses":["microsoft_output_csi_intermediates_remain_intermediate_until_final"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiParam","coverage":"Exact","rustWitnesses":["microsoft_output_csi_parameter_vector_matches_omitted_values"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiMaxParamCount","coverage":"Exact","rustWitnesses":["microsoft_output_csi_parameter_count_is_capped_at_32"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestLeadingZeroCsiParam","coverage":"Exact","rustWitnesses":["microsoft_output_csi_parameter_accepts_many_leading_zeroes"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiSubParam","coverage":"Exact","rustWitnesses":["microsoft_output_csi_subparameter_ranges_match_reference_vector"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiMaxSubParamCount","coverage":"Exact","rustWitnesses":["microsoft_output_csi_subparameter_count_is_capped_per_parameter"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestLeadingZeroCsiSubParam","coverage":"Exact","rustWitnesses":["microsoft_output_csi_subparameter_accepts_many_leading_zeroes"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestCsiIgnore","coverage":"Exact","rustWitnesses":["microsoft_output_csi_ignore_paths_return_to_ground_without_dispatch"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1Osc","coverage":"Exact","rustWitnesses":["microsoft_output_c1_osc_enters_and_bel_terminates"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscStringSimple","coverage":"Exact","rustWitnesses":["microsoft_output_osc_string_supports_bel_and_st_termination"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestLongOscString","coverage":"Exact","rustWitnesses":["microsoft_output_osc_string_grows_past_legacy_256_limit"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"NormalTestOscParam","coverage":"Exact","rustWitnesses":["microsoft_output_osc_parameter_matches_12345"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestLeadingZeroOscParam","coverage":"Exact","rustWitnesses":["microsoft_output_osc_parameter_accepts_many_leading_zeroes"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestLongOscParam","coverage":"Exact","rustWitnesses":["microsoft_output_osc_parameter_saturates_at_max_parameter_value"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscStringInvalidTermination","coverage":"Exact","rustWitnesses":["microsoft_output_invalid_osc_termination_becomes_csi"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsEntry","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_entry_terminates_with_st"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1DcsEntry","coverage":"Exact","rustWitnesses":["microsoft_output_c1_dcs_entry_matches_seven_bit_form"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsImmediate","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_intermediate_state_accepts_multiple_intermediates"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsIgnore","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_colon_enters_ignore_until_st"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsParam","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_parameter_vector_matches_omitted_values"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsIntermediateAndPassThrough","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_without_handler_ignores_passthrough_data"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsLongStringPassThrough","coverage":"Exact","rustWitnesses":["microsoft_output_dcs_ignore_accepts_long_payload_until_st"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestDcsInvalidTermination","coverage":"Exact","rustWitnesses":["microsoft_output_invalid_dcs_termination_becomes_csi"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestSosPmApcString","coverage":"Exact","rustWitnesses":["microsoft_output_sos_pm_apc_strings_ignore_payload_until_st"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1StringTerminator","coverage":"Exact","rustWitnesses":["microsoft_output_c1_st_terminates_osc_dcs_and_sos_pm_apc"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestC1ParserMode","coverage":"Exact","rustWitnesses":["microsoft_output_c1_parser_mode_matches_disabled_and_enabled_sequences"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscSetDefaultForeground","coverage":"Exact","rustWitnesses":["microsoft_output_osc_set_default_foreground_matches_all_reference_vectors"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscSetDefaultBackground","coverage":"Exact","rustWitnesses":["microsoft_output_osc_set_default_background_matches_all_reference_vectors"]},
+    {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestOscSetColorTableEntry","coverage":"Exact","rustWitnesses":["microsoft_output_osc_set_color_table_entry_matches_valid_partial_and_invalid_vectors"]}
   ],
   "expectedCoverage": {
     "terminal": {
-      "Exact": 19,
+      "Exact": 54,
       "Stronger": 11,
-      "Partial": 65,
+      "Partial": 30,
       "Platform-only": 3,
       "UI-managed": 0,
       "Missing": 0
     }
   },
   "expectedGlobalCoverage": {
-    "Exact": 64,
+    "Exact": 98,
     "Stronger": 11,
-    "Partial": 447,
-    "Platform-only": 62,
+    "Partial": 412,
+    "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 492
   }
