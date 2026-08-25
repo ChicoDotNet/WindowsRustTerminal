@@ -111,9 +111,7 @@ mod tests {
         environment.insert("B", "Banana");
         environment.insert("C", "Cassowary");
 
-        let mut expected: Vec<u16> = "A=Apple\0B=Banana\0C=Cassowary\0"
-            .encode_utf16()
-            .collect();
+        let mut expected: Vec<u16> = "A=Apple\0B=Banana\0C=Cassowary\0".encode_utf16().collect();
         expected.push(0);
         assert_eq!(expected, environment.to_utf16_block());
     }
