@@ -16,7 +16,7 @@ pub struct TerminalDimensions {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TerminalLayout {
     viewport: TerminalDimensions,
-    history_rows: u16,
+    configured_history_rows: u16,
     total_rows: u16,
 }
 
@@ -25,11 +25,11 @@ impl TerminalLayout {
     pub fn from_settings(history_size: i32, rows: i32, columns: i32) -> Self {
         let height = clamp_dimension(rows);
         let width = clamp_dimension(columns);
-        let history_rows = clamp_history(history_size, height);
+        let configured_history_rows = clamp_history(history_size, height);
         Self {
             viewport: TerminalDimensions { width, height },
-            history_rows,
-            total_rows: height + history_rows,
+            configured_history_rows,
+            total_rows: height + configured_history_rows,
         }
     }
 
@@ -44,20 +44,21 @@ impl TerminalLayout {
     }
 
     #[must_use]
-    pub const fn history_rows(&self) -> u16 {
-        self.history_rows
+    pub const fn configured_history_rows(&self) -> u16 {
+        self.configured_history_rows
     }
 
     /// Applies the same user-resize capacity rule as TerminalCore: viewport
-    /// dimensions remain in range and history shrinks as needed so visible
-    /// rows plus history can never exceed `SHRT_MAX`.
+    /// dimensions remain in range and the backing row count is clamped to
+    /// `SHRT_MAX` without mutating the configured history allowance. Shrinking
+    /// the viewport can therefore restore rows that a larger viewport had
+    /// temporarily clipped.
     pub fn user_resize(&mut self, columns: i32, rows: i32) {
         let height = clamp_dimension(rows);
         let width = clamp_dimension(columns);
-        let requested_total = i32::from(height) + i32::from(self.history_rows);
+        let requested_total = i32::from(height) + i32::from(self.configured_history_rows);
         self.total_rows = requested_total.min(MAX_COORD) as u16;
         self.viewport = TerminalDimensions { width, height };
-        self.history_rows = self.total_rows.saturating_sub(height);
     }
 }
 
