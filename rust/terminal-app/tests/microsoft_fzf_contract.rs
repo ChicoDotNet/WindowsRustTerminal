@@ -16,12 +16,7 @@ fn runs(items: &[(usize, usize)]) -> Vec<TextRun> {
         .collect()
 }
 
-fn assert_match(
-    pattern: &str,
-    text: &str,
-    expected_score: i32,
-    expected_runs: &[(usize, usize)],
-) {
+fn assert_match(pattern: &str, text: &str, expected_score: i32, expected_runs: &[(usize, usize)]) {
     let actual = match_text(text, &parse_pattern(pattern));
     if expected_score == 0 && expected_runs.is_empty() {
         assert_eq!(actual, None);
@@ -173,12 +168,7 @@ fn microsoft_terminal_app_fzf_multiple_terms_all_chars_match() {
         + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER
         + BONUS_FIRST_CHAR_MULTIPLIER * BONUS_CONSECUTIVE * 2;
 
-    assert_match(
-        "foo bar",
-        "foo bar",
-        term_score * 2,
-        &[(0, 2), (4, 6)],
-    );
+    assert_match("foo bar", "foo bar", term_score * 2, &[(0, 2), (4, 6)]);
 }
 
 #[test]
@@ -268,12 +258,7 @@ fn microsoft_terminal_app_fzf_gap_boundary_can_beat_consecutive() {
         + SCORE_GAP_EXTENSION;
 
     assert_match("oob", "foobar", consecutive_score, &[(1, 3)]);
-    assert_match(
-        "oob",
-        "out-of-bound",
-        gap_score,
-        &[(0, 0), (4, 4), (7, 7)],
-    );
+    assert_match("oob", "out-of-bound", gap_score, &[(0, 0), (4, 4), (7, 7)]);
     assert!(gap_score > consecutive_score);
 }
 
@@ -282,17 +267,11 @@ fn microsoft_terminal_app_fzf_consecutive_beats_gap_with_first_char_bonus() {
     let consecutive_score = SCORE_MATCH * 3
         + BONUS_FIRST_CHAR_MULTIPLIER * BONUS_BOUNDARY
         + BONUS_FIRST_CHAR_MULTIPLIER * BONUS_CONSECUTIVE * 2;
-    let gap_score = SCORE_MATCH * 3
-        + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER
-        + SCORE_GAP_START * 2;
+    let gap_score =
+        SCORE_MATCH * 3 + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER + SCORE_GAP_START * 2;
 
     assert_match("oob", "oobar", consecutive_score, &[(0, 2)]);
-    assert_match(
-        "oob",
-        "oaoabound",
-        gap_score,
-        &[(0, 0), (2, 2), (4, 4)],
-    );
+    assert_match("oob", "oaoabound", gap_score, &[(0, 0), (2, 2), (4, 4)]);
     assert!(consecutive_score > gap_score);
 }
 
@@ -302,21 +281,15 @@ fn microsoft_terminal_app_fzf_consecutive_beats_gap_without_bonus() {
     let gap_score = SCORE_MATCH * 3 + SCORE_GAP_START * 2;
 
     assert_match("oob", "aoobar", consecutive_score, &[(1, 3)]);
-    assert_match(
-        "oob",
-        "aoaoabound",
-        gap_score,
-        &[(1, 1), (3, 3), (5, 5)],
-    );
+    assert_match("oob", "aoaoabound", gap_score, &[(1, 1), (3, 3), (5, 5)]);
     assert!(consecutive_score > gap_score);
 }
 
 #[test]
 fn microsoft_terminal_app_fzf_gap_first_char_bonus_can_beat_consecutive() {
     let consecutive_score = SCORE_MATCH * 2 + BONUS_CONSECUTIVE;
-    let gap_score = SCORE_MATCH * 2
-        + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER
-        + SCORE_GAP_START;
+    let gap_score =
+        SCORE_MATCH * 2 + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER + SCORE_GAP_START;
 
     assert_match("ob", "aobar", consecutive_score, &[(1, 2)]);
     assert_match("ob", "oabar", gap_score, &[(0, 0), (2, 2)]);
@@ -326,9 +299,8 @@ fn microsoft_terminal_app_fzf_gap_first_char_bonus_can_beat_consecutive() {
 #[test]
 fn microsoft_terminal_app_fzf_gap_3_four_char_no_consecutive_no_longer_beats_consecutive() {
     let consecutive_score = SCORE_MATCH * 4 + BONUS_CONSECUTIVE * 3;
-    let gap_score = SCORE_MATCH * 4
-        + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER
-        + SCORE_GAP_START * 3;
+    let gap_score =
+        SCORE_MATCH * 4 + BONUS_BOUNDARY * BONUS_FIRST_CHAR_MULTIPLIER + SCORE_GAP_START * 3;
 
     assert_match("obar", "aobar", consecutive_score, &[(1, 4)]);
     assert_match(
@@ -363,12 +335,7 @@ fn microsoft_terminal_app_fzf_gap_11_three_char_one_consecutive_no_longer_beats_
         + SCORE_GAP_EXTENSION * 10;
 
     assert_match("oba", "aobar", consecutive_score, &[(1, 3)]);
-    assert_match(
-        "oba",
-        "oaaaaaaaaaaabar",
-        gap_score,
-        &[(0, 0), (12, 13)],
-    );
+    assert_match("oba", "oaaaaaaaaaaabar", gap_score, &[(0, 0), (12, 13)]);
     assert!(consecutive_score > gap_score);
 }
 
@@ -383,12 +350,7 @@ fn microsoft_terminal_app_fzf_gap_5_three_char_no_consecutive_no_longer_beats_co
         + SCORE_GAP_EXTENSION;
 
     assert_match("oba", "aobar", consecutive_score, &[(1, 3)]);
-    assert_match(
-        "oba",
-        "oaaabzzar",
-        gap_score,
-        &[(0, 0), (4, 4), (7, 7)],
-    );
+    assert_match("oba", "oaaabzzar", gap_score, &[(0, 0), (4, 4), (7, 7)]);
     assert!(consecutive_score > gap_score);
 }
 
