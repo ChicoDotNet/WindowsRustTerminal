@@ -75,6 +75,17 @@ $currentKeys = @{}
 $currentSources = @{}
 $suiteCoverage = @{}
 $bootstrapRequired = $false
+$reconciledSuites = @(
+    'textBuffer',
+    'types',
+    'til',
+    'terminalCore',
+    'host',
+    'localTerminalApp',
+    'terminalApp',
+    'unitControl',
+    'unitSettingsModel'
+)
 foreach ($suite in $expectedSuites) {
     $items = @($inventory | Where-Object suite -eq $suite)
     if ($items.Count -eq 0) {
@@ -126,7 +137,7 @@ foreach ($suite in $expectedSuites) {
             $coverage = $ledger.suites[$suite].defaultCoverage
         }
 
-        if ($suite -in @('textBuffer', 'types', 'til', 'terminalCore', 'host') -and -not $entryKeys.ContainsKey($key) -and -not $sourceRules.ContainsKey($sourceKey)) {
+        if ($suite -in $reconciledSuites -and -not $entryKeys.ContainsKey($key) -and -not $sourceRules.ContainsKey($sourceKey)) {
             throw "Reconciled-stage contract has not been deliberately classified: $key"
         }
 
