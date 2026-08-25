@@ -203,3 +203,16 @@ fn microsoft_test_focus_events_matches_focus_mode_contract() {
     assert_eq!(input.handle_focus(false), Some("\u{1b}[O".to_string()));
     assert_eq!(input.handle_focus(true), Some("\u{1b}[I".to_string()));
 }
+
+#[test]
+fn microsoft_send_c1_control_test_matches_eight_and_seven_bit_modes() {
+    let mut input = TerminalInput::new();
+
+    input.set_input_mode(terminal_input::Mode::SendC1, true);
+    assert_eq!(input.handle_key(key_down(virtual_key::HOME)), "\u{009b}H");
+    assert_eq!(input.handle_key(key_down(virtual_key::F1)), "\u{008f}P");
+
+    input.set_input_mode(terminal_input::Mode::SendC1, false);
+    assert_eq!(input.handle_key(key_down(virtual_key::HOME)), "\u{1b}[H");
+    assert_eq!(input.handle_key(key_down(virtual_key::F1)), "\u{1b}OP");
+}
