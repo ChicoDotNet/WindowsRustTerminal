@@ -264,7 +264,8 @@ fn microsoft_adapter_request_user_preference_charset_preserves_decrqupss_boundar
 
 #[test]
 fn microsoft_adapter_macro_invokes_preserve_ids_bounds_and_depth_core() {
-    let engine = OutputStateMachineEngine::new(AdapterDispatch::new(PageGeometry::new(20, 100, 29)));
+    let engine =
+        OutputStateMachineEngine::new(AdapterDispatch::new(PageGeometry::new(20, 100, 29)));
     let mut machine = StateMachine::new(engine);
     machine.process_str("\u{1b}P0;0;0!zMacro 0\u{1b}\\");
     machine.process_str("\u{1b}P2;0;0!zMacro 2\u{1b}\\");
@@ -275,7 +276,10 @@ fn microsoft_adapter_macro_invokes_preserve_ids_bounds_and_depth_core() {
         let prepared = buffer
             .prepare_invoke(id, InvocationContext::default())
             .expect("Microsoft macro id must be invokable");
-        assert_eq!(prepared.sequence(), expected.encode_utf16().collect::<Vec<_>>());
+        assert_eq!(
+            prepared.sequence(),
+            expected.encode_utf16().collect::<Vec<_>>()
+        );
     }
     assert!(
         buffer
