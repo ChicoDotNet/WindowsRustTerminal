@@ -188,8 +188,9 @@
       "suite": "adapter",
       "source": "kittyKeyboardProtocol.cpp",
       "method": "IgnoreDeadKey",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_kitty_ignore_dead_key_release_contract"]
+      "coverage": "Partial",
+      "rustWitnesses": ["microsoft_kitty_ignore_dead_key_release_contract"],
+      "notes": "The Rust core exactly preserves the no-output result when KeyboardMapper reports the Windows dead-key translation as non-representable. Full equivalence remains platform-bound until the Windows ToUnicodeEx KeyboardMapper adapter is present."
     }
   ]
 }
