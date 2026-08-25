@@ -1,4 +1,4 @@
-//! Portable aggregate policy for `TerminalCore` sizing and history capacity.
+//! Portable aggregate policy for `TerminalCore` sizing, history and scrolling.
 //!
 //! Microsoft Terminal clamps visible dimensions and total backing rows to the
 //! signed 16-bit coordinate domain used by the native product. Keeping that
@@ -14,10 +14,25 @@ pub struct TerminalDimensions {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ScrollBarNotification {
+    pub viewport_top: u16,
+    pub viewport_height: u16,
+    pub buffer_height: u16,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TerminalScrollUpdate {
+    pub scroll_bar: Option<ScrollBarNotification>,
+    pub renderer_delta: Option<(i16, i16)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TerminalLayout {
     viewport: TerminalDimensions,
     configured_history_rows: u16,
     total_rows: u16,
+    emitted_rows: u32,
+    always_notify_on_buffer_rotation: bool,
 }
 
 impl TerminalLayout {
@@ -30,6 +45,8 @@ impl TerminalLayout {
             viewport: TerminalDimensions { width, height },
             configured_history_rows,
             total_rows: height + configured_history_rows,
+            emitted_rows: 0,
+            always_notify_on_buffer_rotation: false,
         }
     }
 
@@ -46,6 +63,50 @@ impl TerminalLayout {
     #[must_use]
     pub const fn configured_history_rows(&self) -> u16 {
         self.configured_history_rows
+    }
+
+    pub const fn set_always_notify_on_buffer_rotation(&mut self, value: bool) {
+        self.always_notify_on_buffer_rotation = value;
+    }
+
+    /// Records one emitted line and returns the portable side effects that the
+    /// native shell must forward to the scrollbar callback and renderer.
+    ///
+    /// Once the viewport starts scrolling, its top advances until history is
+    /// saturated. After the backing buffer starts circling, every new line
+    /// requests renderer scroll `(0, -1)`; scrollbar callbacks continue only
+    /// when the host explicitly requested notifications on buffer rotation.
+    #[must_use]
+    pub fn line_feed(&mut self) -> TerminalScrollUpdate {
+        let current_row = self.emitted_rows;
+        self.emitted_rows = self.emitted_rows.saturating_add(1);
+
+        let viewport_height = u32::from(self.viewport.height);
+        let total_rows = u32::from(self.total_rows);
+        let scrolled = current_row >= viewport_height.saturating_sub(1);
+        let circled_buffer = current_row >= total_rows.saturating_sub(1);
+        let notify_scroll_bar = (scrolled && !circled_buffer)
+            || (circled_buffer && self.always_notify_on_buffer_rotation);
+
+        let scroll_bar = notify_scroll_bar.then(|| {
+            let unclamped_top = current_row
+                .saturating_add(2)
+                .saturating_sub(viewport_height);
+            let top = unclamped_top.min(u32::from(self.configured_history_rows));
+            let top = u16::try_from(top).expect("history policy keeps viewport top in u16 range");
+            ScrollBarNotification {
+                viewport_top: top,
+                viewport_height: self.viewport.height,
+                buffer_height: top + self.viewport.height,
+            }
+        });
+
+        let renderer_delta = (scrolled && circled_buffer).then_some((0, -1));
+
+        TerminalScrollUpdate {
+            scroll_bar,
+            renderer_delta,
+        }
     }
 
     /// Applies the same user-resize capacity rule as `TerminalCore`: viewport
@@ -138,5 +199,44 @@ mod tests {
 
         terminal.user_resize(COLS, ROWS);
         assert_eq!(terminal.total_rows(), expected_total);
+    }
+
+    #[test]
+    fn microsoft_scroll_test_notify_scrolling_matches_source_contract() {
+        const VIEW_HEIGHT: i32 = 32;
+        const HISTORY: i32 = 9_001;
+
+        for notify_on_circling in [false, true] {
+            let mut terminal = TerminalLayout::from_settings(HISTORY, VIEW_HEIGHT, 80);
+            terminal.set_always_notify_on_buffer_rotation(notify_on_circling);
+            let total_rows = u32::from(terminal.total_rows());
+
+            for current_row in 0..total_rows * 2 {
+                let update = terminal.line_feed();
+                let scrolled = current_row >= 31;
+                let circled_buffer = current_row >= total_rows - 1;
+                let expect_scroll_bar =
+                    (scrolled && !circled_buffer) || (circled_buffer && notify_on_circling);
+
+                assert_eq!(update.scroll_bar.is_some(), expect_scroll_bar);
+                assert_eq!(
+                    update.renderer_delta,
+                    (scrolled && circled_buffer).then_some((0, -1))
+                );
+
+                if let Some(notification) = update.scroll_bar {
+                    let expected_top = current_row
+                        .saturating_add(2)
+                        .saturating_sub(32)
+                        .min(9_001);
+                    assert_eq!(u32::from(notification.viewport_top), expected_top);
+                    assert_eq!(notification.viewport_height, 32);
+                    assert_eq!(
+                        notification.buffer_height,
+                        notification.viewport_top + notification.viewport_height
+                    );
+                }
+            }
+        }
     }
 }

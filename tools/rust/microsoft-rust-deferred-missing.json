@@ -1,9 +1,8 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 419,
+  "expectedMissingTotal": 418,
   "sources": [
-    {"suite":"terminalCore","source":"ScrollTest.cpp","expectedMissing":1,"reason":"Scroll callbacks, buffer-circling notification policy and renderer invalidation remain aggregate Terminal integration backlog."},
     {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
     {"suite":"host","source":"ClipboardTests.cpp","expectedMissing":2,"reason":"Only the two CopyRequest/GetPlainText extraction contracts remain unported; keyboard/platform methods are separately Platform-only."},
