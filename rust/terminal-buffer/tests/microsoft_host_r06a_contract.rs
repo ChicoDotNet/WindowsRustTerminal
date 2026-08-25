@@ -1,6 +1,4 @@
-use terminal_buffer::output_cell::{
-    GlyphWidthDetector, OutputCellIterator, TextAttributeBehavior,
-};
+use terminal_buffer::output_cell::{GlyphWidthDetector, OutputCellIterator, TextAttributeBehavior};
 use terminal_buffer::row::DbcsAttribute;
 use terminal_buffer::text_attribute::{LegacyColorDefaults, TextAttribute};
 
@@ -23,10 +21,15 @@ fn microsoft_host_output_cell_string_and_distance_standard_match() {
     let mut iterator = OutputCellIterator::text_only(&text, &detector);
 
     for (input_position, expected) in text.iter().copied().enumerate() {
-        let cell = iterator.next().expect("one output cell per narrow code unit");
+        let cell = iterator
+            .next()
+            .expect("one output cell per narrow code unit");
         assert_eq!(cell.chars(), &[expected]);
         assert_eq!(cell.dbcs_attribute(), DbcsAttribute::Single);
-        assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Current);
+        assert_eq!(
+            cell.text_attribute_behavior(),
+            TextAttributeBehavior::Current
+        );
         assert_eq!(iterator.position(), input_position + 1);
         assert_eq!(iterator.cell_distance(), input_position + 1);
     }
@@ -65,15 +68,18 @@ fn microsoft_host_output_cell_string_with_color_is_stored() {
     let detector = MicrosoftWidthDetector;
     let text = utf16("The quick brown fox jumps over the lazy dog.");
     let attribute = TextAttribute::from_legacy(0x000a, LegacyColorDefaults::default());
-    let cells = OutputCellIterator::text_with_attribute(&text, attribute, &detector)
-        .collect::<Vec<_>>();
+    let cells =
+        OutputCellIterator::text_with_attribute(&text, attribute, &detector).collect::<Vec<_>>();
 
     assert_eq!(cells.len(), text.len());
     for (cell, expected) in cells.iter().zip(text.iter()) {
         assert_eq!(cell.chars(), &[*expected]);
         assert_eq!(cell.dbcs_attribute(), DbcsAttribute::Single);
         assert_eq!(cell.text_attribute(), attribute);
-        assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+        assert_eq!(
+            cell.text_attribute_behavior(),
+            TextAttributeBehavior::Stored
+        );
     }
 }
 
@@ -82,8 +88,8 @@ fn microsoft_host_output_cell_full_width_string_with_color_is_stored() {
     let detector = MicrosoftWidthDetector;
     let text = [0x30a2, 0x30a3, 0x30a4, 0x30a5, 0x30a6];
     let attribute = TextAttribute::from_legacy(0x000a, LegacyColorDefaults::default());
-    let cells = OutputCellIterator::text_with_attribute(&text, attribute, &detector)
-        .collect::<Vec<_>>();
+    let cells =
+        OutputCellIterator::text_with_attribute(&text, attribute, &detector).collect::<Vec<_>>();
 
     assert_eq!(cells.len(), text.len() * 2);
     for (index, expected) in text.iter().copied().enumerate() {
@@ -92,11 +98,17 @@ fn microsoft_host_output_cell_full_width_string_with_color_is_stored() {
         assert_eq!(leading.chars(), &[expected]);
         assert_eq!(leading.dbcs_attribute(), DbcsAttribute::Leading);
         assert_eq!(leading.text_attribute(), attribute);
-        assert_eq!(leading.text_attribute_behavior(), TextAttributeBehavior::Stored);
+        assert_eq!(
+            leading.text_attribute_behavior(),
+            TextAttributeBehavior::Stored
+        );
         assert_eq!(trailing.chars(), &[expected]);
         assert_eq!(trailing.dbcs_attribute(), DbcsAttribute::Trailing);
         assert_eq!(trailing.text_attribute(), attribute);
-        assert_eq!(trailing.text_attribute_behavior(), TextAttributeBehavior::Stored);
+        assert_eq!(
+            trailing.text_attribute_behavior(),
+            TextAttributeBehavior::Stored
+        );
     }
 }
 
