@@ -75,6 +75,9 @@ jobs:
       - name: Validate global Microsoft source census
         shell: pwsh
         run: ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1
+      - name: Validate global Rust witnesses
+        shell: pwsh
+        run: ./tools/rust/Test-RustGlobalWitnesses.ps1
       - name: Validate R06-B server seams
         shell: pwsh
         run: ./tools/rust/Test-RustServerSourceMap.ps1
