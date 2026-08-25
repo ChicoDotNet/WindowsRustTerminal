@@ -42,9 +42,9 @@ fn microsoft_adapter_graphics_single_preserves_single_sgr_parameter_boundary_act
     // Exact data source from AdapterTest::GraphicsSingleTests. This witness deliberately
     // proves the complete parser/adapter boundary matrix, not TextAttribute application.
     for parameter in [
-        0, 1, 2, 4, 7, 8, 9, 21, 22, 24, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39,
-        40, 41, 42, 43, 44, 45, 46, 47, 49, 53, 55, 90, 91, 92, 93, 94, 95, 96, 97, 100,
-        101, 102, 103, 104, 105, 106, 107,
+        0, 1, 2, 4, 7, 8, 9, 21, 22, 24, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 39, 40, 41,
+        42, 43, 44, 45, 46, 47, 49, 53, 55, 90, 91, 92, 93, 94, 95, 96, 97, 100, 101, 102, 103,
+        104, 105, 106, 107,
     ] {
         assert_deferred(OutputAction::SetGraphicsRendition(Parameters::from_values(
             vec![Some(parameter)],
