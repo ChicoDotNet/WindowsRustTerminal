@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "description": "R06-B Interactivity Win32 reconciliation. UiaTextRangeTests exercises the retained Windows UI Automation COM provider boundary, so its complete Microsoft source surface remains deliberately Platform-only rather than being imitated in portable Rust.",
+  "expectedCoverage": {
+    "interactivityWin32": { "Platform-only": 19 }
+  },
+  "sourceRules": [
+    {
+      "suite": "interactivityWin32",
+      "source": "UiaTextRangeTests.cpp",
+      "coverage": "Platform-only",
+      "rustWitnesses": [],
+      "notes": "All 19 source methods exercise Microsoft::Console::Interactivity::Win32::UiaTextRange through Windows UI Automation/COM interfaces, WRL providers, TextPatternRangeEndpoint/TextUnit values, VARIANT attributes, scrolling through IRenderData, and the native TextBuffer/provider bridge. Migration policy retains native WinRT/COM/Win32 boundaries explicitly; no portable Rust shadow implementation is created merely to reduce ledger debt."
+    }
+  ]
+}
