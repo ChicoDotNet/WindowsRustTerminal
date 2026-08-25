@@ -1,9 +1,10 @@
 {
-  "schemaVersion": 1,
-  "description": "R06-B audited server seams. This is not a synthetic Microsoft TAEF suite: it records which deterministic src/server behavior has a safe Rust owner and which native server/device boundaries intentionally remain C++.",
+  "schemaVersion": 2,
+  "description": "R06-B audited server seams. H07 pins each audited C++ source blob so any upstream semantic change forces an explicit ownership re-audit instead of silently inheriting the previous split/native decision.",
   "entries": [
     {
       "sourcePath": "src/server/ApiSorter.cpp",
+      "sourceBlobSha": "7e20b290f59dc33811ffc21bf38c01128289236a",
       "ownership": "split",
       "rustPath": "rust/terminal-host/src/api_sorter.rs",
       "rustWitnesses": [
@@ -18,6 +19,7 @@
     },
     {
       "sourcePath": "src/server/ApiMessage.cpp",
+      "sourceBlobSha": "abb2a3edd3f05e7358ecc65de06c81829ae274f0",
       "ownership": "split",
       "rustPath": "rust/terminal-host/src/api_message_buffers.rs",
       "rustWitnesses": [
@@ -31,6 +33,7 @@
     },
     {
       "sourcePath": "src/server/ConsoleShimPolicy.cpp",
+      "sourceBlobSha": "5ca506bd9a7931bb34bbc1af366c50ab966285e5",
       "ownership": "split",
       "rustPath": "rust/terminal-host/src/console_shim_policy.rs",
       "rustWitnesses": [
@@ -44,6 +47,7 @@
     },
     {
       "sourcePath": "src/server/ApiDispatchers.cpp",
+      "sourceBlobSha": "fc7d83d8cf2bc4e02df13c0e828b92b94bc9f213",
       "ownership": "native",
       "rustPath": null,
       "rustWitnesses": [],
@@ -51,6 +55,7 @@
     },
     {
       "sourcePath": "src/server/ApiDispatchersInternal.cpp",
+      "sourceBlobSha": "cc4e7be3cdb1e06afcfc2025de98cb14d937bdc9",
       "ownership": "native",
       "rustPath": null,
       "rustWitnesses": [],
@@ -58,6 +63,7 @@
     },
     {
       "sourcePath": "src/server/ConDrvDeviceComm.cpp",
+      "sourceBlobSha": "3d9ddba52b1c03c128a12e486af3a36a7d65038a",
       "ownership": "native",
       "rustPath": null,
       "rustWitnesses": [],
