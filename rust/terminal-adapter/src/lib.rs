@@ -12,5 +12,6 @@ pub mod macro_buffer;
 pub mod page_manager;
 pub mod page_storage;
 pub mod presentation_state;
+pub mod response_dispatch;
 pub mod sixel;
 pub mod vt_response;
