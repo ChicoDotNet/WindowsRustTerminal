@@ -1,3 +1,9 @@
+use crate::render_settings_policy::{RenderMode, RenderSettingsPolicy};
+use terminal_buffer::{
+    text_attribute::TextAttribute,
+    text_color::{Rgb, TABLE_SIZE},
+};
+
 const HALF_COMPONENT_MASK: u32 = 0x007F_7F7F;
 const OPAQUE_ALPHA: u32 = 0xFF00_0000;
 
@@ -75,6 +81,12 @@ pub struct AttributeColors {
     pub background: u32,
 }
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct ResolvedAttributeColors {
+    pub foreground: Rgb,
+    pub background: Rgb,
+}
+
 #[must_use]
 pub fn apply_attribute_effects(
     mut foreground: u32,
@@ -94,6 +106,50 @@ pub fn apply_attribute_effects(
     }
 
     AttributeColors {
+        foreground,
+        background,
+    }
+}
+
+/// Resolves the portable `RenderSettings::GetAttributeColors` path.
+///
+/// Color-fix modes that intentionally adjust otherwise indistinguishable text
+/// remain outside this owner. The baseline color-table lookup, intense-as-bright,
+/// blink/faint, reverse-video, screen-reverse, and invisible semantics are all
+/// represented here.
+#[must_use]
+pub fn resolve_text_attribute_colors(
+    attribute: TextAttribute,
+    color_table: &[Rgb; TABLE_SIZE],
+    default_foreground_index: usize,
+    default_background_index: usize,
+    settings: RenderSettingsPolicy,
+) -> ResolvedAttributeColors {
+    let brighten_foreground =
+        attribute.is_intense() && settings.mode(RenderMode::IntenseIsBright);
+    let mut foreground = attribute.foreground().resolve(
+        color_table,
+        default_foreground_index,
+        brighten_foreground,
+    );
+    let mut background =
+        attribute
+            .background()
+            .resolve(color_table, default_background_index, false);
+
+    if attribute.is_faint() || (settings.blink_should_be_faint() && attribute.is_blinking()) {
+        foreground = Rgb::new(foreground.r >> 1, foreground.g >> 1, foreground.b >> 1);
+    }
+
+    if attribute.is_reverse_video() ^ settings.mode(RenderMode::ScreenReversed) {
+        core::mem::swap(&mut foreground, &mut background);
+    }
+
+    if attribute.is_invisible() {
+        foreground = background;
+    }
+
+    ResolvedAttributeColors {
         foreground,
         background,
     }
