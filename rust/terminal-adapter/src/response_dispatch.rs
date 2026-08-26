@@ -94,6 +94,7 @@ impl AdaptDispatchResponseState {
                 self.responses
                     .cursor_position_report(cursor.x, cursor.y, viewport_top)
             }
+            (true, 5) => self.responses.return_response("\u{1b}[?0n"),
             (true, 6) => {
                 let cursor = self.presentation.core().cursor();
                 let viewport_top = self.presentation.core().geometry().top;
@@ -104,6 +105,13 @@ impl AdaptDispatchResponseState {
                     id.unwrap_or(1),
                 )
             }
+            (true, 15) => self.responses.return_response("\u{1b}[?13n"),
+            (true, 25) => self.responses.return_response("\u{1b}[?20n"),
+            (true, 26) => self.responses.return_response("\u{1b}[?27;1;0;0n"),
+            (true, 53) => self.responses.return_response("\u{1b}[?53n"),
+            (true, 55) => self.responses.return_response("\u{1b}[?57;0n"),
+            (true, 75) => self.responses.return_response("\u{1b}[?70n"),
+            (true, 85) => self.responses.return_response("\u{1b}[?83n"),
             _ => false,
         }
     }
@@ -395,6 +403,44 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_private_status_reports_match_all_static_source_vectors() {
+        let cases = [
+            (5, "\u{1b}[?0n"),
+            (15, "\u{1b}[?13n"),
+            (25, "\u{1b}[?20n"),
+            (26, "\u{1b}[?27;1;0;0n"),
+            (53, "\u{1b}[?53n"),
+            (55, "\u{1b}[?57;0n"),
+            (75, "\u{1b}[?70n"),
+            (85, "\u{1b}[?83n"),
+        ];
+
+        for (status, expected) in cases {
+            let mut state = state();
+            state.dispatch(OutputAction::DeviceStatusReport {
+                private: true,
+                status,
+                id: None,
+            });
+            assert_eq!(state.response(), expected, "private DSR status {status}");
+            assert!(state.presentation().core().deferred_actions().is_empty());
+        }
+    }
+
+    #[test]
+    fn microsoft_private_status_sink_failure_remains_deferred() {
+        let mut state = state();
+        state.set_response_writable(false);
+        state.dispatch(OutputAction::DeviceStatusReport {
+            private: true,
+            status: 15,
+            id: None,
+        });
+        assert!(state.response().is_empty());
+        assert_eq!(state.presentation().core().deferred_actions().len(), 1);
+    }
+
+    #[test]
     fn microsoft_primary_device_attributes_uses_live_clipboard_capability() {
         let mut state = state();
         state.dispatch(OutputAction::DeviceAttributes(
@@ -638,7 +684,7 @@ mod tests {
         let mut state = state();
         state.dispatch(OutputAction::DeviceStatusReport {
             private: true,
-            status: 15,
+            status: 9999,
             id: None,
         });
         state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Vt52));
