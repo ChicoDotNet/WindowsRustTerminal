@@ -114,6 +114,17 @@ impl VtResponseEngine {
         self.push(&format!("\u{1b}[{height};{width};{left};1;{page}\"w"))
     }
 
+    /// Serializes a DECRQM/DECRPM mode report for a mode owned by the Rust
+    /// adapter. DEC reports `1` for set and `2` for reset. Recognition is
+    /// deliberately decided by the caller so unsupported modes remain at the
+    /// external boundary rather than being reported as implemented.
+    #[must_use]
+    pub fn mode_report(&mut self, private: bool, mode: i32, enabled: bool) -> bool {
+        let state = if enabled { 1 } else { 2 };
+        let private_prefix = if private { "?" } else { "" };
+        self.push(&format!("\u{1b}[{private_prefix}{mode};{state}$y"))
+    }
+
     fn push(&mut self, response: &str) -> bool {
         if !self.writable {
             return false;
@@ -203,6 +214,19 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_decrqm_serializes_standard_and_private_mode_states() {
+        let mut responses = VtResponseEngine::default();
+        assert!(responses.mode_report(false, 4, true));
+        assert_eq!(responses.response(), "\u{1b}[4;1$y");
+        responses.clear();
+        assert!(responses.mode_report(false, 4, false));
+        assert_eq!(responses.response(), "\u{1b}[4;2$y");
+        responses.clear();
+        assert!(responses.mode_report(true, 25, true));
+        assert_eq!(responses.response(), "\u{1b}[?25;1$y");
+    }
+
+    #[test]
     fn rejected_response_write_is_reported_without_mutating_stream() {
         let mut responses = VtResponseEngine::default();
         responses.set_writable(false);
@@ -211,6 +235,7 @@ mod tests {
         assert!(!responses.tertiary_device_attributes());
         assert!(!responses.terminal_parameters(0));
         assert!(!responses.displayed_extent(24, 80, 0, 1));
+        assert!(!responses.mode_report(true, 25, true));
         assert!(responses.response().is_empty());
     }
 }
