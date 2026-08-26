@@ -4,13 +4,23 @@
 //! response serializer while retaining the existing presentation-state owner
 //! for cursor, modes, and rendition semantics.
 
-use terminal_parser::output_engine::{DeviceAttributesKind, OutputAction, TermDispatch};
+use terminal_parser::{
+    output_engine::{DcsAction, DeviceAttributesKind, OutputAction, TermDispatch},
+    state_machine::Parameters,
+};
 
 use crate::{
-    adapt_dispatch::PageGeometry, presentation_state::AdaptDispatchPresentationState,
+    adapt_dispatch::PageGeometry,
+    decrqss::{DecrqssState, serialize_request_setting},
+    decrqss_color_alias::{ColorAliasIndices, serialize_decac},
+    decrqss_cursor::{
+        CursorShape, CursorStyleState, serialize_character_protection, serialize_cursor_style,
+    },
+    presentation_state::AdaptDispatchPresentationState,
     vt_response::VtResponseEngine,
 };
 
+const ESC: u16 = 0x1b;
 const PERMANENT_GRAPHEME_CLUSTER_MODE: i32 = 2027;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -21,6 +31,9 @@ pub struct AdaptDispatchResponseState {
     viewport_left: i32,
     active_page: i32,
     visible_page: i32,
+    cursor_style: CursorStyleState,
+    color_aliases: ColorAliasIndices,
+    request_setting_buffer: Option<String>,
 }
 
 impl AdaptDispatchResponseState {
@@ -39,6 +52,9 @@ impl AdaptDispatchResponseState {
             viewport_left: 0,
             active_page: 1,
             visible_page: 1,
+            cursor_style: CursorStyleState::default(),
+            color_aliases: ColorAliasIndices::default(),
+            request_setting_buffer: None,
         }
     }
 
@@ -64,6 +80,9 @@ impl AdaptDispatchResponseState {
     }
     pub fn set_viewport_left(&mut self, left: i32) {
         self.viewport_left = left.max(0);
+    }
+    pub const fn set_color_alias_indices(&mut self, aliases: ColorAliasIndices) {
+        self.color_aliases = aliases;
     }
 
     fn device_status_report(&mut self, private: bool, status: i32, id: Option<i32>) -> bool {
@@ -129,6 +148,79 @@ impl AdaptDispatchResponseState {
             self.visible_page = self.active_page;
         }
     }
+
+    fn set_cursor_style(&mut self, parameter: i32) {
+        self.cursor_style = match parameter {
+            1 => CursorStyleState {
+                shape: CursorShape::Block,
+                blinking: true,
+            },
+            2 => CursorStyleState {
+                shape: CursorShape::Block,
+                blinking: false,
+            },
+            3 => CursorStyleState {
+                shape: CursorShape::Underline,
+                blinking: true,
+            },
+            4 => CursorStyleState {
+                shape: CursorShape::Underline,
+                blinking: false,
+            },
+            5 => CursorStyleState {
+                shape: CursorShape::Bar,
+                blinking: true,
+            },
+            6 => CursorStyleState {
+                shape: CursorShape::Bar,
+                blinking: false,
+            },
+            _ => CursorStyleState::default(),
+        };
+    }
+
+    fn set_character_protection(&mut self, parameters: &Parameters) {
+        let protected = parameters.at(0).unwrap_or(0) == 1;
+        let mut attributes = self.presentation.current_attributes();
+        attributes.set_protected(protected);
+        self.presentation.set_current_attributes(attributes);
+    }
+
+    fn request_setting_response(&self, setting_id: &str) -> String {
+        let core = self.presentation.core();
+        let state = DecrqssState {
+            geometry: core.geometry(),
+            margins: core.margins(),
+            attributes: self.presentation.current_attributes(),
+        };
+
+        match setting_id {
+            " q" => serialize_cursor_style(self.cursor_style),
+            "\"q" => serialize_character_protection(state.attributes.is_protected()),
+            _ => {
+                if let Some(item) = setting_id.strip_suffix(",|") {
+                    let item = if item.is_empty() {
+                        None
+                    } else if let Ok(item) = item.parse::<u16>() {
+                        Some(item)
+                    } else {
+                        return serialize_request_setting(setting_id, state);
+                    };
+                    serialize_decac(item, self.color_aliases)
+                } else {
+                    serialize_request_setting(setting_id, state)
+                }
+            }
+        }
+    }
+
+    fn finish_request_setting(&mut self) -> bool {
+        let Some(setting_id) = self.request_setting_buffer.take() else {
+            return false;
+        };
+        let response = self.request_setting_response(&setting_id);
+        self.responses.return_response(&response)
+    }
 }
 
 impl TermDispatch for AdaptDispatchResponseState {
@@ -177,6 +269,14 @@ impl TermDispatch for AdaptDispatchResponseState {
                 self.presentation
                     .dispatch(OutputAction::PagePositionAbsolute(page));
             }
+            OutputAction::SetCursorStyle(parameter) => {
+                self.set_cursor_style(parameter);
+                self.presentation
+                    .dispatch(OutputAction::SetCursorStyle(parameter));
+            }
+            OutputAction::SetCharacterProtectionAttribute(parameters) => {
+                self.set_character_protection(&parameters);
+            }
             OutputAction::SetMode {
                 private: true,
                 mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
@@ -200,12 +300,43 @@ impl TermDispatch for AdaptDispatchResponseState {
             other => self.presentation.dispatch(other),
         }
     }
+
+    fn begin_dcs(&mut self, action: DcsAction) -> bool {
+        if action == DcsAction::RequestSetting {
+            self.request_setting_buffer = Some(String::new());
+            true
+        } else {
+            self.presentation.begin_dcs(action)
+        }
+    }
+
+    fn dcs_put(&mut self, code_unit: u16) -> bool {
+        let Some(buffer) = self.request_setting_buffer.as_mut() else {
+            return self.presentation.dcs_put(code_unit);
+        };
+
+        if code_unit == ESC {
+            return self.finish_request_setting();
+        }
+
+        if code_unit > 0x7f || buffer.len() >= 64 {
+            self.request_setting_buffer = None;
+            return false;
+        }
+
+        buffer.push(char::from(u8::try_from(code_unit).unwrap_or_default()));
+        true
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::adapt_dispatch::Point;
+    use crate::{adapt_dispatch::Point, decrqss_color_alias::ColorAliasIndices};
+    use terminal_parser::{
+        output_engine::OutputStateMachineEngine,
+        state_machine::StateMachine,
+    };
 
     fn state() -> AdaptDispatchResponseState {
         let mut state = AdaptDispatchResponseState::new(PageGeometry::new(20, 100, 29));
@@ -405,6 +536,83 @@ mod tests {
             mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
         });
         assert_eq!(state.response(), "\u{1b}[?2027;3$y");
+    }
+
+    #[test]
+    fn microsoft_request_settings_dcs_flows_parser_to_live_adapter_state() {
+        let mut dispatch = AdaptDispatchResponseState::new(PageGeometry::new(0, 100, 25));
+        dispatch.set_color_alias_indices(ColorAliasIndices {
+            default_foreground: 3,
+            default_background: 5,
+            frame_foreground: 4,
+            frame_background: 6,
+        });
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("\u{1b}[5;10r\u{1b}P$q r");
+        machine.process_str("\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P0$r\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}P$q r\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P0$r\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}P$qr\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r5;10r\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}[1;4;7m\u{1b}P$qm\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r0;1;4;7m\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}[4 q\u{1b}P$q q\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r4 q\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}[1\"q\u{1b}P$q\"q\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r1\"q\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}P$q,|\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r1;3;5,|\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}P$q2,|\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1$r2;4;6,|\u{1b}\\"
+        );
+    }
+
+    #[test]
+    fn decrqss_sink_failure_terminates_the_dcs_without_output() {
+        let mut dispatch = AdaptDispatchResponseState::new(PageGeometry::new(0, 100, 25));
+        dispatch.set_response_writable(false);
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+        machine.process_str("\u{1b}P$qm\u{1b}\\");
+        assert!(machine.engine().dispatch().response().is_empty());
     }
 
     #[test]
