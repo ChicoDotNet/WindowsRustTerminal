@@ -94,11 +94,11 @@ impl AdaptDispatchPresentationState {
     fn underline_style_from_bits(bits: u16) -> UnderlineStyle {
         match bits {
             0 => UnderlineStyle::None,
-            1 => UnderlineStyle::Single,
             2 => UnderlineStyle::Double,
             3 => UnderlineStyle::Curly,
             4 => UnderlineStyle::Dotted,
-            _ => UnderlineStyle::Dashed,
+            5 => UnderlineStyle::Dashed,
+            _ => UnderlineStyle::Single,
         }
     }
 
@@ -192,7 +192,11 @@ impl AdaptDispatchPresentationState {
     }
 
     fn push_graphics_rendition(&mut self, parameters: Parameters) {
-        let options: Vec<_> = parameters.values().iter().map(|value| value.unwrap_or(0)).collect();
+        let options: Vec<_> = parameters
+            .values()
+            .iter()
+            .map(|value| value.unwrap_or(0))
+            .collect();
         let saves_all = options.is_empty() || options.contains(&0);
         if saves_all {
             self.rendition_stack
@@ -211,11 +215,13 @@ impl AdaptDispatchPresentationState {
                 1 => self.current_attributes.set_intense(saved.is_intense()),
                 2 => self.current_attributes.set_faint(saved.is_faint()),
                 3 => self.current_attributes.set_italic(saved.is_italic()),
-                4 => self.current_attributes.set_underline_style(Self::restore_underline_bit(
-                    self.current_attributes.underline_style(),
-                    saved.underline_style(),
-                    0b001,
-                )),
+                4 => self
+                    .current_attributes
+                    .set_underline_style(Self::restore_underline_bit(
+                        self.current_attributes.underline_style(),
+                        saved.underline_style(),
+                        0b001,
+                    )),
                 5 => self.current_attributes.set_blinking(saved.is_blinking()),
                 7 => self
                     .current_attributes
@@ -224,11 +230,13 @@ impl AdaptDispatchPresentationState {
                 9 => self
                     .current_attributes
                     .set_crossed_out(saved.is_crossed_out()),
-                21 => self.current_attributes.set_underline_style(Self::restore_underline_bit(
-                    self.current_attributes.underline_style(),
-                    saved.underline_style(),
-                    0b010,
-                )),
+                21 => self
+                    .current_attributes
+                    .set_underline_style(Self::restore_underline_bit(
+                        self.current_attributes.underline_style(),
+                        saved.underline_style(),
+                        0b010,
+                    )),
                 30 => self.current_attributes.set_foreground(saved.foreground()),
                 31 => self.current_attributes.set_background(saved.background()),
                 _ => {}
@@ -391,11 +399,9 @@ mod tests {
         saved.set_intense(true);
         saved.set_background(TextColor::index16(TextColor::DARK_BLUE));
         state.set_current_attributes(saved);
-        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![
-            Some(1),
-            Some(31),
-            Some(21),
-        ])));
+        state.dispatch(OutputAction::PushGraphicsRendition(
+            Parameters::from_values(vec![Some(1), Some(31), Some(21)]),
+        ));
 
         let mut changed = saved;
         changed.set_intense(false);
@@ -417,27 +423,42 @@ mod tests {
         let mut state = AdaptDispatchPresentationState::new(PageGeometry::new(20, 100, 29));
 
         state.set_current_attributes(TextAttribute::default());
-        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+        state.dispatch(OutputAction::PushGraphicsRendition(
+            Parameters::from_values(vec![Some(4)]),
+        ));
         let mut single = TextAttribute::default();
         single.set_underline_style(UnderlineStyle::Single);
         state.set_current_attributes(single);
         state.dispatch(OutputAction::PopGraphicsRendition);
-        assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::None);
+        assert_eq!(
+            state.current_attributes().underline_style(),
+            UnderlineStyle::None
+        );
 
         state.set_current_attributes(TextAttribute::default());
-        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+        state.dispatch(OutputAction::PushGraphicsRendition(
+            Parameters::from_values(vec![Some(4)]),
+        ));
         let mut double = TextAttribute::default();
         double.set_underline_style(UnderlineStyle::Double);
         state.set_current_attributes(double);
         state.dispatch(OutputAction::PopGraphicsRendition);
-        assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Double);
+        assert_eq!(
+            state.current_attributes().underline_style(),
+            UnderlineStyle::Double
+        );
 
         let mut curly = TextAttribute::default();
         curly.set_underline_style(UnderlineStyle::Curly);
         state.set_current_attributes(curly);
-        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+        state.dispatch(OutputAction::PushGraphicsRendition(
+            Parameters::from_values(vec![Some(4)]),
+        ));
         state.set_current_attributes(double);
         state.dispatch(OutputAction::PopGraphicsRendition);
-        assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Curly);
+        assert_eq!(
+            state.current_attributes().underline_style(),
+            UnderlineStyle::Curly
+        );
     }
 }
