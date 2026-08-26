@@ -99,6 +99,21 @@ impl VtResponseEngine {
         self.push(&format!("\u{1b}[{response_permission};1;1;128;128;1;0x"))
     }
 
+    #[must_use]
+    pub fn displayed_extent(
+        &mut self,
+        height: i32,
+        width: i32,
+        viewport_left: i32,
+        page: i32,
+    ) -> bool {
+        let height = height.max(1);
+        let width = width.max(1);
+        let left = viewport_left.max(0).saturating_add(1);
+        let page = page.max(1);
+        self.push(&format!("\u{1b}[{height};{width};{left};1;{page}\"w"))
+    }
+
     fn push(&mut self, response: &str) -> bool {
         if !self.writable {
             return false;
@@ -178,6 +193,16 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_displayed_extent_serializes_viewport_geometry_and_page() {
+        let mut responses = VtResponseEngine::default();
+        assert!(responses.displayed_extent(24, 80, 0, 1));
+        assert_eq!(responses.response(), "\u{1b}[24;80;1;1;1\"w");
+        responses.clear();
+        assert!(responses.displayed_extent(24, 80, 5, 3));
+        assert_eq!(responses.response(), "\u{1b}[24;80;6;1;3\"w");
+    }
+
+    #[test]
     fn rejected_response_write_is_reported_without_mutating_stream() {
         let mut responses = VtResponseEngine::default();
         responses.set_writable(false);
@@ -185,6 +210,7 @@ mod tests {
         assert!(!responses.secondary_device_attributes());
         assert!(!responses.tertiary_device_attributes());
         assert!(!responses.terminal_parameters(0));
+        assert!(!responses.displayed_extent(24, 80, 0, 1));
         assert!(responses.response().is_empty());
     }
 }
