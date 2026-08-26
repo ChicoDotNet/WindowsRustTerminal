@@ -108,6 +108,15 @@ impl AdaptDispatchResponseState {
         )
     }
 
+    fn request_mode(&mut self, private: bool, mode: i32) -> bool {
+        let status = if private && mode == 25 {
+            Some(self.presentation.cursor_visible())
+        } else {
+            self.presentation.core().mode_status(private, mode)
+        };
+        status.is_some_and(|enabled| self.responses.mode_report(private, mode, enabled))
+    }
+
     fn page_position_absolute(&mut self, page: i32) {
         self.active_page = page.max(1);
         if self.presentation.core().page_cursor_coupling_mode() {
@@ -149,6 +158,12 @@ impl TermDispatch for AdaptDispatchResponseState {
                 if !self.request_displayed_extent() {
                     self.presentation
                         .dispatch(OutputAction::RequestDisplayedExtent);
+                }
+            }
+            OutputAction::RequestMode { private, mode } => {
+                if !self.request_mode(private, mode) {
+                    self.presentation
+                        .dispatch(OutputAction::RequestMode { private, mode });
                 }
             }
             OutputAction::PagePositionAbsolute(page) => {
@@ -322,6 +337,49 @@ mod tests {
     }
 
     #[test]
+    fn decrqm_reports_only_modes_owned_by_rust_adapter_state() {
+        let mut state = state();
+
+        state.dispatch(OutputAction::RequestMode {
+            private: false,
+            mode: 4,
+        });
+        assert_eq!(state.response(), "\u{1b}[4;2$y");
+
+        state.clear_response();
+        state.dispatch(OutputAction::SetMode {
+            private: false,
+            mode: 4,
+            enabled: true,
+        });
+        state.dispatch(OutputAction::RequestMode {
+            private: false,
+            mode: 4,
+        });
+        assert_eq!(state.response(), "\u{1b}[4;1$y");
+
+        state.clear_response();
+        state.dispatch(OutputAction::SetMode {
+            private: true,
+            mode: 25,
+            enabled: false,
+        });
+        state.dispatch(OutputAction::RequestMode {
+            private: true,
+            mode: 25,
+        });
+        assert_eq!(state.response(), "\u{1b}[?25;2$y");
+
+        state.clear_response();
+        state.dispatch(OutputAction::RequestMode {
+            private: true,
+            mode: 9999,
+        });
+        assert!(state.response().is_empty());
+        assert_eq!(state.presentation().core().deferred_actions().len(), 1);
+    }
+
+    #[test]
     fn response_sink_failure_is_propagated_as_deferred_adapter_work() {
         let mut state = state();
         state.set_response_writable(false);
@@ -336,8 +394,12 @@ mod tests {
         ));
         state.dispatch(OutputAction::RequestTerminalParameters(0));
         state.dispatch(OutputAction::RequestDisplayedExtent);
+        state.dispatch(OutputAction::RequestMode {
+            private: false,
+            mode: 4,
+        });
         assert!(state.response().is_empty());
-        assert_eq!(state.presentation().core().deferred_actions().len(), 5);
+        assert_eq!(state.presentation().core().deferred_actions().len(), 6);
     }
 
     #[test]
