@@ -120,7 +120,17 @@ impl VtResponseEngine {
     /// external boundary rather than being reported as implemented.
     #[must_use]
     pub fn mode_report(&mut self, private: bool, mode: i32, enabled: bool) -> bool {
-        let state = if enabled { 1 } else { 2 };
+        self.mode_report_state(private, mode, if enabled { 1 } else { 2 })
+    }
+
+    /// Serializes a DECRPM response using one of the four DEC mode-status
+    /// values: set (`1`), reset (`2`), permanently set (`3`), or permanently
+    /// reset (`4`). Values outside that domain are rejected without writing.
+    #[must_use]
+    pub fn mode_report_state(&mut self, private: bool, mode: i32, state: i32) -> bool {
+        if !(1..=4).contains(&state) {
+            return false;
+        }
         let private_prefix = if private { "?" } else { "" };
         self.push(&format!("\u{1b}[{private_prefix}{mode};{state}$y"))
     }
@@ -214,7 +224,7 @@ mod tests {
     }
 
     #[test]
-    fn microsoft_decrqm_serializes_standard_and_private_mode_states() {
+    fn microsoft_decrqm_serializes_standard_private_and_permanent_mode_states() {
         let mut responses = VtResponseEngine::default();
         assert!(responses.mode_report(false, 4, true));
         assert_eq!(responses.response(), "\u{1b}[4;1$y");
@@ -224,6 +234,17 @@ mod tests {
         responses.clear();
         assert!(responses.mode_report(true, 25, true));
         assert_eq!(responses.response(), "\u{1b}[?25;1$y");
+        responses.clear();
+        assert!(responses.mode_report_state(true, 2027, 3));
+        assert_eq!(responses.response(), "\u{1b}[?2027;3$y");
+    }
+
+    #[test]
+    fn invalid_mode_report_state_is_rejected_without_output() {
+        let mut responses = VtResponseEngine::default();
+        assert!(!responses.mode_report_state(true, 2027, 0));
+        assert!(!responses.mode_report_state(true, 2027, 5));
+        assert!(responses.response().is_empty());
     }
 
     #[test]
@@ -236,6 +257,7 @@ mod tests {
         assert!(!responses.terminal_parameters(0));
         assert!(!responses.displayed_extent(24, 80, 0, 1));
         assert!(!responses.mode_report(true, 25, true));
+        assert!(!responses.mode_report_state(true, 2027, 3));
         assert!(responses.response().is_empty());
     }
 }
