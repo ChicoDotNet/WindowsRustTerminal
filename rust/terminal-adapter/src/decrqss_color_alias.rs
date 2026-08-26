@@ -34,11 +34,7 @@ impl Default for ColorAliasIndices {
 #[must_use]
 pub fn serialize_decac(item: Option<u16>, aliases: ColorAliasIndices) -> String {
     let (item, foreground, background) = match item.unwrap_or(1) {
-        1 => (
-            1,
-            aliases.default_foreground,
-            aliases.default_background,
-        ),
+        1 => (1, aliases.default_foreground, aliases.default_background),
         2 => (2, aliases.frame_foreground, aliases.frame_background),
         _ => return DCS_INVALID_RESPONSE.to_owned(),
     };
@@ -59,10 +55,7 @@ mod tests {
             frame_background: 6,
         };
 
-        assert_eq!(
-            serialize_decac(None, aliases),
-            "\u{1b}P1$r1;3;5,|\u{1b}\\"
-        );
+        assert_eq!(serialize_decac(None, aliases), "\u{1b}P1$r1;3;5,|\u{1b}\\");
         assert_eq!(
             serialize_decac(Some(1), aliases),
             "\u{1b}P1$r1;3;5,|\u{1b}\\"
