@@ -1,4 +1,6 @@
-use terminal_adapter::{AdaptDispatchPresentationState, PageGeometry};
+use terminal_adapter::{
+    adapt_dispatch::PageGeometry, presentation_state::AdaptDispatchPresentationState,
+};
 use terminal_buffer::{
     text_attribute::{TextAttribute, UnderlineStyle},
     text_color::TextColor,
@@ -15,9 +17,9 @@ fn state() -> AdaptDispatchPresentationState {
 fn apply_single(starting: TextAttribute, option: i32) -> TextAttribute {
     let mut state = state();
     state.set_current_attributes(starting);
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![
-        Some(option),
-    ])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(option)],
+    )));
     state.current_attributes()
 }
 
