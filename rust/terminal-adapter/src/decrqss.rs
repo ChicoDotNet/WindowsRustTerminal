@@ -125,7 +125,6 @@ fn push_underline_color(params: &mut Vec<String>, color: TextColor) {
 mod tests {
     use super::*;
     use crate::adapt_dispatch::AdaptDispatchCore;
-    use terminal_buffer::text_color::Rgb;
 
     fn state(core: &AdaptDispatchCore, attributes: TextAttribute) -> DecrqssState {
         DecrqssState {
@@ -191,6 +190,22 @@ mod tests {
             serialize_request_setting("m", state(&core, attributes)),
             "\u{1b}P1$r0;2;5;8m\u{1b}\\"
         );
+
+        attributes = TextAttribute::default();
+        attributes.set_italic(true);
+        attributes.set_crossed_out(true);
+        assert_eq!(
+            serialize_request_setting("m", state(&core, attributes)),
+            "\u{1b}P1$r0;3;9m\u{1b}\\"
+        );
+
+        attributes = TextAttribute::default();
+        attributes.set_underline_style(UnderlineStyle::Double);
+        attributes.set_overlined(true);
+        assert_eq!(
+            serialize_request_setting("m", state(&core, attributes)),
+            "\u{1b}P1$r0;21;53m\u{1b}\\"
+        );
     }
 
     #[test]
@@ -229,8 +244,6 @@ mod tests {
             serialize_request_setting("m", state(&core, attributes)),
             "\u{1b}P1$r0;38:2::12:34:56;48:2::65:43:21;58:2::128:222:45m\u{1b}\\"
         );
-
-        let _ = Rgb::new(0, 0, 0);
     }
 
     #[test]
