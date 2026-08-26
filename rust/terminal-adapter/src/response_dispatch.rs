@@ -1,10 +1,10 @@
 //! Product-level adapter response dispatch.
 //!
-//! This owner wires parser `DeviceStatusReport` actions into the portable VT
+//! This owner wires parser response-producing actions into the portable VT
 //! response serializer while retaining the existing presentation-state owner
 //! for cursor, modes, and rendition semantics.
 
-use terminal_parser::output_engine::{OutputAction, TermDispatch};
+use terminal_parser::output_engine::{DeviceAttributesKind, OutputAction, TermDispatch};
 
 use crate::{
     adapt_dispatch::PageGeometry, presentation_state::AdaptDispatchPresentationState,
@@ -15,6 +15,7 @@ use crate::{
 pub struct AdaptDispatchResponseState {
     presentation: AdaptDispatchPresentationState,
     responses: VtResponseEngine,
+    clipboard_supported: bool,
 }
 
 impl AdaptDispatchResponseState {
@@ -23,6 +24,7 @@ impl AdaptDispatchResponseState {
         Self {
             presentation: AdaptDispatchPresentationState::new(geometry),
             responses: VtResponseEngine::default(),
+            clipboard_supported: true,
         }
     }
 
@@ -42,6 +44,10 @@ impl AdaptDispatchResponseState {
 
     pub fn clear_response(&mut self) {
         self.responses.clear();
+    }
+
+    pub const fn set_clipboard_supported(&mut self, supported: bool) {
+        self.clipboard_supported = supported;
     }
 
     fn device_status_report(&mut self, private: bool, status: i32, id: Option<i32>) -> bool {
@@ -71,6 +77,25 @@ impl AdaptDispatchResponseState {
             _ => false,
         }
     }
+
+    fn device_attributes(&mut self, kind: DeviceAttributesKind) -> bool {
+        match kind {
+            DeviceAttributesKind::Primary => {
+                self.responses
+                    .primary_device_attributes(self.clipboard_supported);
+                true
+            }
+            DeviceAttributesKind::Secondary => {
+                self.responses.secondary_device_attributes();
+                true
+            }
+            DeviceAttributesKind::Tertiary => {
+                self.responses.tertiary_device_attributes();
+                true
+            }
+            DeviceAttributesKind::Vt52 => false,
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchResponseState {
@@ -88,6 +113,11 @@ impl TermDispatch for AdaptDispatchResponseState {
                             status,
                             id,
                         });
+                }
+            }
+            OutputAction::DeviceAttributes(kind) => {
+                if !self.device_attributes(kind) {
+                    self.presentation.dispatch(OutputAction::DeviceAttributes(kind));
                 }
             }
             other => self.presentation.dispatch(other),
@@ -162,14 +192,44 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_reports_remain_explicitly_deferred() {
+    fn microsoft_primary_device_attributes_uses_live_clipboard_capability() {
+        let mut state = state();
+        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary));
+        assert_eq!(
+            state.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
+        );
+
+        state.clear_response();
+        state.set_clipboard_supported(false);
+        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary));
+        assert_eq!(
+            state.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42c"
+        );
+    }
+
+    #[test]
+    fn microsoft_secondary_and_tertiary_attributes_flow_through_adapter_dispatch() {
+        let mut state = state();
+        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Secondary));
+        assert_eq!(state.response(), "\u{1b}[>0;10;1c");
+
+        state.clear_response();
+        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Tertiary));
+        assert_eq!(state.response(), "\u{1b}P!|00000000\u{1b}\\");
+    }
+
+    #[test]
+    fn unsupported_reports_and_vt52_attributes_remain_explicitly_deferred() {
         let mut state = state();
         state.dispatch(OutputAction::DeviceStatusReport {
             private: true,
             status: 15,
             id: None,
         });
+        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Vt52));
         assert!(state.response().is_empty());
-        assert_eq!(state.presentation().core().deferred_actions().len(), 1);
+        assert_eq!(state.presentation().core().deferred_actions().len(), 2);
     }
 }
