@@ -191,7 +191,7 @@ impl AdaptDispatchPresentationState {
         }
     }
 
-    fn push_graphics_rendition(&mut self, parameters: Parameters) {
+    fn push_graphics_rendition(&mut self, parameters: &Parameters) {
         let options: Vec<_> = parameters
             .values()
             .iter()
@@ -290,7 +290,7 @@ impl TermDispatch for AdaptDispatchPresentationState {
                 self.apply_graphics_rendition(&parameters);
             }
             OutputAction::PushGraphicsRendition(parameters) => {
-                self.push_graphics_rendition(parameters);
+                self.push_graphics_rendition(&parameters);
             }
             OutputAction::PopGraphicsRendition => {
                 self.pop_graphics_rendition();
