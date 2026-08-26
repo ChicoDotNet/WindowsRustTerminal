@@ -24,12 +24,7 @@ impl VtResponseEngine {
         self.push("\u{1b}[0n");
     }
 
-    pub fn cursor_position_report(
-        &mut self,
-        cursor_x: i32,
-        cursor_y: i32,
-        viewport_top: i32,
-    ) {
+    pub fn cursor_position_report(&mut self, cursor_x: i32, cursor_y: i32, viewport_top: i32) {
         let row = cursor_y.saturating_sub(viewport_top).saturating_add(1);
         let column = cursor_x.saturating_add(1);
         self.push(&format!("\u{1b}[{row};{column}R"));
