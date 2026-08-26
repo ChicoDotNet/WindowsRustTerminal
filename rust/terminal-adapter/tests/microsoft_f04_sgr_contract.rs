@@ -215,7 +215,9 @@ fn microsoft_graphics_push_pop_basic_and_nested_full_stack_matches_source_contra
 
     // Microsoft Test 2: a color change between push and pop is discarded.
     state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(36)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(36)],
+    )));
     let mut cyan = TextAttribute::default();
     cyan.set_foreground(TextColor::index16(TextColor::DARK_CYAN));
     assert_eq!(state.current_attributes(), cyan);
@@ -224,13 +226,17 @@ fn microsoft_graphics_push_pop_basic_and_nested_full_stack_matches_source_contra
 
     // Microsoft Test 3: nested pushes unwind in LIFO order.
     state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(31)],
+    )));
     let mut red = TextAttribute::default();
     red.set_foreground(TextColor::index16(TextColor::DARK_RED));
     assert_eq!(state.current_attributes(), red);
 
     state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(32)],
+    )));
     let mut green = TextAttribute::default();
     green.set_foreground(TextColor::index16(TextColor::DARK_GREEN));
     assert_eq!(state.current_attributes(), green);
