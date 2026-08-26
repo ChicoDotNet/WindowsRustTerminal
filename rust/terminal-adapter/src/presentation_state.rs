@@ -69,16 +69,44 @@ impl AdaptDispatchPresentationState {
         }
     }
 
+    fn underline_style_from_subparams(sub_params: &[Option<i32>]) -> UnderlineStyle {
+        match sub_params.first().copied().flatten().unwrap_or(1) {
+            0 => UnderlineStyle::None,
+            2 => UnderlineStyle::Double,
+            3 => UnderlineStyle::Curly,
+            4 => UnderlineStyle::Dotted,
+            5 => UnderlineStyle::Dashed,
+            _ => UnderlineStyle::Single,
+        }
+    }
+
+    fn extended_color_from_subparams(sub_params: &[Option<i32>]) -> Option<TextColor> {
+        match sub_params.first().copied().flatten()? {
+            2 => {
+                let red = u8::try_from(sub_params.get(1).copied().flatten()?).ok()?;
+                let green = u8::try_from(sub_params.get(2).copied().flatten()?).ok()?;
+                let blue = u8::try_from(sub_params.get(3).copied().flatten()?).ok()?;
+                Some(TextColor::rgb(red, green, blue))
+            }
+            5 => {
+                let index = u8::try_from(sub_params.get(1).copied().flatten()?).ok()?;
+                Some(TextColor::index256(index))
+            }
+            _ => None,
+        }
+    }
+
     fn apply_graphics_rendition(&mut self, parameters: &Parameters) {
         for index in 0..parameters.size() {
             let option = parameters.at(index).unwrap_or(0);
+            let sub_params = parameters.sub_params_for(index);
             match option {
                 0 => self.current_attributes = TextAttribute::default(),
                 1 => self.current_attributes.set_intense(true),
                 2 => self.current_attributes.set_faint(true),
                 4 => self
                     .current_attributes
-                    .set_underline_style(UnderlineStyle::Single),
+                    .set_underline_style(Self::underline_style_from_subparams(sub_params)),
                 7 => self.current_attributes.set_reverse_video(true),
                 8 => self.current_attributes.set_invisible(true),
                 9 => self.current_attributes.set_crossed_out(true),
@@ -98,13 +126,28 @@ impl AdaptDispatchPresentationState {
                 30..=37 => self.current_attributes.set_foreground(TextColor::index16(
                     u8::try_from(option - 30).unwrap_or_default(),
                 )),
+                38 => {
+                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                        self.current_attributes.set_foreground(color);
+                    }
+                }
                 39 => self.current_attributes.set_default_foreground(),
                 40..=47 => self.current_attributes.set_background(TextColor::index16(
                     u8::try_from(option - 40).unwrap_or_default(),
                 )),
+                48 => {
+                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                        self.current_attributes.set_background(color);
+                    }
+                }
                 49 => self.current_attributes.set_default_background(),
                 53 => self.current_attributes.set_overlined(true),
                 55 => self.current_attributes.set_overlined(false),
+                58 => {
+                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                        self.current_attributes.set_underline_color(color);
+                    }
+                }
                 90..=97 => self.current_attributes.set_foreground(TextColor::index16(
                     u8::try_from(option - 90 + 8).unwrap_or_default(),
                 )),
