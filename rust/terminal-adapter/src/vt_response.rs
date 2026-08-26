@@ -60,6 +60,18 @@ impl VtResponseEngine {
         self.push("\u{1b}P!|00000000\u{1b}\\");
     }
 
+    pub fn terminal_parameters(&mut self, reporting_permission: i32) -> bool {
+        let response_permission = match reporting_permission {
+            0 => 2,
+            1 => 3,
+            _ => return false,
+        };
+        self.push(&format!(
+            "\u{1b}[{response_permission};1;1;128;128;1;0x"
+        ));
+        true
+    }
+
     fn push(&mut self, response: &str) {
         self.response.push_str(response);
     }
@@ -127,5 +139,20 @@ mod tests {
         responses.clear();
         responses.tertiary_device_attributes();
         assert_eq!(responses.response(), "\u{1b}P!|00000000\u{1b}\\");
+    }
+
+    #[test]
+    fn microsoft_terminal_parameters_serialize_both_reporting_permissions() {
+        let mut responses = VtResponseEngine::default();
+        assert!(responses.terminal_parameters(0));
+        assert_eq!(responses.response(), "\u{1b}[2;1;1;128;128;1;0x");
+
+        responses.clear();
+        assert!(responses.terminal_parameters(1));
+        assert_eq!(responses.response(), "\u{1b}[3;1;1;128;128;1;0x");
+
+        responses.clear();
+        assert!(!responses.terminal_parameters(2));
+        assert!(responses.response().is_empty());
     }
 }
