@@ -201,3 +201,42 @@ fn extended_sgr_rgb_subparams_are_owned_by_the_same_product_path() {
         expected
     );
 }
+
+#[test]
+fn microsoft_graphics_push_pop_basic_and_nested_full_stack_matches_source_contract() {
+    let mut state = state();
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::default()));
+    assert_eq!(state.current_attributes(), TextAttribute::default());
+
+    // Microsoft Test 1: push and pop without mutation preserves the current rendition.
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes(), TextAttribute::default());
+
+    // Microsoft Test 2: a color change between push and pop is discarded.
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(36)])));
+    let mut cyan = TextAttribute::default();
+    cyan.set_foreground(TextColor::index16(TextColor::DARK_CYAN));
+    assert_eq!(state.current_attributes(), cyan);
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes(), TextAttribute::default());
+
+    // Microsoft Test 3: nested pushes unwind in LIFO order.
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
+    let mut red = TextAttribute::default();
+    red.set_foreground(TextColor::index16(TextColor::DARK_RED));
+    assert_eq!(state.current_attributes(), red);
+
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
+    let mut green = TextAttribute::default();
+    green.set_foreground(TextColor::index16(TextColor::DARK_GREEN));
+    assert_eq!(state.current_attributes(), green);
+
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes(), red);
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes(), TextAttribute::default());
+}
