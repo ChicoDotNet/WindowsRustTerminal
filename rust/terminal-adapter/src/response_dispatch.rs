@@ -11,6 +11,8 @@ use crate::{
     vt_response::VtResponseEngine,
 };
 
+const PERMANENT_GRAPHEME_CLUSTER_MODE: i32 = 2027;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdaptDispatchResponseState {
     presentation: AdaptDispatchPresentationState,
@@ -109,6 +111,10 @@ impl AdaptDispatchResponseState {
     }
 
     fn request_mode(&mut self, private: bool, mode: i32) -> bool {
+        if private && mode == PERMANENT_GRAPHEME_CLUSTER_MODE {
+            return self.responses.mode_report_state(true, mode, 3);
+        }
+
         let status = if private && mode == 25 {
             Some(self.presentation.cursor_visible())
         } else {
@@ -171,6 +177,11 @@ impl TermDispatch for AdaptDispatchResponseState {
                 self.presentation
                     .dispatch(OutputAction::PagePositionAbsolute(page));
             }
+            OutputAction::SetMode {
+                private: true,
+                mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
+                ..
+            } => {}
             OutputAction::SetMode {
                 private: true,
                 mode: 64,
@@ -380,6 +391,23 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_permanent_mode_2027_stays_enabled_after_reset() {
+        let mut state = state();
+        state.dispatch(OutputAction::SetMode {
+            private: true,
+            mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
+            enabled: false,
+        });
+        assert!(state.presentation().core().deferred_actions().is_empty());
+
+        state.dispatch(OutputAction::RequestMode {
+            private: true,
+            mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
+        });
+        assert_eq!(state.response(), "\u{1b}[?2027;3$y");
+    }
+
+    #[test]
     fn response_sink_failure_is_propagated_as_deferred_adapter_work() {
         let mut state = state();
         state.set_response_writable(false);
@@ -398,8 +426,12 @@ mod tests {
             private: false,
             mode: 4,
         });
+        state.dispatch(OutputAction::RequestMode {
+            private: true,
+            mode: PERMANENT_GRAPHEME_CLUSTER_MODE,
+        });
         assert!(state.response().is_empty());
-        assert_eq!(state.presentation().core().deferred_actions().len(), 6);
+        assert_eq!(state.presentation().core().deferred_actions().len(), 7);
     }
 
     #[test]
