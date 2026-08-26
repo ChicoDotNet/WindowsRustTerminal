@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
-  "description": "F04 TextAttribute method-level equivalence evidence.",
-  "expectedCoveragePriority": 24,
+  "description": "F04 TextAttribute method-level equivalence evidence, including portable renderer color resolution.",
+  "expectedCoveragePriority": 25,
   "expectedCoverage": {
-    "textBuffer": { "Exact": 10, "Partial": 4, "Missing": 0 }
+    "textBuffer": { "Exact": 12, "Partial": 2, "Missing": 0 }
   },
-  "expectedGlobalCoveragePriority": 24,
+  "expectedGlobalCoveragePriority": 25,
   "expectedGlobalCoverage": {
-    "Exact": 237,
+    "Exact": 239,
     "Stronger": 11,
-    "Partial": 347,
+    "Partial": 345,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 418
@@ -46,6 +46,22 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_f04_text_attribute_default_colors_roundtrip_matches_source_contract"],
       "notes": "Rust uses an explicit LegacyColorDefaults value instead of Microsoft's mutable process-global defaults, but reproduces all three source observables: default foreground, default background, and both defaults map bidirectionally to the configured legacy indices."
+    },
+    {
+      "suite": "textBuffer",
+      "source": "TextAttributeTests.cpp",
+      "method": "TestTextAttributeColorGetters",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_f04_text_attribute_color_getters_match_source_contract"],
+      "notes": "The production renderer now composes TextAttribute/TextColor lookup with faint, reverse-video and invisible policy. The direct Rust witness reproduces Microsoft's RGB getter invariants and all six calculated foreground/background transitions."
+    },
+    {
+      "suite": "textBuffer",
+      "source": "TextAttributeTests.cpp",
+      "method": "TestReverseDefaultColors",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_f04_reverse_default_colors_match_source_contract"],
+      "notes": "The portable renderer resolver reproduces Microsoft's configured default foreground/background aliases, reverse-video swap, explicit foreground mutation, invert, and restored-default foreground with explicit background."
     }
   ]
 }
