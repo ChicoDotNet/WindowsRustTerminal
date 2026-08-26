@@ -3,11 +3,14 @@ use terminal_buffer::{
     text_color::{DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, Rgb, TABLE_SIZE, TextColor},
 };
 use terminal_renderer::{
-    RenderSettingsPolicy, ResolvedAttributeColors, resolve_text_attribute_colors,
+    RenderMode, RenderSettingsPolicy, ResolvedAttributeColors, resolve_text_attribute_colors,
 };
 
 fn color_table() -> [Rgb; TABLE_SIZE] {
     let mut table = [Rgb::default(); TABLE_SIZE];
+    table[0] = Rgb::new(12, 12, 12);
+    table[2] = Rgb::new(19, 161, 14);
+    table[8] = Rgb::new(118, 118, 118);
     table[DEFAULT_FOREGROUND] = Rgb::new(1, 2, 3);
     table[DEFAULT_BACKGROUND] = Rgb::new(4, 5, 6);
     table
@@ -20,14 +23,22 @@ fn colors(foreground: Rgb, background: Rgb) -> ResolvedAttributeColors {
     }
 }
 
-fn resolve(attribute: TextAttribute, table: &[Rgb; TABLE_SIZE]) -> ResolvedAttributeColors {
+fn resolve_with_settings(
+    attribute: TextAttribute,
+    table: &[Rgb; TABLE_SIZE],
+    settings: RenderSettingsPolicy,
+) -> ResolvedAttributeColors {
     resolve_text_attribute_colors(
         attribute,
         table,
         DEFAULT_FOREGROUND,
         DEFAULT_BACKGROUND,
-        RenderSettingsPolicy::default(),
+        settings,
     )
+}
+
+fn resolve(attribute: TextAttribute, table: &[Rgb; TABLE_SIZE]) -> ResolvedAttributeColors {
+    resolve_with_settings(attribute, table, RenderSettingsPolicy::default())
 }
 
 #[test]
@@ -118,4 +129,110 @@ fn microsoft_f04_reverse_default_colors_match_source_contract() {
         resolve(attribute, &table),
         colors(default_foreground, green)
     );
+}
+
+#[test]
+fn microsoft_f04_intense_as_bright_matches_source_contract() {
+    let table = color_table();
+    let dark_black = table[0];
+    let bright_black = table[8];
+    let dark_green = table[2];
+    let default_foreground = table[DEFAULT_FOREGROUND];
+    let default_background = table[DEFAULT_BACKGROUND];
+    let mut settings = RenderSettingsPolicy::default();
+    let mut attribute = TextAttribute::default();
+
+    assert!(!attribute.is_intense());
+    assert_eq!(
+        attribute
+            .foreground()
+            .resolve(&table, DEFAULT_FOREGROUND, false),
+        default_foreground
+    );
+    assert_eq!(
+        attribute
+            .background()
+            .resolve(&table, DEFAULT_BACKGROUND, false),
+        default_background
+    );
+
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(default_foreground, default_background)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(default_foreground, default_background)
+    );
+
+    attribute.set_intense(true);
+    assert!(attribute.is_intense());
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(default_foreground, default_background)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(default_foreground, default_background)
+    );
+
+    attribute.set_foreground(TextColor::index16(TextColor::DARK_BLACK));
+    assert!(attribute.is_intense());
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(bright_black, default_background)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(dark_black, default_background)
+    );
+
+    attribute.set_background(TextColor::index16(TextColor::DARK_GREEN));
+    assert!(attribute.is_intense());
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(bright_black, dark_green)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(dark_black, dark_green)
+    );
+
+    attribute.set_intense(false);
+    assert!(!attribute.is_intense());
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(dark_black, dark_green)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(dark_black, dark_green)
+    );
+
+    attribute.set_intense(true);
+    attribute.set_foreground(TextColor::index16(TextColor::BRIGHT_BLACK));
+    assert!(attribute.is_intense());
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(bright_black, dark_green)
+    );
+    settings.set_mode(RenderMode::IntenseIsBright, false);
+    assert_eq!(
+        resolve_with_settings(attribute, &table, settings),
+        colors(bright_black, dark_green)
+    );
+
+    settings.set_mode(RenderMode::IntenseIsBright, true);
+    assert!(settings.mode(RenderMode::IntenseIsBright));
 }
