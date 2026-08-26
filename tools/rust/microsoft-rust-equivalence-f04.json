@@ -3,7 +3,7 @@
   "description": "F04 TextAttribute, rendition and cursor-presentation method-level equivalence evidence, including portable renderer color resolution.",
   "expectedCoveragePriority": 27,
   "expectedCoverage": {
-    "adapter": { "Exact": 26, "Partial": 45, "Platform-only": 1 },
+    "adapter": { "Exact": 29, "Partial": 42, "Platform-only": 1 },
     "textBuffer": { "Exact": 13, "Partial": 1, "Missing": 0 }
   },
   "expectedGlobalCoveragePriority": 27,
