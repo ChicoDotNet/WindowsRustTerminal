@@ -19,11 +19,18 @@ use crate::adapt_dispatch::{AdaptDispatchCore, PageGeometry};
 const DECTCEM_TEXT_CURSOR_ENABLE_MODE: i32 = 25;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+enum RenditionStackEntry {
+    Full(TextAttribute),
+    DeferredSelective,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdaptDispatchPresentationState {
     core: AdaptDispatchCore,
     current_attributes: TextAttribute,
     saved_attributes: Option<TextAttribute>,
     cursor_visible: bool,
+    rendition_stack: Vec<RenditionStackEntry>,
 }
 
 impl AdaptDispatchPresentationState {
@@ -34,6 +41,7 @@ impl AdaptDispatchPresentationState {
             current_attributes: TextAttribute::default(),
             saved_attributes: None,
             cursor_visible: true,
+            rendition_stack: Vec::new(),
         }
     }
 
@@ -158,6 +166,31 @@ impl AdaptDispatchPresentationState {
             }
         }
     }
+
+    fn push_graphics_rendition(&mut self, parameters: Parameters) {
+        let saves_all = parameters.values().is_empty()
+            || (parameters.values().len() == 1 && parameters.at(0).unwrap_or(0) == 0);
+        if saves_all {
+            self.rendition_stack
+                .push(RenditionStackEntry::Full(self.current_attributes));
+        } else {
+            self.rendition_stack
+                .push(RenditionStackEntry::DeferredSelective);
+            self.core
+                .dispatch(OutputAction::PushGraphicsRendition(parameters));
+        }
+    }
+
+    fn pop_graphics_rendition(&mut self) {
+        match self.rendition_stack.pop() {
+            Some(RenditionStackEntry::Full(attributes)) => {
+                self.current_attributes = attributes;
+            }
+            Some(RenditionStackEntry::DeferredSelective) | None => {
+                self.core.dispatch(OutputAction::PopGraphicsRendition);
+            }
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchPresentationState {
@@ -186,6 +219,12 @@ impl TermDispatch for AdaptDispatchPresentationState {
             }
             OutputAction::SetGraphicsRendition(parameters) => {
                 self.apply_graphics_rendition(&parameters);
+            }
+            OutputAction::PushGraphicsRendition(parameters) => {
+                self.push_graphics_rendition(parameters);
+            }
+            OutputAction::PopGraphicsRendition => {
+                self.pop_graphics_rendition();
             }
             other => self.core.dispatch(other),
         }
@@ -255,6 +294,28 @@ mod tests {
 
         state.dispatch(OutputAction::SetGraphicsRendition(Parameters::default()));
 
+        assert_eq!(state.current_attributes(), TextAttribute::default());
+    }
+
+    #[test]
+    fn full_rendition_stack_restores_nested_states() {
+        let mut state = AdaptDispatchPresentationState::new(PageGeometry::new(20, 100, 29));
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::default()));
+        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
+        let red = state.current_attributes();
+        state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
+
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
+        assert_eq!(
+            state.current_attributes().foreground(),
+            TextColor::index16(TextColor::DARK_GREEN)
+        );
+
+        state.dispatch(OutputAction::PopGraphicsRendition);
+        assert_eq!(state.current_attributes(), red);
+        state.dispatch(OutputAction::PopGraphicsRendition);
         assert_eq!(state.current_attributes(), TextAttribute::default());
     }
 }
