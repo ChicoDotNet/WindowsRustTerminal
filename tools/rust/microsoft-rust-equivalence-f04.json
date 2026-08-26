@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "description": "F04 TextAttribute method-level equivalence evidence, including portable renderer color resolution.",
-  "expectedCoveragePriority": 25,
+  "expectedCoveragePriority": 26,
   "expectedCoverage": {
-    "textBuffer": { "Exact": 12, "Partial": 2, "Missing": 0 }
+    "textBuffer": { "Exact": 13, "Partial": 1, "Missing": 0 }
   },
-  "expectedGlobalCoveragePriority": 25,
+  "expectedGlobalCoveragePriority": 26,
   "expectedGlobalCoverage": {
-    "Exact": 239,
+    "Exact": 240,
     "Stronger": 11,
-    "Partial": 345,
+    "Partial": 344,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 418
@@ -62,6 +62,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_f04_reverse_default_colors_match_source_contract"],
       "notes": "The portable renderer resolver reproduces Microsoft's configured default foreground/background aliases, reverse-video swap, explicit foreground mutation, invert, and restored-default foreground with explicit background."
+    },
+    {
+      "suite": "textBuffer",
+      "source": "TextAttributeTests.cpp",
+      "method": "TestIntenseAsBright",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_f04_intense_as_bright_matches_source_contract"],
+      "notes": "Rust reproduces the complete Microsoft IntenseIsBright matrix: defaults remain unchanged, dark indexed foreground brightens only while the mode is enabled and intensity is set, background is unaffected, intensity-off disables brightening, and an already-bright foreground remains bright with the mode either enabled or disabled."
     }
   ]
 }
