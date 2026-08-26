@@ -7,9 +7,9 @@
   },
   "expectedGlobalCoveragePriority": 27,
   "expectedGlobalCoverage": {
-    "Exact": 242,
+    "Exact": 240,
     "Stronger": 11,
-    "Partial": 342,
+    "Partial": 344,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 418
@@ -70,22 +70,6 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_f04_intense_as_bright_matches_source_contract"],
       "notes": "Rust reproduces the complete Microsoft IntenseIsBright matrix: defaults remain unchanged, dark indexed foreground brightens only while the mode is enabled and intensity is set, background is unaffected, intensity-off disables brightening, and an already-bright foreground remains bright with the mode either enabled or disabled."
-    },
-    {
-      "suite": "adapter",
-      "source": "adapterTest.cpp",
-      "method": "CursorSaveRestoreTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_adapter_cursor_save_restore_ported_subset_preserves_cursor_state", "restore_without_save_resets_cursor_and_attributes", "save_restore_preserves_text_attributes_with_cursor_state"],
-      "notes": "AdaptDispatchPresentationState now owns the complete portable DECSC/DECRC state: cursor position and delayed-wrap remain in AdaptDispatchCore while TextAttribute is saved/restored alongside them; restore-before-save resets both cursor position and attributes to Microsoft defaults."
-    },
-    {
-      "suite": "adapter",
-      "source": "adapterTest.cpp",
-      "method": "CursorHideShowTest",
-      "coverage": "Exact",
-      "rustWitnesses": ["dectcem_updates_effective_cursor_visibility"],
-      "notes": "The Rust presentation owner consumes private mode 25 (DECTCEM) as effective cursor visibility and covers Microsoft's complete starting-visible x ending-visible boolean matrix without requiring renderer or Win32 behavior."
     }
   ]
 }
