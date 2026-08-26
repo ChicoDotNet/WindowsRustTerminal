@@ -246,3 +246,60 @@ fn microsoft_graphics_push_pop_basic_and_nested_full_stack_matches_source_contra
     state.dispatch(OutputAction::PopGraphicsRendition);
     assert_eq!(state.current_attributes(), TextAttribute::default());
 }
+
+#[test]
+fn microsoft_graphics_push_pop_selective_restore_matches_source_contract() {
+    let mut state = state();
+
+    // Microsoft Test 4: save only intensity, background and the double-underline bit.
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(1)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(44)])));
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![
+        Some(1),
+        Some(31),
+        Some(21),
+    ])));
+
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![
+        Some(42),
+        Some(21),
+    ])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(22)])));
+    state.dispatch(OutputAction::PopGraphicsRendition);
+
+    let mut expected = TextAttribute::default();
+    expected.set_foreground(TextColor::index16(TextColor::DARK_RED));
+    expected.set_background(TextColor::index16(TextColor::DARK_BLUE));
+    expected.set_intense(true);
+    assert_eq!(state.current_attributes(), expected);
+
+    // Microsoft Test 5: restoring the single-underline bit clears a newly-set single underline.
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(24)])));
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::None);
+
+    // Microsoft Test 6: the same restore leaves a double underline intact.
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(24)])));
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(21)])));
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(
+        state.current_attributes().underline_style(),
+        UnderlineStyle::Double
+    );
+
+    // Microsoft Test 7: saving curly and changing to double restores the single bit,
+    // reconstructing the original curly style.
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_subparams(vec![
+        (Some(4), vec![Some(3)]),
+    ])));
+    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Curly);
+    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(21)])));
+    state.dispatch(OutputAction::PopGraphicsRendition);
+    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Curly);
+}
