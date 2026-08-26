@@ -66,9 +66,7 @@ impl VtResponseEngine {
             1 => 3,
             _ => return false,
         };
-        self.push(&format!(
-            "\u{1b}[{response_permission};1;1;128;128;1;0x"
-        ));
+        self.push(&format!("\u{1b}[{response_permission};1;1;128;128;1;0x"));
         true
     }
 
