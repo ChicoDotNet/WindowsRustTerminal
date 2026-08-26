@@ -333,10 +333,7 @@ impl TermDispatch for AdaptDispatchResponseState {
 mod tests {
     use super::*;
     use crate::{adapt_dispatch::Point, decrqss_color_alias::ColorAliasIndices};
-    use terminal_parser::{
-        output_engine::OutputStateMachineEngine,
-        state_machine::StateMachine,
-    };
+    use terminal_parser::{output_engine::OutputStateMachineEngine, state_machine::StateMachine};
 
     fn state() -> AdaptDispatchResponseState {
         let mut state = AdaptDispatchResponseState::new(PageGeometry::new(20, 100, 29));
@@ -551,17 +548,11 @@ mod tests {
 
         machine.process_str("\u{1b}[5;10r\u{1b}P$q r");
         machine.process_str("\u{1b}\\");
-        assert_eq!(
-            machine.engine().dispatch().response(),
-            "\u{1b}P0$r\u{1b}\\"
-        );
+        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P0$r\u{1b}\\");
         machine.engine_mut().dispatch_mut().clear_response();
 
         machine.process_str("\u{1b}P$q r\u{1b}\\");
-        assert_eq!(
-            machine.engine().dispatch().response(),
-            "\u{1b}P0$r\u{1b}\\"
-        );
+        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P0$r\u{1b}\\");
         machine.engine_mut().dispatch_mut().clear_response();
 
         machine.process_str("\u{1b}P$qr\u{1b}\\");
