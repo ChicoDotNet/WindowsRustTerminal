@@ -6,8 +6,8 @@ use terminal_buffer::{
     text_color::TextColor,
 };
 use terminal_parser::{
-    output_engine::{OutputAction, TermDispatch},
-    state_machine::Parameters,
+    output_engine::{OutputAction, OutputStateMachineEngine, TermDispatch},
+    state_machine::{Parameters, StateMachine},
 };
 
 fn state() -> AdaptDispatchPresentationState {
@@ -21,6 +21,13 @@ fn apply_single(starting: TextAttribute, option: i32) -> TextAttribute {
         vec![Some(option)],
     )));
     state.current_attributes()
+}
+
+fn apply_sequence(sequence: &str) -> TextAttribute {
+    let engine = OutputStateMachineEngine::new(state());
+    let mut machine = StateMachine::new(engine);
+    machine.process_str(sequence);
+    machine.engine().dispatch().current_attributes()
 }
 
 #[test]
@@ -161,4 +168,36 @@ fn microsoft_graphics_single_sgr_options_match_source_contract() {
         expected.set_background(TextColor::index16(index));
         assert_eq!(apply_single(starting, option), expected, "SGR {option}");
     }
+}
+
+#[test]
+fn microsoft_graphics_single_with_subparams_matches_source_contract() {
+    let mut expected = TextAttribute::default();
+    expected.set_underline_style(UnderlineStyle::Curly);
+    assert_eq!(apply_sequence("\u{1b}[4:3m"), expected);
+
+    expected = TextAttribute::default();
+    expected.set_foreground(TextColor::index256(TextColor::DARK_RED));
+    assert_eq!(apply_sequence("\u{1b}[38:5:1m"), expected);
+
+    expected = TextAttribute::default();
+    expected.set_background(TextColor::index256(TextColor::BRIGHT_WHITE));
+    assert_eq!(apply_sequence("\u{1b}[48:5:15m"), expected);
+
+    expected = TextAttribute::default();
+    expected.set_underline_color(TextColor::index256(TextColor::DARK_RED));
+    assert_eq!(apply_sequence("\u{1b}[58:5:1m"), expected);
+}
+
+#[test]
+fn extended_sgr_rgb_subparams_are_owned_by_the_same_product_path() {
+    let mut expected = TextAttribute::default();
+    expected.set_foreground(TextColor::rgb(12, 34, 56));
+    expected.set_background(TextColor::rgb(78, 90, 123));
+    expected.set_underline_color(TextColor::rgb(210, 111, 12));
+
+    assert_eq!(
+        apply_sequence("\u{1b}[38:2:12:34:56;48:2:78:90:123;58:2:210:111:12m"),
+        expected
+    );
 }
