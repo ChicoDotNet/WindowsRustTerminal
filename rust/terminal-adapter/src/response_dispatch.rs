@@ -16,6 +16,9 @@ pub struct AdaptDispatchResponseState {
     presentation: AdaptDispatchPresentationState,
     responses: VtResponseEngine,
     clipboard_supported: bool,
+    viewport_left: i32,
+    active_page: i32,
+    visible_page: i32,
 }
 
 impl AdaptDispatchResponseState {
@@ -25,6 +28,9 @@ impl AdaptDispatchResponseState {
             presentation: AdaptDispatchPresentationState::new(geometry),
             responses: VtResponseEngine::default(),
             clipboard_supported: true,
+            viewport_left: 0,
+            active_page: 1,
+            visible_page: 1,
         }
     }
 
@@ -47,6 +53,9 @@ impl AdaptDispatchResponseState {
     }
     pub const fn set_response_writable(&mut self, writable: bool) {
         self.responses.set_writable(writable);
+    }
+    pub fn set_viewport_left(&mut self, left: i32) {
+        self.viewport_left = left.max(0);
     }
 
     fn device_status_report(&mut self, private: bool, status: i32, id: Option<i32>) -> bool {
@@ -82,6 +91,23 @@ impl AdaptDispatchResponseState {
             DeviceAttributesKind::Vt52 => false,
         }
     }
+
+    fn request_displayed_extent(&mut self) -> bool {
+        let geometry = self.presentation.core().geometry();
+        self.responses.displayed_extent(
+            geometry.height,
+            geometry.width,
+            self.viewport_left,
+            self.visible_page,
+        )
+    }
+
+    fn page_position_absolute(&mut self, page: i32) {
+        self.active_page = page.max(1);
+        if self.presentation.core().page_cursor_coupling_mode() {
+            self.visible_page = self.active_page;
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchResponseState {
@@ -111,6 +137,30 @@ impl TermDispatch for AdaptDispatchResponseState {
                 if !self.responses.terminal_parameters(permission) {
                     self.presentation
                         .dispatch(OutputAction::RequestTerminalParameters(permission));
+                }
+            }
+            OutputAction::RequestDisplayedExtent => {
+                if !self.request_displayed_extent() {
+                    self.presentation.dispatch(OutputAction::RequestDisplayedExtent);
+                }
+            }
+            OutputAction::PagePositionAbsolute(page) => {
+                self.page_position_absolute(page);
+                self.presentation.dispatch(OutputAction::PagePositionAbsolute(page));
+            }
+            OutputAction::SetMode {
+                private: true,
+                mode: 64,
+                enabled,
+            } => {
+                let was_coupled = self.presentation.core().page_cursor_coupling_mode();
+                self.presentation.dispatch(OutputAction::SetMode {
+                    private: true,
+                    mode: 64,
+                    enabled,
+                });
+                if enabled && !was_coupled {
+                    self.visible_page = self.active_page;
                 }
             }
             other => self.presentation.dispatch(other),
@@ -228,6 +278,42 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_displayed_extent_tracks_pan_visible_page_and_coupling() {
+        let mut state = AdaptDispatchResponseState::new(PageGeometry::new(0, 80, 24));
+        state.dispatch(OutputAction::RequestDisplayedExtent);
+        assert_eq!(state.response(), "\u{1b}[24;80;1;1;1\"w");
+
+        state.clear_response();
+        state.set_viewport_left(5);
+        state.dispatch(OutputAction::RequestDisplayedExtent);
+        assert_eq!(state.response(), "\u{1b}[24;80;6;1;1\"w");
+
+        state.clear_response();
+        state.dispatch(OutputAction::PagePositionAbsolute(3));
+        state.dispatch(OutputAction::RequestDisplayedExtent);
+        assert_eq!(state.response(), "\u{1b}[24;80;6;1;3\"w");
+
+        state.clear_response();
+        state.dispatch(OutputAction::SetMode {
+            private: true,
+            mode: 64,
+            enabled: false,
+        });
+        state.dispatch(OutputAction::PagePositionAbsolute(1));
+        state.dispatch(OutputAction::RequestDisplayedExtent);
+        assert_eq!(state.response(), "\u{1b}[24;80;6;1;3\"w");
+
+        state.clear_response();
+        state.dispatch(OutputAction::SetMode {
+            private: true,
+            mode: 64,
+            enabled: true,
+        });
+        state.dispatch(OutputAction::RequestDisplayedExtent);
+        assert_eq!(state.response(), "\u{1b}[24;80;6;1;1\"w");
+    }
+
+    #[test]
     fn response_sink_failure_is_propagated_as_deferred_adapter_work() {
         let mut state = state();
         state.set_response_writable(false);
@@ -241,8 +327,9 @@ mod tests {
             DeviceAttributesKind::Tertiary,
         ));
         state.dispatch(OutputAction::RequestTerminalParameters(0));
+        state.dispatch(OutputAction::RequestDisplayedExtent);
         assert!(state.response().is_empty());
-        assert_eq!(state.presentation().core().deferred_actions().len(), 4);
+        assert_eq!(state.presentation().core().deferred_actions().len(), 5);
     }
 
     #[test]
