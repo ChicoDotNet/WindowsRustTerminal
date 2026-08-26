@@ -121,6 +121,12 @@ impl TermDispatch for AdaptDispatchResponseState {
                         .dispatch(OutputAction::DeviceAttributes(kind));
                 }
             }
+            OutputAction::RequestTerminalParameters(permission) => {
+                if !self.responses.terminal_parameters(permission) {
+                    self.presentation
+                        .dispatch(OutputAction::RequestTerminalParameters(permission));
+                }
+            }
             other => self.presentation.dispatch(other),
         }
     }
@@ -230,7 +236,18 @@ mod tests {
     }
 
     #[test]
-    fn unsupported_reports_and_vt52_attributes_remain_explicitly_deferred() {
+    fn microsoft_terminal_parameters_flow_through_adapter_dispatch() {
+        let mut state = state();
+        state.dispatch(OutputAction::RequestTerminalParameters(0));
+        assert_eq!(state.response(), "\u{1b}[2;1;1;128;128;1;0x");
+
+        state.clear_response();
+        state.dispatch(OutputAction::RequestTerminalParameters(1));
+        assert_eq!(state.response(), "\u{1b}[3;1;1;128;128;1;0x");
+    }
+
+    #[test]
+    fn unsupported_reports_vt52_attributes_and_parameters_remain_deferred() {
         let mut state = state();
         state.dispatch(OutputAction::DeviceStatusReport {
             private: true,
@@ -238,7 +255,8 @@ mod tests {
             id: None,
         });
         state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Vt52));
+        state.dispatch(OutputAction::RequestTerminalParameters(2));
         assert!(state.response().is_empty());
-        assert_eq!(state.presentation().core().deferred_actions().len(), 2);
+        assert_eq!(state.presentation().core().deferred_actions().len(), 3);
     }
 }
