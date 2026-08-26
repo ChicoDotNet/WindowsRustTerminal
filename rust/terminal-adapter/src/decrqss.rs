@@ -34,16 +34,16 @@ pub fn serialize_request_setting(setting_id: &str, state: DecrqssState) -> Strin
 }
 
 fn serialize_vertical_margins(geometry: PageGeometry, margins: ScrollMargins) -> String {
-    let (top, bottom) = margins
-        .vertical()
-        .map_or((1, geometry.height), |range| (range.start + 1, range.end + 1));
+    let (top, bottom) = margins.vertical().map_or((1, geometry.height), |range| {
+        (range.start + 1, range.end + 1)
+    });
     format!("{DCS_VALID_PREFIX}{top};{bottom}r{ST}")
 }
 
 fn serialize_horizontal_margins(geometry: PageGeometry, margins: ScrollMargins) -> String {
-    let (left, right) = margins
-        .horizontal()
-        .map_or((1, geometry.width), |range| (range.start + 1, range.end + 1));
+    let (left, right) = margins.horizontal().map_or((1, geometry.width), |range| {
+        (range.start + 1, range.end + 1)
+    });
     format!("{DCS_VALID_PREFIX}{left};{right}s{ST}")
 }
 
