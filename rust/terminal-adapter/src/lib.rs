@@ -11,4 +11,5 @@ pub mod dcs_dispatch;
 pub mod macro_buffer;
 pub mod page_manager;
 pub mod page_storage;
+pub mod presentation_state;
 pub mod sixel;
