@@ -7,8 +7,7 @@
 use terminal_parser::output_engine::{OutputAction, TermDispatch};
 
 use crate::{
-    adapt_dispatch::PageGeometry,
-    presentation_state::AdaptDispatchPresentationState,
+    adapt_dispatch::PageGeometry, presentation_state::AdaptDispatchPresentationState,
     vt_response::VtResponseEngine,
 };
 
@@ -83,11 +82,12 @@ impl TermDispatch for AdaptDispatchResponseState {
                 id,
             } => {
                 if !self.device_status_report(private, status, id) {
-                    self.presentation.dispatch(OutputAction::DeviceStatusReport {
-                        private,
-                        status,
-                        id,
-                    });
+                    self.presentation
+                        .dispatch(OutputAction::DeviceStatusReport {
+                            private,
+                            status,
+                            id,
+                        });
                 }
             }
             other => self.presentation.dispatch(other),
