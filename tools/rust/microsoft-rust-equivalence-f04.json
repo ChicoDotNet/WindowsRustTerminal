@@ -8,9 +8,9 @@
   },
   "expectedGlobalCoveragePriority": 27,
   "expectedGlobalCoverage": {
-    "Exact": 247,
+    "Exact": 250,
     "Stronger": 11,
-    "Partial": 337,
+    "Partial": 334,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 418
