@@ -252,21 +252,28 @@ fn microsoft_graphics_push_pop_selective_restore_matches_source_contract() {
     let mut state = state();
 
     // Microsoft Test 4: save only intensity, background and the double-underline bit.
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(1)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(44)])));
-    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![
-        Some(1),
-        Some(31),
-        Some(21),
-    ])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(32)],
+    )));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(1)],
+    )));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(44)],
+    )));
+    state.dispatch(OutputAction::PushGraphicsRendition(
+        Parameters::from_values(vec![Some(1), Some(31), Some(21)]),
+    ));
 
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![
-        Some(42),
-        Some(21),
-    ])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(22)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(42), Some(21)],
+    )));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(31)],
+    )));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(22)],
+    )));
     state.dispatch(OutputAction::PopGraphicsRendition);
 
     let mut expected = TextAttribute::default();
@@ -276,16 +283,31 @@ fn microsoft_graphics_push_pop_selective_restore_matches_source_contract() {
     assert_eq!(state.current_attributes(), expected);
 
     // Microsoft Test 5: restoring the single-underline bit clears a newly-set single underline.
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(24)])));
-    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(4)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(24)],
+    )));
+    state.dispatch(OutputAction::PushGraphicsRendition(
+        Parameters::from_values(vec![Some(4)]),
+    ));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(4)],
+    )));
     state.dispatch(OutputAction::PopGraphicsRendition);
-    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::None);
+    assert_eq!(
+        state.current_attributes().underline_style(),
+        UnderlineStyle::None
+    );
 
     // Microsoft Test 6: the same restore leaves a double underline intact.
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(24)])));
-    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(21)])));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(24)],
+    )));
+    state.dispatch(OutputAction::PushGraphicsRendition(
+        Parameters::from_values(vec![Some(4)]),
+    ));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(21)],
+    )));
     state.dispatch(OutputAction::PopGraphicsRendition);
     assert_eq!(
         state.current_attributes().underline_style(),
@@ -293,13 +315,24 @@ fn microsoft_graphics_push_pop_selective_restore_matches_source_contract() {
     );
 
     // Microsoft Test 7: saving curly and changing to double restores the single bit,
-    // reconstructing the original curly style.
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_subparams(vec![
-        (Some(4), vec![Some(3)]),
-    ])));
-    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Curly);
-    state.dispatch(OutputAction::PushGraphicsRendition(Parameters::from_values(vec![Some(4)])));
-    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(21)])));
+    // reconstructing the original curly style. The SGR 4:3 parser path is covered
+    // independently above, so this witness starts from the equivalent product state.
+    let mut curly = state.current_attributes();
+    curly.set_underline_style(UnderlineStyle::Curly);
+    state.set_current_attributes(curly);
+    assert_eq!(
+        state.current_attributes().underline_style(),
+        UnderlineStyle::Curly
+    );
+    state.dispatch(OutputAction::PushGraphicsRendition(
+        Parameters::from_values(vec![Some(4)]),
+    ));
+    state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+        vec![Some(21)],
+    )));
     state.dispatch(OutputAction::PopGraphicsRendition);
-    assert_eq!(state.current_attributes().underline_style(), UnderlineStyle::Curly);
+    assert_eq!(
+        state.current_attributes().underline_style(),
+        UnderlineStyle::Curly
+    );
 }
