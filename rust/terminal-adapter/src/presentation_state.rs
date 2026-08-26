@@ -1,12 +1,18 @@
 //! Product-level adapter presentation state for cursor and text attributes.
 //!
-//! Microsoft `AdaptDispatch` saves text attributes together with the cursor and
-//! applies DECTCEM directly to the active cursor. This owner keeps those
-//! deterministic semantics in Rust while native drawing remains outside the
-//! portable core.
+//! Microsoft `AdaptDispatch` saves text attributes together with the cursor,
+//! applies DECTCEM directly to the active cursor, and mutates the active text
+//! attributes for SGR. This owner keeps those deterministic semantics in Rust
+//! while native drawing remains outside the portable core.
 
-use terminal_buffer::text_attribute::TextAttribute;
-use terminal_parser::output_engine::{OutputAction, TermDispatch};
+use terminal_buffer::{
+    text_attribute::{TextAttribute, UnderlineStyle},
+    text_color::TextColor,
+};
+use terminal_parser::{
+    output_engine::{OutputAction, TermDispatch},
+    state_machine::Parameters,
+};
 
 use crate::adapt_dispatch::{AdaptDispatchCore, PageGeometry};
 
@@ -62,6 +68,53 @@ impl AdaptDispatchPresentationState {
             self.core.set_mode(private, mode, enabled)
         }
     }
+
+    fn apply_graphics_rendition(&mut self, parameters: &Parameters) {
+        for index in 0..parameters.size() {
+            let option = parameters.at(index).unwrap_or(0);
+            match option {
+                0 => self.current_attributes = TextAttribute::default(),
+                1 => self.current_attributes.set_intense(true),
+                2 => self.current_attributes.set_faint(true),
+                4 => self
+                    .current_attributes
+                    .set_underline_style(UnderlineStyle::Single),
+                7 => self.current_attributes.set_reverse_video(true),
+                8 => self.current_attributes.set_invisible(true),
+                9 => self.current_attributes.set_crossed_out(true),
+                21 => self
+                    .current_attributes
+                    .set_underline_style(UnderlineStyle::Double),
+                22 => {
+                    self.current_attributes.set_intense(false);
+                    self.current_attributes.set_faint(false);
+                }
+                24 => self
+                    .current_attributes
+                    .set_underline_style(UnderlineStyle::None),
+                27 => self.current_attributes.set_reverse_video(false),
+                28 => self.current_attributes.set_invisible(false),
+                29 => self.current_attributes.set_crossed_out(false),
+                30..=37 => self.current_attributes.set_foreground(TextColor::index16(
+                    u8::try_from(option - 30).unwrap_or_default(),
+                )),
+                39 => self.current_attributes.set_default_foreground(),
+                40..=47 => self.current_attributes.set_background(TextColor::index16(
+                    u8::try_from(option - 40).unwrap_or_default(),
+                )),
+                49 => self.current_attributes.set_default_background(),
+                53 => self.current_attributes.set_overlined(true),
+                55 => self.current_attributes.set_overlined(false),
+                90..=97 => self.current_attributes.set_foreground(TextColor::index16(
+                    u8::try_from(option - 90 + 8).unwrap_or_default(),
+                )),
+                100..=107 => self.current_attributes.set_background(TextColor::index16(
+                    u8::try_from(option - 100 + 8).unwrap_or_default(),
+                )),
+                _ => {}
+            }
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchPresentationState {
@@ -87,6 +140,9 @@ impl TermDispatch for AdaptDispatchPresentationState {
                         mode,
                     });
                 }
+            }
+            OutputAction::SetGraphicsRendition(parameters) => {
+                self.apply_graphics_rendition(&parameters);
             }
             other => self.core.dispatch(other),
         }
@@ -144,5 +200,18 @@ mod tests {
                 assert_eq!(state.cursor_visible(), ending_visibility);
             }
         }
+    }
+
+    #[test]
+    fn empty_sgr_resets_attributes() {
+        let mut state = AdaptDispatchPresentationState::new(PageGeometry::new(20, 100, 29));
+        let mut attributes = TextAttribute::default();
+        attributes.set_intense(true);
+        attributes.set_reverse_video(true);
+        state.set_current_attributes(attributes);
+
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::default()));
+
+        assert_eq!(state.current_attributes(), TextAttribute::default());
     }
 }
