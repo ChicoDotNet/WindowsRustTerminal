@@ -37,6 +37,14 @@ impl VtResponseEngine {
         self.writable = writable;
     }
 
+    /// Writes an already-serialized VT response through the same fallible sink
+    /// used by the typed response helpers. This is used by protocol serializers
+    /// such as DECRQSS that own their complete DCS framing separately.
+    #[must_use]
+    pub fn return_response(&mut self, response: &str) -> bool {
+        self.push(response)
+    }
+
     #[must_use]
     pub fn operating_status(&mut self) -> bool {
         self.push("\u{1b}[0n")
@@ -251,6 +259,7 @@ mod tests {
     fn rejected_response_write_is_reported_without_mutating_stream() {
         let mut responses = VtResponseEngine::default();
         responses.set_writable(false);
+        assert!(!responses.return_response("\u{1b}P1$r0m\u{1b}\\"));
         assert!(!responses.primary_device_attributes(true));
         assert!(!responses.secondary_device_attributes());
         assert!(!responses.tertiary_device_attributes());
