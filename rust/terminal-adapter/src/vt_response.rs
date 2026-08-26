@@ -43,6 +43,23 @@ impl VtResponseEngine {
         self.push(&format!("\u{1b}[?{row};{column};{page}R"));
     }
 
+    pub fn primary_device_attributes(&mut self, clipboard_supported: bool) {
+        const BASE_ATTRIBUTES: &str = "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42";
+        self.push(BASE_ATTRIBUTES);
+        if clipboard_supported {
+            self.push(";52");
+        }
+        self.push("c");
+    }
+
+    pub fn secondary_device_attributes(&mut self) {
+        self.push("\u{1b}[>0;10;1c");
+    }
+
+    pub fn tertiary_device_attributes(&mut self) {
+        self.push("\u{1b}P!|00000000\u{1b}\\");
+    }
+
     fn push(&mut self, response: &str) {
         self.response.push_str(response);
     }
@@ -82,5 +99,33 @@ mod tests {
         responses.clear();
         responses.extended_cursor_position_report(50, 34, 20, 3);
         assert_eq!(responses.response(), "\u{1b}[?15;51;3R");
+    }
+
+    #[test]
+    fn microsoft_primary_device_attributes_tracks_clipboard_feature() {
+        let mut responses = VtResponseEngine::default();
+        responses.primary_device_attributes(true);
+        assert_eq!(
+            responses.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
+        );
+
+        responses.clear();
+        responses.primary_device_attributes(false);
+        assert_eq!(
+            responses.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42c"
+        );
+    }
+
+    #[test]
+    fn microsoft_secondary_and_tertiary_device_attributes_are_exact() {
+        let mut responses = VtResponseEngine::default();
+        responses.secondary_device_attributes();
+        assert_eq!(responses.response(), "\u{1b}[>0;10;1c");
+
+        responses.clear();
+        responses.tertiary_device_attributes();
+        assert_eq!(responses.response(), "\u{1b}P!|00000000\u{1b}\\");
     }
 }
