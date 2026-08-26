@@ -9,6 +9,7 @@
 pub mod adapt_dispatch;
 pub mod dcs_dispatch;
 pub mod decrqss;
+pub mod decrqss_cursor;
 pub mod macro_buffer;
 pub mod page_manager;
 pub mod page_storage;
