@@ -96,5 +96,8 @@ fn microsoft_f04_text_attribute_default_colors_roundtrip_matches_source_contract
         both_default,
         TextAttribute::from_legacy(both_default_legacy, defaults)
     );
-    assert_eq!(both_default.legacy_attributes(defaults), both_default_legacy);
+    assert_eq!(
+        both_default.legacy_attributes(defaults),
+        both_default_legacy
+    );
 }
