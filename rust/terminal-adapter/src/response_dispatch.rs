@@ -24,8 +24,14 @@ pub struct AdaptDispatchResponseState {
 impl AdaptDispatchResponseState {
     #[must_use]
     pub fn new(geometry: PageGeometry) -> Self {
+        let mut presentation = AdaptDispatchPresentationState::new(geometry);
+        presentation.dispatch(OutputAction::SetMode {
+            private: true,
+            mode: 64,
+            enabled: true,
+        });
         Self {
-            presentation: AdaptDispatchPresentationState::new(geometry),
+            presentation,
             responses: VtResponseEngine::default(),
             clipboard_supported: true,
             viewport_left: 0,
@@ -141,12 +147,14 @@ impl TermDispatch for AdaptDispatchResponseState {
             }
             OutputAction::RequestDisplayedExtent => {
                 if !self.request_displayed_extent() {
-                    self.presentation.dispatch(OutputAction::RequestDisplayedExtent);
+                    self.presentation
+                        .dispatch(OutputAction::RequestDisplayedExtent);
                 }
             }
             OutputAction::PagePositionAbsolute(page) => {
                 self.page_position_absolute(page);
-                self.presentation.dispatch(OutputAction::PagePositionAbsolute(page));
+                self.presentation
+                    .dispatch(OutputAction::PagePositionAbsolute(page));
             }
             OutputAction::SetMode {
                 private: true,
