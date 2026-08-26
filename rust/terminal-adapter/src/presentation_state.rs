@@ -303,11 +303,15 @@ mod tests {
         state.dispatch(OutputAction::SetGraphicsRendition(Parameters::default()));
         state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
 
-        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(31)])));
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+            vec![Some(31)],
+        )));
         let red = state.current_attributes();
         state.dispatch(OutputAction::PushGraphicsRendition(Parameters::default()));
 
-        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(vec![Some(32)])));
+        state.dispatch(OutputAction::SetGraphicsRendition(Parameters::from_values(
+            vec![Some(32)],
+        )));
         assert_eq!(
             state.current_attributes().foreground(),
             TextColor::index16(TextColor::DARK_GREEN)
