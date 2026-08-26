@@ -117,7 +117,8 @@ impl TermDispatch for AdaptDispatchResponseState {
             }
             OutputAction::DeviceAttributes(kind) => {
                 if !self.device_attributes(kind) {
-                    self.presentation.dispatch(OutputAction::DeviceAttributes(kind));
+                    self.presentation
+                        .dispatch(OutputAction::DeviceAttributes(kind));
                 }
             }
             other => self.presentation.dispatch(other),
@@ -194,7 +195,9 @@ mod tests {
     #[test]
     fn microsoft_primary_device_attributes_uses_live_clipboard_capability() {
         let mut state = state();
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Primary,
+        ));
         assert_eq!(
             state.response(),
             "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
@@ -202,7 +205,9 @@ mod tests {
 
         state.clear_response();
         state.set_clipboard_supported(false);
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Primary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Primary,
+        ));
         assert_eq!(
             state.response(),
             "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42c"
@@ -212,11 +217,15 @@ mod tests {
     #[test]
     fn microsoft_secondary_and_tertiary_attributes_flow_through_adapter_dispatch() {
         let mut state = state();
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Secondary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Secondary,
+        ));
         assert_eq!(state.response(), "\u{1b}[>0;10;1c");
 
         state.clear_response();
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Tertiary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Tertiary,
+        ));
         assert_eq!(state.response(), "\u{1b}P!|00000000\u{1b}\\");
     }
 
