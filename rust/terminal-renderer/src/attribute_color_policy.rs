@@ -125,13 +125,11 @@ pub fn resolve_text_attribute_colors(
     default_background_index: usize,
     settings: RenderSettingsPolicy,
 ) -> ResolvedAttributeColors {
-    let brighten_foreground =
-        attribute.is_intense() && settings.mode(RenderMode::IntenseIsBright);
-    let mut foreground = attribute.foreground().resolve(
-        color_table,
-        default_foreground_index,
-        brighten_foreground,
-    );
+    let brighten_foreground = attribute.is_intense() && settings.mode(RenderMode::IntenseIsBright);
+    let mut foreground =
+        attribute
+            .foreground()
+            .resolve(color_table, default_foreground_index, brighten_foreground);
     let mut background =
         attribute
             .background()
