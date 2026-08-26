@@ -43,7 +43,12 @@ impl VtResponseEngine {
     }
 
     #[must_use]
-    pub fn cursor_position_report(&mut self, cursor_x: i32, cursor_y: i32, viewport_top: i32) -> bool {
+    pub fn cursor_position_report(
+        &mut self,
+        cursor_x: i32,
+        cursor_y: i32,
+        viewport_top: i32,
+    ) -> bool {
         let row = cursor_y.saturating_sub(viewport_top).saturating_add(1);
         let column = cursor_x.saturating_add(1);
         self.push(&format!("\u{1b}[{row};{column}R"))
@@ -137,10 +142,16 @@ mod tests {
     fn microsoft_primary_device_attributes_tracks_clipboard_feature() {
         let mut responses = VtResponseEngine::default();
         assert!(responses.primary_device_attributes(true));
-        assert_eq!(responses.response(), "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42;52c");
+        assert_eq!(
+            responses.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42;52c"
+        );
         responses.clear();
         assert!(responses.primary_device_attributes(false));
-        assert_eq!(responses.response(), "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42c");
+        assert_eq!(
+            responses.response(),
+            "\u{1b}[?61;4;6;7;14;21;22;23;24;28;32;42c"
+        );
     }
 
     #[test]
