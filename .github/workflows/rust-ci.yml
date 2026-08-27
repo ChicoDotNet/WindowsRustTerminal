@@ -49,7 +49,11 @@ jobs:
       - name: Verify rustfmt for integration-ready PR
         if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         run: cargo fmt --all --check
-      - name: Clippy
+      - name: Apply Clippy fixes for incremental CI
+        if: github.event_name != 'pull_request' || github.event.pull_request.draft == true
+        run: cargo clippy --fix --workspace --all-targets --locked --allow-dirty --allow-staged -- -D warnings
+      - name: Verify Clippy for integration-ready PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   test:
