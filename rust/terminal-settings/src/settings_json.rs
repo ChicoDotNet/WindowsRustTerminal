@@ -1,4 +1,4 @@
-//! Shared deterministic JSON/JSONC core for portable SettingsModel owners.
+//! Shared deterministic JSON/JSONC core for portable `SettingsModel` owners.
 //!
 //! Windows Terminal settings need to distinguish an omitted property from an
 //! explicit `null`. This module provides that distinction once so individual
@@ -67,6 +67,12 @@ pub struct JsonError {
     pub kind: JsonErrorKind,
 }
 
+/// Parses one Windows Terminal settings JSON/JSONC document.
+///
+/// # Errors
+///
+/// Returns [`JsonError`] when the document is malformed, contains an invalid
+/// escape/number, ends unexpectedly, or has trailing non-trivia data.
 pub fn parse(input: &str) -> Result<JsonValue, JsonError> {
     let mut parser = Parser::new(input);
     let value = parser.parse_value()?;
