@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: the first three Profile inheritance/local-ownership contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 35,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership and nullable icon layering contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 36,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 25,
-      "Missing": 132
+      "Exact": 26,
+      "Missing": 131
     }
   },
-  "expectedGlobalCoveragePriority": 35,
+  "expectedGlobalCoveragePriority": 36,
   "expectedGlobalCoverage": {
-    "Exact": 302,
+    "Exact": 303,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 393
+    "Missing": 392
   },
   "entries": [
     {
@@ -41,6 +41,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_profile_has_setting_at_specific_layer"],
       "notes": "The Rust owner distinguishes local ownership from inherited resolution: explicit profile historySize reports Has=true, inherited defaults historySize/tabTitle report Has=false on children, and profiles.defaults itself retains Has=true for its locally-defined value."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "LayerProfileIcon",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_profile_layer_icon_preserves_null_and_missing_semantics"],
+      "notes": "The safe Rust Profile owner reproduces Microsoft's nullable icon layering: an explicit null clears the icon, an omitted icon preserves the current layer result, and a later string replaces it."
     }
   ]
 }
