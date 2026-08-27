@@ -438,10 +438,13 @@ mod tests {
                 .get_input_mode(Mode::CursorKey)
         );
         machine.process_str("\u{1b}[?1h");
-        machine.engine_mut().dispatch_mut().dispatch(OutputAction::RequestMode {
-            private: true,
-            mode: 1,
-        });
+        machine
+            .engine_mut()
+            .dispatch_mut()
+            .dispatch(OutputAction::RequestMode {
+                private: true,
+                mode: 1,
+            });
         assert_eq!(machine.engine().dispatch().response(), "\u{1b}[?1;1$y");
         assert!(
             machine
