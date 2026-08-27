@@ -48,6 +48,49 @@ impl ActionMapDocument {
         &self.root
     }
 
+    /// Reports whether Microsoft's user-origin ActionMap loader would mark the
+    /// document as needing write-back fixups while layering these actions.
+    ///
+    /// Native `ActionMap::LayerJson` flags only ordinary user commands that
+    /// either lack an `id` or still carry legacy inline `keys`. Nested command
+    /// groups and iterable commands are deliberately excluded from generated-ID
+    /// fixups.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ActionMapError`] when the action collection has an invalid
+    /// shape.
+    pub fn fixups_applied_during_load(&self) -> Result<bool, ActionMapError> {
+        let actions = match &self.root {
+            JsonValue::Array(actions) => actions.as_slice(),
+            JsonValue::Object(root) => match root.get("actions") {
+                Some(JsonValue::Array(actions)) => actions.as_slice(),
+                Some(_) => return Err(ActionMapError::ExpectedActionsArray),
+                None => return Ok(false),
+            },
+            _ => return Err(ActionMapError::ExpectedActionMap),
+        };
+
+        for action in actions {
+            let JsonValue::Object(entry) = action else {
+                return Err(ActionMapError::ExpectedEntryObject);
+            };
+
+            if entry.get("commands").is_some() || entry.get("iterateOn").is_some() {
+                continue;
+            }
+            if entry.get("command").is_none() {
+                continue;
+            }
+
+            if entry.get("id").is_none() || entry.get("keys").is_some() {
+                return Ok(true);
+            }
+        }
+
+        Ok(false)
+    }
+
     /// Resolves the action ID associated with a key chord, including the legacy
     /// `keys`-inside-action form used by SettingsLoader before action fixup.
     ///

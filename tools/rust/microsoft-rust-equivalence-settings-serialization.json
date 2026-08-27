@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, all three color-scheme collision round-trips, RoundtripGenerateActionID, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 60,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, all three color-scheme collision round-trips, RoundtripGenerateActionID, NoGeneratedIDsForIterableAndNestedCommands, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 61,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 51,
-      "Missing": 106
+      "Exact": 52,
+      "Missing": 105
     }
   },
-  "expectedGlobalCoveragePriority": 60,
+  "expectedGlobalCoveragePriority": 61,
   "expectedGlobalCoverage": {
-    "Exact": 328,
+    "Exact": 329,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 367
+    "Missing": 366
   },
   "entries": [
     {
@@ -121,6 +121,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_roundtrip_generate_action_id_contract"],
       "notes": "Microsoft loads a legacy sendInput action without an explicit ID, resolves it through the ctrl+shift+w key chord and expects ActionAndArgs::GenerateID to produce User.sendInput.<hash>. Safe Rust ActionMapDocument now resolves legacy keys-inside-action bindings and reproduces Microsoft's TIL hash over UTF-16 sendInput arguments, including the architecture-specific 32-bit 56911147 and 64-bit A020D2 vectors, instead of hardcoding the observed ID."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "NoGeneratedIDsForIterableAndNestedCommands",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_no_generated_ids_for_iterable_and_nested_commands_contract"],
+      "notes": "Microsoft expects SettingsLoader/ActionMap to report no user-settings fixup for three shapes: an ordinary action with an explicit ID and no legacy keys, an iterable command, and a nested command group. Safe Rust ActionMapDocument now mirrors ActionMap::LayerJson's user-origin fixup predicate: ordinary commands request write-back only when the ID is absent or legacy inline keys are present; iterable and nested groups are excluded. The direct witness uses Microsoft's exact three-entry vector and also exercises both positive branches of the native predicate."
     },
     {
       "suite": "unitSettingsModel",
