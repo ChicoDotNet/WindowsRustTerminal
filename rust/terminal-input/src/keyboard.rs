@@ -129,7 +129,11 @@ pub(crate) fn handle_key<M: KeyboardMapper>(
         return output;
     }
 
-    if event.virtual_key == virtual_key::PACKET || event.virtual_key == 0 {
+    if event.key_down && event.virtual_key == 0 && event.codepoint == 0 {
+        return String::new();
+    }
+
+    if event.key_down && (event.virtual_key == virtual_key::PACKET || event.virtual_key == 0) {
         return codepoint_string(event.codepoint);
     }
 
@@ -1005,6 +1009,19 @@ mod tests {
         assert_eq!(
             value.handle_key_with_mapper(up, &AzertyFixture),
             "\u{1b}[1;1:3A"
+        );
+    }
+
+    #[test]
+    fn microsoft_terminal_core_invalid_key_event_is_silent() {
+        let mut value = TerminalInput::new();
+        assert_eq!(
+            value.handle_key_with_mapper(event(0, 123, 0, 0), &AzertyFixture),
+            ""
+        );
+        assert_eq!(
+            value.handle_key_with_mapper(event(255, 123, 0, 0), &AzertyFixture),
+            ""
         );
     }
 

@@ -10,14 +10,21 @@ on:
       - "rust-toolchain.toml"
       - "rust/**"
       - "tools/rust/**"
+      - "doc/rust-migration/**"
+      - "src/cascadia/fzf/**"
+      - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "Cargo.toml"
       - "Cargo.lock"
       - "rust-toolchain.toml"
       - "rust/**"
       - "tools/rust/**"
+      - "doc/rust-migration/**"
+      - "src/cascadia/fzf/**"
+      - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
   workflow_dispatch:
 
@@ -36,9 +43,17 @@ jobs:
       - uses: actions/checkout@v5
       - name: Toolchain
         run: rustup show
-      - name: Format
+      - name: Apply rustfmt for incremental CI
+        if: github.event_name != 'pull_request' || github.event.pull_request.draft == true
+        run: cargo fmt --all
+      - name: Verify rustfmt for integration-ready PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         run: cargo fmt --all --check
-      - name: Clippy
+      - name: Apply Clippy fixes for incremental CI
+        if: github.event_name != 'pull_request' || github.event.pull_request.draft == true
+        run: cargo clippy --fix --workspace --all-targets --locked --allow-dirty --allow-staged -- -D warnings
+      - name: Verify Clippy for integration-ready PR
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
   test:
@@ -54,6 +69,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Toolchain
         run: rustup show
+      - name: Apply rustfmt before checks
+        run: cargo fmt --all
       - name: Check
         run: cargo check --workspace --all-targets --locked
       - name: Test
@@ -67,3 +84,28 @@ jobs:
       - name: Validate TAEF result parser
         shell: pwsh
         run: ./tools/rust/Test-TaefContract.ps1
+      - name: Validate Microsoft source inventory
+        shell: pwsh
+        run: ./tools/rust/Test-MicrosoftTestInventory.ps1
+      - name: Validate global Microsoft source census
+        shell: pwsh
+        run: ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1
+      - name: Validate R08 functional-debt classification
+        shell: pwsh
+        run: ./tools/rust/Test-R08FunctionalDebt.ps1
+      - name: Enforce R08 functional-debt exit gate
+        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        shell: pwsh
+        run: ./tools/rust/Test-R08FunctionalDebt.ps1 -RequireZero
+      - name: Validate global Rust witnesses
+        shell: pwsh
+        run: ./tools/rust/Test-RustGlobalWitnesses.ps1
+      - name: Validate R06-B server seams
+        shell: pwsh
+        run: ./tools/rust/Test-RustServerSourceMap.ps1
+      - name: Validate R07 renderer seams
+        shell: pwsh
+        run: ./tools/rust/Test-RustRendererSourceMap.ps1
+      - name: Validate H09 TerminalApp FZF seam
+        shell: pwsh
+        run: ./tools/rust/Test-RustTerminalAppFzfSourceMap.ps1

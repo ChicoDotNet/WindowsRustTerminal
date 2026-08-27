@@ -7,8 +7,13 @@ name = "terminal-adapter"
 version = "0.0.0"
 dependencies = [
  "terminal-buffer",
+ "terminal-input",
  "terminal-parser",
 ]
+
+[[package]]
+name = "terminal-app"
+version = "0.0.0"
 
 [[package]]
 name = "terminal-buffer"
@@ -20,6 +25,10 @@ version = "0.0.0"
 dependencies = [
  "terminal-buffer",
 ]
+
+[[package]]
+name = "terminal-foundation"
+version = "0.0.0"
 
 [[package]]
 name = "terminal-host"
@@ -46,3 +55,13 @@ dependencies = [
 [[package]]
 name = "terminal-renderer"
 version = "0.0.0"
+dependencies = [
+ "terminal-buffer",
+]
+
+[[package]]
+name = "terminal-settings"
+version = "0.1.0"
+dependencies = [
+ "terminal-foundation",
+]
