@@ -10,5 +10,6 @@ pub mod application_state;
 pub mod color_scheme;
 pub mod new_tab_menu;
 pub mod profile;
+pub mod profile_collection;
 pub mod settings_json;
 pub mod theme;
