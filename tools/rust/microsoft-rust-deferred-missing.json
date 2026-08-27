@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 384,
+  "expectedMissingTotal": 383,
   "sources": [
     {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
@@ -20,7 +20,6 @@
     {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","reason":"Settings deserialization/layering semantics remain native."},
     {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","reason":"Settings key-binding/action-binding semantics remain native."},
     {"suite":"unitSettingsModel","source":"MediaResourceTests.cpp","reason":"Settings media-resource semantics remain native."},
-    {"suite":"unitSettingsModel","source":"ProfileTests.cpp","expectedMissing":1,"reason":"Twelve Profile contracts are Exact in safe Rust, including inheritance, icon/environment, environment-case warning validation, strict and generated GUID identity, property layering, legacy profile-array reconciliation, prohibited profiles.defaults identity fields and canonical cmd/PowerShell commandline fixups; only DuplicateProfileTest remains deferred."},
     {"suite":"unitSettingsModel","source":"SerializationTests.cpp","reason":"Settings serialization/round-trip semantics remain native."},
     {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native."}
   ]
