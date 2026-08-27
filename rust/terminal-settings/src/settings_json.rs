@@ -218,7 +218,9 @@ impl<'a> Parser<'a> {
                 }
                 b'\\' => {
                     self.offset += 1;
-                    let escaped = self.next().ok_or_else(|| self.error(JsonErrorKind::UnexpectedEnd))?;
+                    let escaped = self
+                        .next()
+                        .ok_or_else(|| self.error(JsonErrorKind::UnexpectedEnd))?;
                     match escaped {
                         b'"' => result.push('"'),
                         b'\\' => result.push('\\'),
@@ -235,7 +237,10 @@ impl<'a> Parser<'a> {
                 0x00..=0x1f => return Err(self.error(JsonErrorKind::UnexpectedToken)),
                 _ => {
                     let remainder = &self.input[self.offset..];
-                    let ch = remainder.chars().next().ok_or_else(|| self.error(JsonErrorKind::UnexpectedEnd))?;
+                    let ch = remainder
+                        .chars()
+                        .next()
+                        .ok_or_else(|| self.error(JsonErrorKind::UnexpectedEnd))?;
                     result.push(ch);
                     self.offset += ch.len_utf8();
                 }
@@ -255,12 +260,14 @@ impl<'a> Parser<'a> {
             if !(0xdc00..=0xdfff).contains(&low) {
                 return Err(self.error(JsonErrorKind::InvalidUnicodeEscape));
             }
-            let codepoint = 0x10000 + (((u32::from(high) - 0xd800) << 10) | (u32::from(low) - 0xdc00));
+            let codepoint =
+                0x10000 + (((u32::from(high) - 0xd800) << 10) | (u32::from(low) - 0xdc00));
             char::from_u32(codepoint).ok_or_else(|| self.error(JsonErrorKind::InvalidUnicodeEscape))
         } else if (0xdc00..=0xdfff).contains(&high) {
             Err(self.error(JsonErrorKind::InvalidUnicodeEscape))
         } else {
-            char::from_u32(u32::from(high)).ok_or_else(|| self.error(JsonErrorKind::InvalidUnicodeEscape))
+            char::from_u32(u32::from(high))
+                .ok_or_else(|| self.error(JsonErrorKind::InvalidUnicodeEscape))
         }
     }
 
@@ -340,7 +347,12 @@ impl<'a> Parser<'a> {
     }
 
     fn expect_bytes(&mut self, expected: &[u8]) -> Result<(), JsonError> {
-        if self.input.as_bytes().get(self.offset..self.offset + expected.len()) == Some(expected) {
+        if self
+            .input
+            .as_bytes()
+            .get(self.offset..self.offset + expected.len())
+            == Some(expected)
+        {
             self.offset += expected.len();
             Ok(())
         } else {
