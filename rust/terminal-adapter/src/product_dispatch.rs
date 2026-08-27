@@ -481,7 +481,10 @@ mod tests {
         machine.process_str("ABC");
         machine.process_str("\u{1b}[99;1;1;1;1;3*y");
 
-        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P99!~FDEA\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P99!~FDEA\u{1b}\\"
+        );
     }
 
     #[test]
