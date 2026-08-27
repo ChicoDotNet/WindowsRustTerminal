@@ -57,6 +57,21 @@ Selection rules:
 
 This is the migration "sandwich": new Rust ownership grows from one side while nearby partial ownership is hardened from the other, repeatedly closing complete functional slices instead of creating a wide front of disconnected ports.
 
+## Increment capacity and selection
+
+The unit of work is a **coherent Microsoft functionality slice**, not one source test and not an arbitrary count of Rust `#[test]` functions.
+
+As a planning heuristic, each normal increment should retire approximately **seven functional Missing and/or Partial cases**, with **5–9 cases** as the usual operating range. Seven is a capacity target rather than a hard limit:
+
+- stop at five or six when that is the natural end-to-end seam;
+- extend to eight or nine when the remaining adjacent cases reuse the same owner, state machine, API, implementation or already-loaded context;
+- do not cut a coherent feature merely to hit seven;
+- do not absorb an L/XL contract wholesale merely to increase the count—take the largest safe 5–9-case vertical slice instead.
+
+Selection optimizes, in order, for completed Microsoft behavior, reuse of loaded technical context, real reduction of Missing/Partial debt, Exact potential, Exact-to-effort/risk ratio, and CI/architecture health. A one-case contract receives no automatic preference over a six-case seam when both have the same discovery and context cost.
+
+`Exact > Partial > Missing` remains the governing quality rule. Partial is used only when a concrete limitation blocks Exact; the capacity target is never satisfied by cosmetic relabeling. When one implementation change unlocks several neighboring Microsoft cases essentially for free, those cases belong in the same increment if the resulting unit remains reviewable and testable.
+
 ## Commit and PR discipline
 
 - `rust/main` is the compact migration baseline (`Initial rust migration effort`).

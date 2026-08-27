@@ -3,7 +3,7 @@
 //! The action map keeps the shared typed JSON tree as its serialization source
 //! of truth while progressively owning portable ActionMap fixup semantics.
 
-use crate::settings_json::{self, JsonValue};
+use crate::settings_json::{self, JsonObject, JsonValue};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ActionMapError {
@@ -91,6 +91,116 @@ impl ActionMapDocument {
         Ok(false)
     }
 
+    /// Canonicalizes user ActionMap JSON to the modern actions/keybindings
+    /// representation used by `SettingsLoader::FixupUserSettings`.
+    ///
+    /// The fixup migrates inline legacy keys, converts `unbound` actions to
+    /// null-id keybindings, generates deterministic IDs, reuses matching inbox
+    /// IDs for redundant user actions, and collapses duplicate command blocks
+    /// that resolve to the same ID while preserving the first block's metadata.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ActionMapError`] for malformed action/keybinding shapes or an
+    /// action whose generated-ID arguments are not yet owned by safe Rust.
+    pub fn fixup_user_actions(&mut self, inbox: Option<&Self>) -> Result<bool, ActionMapError> {
+        let original = self.root.clone();
+        let inbox_actions = match inbox {
+            Some(inbox) => collect_action_objects(inbox)?,
+            None => Vec::new(),
+        };
+
+        let JsonValue::Object(root) = &mut self.root else {
+            return Err(ActionMapError::ExpectedActionMap);
+        };
+
+        let actions = root
+            .remove("actions")
+            .ok_or(ActionMapError::ExpectedActionsArray)?;
+        let JsonValue::Array(actions) = actions else {
+            return Err(ActionMapError::ExpectedActionsArray);
+        };
+
+        let had_keybindings = root.contains_key("keybindings");
+        let mut keybindings = match root.remove("keybindings") {
+            Some(JsonValue::Array(keybindings)) => keybindings,
+            Some(_) => return Err(ActionMapError::ExpectedKeybindingsArray),
+            None => Vec::new(),
+        };
+
+        let mut modern_actions = Vec::new();
+        for action in actions {
+            let JsonValue::Object(mut entry) = action else {
+                return Err(ActionMapError::ExpectedEntryObject);
+            };
+
+            if entry.get("commands").is_some() || entry.get("iterateOn").is_some() {
+                modern_actions.push(JsonValue::Object(entry));
+                continue;
+            }
+
+            let command = entry
+                .get("command")
+                .cloned()
+                .ok_or(ActionMapError::ExpectedCommand)?;
+            let keys = entry.remove("keys");
+
+            if command.as_str() == Some("unbound") {
+                if let Some(keys) = keys {
+                    keybindings.push(keybinding(JsonValue::Null, keys));
+                }
+                continue;
+            }
+
+            let inbox_match = inbox_actions
+                .iter()
+                .find(|candidate| candidate.get("command") == Some(&command));
+
+            let id = if let Some(id) = entry.get("id").and_then(JsonValue::as_str) {
+                id.to_owned()
+            } else if let Some(id) = inbox_match
+                .and_then(|candidate| candidate.get("id"))
+                .and_then(JsonValue::as_str)
+            {
+                id.to_owned()
+            } else {
+                generated_or_explicit_action_id(&JsonValue::Object(entry.clone()))?
+            };
+
+            entry.insert("id".to_owned(), JsonValue::String(id.clone()));
+
+            if let Some(keys) = keys {
+                keybindings.push(keybinding(JsonValue::String(id.clone()), keys));
+            }
+
+            let redundant_inbox = inbox_match.is_some()
+                && entry
+                    .keys()
+                    .all(|key| matches!(key.as_str(), "command" | "id"));
+            if redundant_inbox {
+                continue;
+            }
+
+            let duplicate = modern_actions.iter().any(|existing| {
+                existing
+                    .as_object()
+                    .and_then(|existing| existing.get("id"))
+                    .and_then(JsonValue::as_str)
+                    == Some(id.as_str())
+            });
+            if !duplicate {
+                modern_actions.push(JsonValue::Object(entry));
+            }
+        }
+
+        root.insert("actions".to_owned(), JsonValue::Array(modern_actions));
+        if had_keybindings || !keybindings.is_empty() {
+            root.insert("keybindings".to_owned(), JsonValue::Array(keybindings));
+        }
+
+        Ok(self.root != original)
+    }
+
     /// Resolves the action ID associated with a key chord, including the legacy
     /// `keys`-inside-action form used by SettingsLoader before action fixup.
     ///
@@ -142,6 +252,33 @@ impl ActionMapDocument {
 
         Ok(None)
     }
+}
+
+fn collect_action_objects(document: &ActionMapDocument) -> Result<Vec<JsonObject>, ActionMapError> {
+    let actions = match &document.root {
+        JsonValue::Array(actions) => actions.as_slice(),
+        JsonValue::Object(root) => match root.get("actions") {
+            Some(JsonValue::Array(actions)) => actions.as_slice(),
+            Some(_) => return Err(ActionMapError::ExpectedActionsArray),
+            None => return Ok(Vec::new()),
+        },
+        _ => return Err(ActionMapError::ExpectedActionMap),
+    };
+
+    actions
+        .iter()
+        .map(|action| match action {
+            JsonValue::Object(action) => Ok(action.clone()),
+            _ => Err(ActionMapError::ExpectedEntryObject),
+        })
+        .collect()
+}
+
+fn keybinding(id: JsonValue, keys: JsonValue) -> JsonValue {
+    let mut binding = JsonObject::new();
+    binding.insert("id".to_owned(), id);
+    binding.insert("keys".to_owned(), keys);
+    JsonValue::Object(binding)
 }
 
 fn validate_root(root: &JsonValue) -> Result<(), ActionMapError> {

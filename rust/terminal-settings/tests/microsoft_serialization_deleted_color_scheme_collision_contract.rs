@@ -116,7 +116,7 @@ fn microsoft_serialization_roundtrip_user_deleted_color_scheme_collision_contrac
         profiles
             .get("list")
             .and_then(JsonValue::as_array)
-            .map(Vec::len),
+            .map(|values| values.len()),
         Some(1)
     );
 
