@@ -1,6 +1,7 @@
 //! Final portable product aggregate for adapter response-producing behavior.
 //!
-//! `AdaptDispatchResponseState` owns the ordinary VT response path while
+//! `AdaptDispatchResponseState` owns the ordinary VT response path,
+//! `ChecksumReportEngine` owns DECRQCRA state and serialization,
 //! `MacroReportEngine` owns DECDMAC storage plus DSR 62/63,
 //! `UserPreferenceCharsetEngine` owns DECAUPSS/DECRQUPSS,
 //! `WindowReportEngine` owns deterministic window-size reports, and
@@ -15,7 +16,8 @@ use terminal_parser::{
 };
 
 use crate::{
-    adapt_dispatch::PageGeometry, input_mode_dispatch::TerminalInputDispatchState,
+    adapt_dispatch::PageGeometry, checksum_reports::ChecksumReportEngine,
+    decrqss_color_alias::ColorAliasIndices, input_mode_dispatch::TerminalInputDispatchState,
     macro_reports::MacroReportEngine, response_dispatch::AdaptDispatchResponseState,
     user_preference_charset::UserPreferenceCharsetEngine, window_reports::WindowReportEngine,
 };
@@ -31,6 +33,7 @@ enum DcsOwner {
 
 pub struct AdaptDispatchProductState {
     responses: AdaptDispatchResponseState,
+    checksum_reports: ChecksumReportEngine,
     input_modes: TerminalInputDispatchState,
     macros: MacroReportEngine,
     user_preference_charset: UserPreferenceCharsetEngine,
@@ -45,6 +48,7 @@ impl AdaptDispatchProductState {
     pub fn new(geometry: PageGeometry) -> Self {
         Self {
             responses: AdaptDispatchResponseState::new(geometry),
+            checksum_reports: ChecksumReportEngine::new(geometry),
             input_modes: TerminalInputDispatchState::default(),
             macros: MacroReportEngine::default(),
             user_preference_charset: UserPreferenceCharsetEngine::default(),
@@ -62,6 +66,11 @@ impl AdaptDispatchProductState {
 
     pub const fn response_state_mut(&mut self) -> &mut AdaptDispatchResponseState {
         &mut self.responses
+    }
+
+    #[must_use]
+    pub const fn checksum_reports(&self) -> &ChecksumReportEngine {
+        &self.checksum_reports
     }
 
     #[must_use]
@@ -96,6 +105,7 @@ impl AdaptDispatchProductState {
     pub fn clear_response(&mut self) {
         self.outbound.clear();
         self.responses.clear_response();
+        self.checksum_reports.clear_response();
         self.macros.clear_response();
         self.user_preference_charset.clear_response();
         self.window_reports.clear_response();
@@ -104,15 +114,29 @@ impl AdaptDispatchProductState {
     pub const fn set_response_writable(&mut self, writable: bool) {
         self.writable = writable;
         self.responses.set_response_writable(writable);
+        self.checksum_reports.set_response_writable(writable);
         self.macros.set_response_writable(writable);
         self.user_preference_charset.set_response_writable(writable);
         self.window_reports.set_response_writable(writable);
+    }
+
+    pub const fn set_checksum_report_enabled(&mut self, enabled: bool) {
+        self.checksum_reports.set_enabled(enabled);
+    }
+
+    pub const fn set_color_alias_indices(&mut self, aliases: ColorAliasIndices) {
+        self.responses.set_color_alias_indices(aliases);
+        self.checksum_reports.set_color_alias_indices(aliases);
     }
 
     fn collect_responses(&mut self) {
         if !self.responses.response().is_empty() {
             self.outbound.push_str(self.responses.response());
             self.responses.clear_response();
+        }
+        if !self.checksum_reports.response().is_empty() {
+            self.outbound.push_str(self.checksum_reports.response());
+            self.checksum_reports.clear_response();
         }
         if !self.macros.response().is_empty() {
             self.outbound.push_str(self.macros.response());
@@ -160,6 +184,19 @@ impl AdaptDispatchProductState {
         }
     }
 
+    fn dispatch_checksum_report(
+        &mut self,
+        id: VtId,
+        parameters: terminal_parser::state_machine::Parameters,
+    ) {
+        if self.writable && self.checksum_reports.request(&parameters) {
+            self.collect_responses();
+        } else {
+            self.responses
+                .dispatch(OutputAction::AdvancedCsi { id, parameters });
+        }
+    }
+
     fn dispatch_window_report(&mut self, function: i32, parameter1: i32, parameter2: i32) {
         let action = OutputAction::WindowManipulation {
             function,
@@ -200,6 +237,11 @@ impl AdaptDispatchProductState {
             other => self.input_modes.dispatch(other),
         }
     }
+
+    fn record_print(&mut self, text: &[u16]) {
+        let attributes = self.responses.presentation().current_attributes();
+        self.checksum_reports.write_text(text, attributes);
+    }
 }
 
 impl TermDispatch for AdaptDispatchProductState {
@@ -210,6 +252,14 @@ impl TermDispatch for AdaptDispatchProductState {
         }
 
         match action {
+            OutputAction::Print(unit) => {
+                self.record_print(&[unit]);
+                self.responses.dispatch(OutputAction::Print(unit));
+            }
+            OutputAction::PrintString(text) => {
+                self.record_print(&text);
+                self.responses.dispatch(OutputAction::PrintString(text));
+            }
             OutputAction::DeviceStatusReport {
                 private: true,
                 status: status @ (62 | 63),
@@ -217,6 +267,9 @@ impl TermDispatch for AdaptDispatchProductState {
             } => self.dispatch_macro_report(status, id),
             OutputAction::AdvancedCsi { id, parameters } if id == VtId::from_ascii("&u") => {
                 self.dispatch_user_preference_report(id, parameters);
+            }
+            OutputAction::AdvancedCsi { id, parameters } if ChecksumReportEngine::handles(id) => {
+                self.dispatch_checksum_report(id, parameters);
             }
             OutputAction::WindowManipulation {
                 function,
@@ -278,6 +331,7 @@ impl TermDispatch for AdaptDispatchProductState {
 mod tests {
     use super::*;
     use crate::{macro_buffer::MAX_SPACE, user_preference_charset::CharsetSize};
+    use terminal_buffer::text_attribute::TextAttribute;
     use terminal_input::Mode;
     use terminal_parser::{
         output_engine::OutputStateMachineEngine,
@@ -411,6 +465,51 @@ mod tests {
                 .core()
                 .deferred_actions()
                 .is_empty()
+        );
+    }
+
+    #[test]
+    fn microsoft_decrqcra_flows_parser_to_live_product_checksum_state() {
+        let mut dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 100, 29));
+        dispatch.set_checksum_report_enabled(true);
+        dispatch
+            .response_state_mut()
+            .presentation_mut()
+            .set_current_attributes(TextAttribute::default());
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("ABC");
+        machine.process_str("\u{1b}[99;1;1;1;1;3*y");
+
+        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P99!~FDEA\u{1b}\\");
+    }
+
+    #[test]
+    fn decrqcra_sink_failure_remains_deferred_at_product_boundary() {
+        let mut dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 80, 24));
+        dispatch.set_checksum_report_enabled(true);
+        dispatch.set_response_writable(false);
+        dispatch.dispatch(OutputAction::AdvancedCsi {
+            id: VtId::from_ascii("*y"),
+            parameters: Parameters::from_values(vec![
+                Some(99),
+                Some(1),
+                Some(1),
+                Some(1),
+                Some(1),
+                Some(1),
+            ]),
+        });
+
+        assert!(dispatch.response().is_empty());
+        assert_eq!(
+            dispatch
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .len(),
+            1
         );
     }
 
