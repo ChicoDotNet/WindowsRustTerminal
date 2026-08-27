@@ -91,6 +91,18 @@ impl AdaptDispatchResponseState {
         self.color_aliases = aliases;
     }
 
+    /// Records a DECRQM-reportable mode whose real side effect is owned by a
+    /// sibling product component (for example `terminal-input`). Returning
+    /// `false` means this response owner does not recognize the mode and the
+    /// caller should preserve the action for another owner instead.
+    pub fn record_report_only_mode(&mut self, private: bool, mode: i32, enabled: bool) -> bool {
+        if !Self::is_report_only_mode(private, mode) {
+            return false;
+        }
+        self.set_report_only_mode(private, mode, enabled);
+        true
+    }
+
     fn is_report_only_mode(private: bool, mode: i32) -> bool {
         if private {
             PRIVATE_REPORT_ONLY_MODES.contains(&mode)
@@ -352,7 +364,7 @@ impl TermDispatch for AdaptDispatchResponseState {
                 mode,
                 enabled,
             } if Self::is_report_only_mode(private, mode) => {
-                self.set_report_only_mode(private, mode, enabled);
+                self.record_report_only_mode(private, mode, enabled);
                 self.presentation.dispatch(OutputAction::SetMode {
                     private,
                     mode,
