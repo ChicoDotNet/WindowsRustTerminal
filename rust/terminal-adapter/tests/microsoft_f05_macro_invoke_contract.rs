@@ -1,6 +1,4 @@
-use terminal_adapter::{
-    adapt_dispatch::PageGeometry, macro_execution::MacroExecutingProduct,
-};
+use terminal_adapter::{adapt_dispatch::PageGeometry, macro_execution::MacroExecutingProduct};
 
 fn product() -> MacroExecutingProduct {
     MacroExecutingProduct::new(PageGeometry::new(20, 100, 29))
@@ -73,8 +71,5 @@ fn microsoft_macro_invocation_recurses_immediately_and_stops_at_depth_sixteen() 
     clear_output(&mut product);
     product.process_str("\u{1b}[0*z");
 
-    assert_eq!(
-        output(&product),
-        "<[<[<[<[<[<[<[<[]>]>]>]>]>]>]>]>"
-    );
+    assert_eq!(output(&product), "<[<[<[<[<[<[<[<[]>]>]>]>]>]>]>]>");
 }
