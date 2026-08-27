@@ -243,9 +243,7 @@ mod tests {
         let encoded_len = text.encode_utf16().count();
         let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
         machine.process_str(text);
-        machine.process_str(&format!(
-            "\u{1b}[99;1;1;1;1;{encoded_len}*y"
-        ));
+        machine.process_str(&format!("\u{1b}[99;1;1;1;1;{encoded_len}*y"));
         machine.engine().dispatch().response().to_owned()
     }
 
