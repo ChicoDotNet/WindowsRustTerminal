@@ -19,6 +19,7 @@ pub enum SerializationError {
     ExpectedSchemeObject,
     SchemeNotFound,
     ExpectedProfilesArray,
+    ExpectedProfilesDefaultsObject,
     ExpectedProfileObject,
     ProfileNotFound,
 }
@@ -66,34 +67,58 @@ impl SettingsDocument {
 
     /// Canonicalizes the legacy root `profiles: []` shape to the modern
     /// `profiles: { "list": [] }` shape used by CascadiaSettings serialization.
-    /// Existing modern profile objects are preserved unchanged.
+    /// Existing modern profile objects are preserved unchanged. When legacy
+    /// `compatibility.reloadEnvironmentVariables` is present at the root, it is
+    /// moved into `profiles.defaults`, matching the SettingsLoader fixup.
     ///
     /// # Errors
     ///
-    /// Returns [`SerializationError`] when the settings root is not an object
-    /// or when `profiles` is present with a shape other than an array/object.
+    /// Returns [`SerializationError`] when the settings root is not an object,
+    /// when `profiles` is present with a shape other than an array/object, or
+    /// when an existing `profiles.defaults` value is not an object.
     pub fn canonicalize_legacy_profiles(&mut self) -> Result<(), SerializationError> {
         let root = self.root_object_mut()?;
-        let Some(profiles) = root.remove("profiles") else {
+        if let Some(profiles) = root.remove("profiles") {
+            match profiles {
+                JsonValue::Array(list) => {
+                    let mut modern = JsonObject::new();
+                    modern.insert("list".to_owned(), JsonValue::Array(list));
+                    root.insert("profiles".to_owned(), JsonValue::Object(modern));
+                }
+                JsonValue::Object(object) => {
+                    root.insert("profiles".to_owned(), JsonValue::Object(object));
+                }
+                other => {
+                    root.insert("profiles".to_owned(), other);
+                    return Err(SerializationError::ExpectedProfilesArray);
+                }
+            }
+        }
+
+        let Some(reload_environment_variables) =
+            root.remove("compatibility.reloadEnvironmentVariables")
+        else {
             return Ok(());
         };
 
-        match profiles {
-            JsonValue::Array(list) => {
-                let mut modern = JsonObject::new();
-                modern.insert("list".to_owned(), JsonValue::Array(list));
-                root.insert("profiles".to_owned(), JsonValue::Object(modern));
-                Ok(())
-            }
-            JsonValue::Object(object) => {
-                root.insert("profiles".to_owned(), JsonValue::Object(object));
-                Ok(())
-            }
-            other => {
-                root.insert("profiles".to_owned(), other);
-                Err(SerializationError::ExpectedProfilesArray)
-            }
-        }
+        let Some(JsonValue::Object(profiles)) = root.get_mut("profiles") else {
+            root.insert(
+                "compatibility.reloadEnvironmentVariables".to_owned(),
+                reload_environment_variables,
+            );
+            return Ok(());
+        };
+
+        let defaults = profiles
+            .entry("defaults".to_owned())
+            .or_insert_with(|| JsonValue::Object(JsonObject::new()));
+        let JsonValue::Object(defaults) = defaults else {
+            return Err(SerializationError::ExpectedProfilesDefaultsObject);
+        };
+        defaults
+            .entry("compatibility.reloadEnvironmentVariables".to_owned())
+            .or_insert(reload_environment_variables);
+        Ok(())
     }
 
     /// Changes the foreground of one named user color scheme in-place.

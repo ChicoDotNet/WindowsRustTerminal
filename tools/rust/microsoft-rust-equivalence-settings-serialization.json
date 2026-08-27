@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 54,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 55,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 45,
-      "Missing": 112
+      "Exact": 46,
+      "Missing": 111
     }
   },
-  "expectedGlobalCoveragePriority": 54,
+  "expectedGlobalCoveragePriority": 55,
   "expectedGlobalCoverage": {
-    "Exact": 322,
+    "Exact": 323,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 373
+    "Missing": 372
   },
   "entries": [
     {
@@ -73,6 +73,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_dont_roundtrip_no_reload_env_vars_contract"],
       "notes": "Microsoft verifies that settings which never specify compatibility.reloadEnvironmentVariables do not acquire that setting during fixup/round-trip. Safe Rust CascadiaSettingsDocument canonicalizes the legacy profiles array without synthesizing either the legacy root property or a profiles.defaults object; the Microsoft-derived witness uses the exact profile/action vector and verifies unrelated profile and action data remain present."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "RoundtripReloadEnvVars",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_roundtrip_reload_env_vars_contract"],
+      "notes": "Microsoft loads legacy settings with root compatibility.reloadEnvironmentVariables=false, runs SettingsLoader fixup, and expects the value to be emitted under profiles.defaults while profiles becomes the modern object/list shape and unrelated actions survive. Safe Rust SettingsDocument now performs that same localized migration during legacy profile canonicalization; the witness uses Microsoft's old/new vectors and requires structure-identical Rust projections."
     },
     {
       "suite": "unitSettingsModel",
