@@ -5,6 +5,8 @@
 
 use std::collections::BTreeMap;
 
+use crate::settings_json::{self, JsonMember, JsonObject, JsonValue};
+
 /// RGBA color value used by theme settings.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct Color {
@@ -116,32 +118,22 @@ impl Theme {
     ///
     /// # Errors
     ///
-    /// Returns [`ThemeParseError`] when the required theme name is absent, a
-    /// present sub-object is malformed, or a supported theme value is invalid.
+    /// Returns [`ThemeParseError`] when the theme document or a supported value
+    /// is malformed.
     pub fn from_json(input: &str) -> Result<Self, ThemeParseError> {
-        let name = string_member(input, "name")?.ok_or(ThemeParseError::MissingName)?;
+        let value = settings_json::parse(input).map_err(|_| ThemeParseError::InvalidJson)?;
+        let object = value.as_object().ok_or(ThemeParseError::InvalidObject)?;
+        Self::from_object(object)
+    }
 
-        let tab_row = match object_member(input, "tabRow")? {
-            None => None,
-            Some(tab_row) => Some(TabRowTheme {
-                background: theme_color_member(tab_row, "background")?,
-                unfocused_background: theme_color_member(tab_row, "unfocusedBackground")?,
-            }),
-        };
-
-        let window = match object_member(input, "window")? {
-            None => None,
-            Some(window) => Some(WindowTheme {
-                requested_theme: match string_member(window, "applicationTheme")? {
-                    None => ElementTheme::Default,
-                    Some(value) if value.eq_ignore_ascii_case("light") => ElementTheme::Light,
-                    Some(value) if value.eq_ignore_ascii_case("dark") => ElementTheme::Dark,
-                    Some(value) if value.eq_ignore_ascii_case("system") => ElementTheme::Default,
-                    Some(_) => return Err(ThemeParseError::InvalidElementTheme),
-                },
-                use_mica: bool_member(window, "useMica")?.unwrap_or(false),
-            }),
-        };
+    fn from_object(object: &JsonObject) -> Result<Self, ThemeParseError> {
+        let name = required_string(object, "name")?.to_owned();
+        let tab_row = optional_object(object, "tabRow")?
+            .map(parse_tab_row)
+            .transpose()?;
+        let window = optional_object(object, "window")?
+            .map(parse_window)
+            .transpose()?;
 
         Ok(Self {
             name,
@@ -200,18 +192,28 @@ impl ThemeSettings {
     ///
     /// # Errors
     ///
-    /// Returns [`ThemeParseError`] when the themes array or any contained theme
-    /// object is malformed.
+    /// Returns [`ThemeParseError`] when the settings document, themes array, or
+    /// any contained theme is malformed.
     pub fn from_user_settings_json(input: &str) -> Result<Self, ThemeParseError> {
+        let value = settings_json::parse(input).map_err(|_| ThemeParseError::InvalidJson)?;
+        let object = value.as_object().ok_or(ThemeParseError::InvalidObject)?;
+
         let mut themes = BTreeMap::new();
-        if let Some(array) = array_member(input, "themes")? {
-            for object in top_level_objects(array)? {
-                let theme = Theme::from_json(object)?;
-                themes.insert(theme.name.clone(), theme);
+        match JsonMember::from_object(object, "themes") {
+            JsonMember::Missing | JsonMember::Null => {}
+            JsonMember::Value(JsonValue::Array(values)) => {
+                for value in values {
+                    let theme_object = value.as_object().ok_or(ThemeParseError::InvalidObject)?;
+                    let theme = Theme::from_object(theme_object)?;
+                    themes.insert(theme.name.clone(), theme);
+                }
             }
+            JsonMember::Value(_) => return Err(ThemeParseError::InvalidArray),
         }
 
-        let requested = string_member(input, "theme")?.unwrap_or_else(|| "system".to_owned());
+        let requested = optional_string(object, "theme")?
+            .unwrap_or("system")
+            .to_owned();
         let known_builtin = matches!(requested.as_str(), "system" | "light" | "dark");
         let valid = known_builtin || themes.contains_key(&requested);
         let warnings = if valid {
@@ -253,6 +255,7 @@ impl ThemeSettings {
 /// Parse failures for the portable theme slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThemeParseError {
+    InvalidJson,
     MissingName,
     InvalidString,
     InvalidObject,
@@ -262,15 +265,38 @@ pub enum ThemeParseError {
     InvalidElementTheme,
 }
 
-fn theme_color_member(input: &str, key: &str) -> Result<Option<ThemeColor>, ThemeParseError> {
-    let Some(rest) = value_after_key(input, key) else {
-        return Ok(None);
+fn parse_tab_row(object: &JsonObject) -> Result<TabRowTheme, ThemeParseError> {
+    Ok(TabRowTheme {
+        background: theme_color_member(object, "background")?,
+        unfocused_background: theme_color_member(object, "unfocusedBackground")?,
+    })
+}
+
+fn parse_window(object: &JsonObject) -> Result<WindowTheme, ThemeParseError> {
+    let requested_theme = match optional_string(object, "applicationTheme")? {
+        None => ElementTheme::Default,
+        Some(value) if value.eq_ignore_ascii_case("light") => ElementTheme::Light,
+        Some(value) if value.eq_ignore_ascii_case("dark") => ElementTheme::Dark,
+        Some(value) if value.eq_ignore_ascii_case("system") => ElementTheme::Default,
+        Some(_) => return Err(ThemeParseError::InvalidElementTheme),
     };
-    let rest = rest.trim_start();
-    if rest.starts_with("null") {
-        return Ok(None);
-    }
-    let value = parse_quoted(rest).ok_or(ThemeParseError::InvalidColor)?;
+
+    Ok(WindowTheme {
+        requested_theme,
+        use_mica: optional_bool(object, "useMica")?.unwrap_or(false),
+    })
+}
+
+fn theme_color_member(
+    object: &JsonObject,
+    key: &str,
+) -> Result<Option<ThemeColor>, ThemeParseError> {
+    let value = match JsonMember::from_object(object, key) {
+        JsonMember::Missing | JsonMember::Null => return Ok(None),
+        JsonMember::Value(JsonValue::String(value)) => value,
+        JsonMember::Value(_) => return Err(ThemeParseError::InvalidColor),
+    };
+
     let color = match value.as_str() {
         "accent" => ThemeColor {
             color_type: ThemeColorType::Accent,
@@ -282,7 +308,7 @@ fn theme_color_member(input: &str, key: &str) -> Result<Option<ThemeColor>, Them
         },
         _ => ThemeColor {
             color_type: ThemeColorType::Color,
-            color: Some(parse_hex_color(&value)?),
+            color: Some(parse_hex_color(value)?),
         },
     };
     Ok(Some(color))
@@ -312,144 +338,40 @@ fn parse_hex_byte(value: &str) -> Result<u8, ThemeParseError> {
     u8::from_str_radix(value, 16).map_err(|_| ThemeParseError::InvalidColor)
 }
 
-fn string_member(input: &str, key: &str) -> Result<Option<String>, ThemeParseError> {
-    let Some(rest) = value_after_key(input, key) else {
-        return Ok(None);
-    };
-    let rest = rest.trim_start();
-    if rest.starts_with("null") {
-        return Ok(None);
-    }
-    parse_quoted(rest)
-        .map(Some)
-        .ok_or(ThemeParseError::InvalidString)
-}
-
-fn bool_member(input: &str, key: &str) -> Result<Option<bool>, ThemeParseError> {
-    let Some(rest) = value_after_key(input, key) else {
-        return Ok(None);
-    };
-    let rest = rest.trim_start();
-    if rest.starts_with("true") {
-        Ok(Some(true))
-    } else if rest.starts_with("false") {
-        Ok(Some(false))
-    } else if rest.starts_with("null") {
-        Ok(None)
-    } else {
-        Err(ThemeParseError::InvalidBoolean)
+fn required_string<'a>(object: &'a JsonObject, key: &str) -> Result<&'a str, ThemeParseError> {
+    match JsonMember::from_object(object, key) {
+        JsonMember::Value(JsonValue::String(value)) => Ok(value),
+        JsonMember::Missing | JsonMember::Null => Err(ThemeParseError::MissingName),
+        JsonMember::Value(_) => Err(ThemeParseError::InvalidString),
     }
 }
 
-fn object_member<'a>(input: &'a str, key: &str) -> Result<Option<&'a str>, ThemeParseError> {
-    let Some(rest) = value_after_key(input, key) else {
-        return Ok(None);
-    };
-    let rest = rest.trim_start();
-    if rest.starts_with("null") {
-        return Ok(None);
+fn optional_string<'a>(
+    object: &'a JsonObject,
+    key: &str,
+) -> Result<Option<&'a str>, ThemeParseError> {
+    match JsonMember::from_object(object, key) {
+        JsonMember::Missing | JsonMember::Null => Ok(None),
+        JsonMember::Value(JsonValue::String(value)) => Ok(Some(value)),
+        JsonMember::Value(_) => Err(ThemeParseError::InvalidString),
     }
-    let end = find_matching_delimiter(rest, 0, '{', '}').ok_or(ThemeParseError::InvalidObject)?;
-    Ok(Some(&rest[..=end]))
 }
 
-fn array_member<'a>(input: &'a str, key: &str) -> Result<Option<&'a str>, ThemeParseError> {
-    let Some(rest) = value_after_key(input, key) else {
-        return Ok(None);
-    };
-    let rest = rest.trim_start();
-    if rest.starts_with("null") {
-        return Ok(None);
+fn optional_bool(object: &JsonObject, key: &str) -> Result<Option<bool>, ThemeParseError> {
+    match JsonMember::from_object(object, key) {
+        JsonMember::Missing | JsonMember::Null => Ok(None),
+        JsonMember::Value(JsonValue::Bool(value)) => Ok(Some(*value)),
+        JsonMember::Value(_) => Err(ThemeParseError::InvalidBoolean),
     }
-    if !rest.starts_with('[') {
-        return Err(ThemeParseError::InvalidArray);
-    }
-    let end = find_matching_delimiter(rest, 0, '[', ']').ok_or(ThemeParseError::InvalidArray)?;
-    Ok(Some(&rest[1..end]))
 }
 
-fn top_level_objects(input: &str) -> Result<Vec<&str>, ThemeParseError> {
-    let mut result = Vec::new();
-    let mut cursor = 0usize;
-    while cursor < input.len() {
-        let remainder = &input[cursor..];
-        let Some(start_rel) = remainder.find('{') else {
-            break;
-        };
-        let start = cursor + start_rel;
-        let end_rel = find_matching_delimiter(input, start, '{', '}')
-            .ok_or(ThemeParseError::InvalidObject)?;
-        result.push(&input[start..=end_rel]);
-        cursor = end_rel + 1;
+fn optional_object<'a>(
+    object: &'a JsonObject,
+    key: &str,
+) -> Result<Option<&'a JsonObject>, ThemeParseError> {
+    match JsonMember::from_object(object, key) {
+        JsonMember::Missing | JsonMember::Null => Ok(None),
+        JsonMember::Value(JsonValue::Object(value)) => Ok(Some(value)),
+        JsonMember::Value(_) => Err(ThemeParseError::InvalidObject),
     }
-    Ok(result)
-}
-
-fn value_after_key<'a>(input: &'a str, key: &str) -> Option<&'a str> {
-    let needle = format!("\"{key}\"");
-    let offset = input.find(&needle)?;
-    let after = &input[offset + needle.len()..];
-    let colon = after.find(':')?;
-    Some(&after[colon + 1..])
-}
-
-fn parse_quoted(input: &str) -> Option<String> {
-    let input = input.trim_start();
-    let mut chars = input.chars();
-    if chars.next()? != '"' {
-        return None;
-    }
-
-    let mut result = String::new();
-    let mut escaped = false;
-    for ch in chars {
-        if escaped {
-            result.push(match ch {
-                'n' => '\n',
-                'r' => '\r',
-                't' => '\t',
-                other => other,
-            });
-            escaped = false;
-        } else if ch == '\\' {
-            escaped = true;
-        } else if ch == '"' {
-            return Some(result);
-        } else {
-            result.push(ch);
-        }
-    }
-    None
-}
-
-fn find_matching_delimiter(input: &str, start: usize, open: char, close: char) -> Option<usize> {
-    let mut depth = 0usize;
-    let mut in_string = false;
-    let mut escaped = false;
-
-    for (relative, ch) in input[start..].char_indices() {
-        if in_string {
-            if escaped {
-                escaped = false;
-                continue;
-            }
-            match ch {
-                '\\' => escaped = true,
-                '"' => in_string = false,
-                _ => {}
-            }
-            continue;
-        }
-        if ch == '"' {
-            in_string = true;
-        } else if ch == open {
-            depth += 1;
-        } else if ch == close {
-            depth = depth.checked_sub(1)?;
-            if depth == 0 {
-                return Some(start + relative);
-            }
-        }
-    }
-    None
 }
