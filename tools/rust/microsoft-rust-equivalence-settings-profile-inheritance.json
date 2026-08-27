@@ -116,7 +116,7 @@
       "rustWitnesses": [
         "microsoft_profile_environment_case_collision_emits_two_warnings"
       ],
-      "notes": "The safe Rust ProfileCollection validation owner reproduces the Microsoft source vector end-to-end: with no defaultProfile it first records MissingDefaultProfile, then detects FOO/Foo as one ordinal-insensitive environment-name collision and records InvalidProfileEnvironmentVariables, yielding exactly two warnings in constructor order."
+      "notes": "The safe Rust ProfileCollection validation owner reproduces the Microsoft source vector end-to-end. With no inbox schemes, the inherited AppearanceConfig default Campbell scheme is unknown and records UnknownColorScheme first; _validateProfileEnvironmentVariables then detects FOO/Foo through case-insensitive name comparison and records InvalidProfileEnvironmentVariables, yielding exactly the two warnings asserted by Microsoft. An absent defaultProfile does not itself warn because _resolveDefaultProfile only appends MissingDefaultProfile for a non-empty unresolved request."
     }
   ]
 }
