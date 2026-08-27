@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, LegacyFontSettings, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 51,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 52,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 42,
-      "Missing": 115
+      "Exact": 43,
+      "Missing": 114
     }
   },
-  "expectedGlobalCoveragePriority": 51,
+  "expectedGlobalCoveragePriority": 52,
   "expectedGlobalCoverage": {
-    "Exact": 319,
+    "Exact": 320,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 376
+    "Missing": 375
   },
   "entries": [
     {
@@ -41,6 +41,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_profile_contract"],
       "notes": "Microsoft round-trips six Profile vectors: the full Windows PowerShell profile, a minimal name-only profile, a nullable-color profile, explicit icon, null icon, and icon=none. Safe Rust routes these vectors through the existing Profile semantic owner before retaining the complete shared typed JSON tree, so migrated GUID/color/icon/history/directory/environment semantics are validated while unmigrated members remain lossless without a second profile serializer."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "CascadiaSettings",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_cascadia_settings_contract"],
+      "notes": "Microsoft SerializationTests::CascadiaSettings round-trips the aggregate settings model rather than one leaf owner. Safe Rust CascadiaSettingsDocument composes the existing SettingsDocument typed tree, validates portable profiles/schemes/actions/keybindings aggregate shapes, and the Microsoft-derived witness proves globals, profile identity/commandline, scheme colors, actions and keybindings survive together without introducing a second serializer."
     },
     {
       "suite": "unitSettingsModel",
