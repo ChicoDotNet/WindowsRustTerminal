@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 409,
+  "expectedMissingTotal": 403,
   "sources": [
     {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
@@ -23,7 +23,6 @@
     {"suite":"unitSettingsModel","source":"MediaResourceTests.cpp","reason":"Settings media-resource semantics remain native."},
     {"suite":"unitSettingsModel","source":"ProfileTests.cpp","reason":"Profile model semantics remain native."},
     {"suite":"unitSettingsModel","source":"SerializationTests.cpp","reason":"Settings serialization/round-trip semantics remain native."},
-    {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native."},
-    {"suite":"unitSettingsModel","source":"ThemeTests.cpp","reason":"Theme model semantics remain native."}
+    {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native."}
   ]
 }
