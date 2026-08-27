@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 49,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 50,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 40,
-      "Missing": 117
+      "Exact": 41,
+      "Missing": 116
     }
   },
-  "expectedGlobalCoveragePriority": 49,
+  "expectedGlobalCoveragePriority": 50,
   "expectedGlobalCoverage": {
-    "Exact": 317,
+    "Exact": 318,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 378
+    "Missing": 377
   },
   "entries": [
     {
@@ -33,6 +33,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_global_settings_contract"],
       "notes": "Microsoft round-trips both the full GlobalAppSettings vector and a minimal defaultProfile/actions/keybindings vector. Safe Rust SettingsDocument retains the shared typed JSON tree as its serialization source of truth; the Microsoft-derived witness uses those exact vectors, verifies structure-identical round-trip, and checks representative numeric, boolean, string, warning and empty-array settings without inventing a parallel serializer."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "Profile",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_profile_contract"],
+      "notes": "Microsoft round-trips six Profile vectors: the full Windows PowerShell profile, a minimal name-only profile, a nullable-color profile, explicit icon, null icon, and icon=none. Safe Rust routes these vectors through the existing Profile semantic owner before retaining the complete shared typed JSON tree, so migrated GUID/color/icon/history/directory/environment semantics are validated while unmigrated members remain lossless without a second profile serializer."
     },
     {
       "suite": "unitSettingsModel",
