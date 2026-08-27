@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme plus color-scheme/profile mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 47,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 48,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 38,
-      "Missing": 119
+      "Exact": 39,
+      "Missing": 118
     }
   },
-  "expectedGlobalCoveragePriority": 47,
+  "expectedGlobalCoveragePriority": 48,
   "expectedGlobalCoverage": {
-    "Exact": 315,
+    "Exact": 316,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 380
+    "Missing": 379
   },
   "entries": [
     {
@@ -41,6 +41,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_modify_profile_setting_and_roundtrip_contract"],
       "notes": "Microsoft mutates profile zero historySize from 1000 to 5000, verifies commandline cmd.exe survives, then adds tabTitle NewTitle and verifies ToJson. Safe Rust SettingsDocument performs those exact typed mutations over the retained settings tree for both legacy profiles arrays and modern profiles.list shape."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "ModifyGlobalSettingAndRoundtrip",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_modify_global_setting_and_roundtrip_contract"],
+      "notes": "Microsoft loads initialRows=30 and alwaysOnTop=false, mutates them through the global settings owner to 50 and true, then verifies serialization reflects both changes. Safe Rust SettingsDocument performs those exact typed root mutations while retaining defaultProfile and profiles unchanged."
     }
   ]
 }
