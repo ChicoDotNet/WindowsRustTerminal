@@ -4,6 +4,8 @@
 //! exercised by Microsoft's `NewTabMenuTests`. Broader settings JSON layering is
 //! added by later `SettingsModel` slices.
 
+use crate::settings_json::{self, JsonMember, JsonValue};
+
 /// New-tab menu entry kinds from `NewTabMenuEntry.idl`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NewTabMenuEntryType {
@@ -49,40 +51,33 @@ impl NewTabMenuSettings {
     ///
     /// # Errors
     ///
-    /// Returns [`NewTabMenuParseError`] when a present `newTabMenu` fragment is
-    /// not an array, has unterminated delimiters, or contains an unsupported
-    /// entry type in this incremental migration slice.
+    /// Returns [`NewTabMenuParseError`] when the settings document is malformed,
+    /// `newTabMenu` is not an array, or an entry has an unsupported type.
     pub fn from_user_settings_json(input: &str) -> Result<Self, NewTabMenuParseError> {
-        let Some(key_offset) = input.find("\"newTabMenu\"") else {
-            return Ok(Self {
-                entries: vec![NewTabMenuEntry::new(NewTabMenuEntryType::RemainingProfiles)],
-                warnings: Vec::new(),
-            });
+        let document = settings_json::parse(input).map_err(|_| NewTabMenuParseError::InvalidJson)?;
+        let object = document
+            .as_object()
+            .ok_or(NewTabMenuParseError::ExpectedObject)?;
+
+        let array = match JsonMember::from_object(object, "newTabMenu") {
+            JsonMember::Missing => {
+                return Ok(Self {
+                    entries: vec![NewTabMenuEntry::new(NewTabMenuEntryType::RemainingProfiles)],
+                    warnings: Vec::new(),
+                });
+            }
+            JsonMember::Null => return Err(NewTabMenuParseError::ExpectedArray),
+            JsonMember::Value(value) => value
+                .as_array()
+                .ok_or(NewTabMenuParseError::ExpectedArray)?,
         };
 
-        let after_key = &input[key_offset + "\"newTabMenu\"".len()..];
-        let Some(array_start_rel) = after_key.find('[') else {
-            return Err(NewTabMenuParseError::ExpectedArray);
-        };
-        let array_start = key_offset + "\"newTabMenu\"".len() + array_start_rel;
-        let array_end = find_matching_delimiter(input, array_start, '[', ']')
-            .ok_or(NewTabMenuParseError::UnterminatedArray)?;
-        let array = &input[array_start + 1..array_end];
-
-        let mut entries = Vec::new();
-        let mut cursor = 0;
-        while cursor < array.len() {
-            let remainder = &array[cursor..];
-            let Some(object_start_rel) = remainder.find('{') else {
-                break;
-            };
-            let object_start = cursor + object_start_rel;
-            let object_end = find_matching_delimiter(array, object_start, '{', '}')
-                .ok_or(NewTabMenuParseError::UnterminatedObject)?;
-            let object = &array[object_start..=object_end];
-            let entry_type = parse_entry_type(object)?;
-            entries.push(NewTabMenuEntry::new(entry_type));
-            cursor = object_end + 1;
+        let mut entries = Vec::with_capacity(array.len());
+        for value in array {
+            let entry = value
+                .as_object()
+                .ok_or(NewTabMenuParseError::ExpectedObject)?;
+            entries.push(NewTabMenuEntry::new(parse_entry_type(entry)?));
         }
 
         Ok(Self {
@@ -102,33 +97,27 @@ impl NewTabMenuSettings {
     }
 }
 
-/// Parse failures for the deliberately narrow new-tab-menu JSON slice.
+/// Parse failures for the deliberately narrow new-tab-menu settings slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum NewTabMenuParseError {
+    InvalidJson,
+    ExpectedObject,
     ExpectedArray,
-    UnterminatedArray,
-    UnterminatedObject,
     MissingType,
     UnknownType,
 }
 
-fn parse_entry_type(object: &str) -> Result<NewTabMenuEntryType, NewTabMenuParseError> {
-    let Some(type_key) = object.find("\"type\"") else {
-        return Err(NewTabMenuParseError::MissingType);
-    };
-    let after_key = &object[type_key + "\"type\"".len()..];
-    let Some(colon) = after_key.find(':') else {
-        return Err(NewTabMenuParseError::MissingType);
-    };
-    let value = after_key[colon + 1..].trim_start();
-    let Some(value) = value.strip_prefix('"') else {
-        return Err(NewTabMenuParseError::MissingType);
-    };
-    let Some(end_quote) = value.find('"') else {
-        return Err(NewTabMenuParseError::MissingType);
+fn parse_entry_type(
+    object: &settings_json::JsonObject,
+) -> Result<NewTabMenuEntryType, NewTabMenuParseError> {
+    let value = match JsonMember::from_object(object, "type") {
+        JsonMember::Value(JsonValue::String(value)) => value.as_str(),
+        JsonMember::Missing | JsonMember::Null | JsonMember::Value(_) => {
+            return Err(NewTabMenuParseError::MissingType);
+        }
     };
 
-    match &value[..end_quote] {
+    match value {
         "profile" => Ok(NewTabMenuEntryType::Profile),
         "separator" => Ok(NewTabMenuEntryType::Separator),
         "folder" => Ok(NewTabMenuEntryType::Folder),
@@ -137,40 +126,4 @@ fn parse_entry_type(object: &str) -> Result<NewTabMenuEntryType, NewTabMenuParse
         "action" => Ok(NewTabMenuEntryType::Action),
         _ => Err(NewTabMenuParseError::UnknownType),
     }
-}
-
-fn find_matching_delimiter(input: &str, start: usize, open: char, close: char) -> Option<usize> {
-    let mut depth = 0usize;
-    let mut in_string = false;
-    let mut escaped = false;
-
-    for (relative, ch) in input[start..].char_indices() {
-        if in_string {
-            if escaped {
-                escaped = false;
-                continue;
-            }
-            match ch {
-                '\\' => escaped = true,
-                '"' => in_string = false,
-                _ => {}
-            }
-            continue;
-        }
-
-        if ch == '"' {
-            in_string = true;
-            continue;
-        }
-        if ch == open {
-            depth += 1;
-        } else if ch == close {
-            depth = depth.checked_sub(1)?;
-            if depth == 0 {
-                return Some(start + relative);
-            }
-        }
-    }
-
-    None
 }
