@@ -165,10 +165,10 @@ impl UserPreferenceCharsetEngine {
 
 impl TermDispatch for UserPreferenceCharsetEngine {
     fn dispatch(&mut self, action: OutputAction) {
-        if let OutputAction::AdvancedCsi { id, .. } = action {
-            if id == VtId::from_ascii("&u") {
-                let _ = self.request();
-            }
+        if let OutputAction::AdvancedCsi { id, .. } = action
+            && id == VtId::from_ascii("&u")
+        {
+            let _ = self.request();
         }
     }
 
