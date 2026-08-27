@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 55,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 56,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 46,
-      "Missing": 111
+      "Exact": 47,
+      "Missing": 110
     }
   },
-  "expectedGlobalCoveragePriority": 55,
+  "expectedGlobalCoveragePriority": 56,
   "expectedGlobalCoverage": {
-    "Exact": 323,
+    "Exact": 324,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 372
+    "Missing": 371
   },
   "entries": [
     {
@@ -33,6 +33,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_global_settings_contract"],
       "notes": "Microsoft round-trips both the full GlobalAppSettings vector and a minimal defaultProfile/actions/keybindings vector. Safe Rust SettingsDocument retains the shared typed JSON tree as its serialization source of truth; the Microsoft-derived witness uses those exact vectors, verifies structure-identical round-trip, and checks representative numeric, boolean, string, warning and empty-array settings without inventing a parallel serializer."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "Actions",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_actions_contract"],
+      "notes": "Microsoft round-trips fifteen ActionMap/GlobalAppSettings vectors covering simple commands, object commands and arguments, keybindings, icons/names, new-terminal args, meaningful null, nested command groups, iterable commands and an unbound keybinding. Safe Rust ActionMapDocument accepts the same bare-array and actions/keybindings object forms, recursively validates portable command/group structure, retains the shared typed JSON tree and the witness requires every Microsoft vector to project structure-identically. Generated-ID and legacy-action fixups are intentionally not claimed here because Microsoft covers them in separate SerializationTests contracts."
     },
     {
       "suite": "unitSettingsModel",

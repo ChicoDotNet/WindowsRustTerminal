@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod action_map;
 pub mod application_state;
 pub mod cascadia_settings;
 pub mod color_scheme;
