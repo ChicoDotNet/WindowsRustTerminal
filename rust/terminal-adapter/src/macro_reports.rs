@@ -40,7 +40,7 @@ pub fn macro_checksum_report(buffer: &MacroBuffer, request_id: i32) -> String {
 /// This is intentionally narrower than the full adapter aggregate. It exists so
 /// the response dispatcher can embed one live macro owner instead of maintaining
 /// a reporting-only copy of macro memory.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct MacroReportEngine {
     buffer: MacroBuffer,
     responses: VtResponseEngine,
@@ -100,10 +100,7 @@ impl MacroReportEngine {
             _ => return false,
         };
 
-        if !self
-            .buffer
-            .init_parser(macro_id, delete_control, encoding)
-        {
+        if !self.buffer.init_parser(macro_id, delete_control, encoding) {
             return false;
         }
         self.active_macro = true;
@@ -230,7 +227,10 @@ mod tests {
         });
         assert_eq!(
             engine.response(),
-            format!("\u{1b}P12!~{:04X}\u{1b}\\", engine.buffer().calculate_checksum())
+            format!(
+                "\u{1b}P12!~{:04X}\u{1b}\\",
+                engine.buffer().calculate_checksum()
+            )
         );
     }
 
