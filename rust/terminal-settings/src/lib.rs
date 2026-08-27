@@ -10,6 +10,7 @@ pub mod action_map;
 pub mod application_state;
 pub mod cascadia_settings;
 pub mod color_scheme;
+pub mod keybindings;
 pub mod new_tab_menu;
 pub mod profile;
 pub mod profile_collection;
