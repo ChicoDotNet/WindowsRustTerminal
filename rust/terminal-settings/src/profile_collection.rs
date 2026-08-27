@@ -1,10 +1,10 @@
-//! Portable profile-collection layering and fixup semantics from `SettingsModel`.
+//! Portable profile-collection layering, fixup and validation semantics from `SettingsModel`.
 //!
 //! This owner keeps legacy top-level `profiles` arrays as full JSON objects,
 //! layers user objects over inbox objects by strict profile GUID identity,
-//! preserves source order for profiles that are not replaced, and owns the
+//! preserves source order for profiles that are not replaced, owns the
 //! deterministic legacy cmd/PowerShell commandline fixups applied by the
-//! settings loader.
+//! settings loader, and records the migrated profile-validation warnings.
 
 use crate::{
     profile::{ProfileGuid, ProfileParseError},
@@ -18,6 +18,13 @@ const CANONICAL_POWERSHELL_COMMANDLINE: &str =
     "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const LEGACY_COMMAND_PROMPT_COMMANDLINE: &str = "cmd.exe";
 const CANONICAL_COMMAND_PROMPT_COMMANDLINE: &str = "%SystemRoot%\\System32\\cmd.exe";
+
+/// Profile-related settings warnings currently owned by safe Rust.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SettingsLoadWarning {
+    MissingDefaultProfile,
+    InvalidProfileEnvironmentVariables,
+}
 
 /// One layered profile object together with the identity fields needed by the
 /// settings loader to reconcile inbox and user entries.
@@ -119,11 +126,12 @@ impl LayeredProfile {
     }
 }
 
-/// Safe Rust owner for profile collection reconciliation and deterministic
-/// profile fixups.
+/// Safe Rust owner for profile collection reconciliation, deterministic fixups
+/// and the currently migrated profile-validation warnings.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ProfileCollection {
     profiles: Vec<LayeredProfile>,
+    warnings: Vec<SettingsLoadWarning>,
 }
 
 impl ProfileCollection {
@@ -160,7 +168,10 @@ impl ProfileCollection {
             }
         }
 
-        Ok(Self { profiles })
+        Ok(Self {
+            profiles,
+            warnings: Vec::new(),
+        })
     }
 
     /// Parses a modern `profiles.list` user layer and applies the deterministic
@@ -186,13 +197,105 @@ impl ProfileCollection {
             profile.apply_legacy_shell_commandline_fixup(powershell_guid, command_prompt_guid);
         }
 
-        Ok(Self { profiles })
+        Ok(Self {
+            profiles,
+            warnings: Vec::new(),
+        })
+    }
+
+    /// Parses the user profile collection and runs the deterministic validation
+    /// slice currently migrated from `CascadiaSettings`.
+    ///
+    /// Warning order follows the Microsoft constructor pipeline: default-profile
+    /// resolution happens before `_validateSettings`, whose profile environment
+    /// validation then rejects case-colliding names such as `FOO` and `Foo`.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProfileParseError`] when the settings/profile structure or a
+    /// migrated validation input has an invalid shape or type.
+    pub fn from_user_json_with_profile_validation(
+        user_json: &str,
+    ) -> Result<Self, ProfileParseError> {
+        let value = settings_json::parse(user_json).map_err(|_| ProfileParseError::InvalidJson)?;
+        let root = value
+            .as_object()
+            .ok_or(ProfileParseError::ExpectedObject)?;
+        let profiles = parse_profile_objects_from_root(root)?
+            .into_iter()
+            .map(LayeredProfile::from_object)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        let mut warnings = Vec::new();
+        if !profiles.is_empty() && !default_profile_resolves(root, &profiles)? {
+            warnings.push(SettingsLoadWarning::MissingDefaultProfile);
+        }
+
+        for profile in &profiles {
+            if profile_has_environment_name_collision(profile)? {
+                warnings.push(SettingsLoadWarning::InvalidProfileEnvironmentVariables);
+                break;
+            }
+        }
+
+        Ok(Self { profiles, warnings })
     }
 
     #[must_use]
     pub fn profiles(&self) -> &[LayeredProfile] {
         &self.profiles
     }
+
+    #[must_use]
+    pub fn warnings(&self) -> &[SettingsLoadWarning] {
+        &self.warnings
+    }
+}
+
+fn default_profile_resolves(
+    root: &JsonObject,
+    profiles: &[LayeredProfile],
+) -> Result<bool, ProfileParseError> {
+    let requested = match JsonMember::from_object(root, "defaultProfile") {
+        JsonMember::Missing | JsonMember::Null => return Ok(false),
+        JsonMember::Value(JsonValue::String(value)) => value.as_str(),
+        JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
+    };
+
+    if let Ok(guid) = ProfileGuid::parse(requested) {
+        if profiles.iter().any(|profile| profile.guid() == Some(guid)) {
+            return Ok(true);
+        }
+    }
+
+    Ok(profiles
+        .iter()
+        .any(|profile| profile.name() == Some(requested)))
+}
+
+fn profile_has_environment_name_collision(
+    profile: &LayeredProfile,
+) -> Result<bool, ProfileParseError> {
+    let environment = match JsonMember::from_object(profile.object(), "environment") {
+        JsonMember::Missing | JsonMember::Null => return Ok(false),
+        JsonMember::Value(JsonValue::Object(environment)) => environment,
+        JsonMember::Value(_) => return Err(ProfileParseError::ExpectedObject),
+    };
+
+    let mut names: Vec<&str> = Vec::with_capacity(environment.len());
+    for name in environment.keys() {
+        // Microsoft's direct source vector uses ASCII environment names. This
+        // reproduces the exact FOO/Foo ordinal-insensitive collision without
+        // introducing locale-sensitive comparison into the portable owner.
+        if names
+            .iter()
+            .any(|existing| existing.eq_ignore_ascii_case(name))
+        {
+            return Ok(true);
+        }
+        names.push(name.as_str());
+    }
+    Ok(false)
 }
 
 fn parse_legacy_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
@@ -226,6 +329,21 @@ fn parse_modern_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileP
     };
 
     clone_profile_objects(values)
+}
+
+fn parse_profile_objects_from_root(root: &JsonObject) -> Result<Vec<JsonObject>, ProfileParseError> {
+    match JsonMember::from_object(root, "profiles") {
+        JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
+        JsonMember::Value(JsonValue::Array(values)) => clone_profile_objects(values),
+        JsonMember::Value(JsonValue::Object(profiles)) => {
+            match JsonMember::from_object(profiles, "list") {
+                JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
+                JsonMember::Value(JsonValue::Array(values)) => clone_profile_objects(values),
+                JsonMember::Value(_) => Err(ProfileParseError::ExpectedArray),
+            }
+        }
+        JsonMember::Value(_) => Err(ProfileParseError::ExpectedArray),
+    }
 }
 
 fn clone_profile_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, ProfileParseError> {
