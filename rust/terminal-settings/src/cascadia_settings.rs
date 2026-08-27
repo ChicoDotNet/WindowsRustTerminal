@@ -27,13 +27,18 @@ pub struct CascadiaSettingsDocument {
 impl CascadiaSettingsDocument {
     /// Parses a complete settings document through the shared serialization
     /// owner and validates portable aggregate members when they are present.
+    /// Legacy root profile arrays are canonicalized to `profiles.list`, matching
+    /// the modern shape emitted by CascadiaSettings serialization.
     ///
     /// # Errors
     ///
     /// Returns an error for malformed JSON/root shape or for aggregate members
     /// whose JSON shape cannot represent Cascadia settings.
     pub fn from_json(input: &str) -> Result<Self, CascadiaSettingsError> {
-        let document = SettingsDocument::from_json(input)
+        let mut document = SettingsDocument::from_json(input)
+            .map_err(CascadiaSettingsError::Serialization)?;
+        document
+            .canonicalize_legacy_profiles()
             .map_err(CascadiaSettingsError::Serialization)?;
         let root = document
             .to_json_value()
@@ -42,7 +47,6 @@ impl CascadiaSettingsDocument {
 
         if let Some(profiles) = root.get("profiles") {
             match profiles {
-                JsonValue::Array(_) => {}
                 JsonValue::Object(object)
                     if matches!(object.get("list"), Some(JsonValue::Array(_))) => {}
                 _ => return Err(CascadiaSettingsError::InvalidProfilesShape),

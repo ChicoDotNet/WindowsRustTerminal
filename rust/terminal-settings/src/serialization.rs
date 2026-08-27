@@ -64,6 +64,38 @@ impl SettingsDocument {
         Ok(document)
     }
 
+    /// Canonicalizes the legacy root `profiles: []` shape to the modern
+    /// `profiles: { "list": [] }` shape used by CascadiaSettings serialization.
+    /// Existing modern profile objects are preserved unchanged.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] when the settings root is not an object
+    /// or when `profiles` is present with a shape other than an array/object.
+    pub fn canonicalize_legacy_profiles(&mut self) -> Result<(), SerializationError> {
+        let root = self.root_object_mut()?;
+        let Some(profiles) = root.remove("profiles") else {
+            return Ok(());
+        };
+
+        match profiles {
+            JsonValue::Array(list) => {
+                let mut modern = JsonObject::new();
+                modern.insert("list".to_owned(), JsonValue::Array(list));
+                root.insert("profiles".to_owned(), JsonValue::Object(modern));
+                Ok(())
+            }
+            JsonValue::Object(object) => {
+                root.insert("profiles".to_owned(), JsonValue::Object(object));
+                Ok(())
+            }
+            other => {
+                root.insert("profiles".to_owned(), other);
+                Err(SerializationError::ExpectedProfilesArray)
+            }
+        }
+    }
+
     /// Changes the foreground of one named user color scheme in-place.
     /// Unrelated members remain exactly represented by the shared typed tree.
     ///

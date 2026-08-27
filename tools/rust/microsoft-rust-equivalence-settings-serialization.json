@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 52,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 53,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 43,
-      "Missing": 114
+      "Exact": 44,
+      "Missing": 113
     }
   },
-  "expectedGlobalCoveragePriority": 52,
+  "expectedGlobalCoveragePriority": 53,
   "expectedGlobalCoverage": {
-    "Exact": 320,
+    "Exact": 321,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 375
+    "Missing": 374
   },
   "entries": [
     {
@@ -57,6 +57,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_legacy_font_settings_contract"],
       "notes": "Microsoft loads a profile using legacy fontFace/fontSize/fontWeight and expects Profile::ToJson to emit only the modern font object with face=Cascadia Mono, size=12 and weight=normal. Safe Rust SettingsDocument now canonicalizes those aliases during profile serialization while retaining the same Profile validation and shared typed tree, and the witness checks both exact structure and removal of all three legacy keys."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "ProfileWithInvalidIcon",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_profile_with_invalid_icon_contract"],
+      "notes": "Microsoft verifies that an icon path which cannot be resolved at load time is still serialized exactly as the user wrote it, rather than as null or as the commandline fallback. Safe Rust CascadiaSettingsDocument now canonicalizes legacy root profiles arrays into the modern profiles.list shape while retaining the original typed profile fields; the witness uses the exact c:\\this_icon_had_better_not_exist.tiff vector and verifies icon, commandline and history remain intact."
     },
     {
       "suite": "unitSettingsModel",
