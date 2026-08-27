@@ -19,4 +19,5 @@ pub mod presentation_state;
 pub mod product_dispatch;
 pub mod response_dispatch;
 pub mod sixel;
+pub mod user_preference_charset;
 pub mod vt_response;
