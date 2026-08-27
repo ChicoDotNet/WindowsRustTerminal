@@ -11,6 +11,7 @@ pub mod color_scheme;
 pub mod new_tab_menu;
 pub mod profile;
 pub mod profile_collection;
+pub mod profile_duplication;
 pub mod profile_identity;
 pub mod settings_json;
 pub mod theme;
