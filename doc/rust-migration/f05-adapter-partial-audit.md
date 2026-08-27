@@ -20,7 +20,7 @@ The modified sandwich order is:
 | `inputTest.cpp::TerminalInputTests` | platform-boundary | native keyboard boundary | Remaining branches are `MapVirtualKeyW`/default-character translation and non-KEY `INPUT_RECORD` dispatch. |
 | `inputTest.cpp::TerminalInputNullKeyTests` | platform-boundary | native keyboard boundary | Remaining NUL VKEY lookup is `VkKeyScanExW` under a Windows layout. |
 | `inputTest.cpp::DifferentModifiersTest` | platform-boundary | native keyboard boundary | Remaining identity observations depend on Windows keyboard-layout translation. |
-| `kittyKeyboardProtocol.cpp::KeyPressTests` | functional | pre-existing input/R02 burn-down | Major semantic families are present, but the complete Microsoft data-source table is not yet reproduced row-for-row. |
+| `kittyKeyboardProtocol.cpp::KeyPressTests` | functional | preexisting input/R02 burn-down | Major semantic families are present, but the complete Microsoft data-source table is not yet reproduced row-for-row. |
 | `kittyKeyboardProtocol.cpp::IgnoreDeadKey` | platform-boundary | native keyboard boundary | Portable no-output semantic exists; `ToUnicodeEx` adapter remains platform-owned. |
 | `adapterTest.cpp::ColorTableReportTests` | functional | Renderer / policy | Requires renderer color-table projection plus response formatting. |
 | `adapterTest.cpp::Osc4ColorPaletteReportTests` | functional | Renderer / policy | Query routing exists; live renderer color-table lookup/formatting remains. |
