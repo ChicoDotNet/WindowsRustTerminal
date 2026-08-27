@@ -1,4 +1,4 @@
-//! Portable workspace-persistence semantics from SettingsModel `ApplicationState`.
+//! Portable workspace-persistence semantics from `SettingsModel` `ApplicationState`.
 //!
 //! File scheduling and elevation-specific path selection remain boundary work;
 //! this owner captures the deterministic map mutations consumed by those I/O
@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 
 /// Portable subset of the persisted window layout needed by the workspace map.
-/// Additional layout fields are added as their SettingsModel contracts migrate.
+/// Additional layout fields are added as their `SettingsModel` contracts migrate.
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub struct WindowLayout {
     tab_layout: Vec<String>,
