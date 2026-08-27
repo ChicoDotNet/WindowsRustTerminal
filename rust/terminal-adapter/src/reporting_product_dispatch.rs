@@ -362,7 +362,10 @@ mod tests {
         assert!(presentation.current_attributes().is_reverse_video());
         assert!(presentation.current_attributes().is_protected());
         assert_eq!(
-            dispatch.presentation_reports().cursor_information().single_shift(),
+            dispatch
+                .presentation_reports()
+                .cursor_information()
+                .single_shift(),
             Some(2)
         );
         assert_eq!(
@@ -373,8 +376,16 @@ mod tests {
             (1, 3)
         );
         assert_eq!(
-            dispatch.presentation_reports().cursor_information().charsets(),
-            &["%5".to_owned(), "H".to_owned(), "M".to_owned(), "B".to_owned()]
+            dispatch
+                .presentation_reports()
+                .cursor_information()
+                .charsets(),
+            &[
+                "%5".to_owned(),
+                "H".to_owned(),
+                "M".to_owned(),
+                "B".to_owned()
+            ]
         );
 
         machine.engine_mut().dispatch_mut().clear_response();
@@ -386,7 +397,7 @@ mod tests {
     }
 
     #[test]
-    fn presentation_report_sink_failure_remains_deferred_at_product_boundary() {
+    fn tabulation_stop_report_sink_failure_remains_deferred_at_product_boundary() {
         let mut dispatch = AdaptDispatchReportingState::new(PageGeometry::new(0, 80, 24));
         dispatch.set_response_writable(false);
         for selector in [1, 2] {
