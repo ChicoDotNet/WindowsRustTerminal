@@ -1,7 +1,7 @@
 //! Portable profile inheritance semantics from `SettingsModel`.
 //!
 //! This slice owns deterministic fallback, local-ownership (`HasXxx`) and clear
-//! behavior for profile settings. WinRT projection and the broader profile
+//! behavior for profile settings. `WinRT` projection and the broader profile
 //! surface remain outside this owner until their Microsoft contracts migrate.
 
 use crate::settings_json::{self, JsonMember, JsonObject, JsonValue};
@@ -41,10 +41,7 @@ where
     T: Clone,
 {
     fn resolved(&self) -> T {
-        self.local
-            .as_ref()
-            .unwrap_or(&self.inherited)
-            .clone()
+        self.local.as_ref().unwrap_or(&self.inherited).clone()
     }
 
     fn inherited_from(parent: &Self) -> Self {
@@ -274,5 +271,8 @@ fn parse_i32(value: f64) -> Result<i32, ProfileParseError> {
     if value.fract() != 0.0 || value < f64::from(i32::MIN) || value > f64::from(i32::MAX) {
         return Err(ProfileParseError::InvalidInteger);
     }
-    Ok(value as i32)
+    value
+        .to_string()
+        .parse::<i32>()
+        .map_err(|_| ProfileParseError::InvalidInteger)
 }
