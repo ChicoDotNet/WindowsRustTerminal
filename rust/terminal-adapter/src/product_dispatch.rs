@@ -1,10 +1,11 @@
 //! Final portable product aggregate for adapter response-producing behavior.
 //!
 //! `AdaptDispatchResponseState` owns the ordinary VT response path while
-//! `MacroReportEngine` owns DECDMAC storage plus DSR 62/63 and
-//! `UserPreferenceCharsetEngine` owns DECAUPSS/DECRQUPSS. This aggregate is the
-//! single `TermDispatch` surface that composes those owners, preventing parser
-//! and response state from becoming disconnected reporting copies.
+//! `MacroReportEngine` owns DECDMAC storage plus DSR 62/63,
+//! `UserPreferenceCharsetEngine` owns DECAUPSS/DECRQUPSS, and
+//! `WindowReportEngine` owns deterministic window-size reports. This aggregate
+//! is the single `TermDispatch` surface that composes those owners, preventing
+//! parser and response state from becoming disconnected reporting copies.
 
 use terminal_parser::{
     output_engine::{DcsAction, OutputAction, TermDispatch},
@@ -14,7 +15,7 @@ use terminal_parser::{
 use crate::{
     adapt_dispatch::PageGeometry, macro_reports::MacroReportEngine,
     response_dispatch::AdaptDispatchResponseState,
-    user_preference_charset::UserPreferenceCharsetEngine,
+    user_preference_charset::UserPreferenceCharsetEngine, window_reports::WindowReportEngine,
 };
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -31,6 +32,7 @@ pub struct AdaptDispatchProductState {
     responses: AdaptDispatchResponseState,
     macros: MacroReportEngine,
     user_preference_charset: UserPreferenceCharsetEngine,
+    window_reports: WindowReportEngine,
     outbound: String,
     writable: bool,
     dcs_owner: DcsOwner,
@@ -43,6 +45,7 @@ impl AdaptDispatchProductState {
             responses: AdaptDispatchResponseState::new(geometry),
             macros: MacroReportEngine::default(),
             user_preference_charset: UserPreferenceCharsetEngine::default(),
+            window_reports: WindowReportEngine::new(geometry),
             outbound: String::new(),
             writable: true,
             dcs_owner: DcsOwner::None,
@@ -69,6 +72,11 @@ impl AdaptDispatchProductState {
     }
 
     #[must_use]
+    pub const fn window_reports(&self) -> &WindowReportEngine {
+        &self.window_reports
+    }
+
+    #[must_use]
     pub fn response(&self) -> &str {
         &self.outbound
     }
@@ -78,6 +86,7 @@ impl AdaptDispatchProductState {
         self.responses.clear_response();
         self.macros.clear_response();
         self.user_preference_charset.clear_response();
+        self.window_reports.clear_response();
     }
 
     pub const fn set_response_writable(&mut self, writable: bool) {
@@ -85,6 +94,7 @@ impl AdaptDispatchProductState {
         self.responses.set_response_writable(writable);
         self.macros.set_response_writable(writable);
         self.user_preference_charset.set_response_writable(writable);
+        self.window_reports.set_response_writable(writable);
     }
 
     fn collect_responses(&mut self) {
@@ -100,6 +110,10 @@ impl AdaptDispatchProductState {
             self.outbound
                 .push_str(self.user_preference_charset.response());
             self.user_preference_charset.clear_response();
+        }
+        if !self.window_reports.response().is_empty() {
+            self.outbound.push_str(self.window_reports.response());
+            self.window_reports.clear_response();
         }
     }
 
@@ -133,6 +147,20 @@ impl AdaptDispatchProductState {
             self.responses.dispatch(action);
         }
     }
+
+    fn dispatch_window_report(&mut self, function: i32, parameter1: i32, parameter2: i32) {
+        let action = OutputAction::WindowManipulation {
+            function,
+            parameter1,
+            parameter2,
+        };
+        if self.writable {
+            self.window_reports.dispatch(action);
+            self.collect_responses();
+        } else {
+            self.responses.dispatch(action);
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchProductState {
@@ -145,6 +173,13 @@ impl TermDispatch for AdaptDispatchProductState {
             } => self.dispatch_macro_report(status, id),
             OutputAction::AdvancedCsi { id, parameters } if id == VtId::from_ascii("&u") => {
                 self.dispatch_user_preference_report(id, parameters);
+            }
+            OutputAction::WindowManipulation {
+                function,
+                parameter1,
+                parameter2,
+            } if WindowReportEngine::handles(function) => {
+                self.dispatch_window_report(function, parameter1, parameter2);
             }
             other => {
                 self.responses.dispatch(other);
@@ -308,6 +343,51 @@ mod tests {
                 .state()
                 .size(),
             CharsetSize::Size96
+        );
+    }
+
+    #[test]
+    fn microsoft_window_manipulation_reports_flow_parser_to_live_product_geometry() {
+        let dispatch = AdaptDispatchProductState::new(PageGeometry::new(20, 100, 29));
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("\u{1b}[18t\u{1b}[14t\u{1b}[16t");
+
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}[8;29;100t\u{1b}[4;580;1000t\u{1b}[6;20;10t"
+        );
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn window_report_sink_failure_remains_deferred_at_product_boundary() {
+        let mut dispatch = AdaptDispatchProductState::new(PageGeometry::new(20, 100, 29));
+        dispatch.set_response_writable(false);
+        dispatch.dispatch(OutputAction::WindowManipulation {
+            function: 18,
+            parameter1: 0,
+            parameter2: 0,
+        });
+
+        assert!(dispatch.response().is_empty());
+        assert_eq!(
+            dispatch
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .len(),
+            1
         );
     }
 
