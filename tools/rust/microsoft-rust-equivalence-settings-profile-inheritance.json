@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership and nullable icon layering contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 36,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon layering and environment-map contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 37,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 26,
-      "Missing": 131
+      "Exact": 27,
+      "Missing": 130
     }
   },
-  "expectedGlobalCoveragePriority": 36,
+  "expectedGlobalCoveragePriority": 37,
   "expectedGlobalCoverage": {
-    "Exact": 303,
+    "Exact": 304,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 392
+    "Missing": 391
   },
   "entries": [
     {
@@ -49,6 +49,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_profile_layer_icon_preserves_null_and_missing_semantics"],
       "notes": "The safe Rust Profile owner reproduces Microsoft's nullable icon layering: an explicit null clears the icon, an omitted icon preserves the current layer result, and a later string replaces it."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "ProfileWithEnvVars",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_profile_with_env_vars_preserves_entries_verbatim"],
+      "notes": "The safe Rust Profile owner parses the environment object as a typed string map and preserves all three Microsoft values verbatim, including the self-referential %VAR_3%;value3 payload without premature expansion."
     }
   ]
 }
