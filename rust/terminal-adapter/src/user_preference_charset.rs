@@ -13,7 +13,6 @@ use terminal_parser::{
 use crate::vt_response::VtResponseEngine;
 
 const ESC: u16 = 0x1b;
-const REQUEST_USER_PREFERENCE_CHARSET: VtId = VtId::from_ascii("&u");
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub enum CharsetSize {
@@ -167,7 +166,7 @@ impl UserPreferenceCharsetEngine {
 impl TermDispatch for UserPreferenceCharsetEngine {
     fn dispatch(&mut self, action: OutputAction) {
         if let OutputAction::AdvancedCsi { id, .. } = action {
-            if id == REQUEST_USER_PREFERENCE_CHARSET {
+            if id == VtId::from_ascii("&u") {
                 let _ = self.request();
             }
         }
