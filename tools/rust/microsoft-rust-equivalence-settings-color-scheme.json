@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "description": "Modified-sandwich SettingsModel checkpoint: the first ColorScheme contract now has direct safe Rust ownership and a Microsoft-derived witness.",
+  "expectedCoveragePriority": 32,
+  "expectedCoverage": {
+    "unitSettingsModel": {
+      "Exact": 16,
+      "Missing": 141
+    }
+  },
+  "expectedGlobalCoveragePriority": 32,
+  "expectedGlobalCoverage": {
+    "Exact": 293,
+    "Stronger": 11,
+    "Partial": 307,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 402
+  },
+  "entries": [
+    {
+      "suite": "unitSettingsModel",
+      "source": "ColorSchemeTests.cpp",
+      "method": "ParseSimpleColorScheme",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_color_scheme_parse_simple_color_scheme"],
+      "notes": "The safe Rust ColorScheme owner parses Microsoft's full Campbell scheme including name, foreground/background, selection/cursor colors and all 16 table entries, then projects the same typed JSON object for the round-trip assertion."
+    }
+  ]
+}
