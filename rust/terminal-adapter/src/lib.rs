@@ -12,6 +12,7 @@ pub mod decrqss;
 pub mod decrqss_color_alias;
 pub mod decrqss_cursor;
 pub mod macro_buffer;
+pub mod macro_reports;
 pub mod page_manager;
 pub mod page_storage;
 pub mod presentation_state;
