@@ -1,8 +1,10 @@
 //! Portable color-scheme semantics from `SettingsModel`.
 //!
-//! This owner starts with the deterministic parse/round-trip behavior exercised
-//! by Microsoft's `ColorSchemeTests::ParseSimpleColorScheme`. Layering and
-//! collision/retargeting semantics are added in subsequent slices.
+//! This owner covers deterministic parsing/round-tripping and the non-colliding
+//! inbox+user scheme-array layering exercised by Microsoft's `ColorSchemeTests`.
+//! User-owned collision/retargeting semantics remain an explicit later slice.
+
+use std::collections::BTreeMap;
 
 use crate::settings_json::{self, JsonMember, JsonObject, JsonValue};
 
@@ -149,14 +151,83 @@ impl ColorScheme {
     }
 }
 
+/// Layered color-scheme collection from inbox defaults followed by user settings.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct ColorSchemeCollection {
+    schemes: BTreeMap<String, ColorScheme>,
+}
+
+impl ColorSchemeCollection {
+    /// Layers non-colliding `schemes` arrays from inbox and user settings.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ColorSchemeParseError`] for malformed settings/schemes or when
+    /// two layers currently collide by name. Collision retargeting has different
+    /// Microsoft semantics and deliberately remains deferred instead of being
+    /// approximated here.
+    pub fn from_inbox_and_user_json(
+        inbox: &str,
+        user: &str,
+    ) -> Result<Self, ColorSchemeParseError> {
+        let mut result = Self::default();
+        result.layer_document(inbox)?;
+        result.layer_document(user)?;
+        Ok(result)
+    }
+
+    fn layer_document(&mut self, input: &str) -> Result<(), ColorSchemeParseError> {
+        let document =
+            settings_json::parse(input).map_err(|_| ColorSchemeParseError::InvalidJson)?;
+        let object = document
+            .as_object()
+            .ok_or(ColorSchemeParseError::ExpectedObject)?;
+        match JsonMember::from_object(object, "schemes") {
+            JsonMember::Missing | JsonMember::Null => Ok(()),
+            JsonMember::Value(JsonValue::Array(values)) => {
+                for value in values {
+                    let scheme = ColorScheme::from_object(
+                        value
+                            .as_object()
+                            .ok_or(ColorSchemeParseError::ExpectedObject)?,
+                    )?;
+                    if self.schemes.contains_key(scheme.name()) {
+                        return Err(ColorSchemeParseError::CollisionRequiresRetargeting);
+                    }
+                    self.schemes.insert(scheme.name.clone(), scheme);
+                }
+                Ok(())
+            }
+            JsonMember::Value(_) => Err(ColorSchemeParseError::ExpectedArray),
+        }
+    }
+
+    #[must_use]
+    pub fn len(&self) -> usize {
+        self.schemes.len()
+    }
+
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.schemes.is_empty()
+    }
+
+    #[must_use]
+    pub fn get(&self, name: &str) -> Option<&ColorScheme> {
+        self.schemes.get(name)
+    }
+}
+
 /// Parse failures for the portable color-scheme slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ColorSchemeParseError {
     InvalidJson,
     ExpectedObject,
+    ExpectedArray,
     MissingMember,
     InvalidString,
     InvalidColor,
+    CollisionRequiresRetargeting,
 }
 
 fn required_string<'a>(
