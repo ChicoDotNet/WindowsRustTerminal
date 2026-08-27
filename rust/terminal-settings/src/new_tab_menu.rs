@@ -54,7 +54,8 @@ impl NewTabMenuSettings {
     /// Returns [`NewTabMenuParseError`] when the settings document is malformed,
     /// `newTabMenu` is not an array, or an entry has an unsupported type.
     pub fn from_user_settings_json(input: &str) -> Result<Self, NewTabMenuParseError> {
-        let document = settings_json::parse(input).map_err(|_| NewTabMenuParseError::InvalidJson)?;
+        let document =
+            settings_json::parse(input).map_err(|_| NewTabMenuParseError::InvalidJson)?;
         let object = document
             .as_object()
             .ok_or(NewTabMenuParseError::ExpectedObject)?;
