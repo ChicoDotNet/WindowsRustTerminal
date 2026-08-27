@@ -1,8 +1,9 @@
 //! Portable profile inheritance semantics from `SettingsModel`.
 //!
-//! This slice owns deterministic fallback, local-ownership (`HasXxx`) and clear
-//! behavior for profile settings. `WinRT` projection and the broader profile
-//! surface remain outside this owner until their Microsoft contracts migrate.
+//! This slice owns deterministic fallback, local-ownership (`HasXxx`), clear,
+//! and nullable icon layering behavior for profile settings. `WinRT` projection
+//! and the broader profile surface remain outside this owner until their
+//! Microsoft contracts migrate.
 
 use crate::settings_json::{self, JsonMember, JsonObject, JsonValue};
 
@@ -56,6 +57,7 @@ pub struct Profile {
     history_size: LayeredSetting<i32>,
     snap_on_input: LayeredSetting<bool>,
     tab_title: LayeredSetting<String>,
+    icon: LayeredSetting<String>,
 }
 
 impl Default for Profile {
@@ -65,6 +67,7 @@ impl Default for Profile {
             history_size: LayeredSetting::new(DEFAULT_HISTORY_SIZE),
             snap_on_input: LayeredSetting::new(DEFAULT_SNAP_ON_INPUT),
             tab_title: LayeredSetting::new(String::new()),
+            icon: LayeredSetting::new(String::new()),
         }
     }
 }
@@ -95,6 +98,7 @@ impl Profile {
             history_size: LayeredSetting::inherited_from(&self.history_size),
             snap_on_input: LayeredSetting::inherited_from(&self.snap_on_input),
             tab_title: LayeredSetting::inherited_from(&self.tab_title),
+            icon: LayeredSetting::inherited_from(&self.icon),
         }
     }
 
@@ -136,6 +140,13 @@ impl Profile {
         match JsonMember::from_object(object, "tabTitle") {
             JsonMember::Missing | JsonMember::Null => {}
             JsonMember::Value(JsonValue::String(value)) => self.tab_title.set(value.clone()),
+            JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
+        }
+
+        match JsonMember::from_object(object, "icon") {
+            JsonMember::Missing => {}
+            JsonMember::Null => self.icon.set(String::new()),
+            JsonMember::Value(JsonValue::String(value)) => self.icon.set(value.clone()),
             JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
         }
 
@@ -183,6 +194,11 @@ impl Profile {
 
     pub fn clear_tab_title(&mut self) {
         self.tab_title.clear();
+    }
+
+    #[must_use]
+    pub fn icon_path(&self) -> String {
+        self.icon.resolved()
     }
 }
 
