@@ -11,7 +11,7 @@ fn assert_profile_roundtrip(input: &str) {
 #[test]
 fn microsoft_serialization_profile_contract() {
     // Microsoft: SerializationTests::Profile.
-    let profile = r#"
+    let profile = r##"
     {
         "name": "Windows PowerShell",
         "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
@@ -54,7 +54,7 @@ fn microsoft_serialization_profile_contract() {
             "KEY_3": "%PATH%"
         }
     }
-    "#;
+    "##;
     assert_profile_roundtrip(profile);
 
     let document = SettingsDocument::from_profile_json(profile).expect("full profile parse");
@@ -62,9 +62,18 @@ fn microsoft_serialization_profile_contract() {
         .to_json_value()
         .as_object()
         .expect("Profile remains an object");
-    assert_eq!(root.get("historySize").and_then(JsonValue::as_f64), Some(9001.0));
-    assert_eq!(root.get("snapOnInput").and_then(JsonValue::as_bool), Some(true));
-    assert_eq!(root.get("foreground").and_then(JsonValue::as_str), Some("#AABBCC"));
+    assert_eq!(
+        root.get("historySize").and_then(JsonValue::as_f64),
+        Some(9001.0)
+    );
+    assert_eq!(
+        root.get("snapOnInput").and_then(JsonValue::as_bool),
+        Some(true)
+    );
+    assert_eq!(
+        root.get("foreground").and_then(JsonValue::as_str),
+        Some("#AABBCC")
+    );
     assert!(matches!(root.get("environment"), Some(JsonValue::Object(values)) if values.len() == 3));
 
     assert_profile_roundtrip(r#"{ "name": "Custom Profile" }"#);
