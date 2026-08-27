@@ -114,7 +114,7 @@ fn microsoft_profile_environment_case_collision_emits_two_warnings() {
     assert_eq!(
         collection.warnings(),
         [
-            SettingsLoadWarning::MissingDefaultProfile,
+            SettingsLoadWarning::UnknownColorScheme,
             SettingsLoadWarning::InvalidProfileEnvironmentVariables,
         ]
     );
