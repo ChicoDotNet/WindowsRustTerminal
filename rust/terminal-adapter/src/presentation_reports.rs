@@ -197,7 +197,11 @@ impl CursorInformationState {
         origin_mode: bool,
         delayed_eol_wrap: bool,
     ) -> String {
-        let row = cursor.y.saturating_sub(viewport_top).saturating_add(1).max(1);
+        let row = cursor
+            .y
+            .saturating_sub(viewport_top)
+            .saturating_add(1)
+            .max(1);
         let column = cursor.x.saturating_add(1).max(1);
         let rendition = flag_char(rendition_bits(attributes));
         let protected = flag_char(u8::from(attributes.is_protected()));
