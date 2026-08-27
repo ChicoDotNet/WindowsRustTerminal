@@ -1,8 +1,8 @@
 use terminal_adapter::{
     adapt_dispatch::PageGeometry,
     parser_control::{
-        designate_coding_system, set_accept_c1_controls, set_ansi_mode, CodingSystem,
-        ISO_8859_1_CODE_PAGE, UTF8_CODE_PAGE,
+        CodingSystem, ISO_8859_1_CODE_PAGE, UTF8_CODE_PAGE, designate_coding_system,
+        set_accept_c1_controls, set_ansi_mode,
     },
     product_dispatch::AdaptDispatchProductState,
 };
