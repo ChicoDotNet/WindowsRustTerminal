@@ -32,10 +32,7 @@ fn microsoft_color_scheme_parse_simple_color_scheme() {
     assert_eq!(scheme.name(), "Campbell");
     assert_eq!(scheme.foreground(), Color::rgb(0xf2, 0xf2, 0xf2));
     assert_eq!(scheme.background(), Color::rgb(0x0c, 0x0c, 0x0c));
-    assert_eq!(
-        scheme.selection_background(),
-        Color::rgb(0x13, 0x13, 0x13)
-    );
+    assert_eq!(scheme.selection_background(), Color::rgb(0x13, 0x13, 0x13));
     assert_eq!(scheme.cursor_color(), Color::rgb(0xff, 0xff, 0xff));
 
     assert_eq!(
