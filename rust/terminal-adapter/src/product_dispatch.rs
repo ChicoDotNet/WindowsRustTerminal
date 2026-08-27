@@ -165,7 +165,10 @@ mod tests {
         }
 
         let dispatch = machine.engine_mut().dispatch_mut();
-        assert_eq!(dispatch.macro_reports().buffer().space_available(), MAX_SPACE - 32);
+        assert_eq!(
+            dispatch.macro_reports().buffer().space_available(),
+            MAX_SPACE - 32
+        );
         dispatch.dispatch(OutputAction::DeviceStatusReport {
             private: true,
             status: 62,
@@ -198,7 +201,10 @@ mod tests {
             status: 63,
             id: Some(12),
         });
-        assert_eq!(dispatch.response(), format!("\u{1b}P12!~{checksum:04X}\u{1b}\\"));
+        assert_eq!(
+            dispatch.response(),
+            format!("\u{1b}P12!~{checksum:04X}\u{1b}\\")
+        );
         assert!(
             dispatch
                 .response_state()
@@ -253,7 +259,10 @@ mod tests {
 
         assert_eq!(
             dispatch.response(),
-            format!("\u{1b}[0n\u{1b}[{}*{{\u{1b}[2;1;1;128;128;1;0x", MAX_SPACE / 16)
+            format!(
+                "\u{1b}[0n\u{1b}[{}*{{\u{1b}[2;1;1;128;128;1;0x",
+                MAX_SPACE / 16
+            )
         );
     }
 }
