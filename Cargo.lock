@@ -62,3 +62,6 @@ dependencies = [
 [[package]]
 name = "terminal-settings"
 version = "0.1.0"
+dependencies = [
+ "terminal-foundation",
+]
