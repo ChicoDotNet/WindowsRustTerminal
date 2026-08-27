@@ -40,7 +40,10 @@ mod tests {
     #[test]
     fn microsoft_macro_space_report_uses_sixteen_byte_blocks() {
         let mut buffer = MacroBuffer::default();
-        assert_eq!(macro_space_report(&buffer), format!("\u{1b}[{}*{{", MAX_SPACE / 16));
+        assert_eq!(
+            macro_space_report(&buffer),
+            format!("\u{1b}[{}*{{", MAX_SPACE / 16)
+        );
 
         // Microsoft defines four eight-byte macros: 32 bytes total, therefore
         // two 16-byte report blocks are consumed.
@@ -56,13 +59,13 @@ mod tests {
     #[test]
     fn microsoft_macro_memory_checksum_report_matches_dsr_63_framing() {
         let mut buffer = MacroBuffer::default();
-        assert_eq!(macro_checksum_report(&buffer, 12), "\u{1b}P12!~0000\u{1b}\\");
+        assert_eq!(
+            macro_checksum_report(&buffer, 12),
+            "\u{1b}P12!~0000\u{1b}\\"
+        );
 
         define_text_macro(&mut buffer, 1, "ABC");
-        let expected = format!(
-            "\u{1b}P12!~{:04X}\u{1b}\\",
-            buffer.calculate_checksum()
-        );
+        let expected = format!("\u{1b}P12!~{:04X}\u{1b}\\", buffer.calculate_checksum());
         assert_eq!(macro_checksum_report(&buffer, 12), expected);
     }
 
