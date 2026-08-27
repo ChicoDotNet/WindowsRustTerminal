@@ -39,3 +39,56 @@ fn microsoft_layer_profiles_on_array_merges_by_guid_and_preserves_inbox_order() 
     assert_eq!(profiles[1].name(), Some("profile4"));
     assert_eq!(profiles[2].name(), Some("profile2"));
 }
+
+#[test]
+fn microsoft_correct_old_default_shell_paths_only_for_canonical_guids() {
+    let user = r#"{
+        "profiles": {
+            "defaults": {
+                "commandline": "pwsh.exe"
+            },
+            "list": [
+                {
+                    "name": "powershell 1",
+                    "commandline": "powershell.exe",
+                    "guid": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}"
+                },
+                {
+                    "name": "powershell 2",
+                    "commandline": "powershell.exe",
+                    "guid": "{61c54bbd-0000-5271-96e7-009a87ff44bf}"
+                },
+                {
+                    "name": "cmd 1",
+                    "commandline": "cmd.exe",
+                    "guid": "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}"
+                },
+                {
+                    "name": "cmd 2",
+                    "commandline": "cmd.exe",
+                    "guid": "{0caa0dad-0000-5f56-a8ff-afceeeaa6101}"
+                }
+            ]
+        }
+    }"#;
+
+    let collection =
+        ProfileCollection::from_user_json_with_legacy_shell_path_fixups(user).unwrap();
+    let profiles = collection.profiles();
+
+    assert_eq!(profiles.len(), 4);
+    assert_eq!(profiles[0].name(), Some("powershell 1"));
+    assert_eq!(profiles[1].name(), Some("powershell 2"));
+    assert_eq!(profiles[2].name(), Some("cmd 1"));
+    assert_eq!(profiles[3].name(), Some("cmd 2"));
+    assert_eq!(
+        profiles[0].commandline(),
+        Some("%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe")
+    );
+    assert_eq!(profiles[1].commandline(), Some("powershell.exe"));
+    assert_eq!(
+        profiles[2].commandline(),
+        Some("%SystemRoot%\\System32\\cmd.exe")
+    );
+    assert_eq!(profiles[3].commandline(), Some("cmd.exe"));
+}
