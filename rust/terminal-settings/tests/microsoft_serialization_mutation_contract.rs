@@ -121,3 +121,47 @@ fn microsoft_modify_profile_setting_and_roundtrip_contract() {
         Some("NewTitle")
     );
 }
+
+#[test]
+fn microsoft_modify_global_setting_and_roundtrip_contract() {
+    // Microsoft: SerializationTests::ModifyGlobalSettingAndRoundtrip.
+    let input = r#"
+    {
+        "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
+        "initialRows": 30,
+        "alwaysOnTop": false,
+        "profiles": [
+            {
+                "name": "profile0",
+                "guid": "{6239a42c-0000-49a3-80bd-e8fdd045185c}"
+            }
+        ]
+    }
+    "#;
+
+    let mut settings = SettingsDocument::from_json(input).expect("Microsoft settings JSON parses");
+    let before = settings.to_json_value().clone();
+    settings
+        .set_global_i32("initialRows", 50)
+        .expect("settings root is an object");
+    settings
+        .set_global_bool("alwaysOnTop", true)
+        .expect("settings root is an object");
+
+    let root = settings
+        .to_json_value()
+        .as_object()
+        .expect("settings root remains an object");
+    assert_eq!(
+        root.get("initialRows").and_then(JsonValue::as_f64),
+        Some(50.0)
+    );
+    assert_eq!(
+        root.get("alwaysOnTop").and_then(JsonValue::as_bool),
+        Some(true)
+    );
+
+    let before_root = before.as_object().expect("original root object");
+    assert_eq!(root.get("defaultProfile"), before_root.get("defaultProfile"));
+    assert_eq!(root.get("profiles"), before_root.get("profiles"));
+}
