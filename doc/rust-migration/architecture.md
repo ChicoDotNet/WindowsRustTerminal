@@ -2,6 +2,8 @@
 
 This document defines the migration track in `ChicoDotNet/terminal`. The goal is not a big-bang rewrite. The goal is a verifiable, incremental Rust implementation that preserves Windows Terminal behavior while making each migrated component independently testable.
 
+The repeatable development lifecycle — Draft CI preflight, spelling policy, commit discipline, queued-CI writing windows, and the modified-sandwich strategy that alternates Missing and Partial work — is part of the migration contract and is defined in [`development-strategy.md`](development-strategy.md).
+
 ## Principles
 
 1. **Microsoft C++ remains the oracle until a Rust component proves equivalence.**
