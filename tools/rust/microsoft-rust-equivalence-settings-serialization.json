@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme and ModifyColorSchemeAndRoundtrip are backed by safe Rust owners with Microsoft-derived typed JSON round-trip evidence.",
-  "expectedCoveragePriority": 46,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme plus color-scheme/profile mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 47,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 37,
-      "Missing": 120
+      "Exact": 38,
+      "Missing": 119
     }
   },
-  "expectedGlobalCoveragePriority": 46,
+  "expectedGlobalCoveragePriority": 47,
   "expectedGlobalCoverage": {
-    "Exact": 314,
+    "Exact": 315,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 381
+    "Missing": 380
   },
   "entries": [
     {
@@ -33,6 +33,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_modify_color_scheme_and_roundtrip_contract"],
       "notes": "Microsoft loads a settings document containing user scheme MyScheme, changes foreground from #CCCCCC to #AABBCC and verifies ToJson persists that mutation while retaining the scheme. Safe Rust SettingsDocument owns the typed settings tree, performs that exact named-scheme mutation, and the Microsoft-derived witness additionally verifies unrelated defaultProfile/profiles and background survive unchanged."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "ModifyProfileSettingAndRoundtrip",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_modify_profile_setting_and_roundtrip_contract"],
+      "notes": "Microsoft mutates profile zero historySize from 1000 to 5000, verifies commandline cmd.exe survives, then adds tabTitle NewTitle and verifies ToJson. Safe Rust SettingsDocument performs those exact typed mutations over the retained settings tree for both legacy profiles arrays and modern profiles.list shape."
     }
   ]
 }
