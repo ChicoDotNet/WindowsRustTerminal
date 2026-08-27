@@ -11,6 +11,7 @@ pub mod dcs_dispatch;
 pub mod decrqss;
 pub mod decrqss_color_alias;
 pub mod decrqss_cursor;
+pub mod input_mode_dispatch;
 pub mod macro_buffer;
 pub mod macro_reports;
 pub mod page_manager;
