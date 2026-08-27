@@ -49,8 +49,8 @@ impl SettingsDocument {
     /// The profile owner validates the migrated semantic surface (GUID,
     /// inheritance-backed values, nullable colors/icon, directory and
     /// environment), while the shared JSON tree preserves settings that have
-    /// not yet moved into that owner. This keeps one serialization source of
-    /// truth instead of introducing a parallel profile serializer.
+    /// not yet moved into that owner. Legacy top-level font aliases are
+    /// canonicalized into the modern `font` object, matching Profile::ToJson.
     ///
     /// # Errors
     ///
@@ -59,7 +59,9 @@ impl SettingsDocument {
     /// JSON itself cannot be retained as a root object.
     pub fn from_profile_json(input: &str) -> Result<Self, SerializationError> {
         Profile::from_json(input).map_err(|_| SerializationError::InvalidProfile)?;
-        Self::from_json(input)
+        let mut document = Self::from_json(input)?;
+        document.canonicalize_legacy_profile_font()?;
+        Ok(document)
     }
 
     /// Changes the foreground of one named user color scheme in-place.
@@ -180,6 +182,35 @@ impl SettingsDocument {
             JsonValue::Object(root) => Ok(root),
             _ => Err(SerializationError::ExpectedRootObject),
         }
+    }
+
+    fn canonicalize_legacy_profile_font(&mut self) -> Result<(), SerializationError> {
+        let root = self.root_object_mut()?;
+        let face = root.remove("fontFace");
+        let size = root.remove("fontSize");
+        let weight = root.remove("fontWeight");
+
+        if face.is_none() && size.is_none() && weight.is_none() {
+            return Ok(());
+        }
+
+        let font = root
+            .entry("font".to_owned())
+            .or_insert_with(|| JsonValue::Object(JsonObject::new()));
+        let JsonValue::Object(font) = font else {
+            return Err(SerializationError::InvalidProfile);
+        };
+
+        if let Some(value) = face {
+            font.entry("face".to_owned()).or_insert(value);
+        }
+        if let Some(value) = size {
+            font.entry("size".to_owned()).or_insert(value);
+        }
+        if let Some(value) = weight {
+            font.entry("weight".to_owned()).or_insert(value);
+        }
+        Ok(())
     }
 
     fn profile_object_mut(&mut self, index: usize) -> Result<&mut JsonObject, SerializationError> {
