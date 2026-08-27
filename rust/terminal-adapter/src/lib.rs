@@ -17,6 +17,7 @@ pub mod macro_buffer;
 pub mod macro_reports;
 pub mod page_manager;
 pub mod page_storage;
+pub mod parser_control;
 pub mod presentation_reports;
 pub mod presentation_state;
 pub mod product_dispatch;
