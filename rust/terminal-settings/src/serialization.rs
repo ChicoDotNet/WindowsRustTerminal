@@ -77,6 +77,38 @@ impl SettingsDocument {
         Err(SerializationError::SchemeNotFound)
     }
 
+    /// Sets an integer member on the settings root while preserving all
+    /// unrelated serialized members.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] when the settings root is not an object.
+    pub fn set_global_i32(
+        &mut self,
+        member: &str,
+        value: i32,
+    ) -> Result<(), SerializationError> {
+        self.root_object_mut()?
+            .insert(member.to_owned(), JsonValue::Number(f64::from(value)));
+        Ok(())
+    }
+
+    /// Sets a boolean member on the settings root while preserving all
+    /// unrelated serialized members.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] when the settings root is not an object.
+    pub fn set_global_bool(
+        &mut self,
+        member: &str,
+        value: bool,
+    ) -> Result<(), SerializationError> {
+        self.root_object_mut()?
+            .insert(member.to_owned(), JsonValue::Bool(value));
+        Ok(())
+    }
+
     /// Sets an integer member on the indexed profile while preserving all
     /// unrelated serialized members.
     ///
