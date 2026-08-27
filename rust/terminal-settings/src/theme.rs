@@ -222,7 +222,11 @@ impl ThemeSettings {
 
         Ok(Self {
             themes,
-            current_theme_name: if valid { requested } else { "system".to_owned() },
+            current_theme_name: if valid {
+                requested
+            } else {
+                "system".to_owned()
+            },
             warnings,
         })
     }
