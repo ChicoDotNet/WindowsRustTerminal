@@ -1,6 +1,6 @@
 # F05 Adapter Partial audit
 
-This audit records the remaining Microsoft `adapter` `Partial` contracts after the DECCIR (`CursorInformationReportTests`) Exact promotion. It is a delivery-routing artifact, not a coverage exemption: every row remains part of the global R08 functional-debt gate until it becomes Exact/Stronger or is independently evidence-classified as a permitted non-functional boundary.
+This audit records the remaining Microsoft `adapter` `Partial` contracts after the DECCIR (`CursorInformationReportTests`) Exact promotion and the follow-up Xterm SGR/color re-audit. It is a delivery-routing artifact, not a coverage exemption: every row remains part of the global R08 functional-debt gate until it becomes Exact/Stronger or is independently evidence-classified as a permitted non-functional boundary.
 
 The modified sandwich order is:
 
@@ -29,9 +29,6 @@ The modified sandwich order is:
 | `adapterTest.cpp::AllowBlinkingTest` | functional | TextBuffer / attributes / colors | no | Requires concrete cursor blinking mutation on the text-buffer/product state. |
 | `adapterTest.cpp::LineFeedTest` | functional | Host / Console aggregate + TextBuffer | no | Typed actions exist; buffer movement and host LineFeed-mode coupling remain. |
 | `adapterTest.cpp::SetConsoleTitleTest` | functional | Host / Console aggregate | no | Payload preservation exists; product/window-title side effect remains. |
-| `adapterTest.cpp::Xterm256ColorTest` | functional | TextBuffer / attributes / colors | no, but re-audit early | Historical note says `TextAttribute` mutation was deferred; F04 added a live presentation owner, so this is a candidate for an early evidence-only promotion if the Microsoft vectors now match exactly. |
-| `adapterTest.cpp::XtermExtendedColorDefaultParameterTest` | functional | TextBuffer / attributes / colors | no, but re-audit early | Current SGR owner may already cover part of the omitted/default parameter behavior; exact rejection/default vectors need comparison before promotion. |
-| `adapterTest.cpp::XtermExtendedSubParameterColorTest` | functional | TextBuffer / attributes / colors | no, but re-audit early | Colon subparameter parsing and indexed/RGB application now exist; compare the full Microsoft matrix before changing coverage. |
 | `adapterTest.cpp::SetColorTableValue` | functional | Renderer / policy | no | Action/index domain exists; live renderer palette mutation remains. |
 | `adapterTest.cpp::SoftFontSizeDetection` | functional | TIL / Types / Foundation + Renderer | no | Requires DRCS/FontBuffer cell-size inference and bitmap sizing semantics. |
 | `adapterTest.cpp::TogglingC1ParserMode` | functional | F05 Adapter / parser coupling | **yes** | Parser semantics exist; Adapter-driven parser/code-page coupling remains. |
@@ -39,9 +36,19 @@ The modified sandwich order is:
 | `adapterTest.cpp::MenuCompletionsTests` | functional | TerminalApp | no | Payload is lossless; completion parsing and UI/menu dispatch are external product behavior. |
 | `adapterTest.cpp::SendC1ControlTest` | functional | Renderer / policy | no | S7C1T/S8C1T and TerminalInput side effects are owned; remaining assertions cross color-report serialization paths. |
 
+## Xterm SGR/color re-audit result
+
+The three historical color Partials were stale after F04 introduced the live Rust `TextAttribute` owner. Existing Microsoft-derived parser-to-product witnesses now exercise the full source vectors, including 256-color foreground/background indices, omitted/default RGB/indexed parameters, colon subparameters, color-space rejection, and out-of-range rejection. The following contracts are therefore promoted to Exact in the historical ledger:
+
+- `Xterm256ColorTest`
+- `XtermExtendedColorDefaultParameterTest`
+- `XtermExtendedSubParameterColorTest`
+
+No downstream Renderer owner was required for these contracts because the Microsoft assertions terminate at the active `TextAttribute`; palette mutation/reporting contracts remain separately visible below Renderer/policy.
+
 ## F05 closeout interpretation
 
-After DECCIR promotion, Adapter has 21 Partial contracts. Four are already H11 `platform-boundary` exceptions, leaving 17 functional Adapter Partials. Only three are presently classified as direct F05 response/parser integration debt:
+After the Xterm color promotions, Adapter has 18 Partial contracts. Four are already H11 `platform-boundary` exceptions, leaving 14 functional Adapter Partials. Only three are presently classified as direct F05 response/parser integration debt:
 
 - `AnsiModeTest`
 - `TogglingC1ParserMode`
@@ -49,12 +56,9 @@ After DECCIR promotion, Adapter has 21 Partial contracts. Four are already H11 `
 
 `KeyPressTests` is older input/R02 debt and remains globally blocking at R08 exit, but it is not response-engine F05 work. The remaining functional Adapter contracts have an explicit downstream owner in the sandwich. Closing F05 therefore does **not** mean hiding those rows or removing them from H11; it means the three F05-specific rows are closed and every other Adapter Partial has a named later owner.
 
-Before leaving F05, re-audit the three Xterm SGR/color contracts against the F04 live `TextAttribute` owner. If they are already exact, promote them rather than carrying stale metadata into the later TextBuffer slice.
-
 ## Next F05 sequence
 
-1. Re-audit `Xterm256ColorTest`, `XtermExtendedColorDefaultParameterTest`, and `XtermExtendedSubParameterColorTest` against current Rust behavior.
-2. Close `AnsiModeTest` live state-machine mutation.
-3. Close `TogglingC1ParserMode` parser/code-page coupling.
-4. Close `MacroInvokes` recursive parser/product execution.
-5. Run the complete Rust CI gates and, if green, declare F05 delivery-complete and move to SettingsModel while the downstream rows stay visible in the global debt ledger.
+1. Close `AnsiModeTest` live state-machine mutation.
+2. Close `TogglingC1ParserMode` parser/code-page coupling.
+3. Close `MacroInvokes` recursive parser/product execution.
+4. Run the complete Rust CI gates and, if green, declare F05 delivery-complete and move to SettingsModel while the downstream rows stay visible in the global debt ledger.
