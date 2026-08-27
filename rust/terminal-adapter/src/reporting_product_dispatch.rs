@@ -5,7 +5,7 @@
 //! DCS presentation-state restore sessions and report-only terminal-output
 //! metadata, while every unrelated parser action continues through the existing
 //! product aggregate. This gives DECCIR/DECTABSR real parser-to-product state
-//! without duplicating the underlying cursor or TextAttribute owners.
+//! without duplicating the underlying cursor or `TextAttribute` owners.
 
 use terminal_parser::output_engine::{DcsAction, OutputAction, TermDispatch};
 
@@ -140,7 +140,7 @@ impl AdaptDispatchReportingState {
         core.cursor().x >= core.geometry().right()
     }
 
-    fn apply_cursor_restore(&mut self, restored: CursorRestore) {
+    fn apply_cursor_restore(&mut self, restored: &CursorRestore) {
         self.product
             .dispatch(OutputAction::PagePositionAbsolute(restored.page));
         let presentation = self.product.response_state_mut().presentation_mut();
@@ -205,7 +205,7 @@ impl TermDispatch for AdaptDispatchReportingState {
             DcsOwner::None => false,
         };
         if let Some(restored) = self.presentation_reports.take_cursor_restore() {
-            self.apply_cursor_restore(restored);
+            self.apply_cursor_restore(&restored);
         }
         self.collect_responses();
         result
