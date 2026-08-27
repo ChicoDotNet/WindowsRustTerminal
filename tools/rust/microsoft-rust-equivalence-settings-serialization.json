@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Microsoft SerializationTests::ColorScheme is now backed by the existing safe Rust ColorScheme owner and the exact Campbell round-trip vector already used by ColorSchemeTests.",
-  "expectedCoveragePriority": 45,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme and ModifyColorSchemeAndRoundtrip are backed by safe Rust owners with Microsoft-derived typed JSON round-trip evidence.",
+  "expectedCoveragePriority": 46,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 36,
-      "Missing": 121
+      "Exact": 37,
+      "Missing": 120
     }
   },
-  "expectedGlobalCoveragePriority": 45,
+  "expectedGlobalCoveragePriority": 46,
   "expectedGlobalCoverage": {
-    "Exact": 313,
+    "Exact": 314,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 382
+    "Missing": 381
   },
   "entries": [
     {
@@ -25,6 +25,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_color_scheme_parse_simple_color_scheme"],
       "notes": "Microsoft SerializationTests::ColorScheme uses the same Campbell object as the existing ColorScheme contract: foreground #F2F2F2, background #0C0C0C, cursor #FFFFFF, selection #131313 and all sixteen ANSI table colors. The safe Rust ColorScheme owner parses that exact vector and projects a structure-identical typed JSON value, satisfying the FromJson/ToJson round-trip without introducing a second settings owner."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "ModifyColorSchemeAndRoundtrip",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_modify_color_scheme_and_roundtrip_contract"],
+      "notes": "Microsoft loads a settings document containing user scheme MyScheme, changes foreground from #CCCCCC to #AABBCC and verifies ToJson persists that mutation while retaining the scheme. Safe Rust SettingsDocument owns the typed settings tree, performs that exact named-scheme mutation, and the Microsoft-derived witness additionally verifies unrelated defaultProfile/profiles and background survive unchanged."
     }
   ]
 }
