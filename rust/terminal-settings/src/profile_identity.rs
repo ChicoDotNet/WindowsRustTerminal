@@ -2,9 +2,11 @@
 //!
 //! Microsoft treats `guid`, `name`, `source`, and `commandline` as profile
 //! identity/launch fields rather than inheritable defaults. This owner keeps
-//! those fields local to each profile, synthesizes stable identity when a GUID
-//! is omitted, reconciles legacy inbox/user arrays by that identity, and applies
-//! the two canonical legacy shell command-line fixups.
+//! those fields local to each profile, synthesizes the same UUIDv5 identity as
+//! the native product when a GUID is omitted, reconciles legacy inbox/user
+//! arrays by that identity, and applies the canonical legacy shell fixups.
+
+use terminal_foundation::{Guid, create_v5_uuid};
 
 use crate::{
     profile::{ProfileGuid, ProfileParseError},
@@ -16,6 +18,12 @@ const DEFAULT_COMMAND_PROMPT_GUID: &str = "{0caa0dad-35be-5f56-a8ff-afceeeaa6101
 const CANONICAL_POWERSHELL_COMMANDLINE: &str =
     "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const CANONICAL_COMMAND_PROMPT_COMMANDLINE: &str = "%SystemRoot%\\System32\\cmd.exe";
+const RUNTIME_GENERATED_PROFILE_NAMESPACE_GUID: Guid = Guid::new(
+    0xf65d_db7e,
+    0x706b,
+    0x4499,
+    [0x8a, 0x50, 0x40, 0x31, 0x3c, 0xaf, 0x51, 0x0a],
+);
 
 /// Effective identity after Microsoft's lazy GUID generation semantics.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -63,18 +71,7 @@ impl ProfileIdentityRecord {
         let name = optional_string(object, "name")?;
         let source = optional_string(object, "source")?;
         let commandline = optional_string(object, "commandline")?;
-        let guid = match JsonMember::from_object(object, "guid") {
-            JsonMember::Missing | JsonMember::Null => {
-                ProfileIdentityGuid::Generated(generate_profile_guid(
-                    name.as_deref().unwrap_or_default(),
-                    source.as_deref(),
-                ))
-            }
-            JsonMember::Value(JsonValue::String(value)) => {
-                ProfileIdentityGuid::Explicit(ProfileGuid::parse(value)?)
-            }
-            JsonMember::Value(_) => return Err(ProfileParseError::InvalidGuid),
-        };
+        let guid = identity_guid(object, name.as_deref(), source.as_deref())?;
 
         let mut record = Self {
             name,
@@ -96,24 +93,7 @@ impl ProfileIdentityRecord {
         if !matches!(JsonMember::from_object(object, "commandline"), JsonMember::Missing) {
             self.commandline = optional_string(object, "commandline")?;
         }
-        match JsonMember::from_object(object, "guid") {
-            JsonMember::Missing => {
-                self.guid = ProfileIdentityGuid::Generated(generate_profile_guid(
-                    self.name.as_deref().unwrap_or_default(),
-                    self.source.as_deref(),
-                ));
-            }
-            JsonMember::Null => {
-                self.guid = ProfileIdentityGuid::Generated(generate_profile_guid(
-                    self.name.as_deref().unwrap_or_default(),
-                    self.source.as_deref(),
-                ));
-            }
-            JsonMember::Value(JsonValue::String(value)) => {
-                self.guid = ProfileIdentityGuid::Explicit(ProfileGuid::parse(value)?);
-            }
-            JsonMember::Value(_) => return Err(ProfileParseError::InvalidGuid),
-        }
+        self.guid = identity_guid(object, self.name.as_deref(), self.source.as_deref())?;
         self.apply_legacy_shell_fixup()
     }
 
@@ -197,9 +177,6 @@ impl ProfileIdentitySettings {
     /// Parses modern `profiles.defaults`/`profiles.list` while deliberately
     /// excluding `guid`, `name`, `source`, and `commandline` from inheritance.
     ///
-    /// The returned defaults identity is therefore empty, exactly as Microsoft's
-    /// `ProfileDefaultsProhibitedSettings` contract requires.
-    ///
     /// # Errors
     ///
     /// Returns [`ProfileParseError`] for malformed settings or invalid identity
@@ -217,7 +194,6 @@ impl ProfileIdentitySettings {
             JsonMember::Value(_) => return Err(ProfileParseError::ExpectedObject),
         };
 
-        // We intentionally inspect but do not inherit the four prohibited keys.
         if let JsonMember::Value(JsonValue::Object(defaults)) =
             JsonMember::from_object(profiles_object, "defaults")
         {
@@ -270,6 +246,22 @@ impl ProfileIdentitySettings {
     }
 }
 
+fn identity_guid(
+    object: &JsonObject,
+    name: Option<&str>,
+    source: Option<&str>,
+) -> Result<ProfileIdentityGuid, ProfileParseError> {
+    match JsonMember::from_object(object, "guid") {
+        JsonMember::Missing | JsonMember::Null => Ok(ProfileIdentityGuid::Generated(
+            generate_profile_guid(name.unwrap_or_default(), source),
+        )),
+        JsonMember::Value(JsonValue::String(value)) => Ok(ProfileIdentityGuid::Explicit(
+            ProfileGuid::parse(value)?,
+        )),
+        JsonMember::Value(_) => Err(ProfileParseError::InvalidGuid),
+    }
+}
+
 fn optional_string(object: &JsonObject, key: &str) -> Result<Option<String>, ProfileParseError> {
     match JsonMember::from_object(object, key) {
         JsonMember::Missing | JsonMember::Null => Ok(None),
@@ -310,37 +302,31 @@ fn parse_legacy_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseErro
         .collect()
 }
 
+fn utf16le_bytes(value: &str) -> Vec<u8> {
+    value.encode_utf16().flat_map(u16::to_le_bytes).collect()
+}
+
 fn generate_profile_guid(name: &str, source: Option<&str>) -> [u8; 16] {
-    // The Microsoft contract requires deterministic identity and source-sensitive
-    // separation, but does not expose the actual UUID value. Keep the portable
-    // owner dependency-free while preserving those observable semantics.
-    let mut first = 0xcbf2_9ce4_8422_2325_u64;
-    for byte in name
-        .bytes()
-        .chain([0])
-        .chain(source.unwrap_or_default().bytes())
-    {
-        first ^= u64::from(byte);
-        first = first.wrapping_mul(0x0000_0100_0000_01b3);
-    }
+    // This is Profile::_GenerateGuidForProfile byte-for-byte: the source, when
+    // present, derives a child namespace from the runtime profile namespace;
+    // then the UTF-16LE profile name derives the final RFC4122 UUIDv5.
+    let namespace = source.filter(|source| !source.is_empty()).map_or(
+        RUNTIME_GENERATED_PROFILE_NAMESPACE_GUID,
+        |source| {
+            create_v5_uuid(
+                RUNTIME_GENERATED_PROFILE_NAMESPACE_GUID,
+                &utf16le_bytes(source),
+            )
+        },
+    );
+    guid_network_bytes(create_v5_uuid(namespace, &utf16le_bytes(name)))
+}
 
-    let mut second = 0x8422_2325_cbf2_9ce4_u64;
-    for byte in source
-        .unwrap_or_default()
-        .bytes()
-        .chain([0])
-        .chain(name.bytes())
-    {
-        second ^= u64::from(byte);
-        second = second.wrapping_mul(0x0000_0100_0000_01b3);
-    }
-
+fn guid_network_bytes(guid: Guid) -> [u8; 16] {
     let mut bytes = [0_u8; 16];
-    bytes[..8].copy_from_slice(&first.to_be_bytes());
-    bytes[8..].copy_from_slice(&second.to_be_bytes());
-    // UUID v5/variant bits make generated identities structurally compatible
-    // with the product's name-based GUID contract.
-    bytes[6] = (bytes[6] & 0x0f) | 0x50;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    bytes[0..4].copy_from_slice(&guid.data1.to_be_bytes());
+    bytes[4..6].copy_from_slice(&guid.data2.to_be_bytes());
+    bytes[6..8].copy_from_slice(&guid.data3.to_be_bytes());
+    bytes[8..16].copy_from_slice(&guid.data4);
     bytes
 }
