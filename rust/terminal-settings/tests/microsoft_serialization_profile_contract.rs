@@ -116,3 +116,48 @@ fn microsoft_serialization_profile_contract() {
         }"#,
     );
 }
+
+#[test]
+fn microsoft_serialization_legacy_font_settings_contract() {
+    // Microsoft: SerializationTests::LegacyFontSettings.
+    let legacy = r#"
+    {
+        "name": "Profile with legacy font settings",
+        "fontFace": "Cascadia Mono",
+        "fontSize": 12,
+        "fontWeight": "normal"
+    }
+    "#;
+    let expected = terminal_settings::settings_json::parse(
+        r#"
+        {
+            "name": "Profile with legacy font settings",
+            "font": {
+                "face": "Cascadia Mono",
+                "size": 12,
+                "weight": "normal"
+            }
+        }
+        "#,
+    )
+    .expect("Microsoft canonical font JSON parses");
+
+    let document = SettingsDocument::from_profile_json(legacy)
+        .expect("safe Rust canonicalizes legacy profile font aliases");
+    assert_eq!(document.to_json_value(), &expected);
+
+    let root = document
+        .to_json_value()
+        .as_object()
+        .expect("canonical profile remains an object");
+    assert!(!root.contains_key("fontFace"));
+    assert!(!root.contains_key("fontSize"));
+    assert!(!root.contains_key("fontWeight"));
+    let font = root
+        .get("font")
+        .and_then(JsonValue::as_object)
+        .expect("modern font object is emitted");
+    assert_eq!(font.get("face").and_then(JsonValue::as_str), Some("Cascadia Mono"));
+    assert_eq!(font.get("size").and_then(JsonValue::as_f64), Some(12.0));
+    assert_eq!(font.get("weight").and_then(JsonValue::as_str), Some("normal"));
+}
