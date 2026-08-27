@@ -1,19 +1,20 @@
 //! Portable DEC presentation-state report support.
 //!
-//! Windows Terminal's DECRQPSR tabulation-stop report is deterministic and
-//! depends only on the live text width plus the terminal's stored tab stops.
-//! This owner keeps the default eight-column cadence, DCS restore semantics,
-//! resize filtering, ordering, clear-all behavior, and exact response framing
-//! in safe Rust.
+//! Windows Terminal's DECRQPSR reports are deterministic terminal state. Rust
+//! owns tabulation-stop reporting/restoration plus DECCIR cursor-information
+//! serialization and parsing while the product decorator supplies the live
+//! cursor/TextAttribute values that already belong to the Adapter owner.
 
+use terminal_buffer::text_attribute::{TextAttribute, UnderlineStyle};
 use terminal_parser::{
     output_engine::{DcsAction, OutputAction, TermDispatch},
     state_machine::{Parameters, VtId},
 };
 
-use crate::vt_response::VtResponseEngine;
+use crate::{adapt_dispatch::Point, vt_response::VtResponseEngine};
 
 const ESC: u16 = 0x1b;
+const CURSOR_INFORMATION_REPORT: i32 = 1;
 const TABULATION_STOP_REPORT: i32 = 2;
 const MAX_RESTORE_PAYLOAD: usize = 4096;
 
@@ -101,10 +102,294 @@ impl TabulationStopState {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct CursorRestore {
+    pub(crate) row: i32,
+    pub(crate) column: i32,
+    pub(crate) page: i32,
+    pub(crate) attributes: TextAttribute,
+    pub(crate) origin_mode: bool,
+    pub(crate) single_shift: Option<u8>,
+    pub(crate) delayed_eol_wrap: bool,
+    pub(crate) gl: u8,
+    pub(crate) gr: u8,
+    pub(crate) charset96: [bool; 4],
+    pub(crate) charsets: [String; 4],
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CursorInformationState {
+    active_page: i32,
+    single_shift: Option<u8>,
+    gl: u8,
+    gr: u8,
+    charset96: [bool; 4],
+    charsets: [String; 4],
+    restore_buffer: Option<String>,
+    pending_restore: Option<CursorRestore>,
+}
+
+impl Default for CursorInformationState {
+    fn default() -> Self {
+        Self {
+            active_page: 1,
+            single_shift: None,
+            gl: 0,
+            gr: 2,
+            charset96: [false; 4],
+            charsets: std::array::from_fn(|_| String::from("B")),
+            restore_buffer: None,
+            pending_restore: None,
+        }
+    }
+}
+
+impl CursorInformationState {
+    #[must_use]
+    pub const fn active_page(&self) -> i32 {
+        self.active_page
+    }
+
+    #[must_use]
+    pub const fn single_shift(&self) -> Option<u8> {
+        self.single_shift
+    }
+
+    #[must_use]
+    pub const fn locking_shifts(&self) -> (u8, u8) {
+        (self.gl, self.gr)
+    }
+
+    #[must_use]
+    pub fn charsets(&self) -> &[String; 4] {
+        &self.charsets
+    }
+
+    pub fn observe(&mut self, action: &OutputAction) {
+        match action {
+            OutputAction::SingleShift(slot) => self.single_shift = Some(*slot),
+            OutputAction::LockingShift(slot) => self.gl = *slot,
+            OutputAction::LockingShiftRight(slot) => self.gr = *slot,
+            OutputAction::Designate94Charset { slot, charset } => {
+                self.designate(*slot, *charset, false);
+            }
+            OutputAction::Designate96Charset { slot, charset } => {
+                self.designate(*slot, *charset, true);
+            }
+            OutputAction::PagePositionAbsolute(page) => self.active_page = (*page).max(1),
+            OutputAction::PagePositionRelative(count) | OutputAction::NextPage(count) => {
+                self.active_page = self.active_page.saturating_add(*count).max(1);
+            }
+            OutputAction::PagePositionBack(count) | OutputAction::PrecedingPage(count) => {
+                self.active_page = self.active_page.saturating_sub(*count).max(1);
+            }
+            OutputAction::Print(_) | OutputAction::PrintString(_) => self.single_shift = None,
+            _ => {}
+        }
+    }
+
+    #[must_use]
+    pub fn report(
+        &self,
+        cursor: Point,
+        viewport_top: i32,
+        attributes: TextAttribute,
+        origin_mode: bool,
+        delayed_eol_wrap: bool,
+    ) -> String {
+        let row = cursor.y.saturating_sub(viewport_top).saturating_add(1).max(1);
+        let column = cursor.x.saturating_add(1).max(1);
+        let rendition = flag_char(rendition_bits(attributes));
+        let protected = flag_char(u8::from(attributes.is_protected()));
+        let mut flags = u8::from(origin_mode);
+        flags |= match self.single_shift {
+            Some(2) => 0b0010,
+            Some(3) => 0b0100,
+            _ => 0,
+        };
+        flags |= if delayed_eol_wrap { 0b1000 } else { 0 };
+        let sizes = self
+            .charset96
+            .iter()
+            .enumerate()
+            .fold(0u8, |bits, (index, enabled)| {
+                bits | if *enabled { 1u8 << index } else { 0 }
+            });
+        let charsets = self.charsets.concat();
+
+        format!(
+            "\u{1b}P1$u{row};{column};{};{rendition};{protected};{};{};{};{};{charsets}\u{1b}\\",
+            self.active_page,
+            flag_char(flags),
+            self.gl,
+            self.gr,
+            flag_char(sizes)
+        )
+    }
+
+    pub fn begin_restore(&mut self, parameters: &Parameters) -> bool {
+        if parameters.at(0).unwrap_or(0) != CURSOR_INFORMATION_REPORT {
+            return false;
+        }
+        self.restore_buffer = Some(String::new());
+        self.pending_restore = None;
+        true
+    }
+
+    pub fn put_restore(&mut self, code_unit: u16) -> bool {
+        let Some(buffer) = self.restore_buffer.as_mut() else {
+            return false;
+        };
+
+        if code_unit == ESC {
+            let payload = self.restore_buffer.take().unwrap_or_default();
+            if let Some(restored) = parse_cursor_restore(&payload) {
+                self.apply_protocol_restore(&restored);
+                self.pending_restore = Some(restored);
+            }
+            return false;
+        }
+
+        let Ok(byte) = u8::try_from(code_unit) else {
+            self.restore_buffer = None;
+            return false;
+        };
+        if !byte.is_ascii() || buffer.len() >= MAX_RESTORE_PAYLOAD {
+            self.restore_buffer = None;
+            return false;
+        }
+        buffer.push(char::from(byte));
+        true
+    }
+
+    fn take_restore(&mut self) -> Option<CursorRestore> {
+        self.pending_restore.take()
+    }
+
+    fn designate(&mut self, slot: u8, charset: u64, is_96: bool) {
+        let index = usize::from(slot);
+        if index >= self.charsets.len() {
+            return;
+        }
+        let id = charset_id_from_value(charset);
+        if !id.is_empty() {
+            self.charsets[index] = id;
+            self.charset96[index] = is_96;
+        }
+    }
+
+    fn apply_protocol_restore(&mut self, restored: &CursorRestore) {
+        self.active_page = restored.page.max(1);
+        self.single_shift = restored.single_shift;
+        self.gl = restored.gl;
+        self.gr = restored.gr;
+        self.charset96 = restored.charset96;
+        self.charsets.clone_from(&restored.charsets);
+    }
+}
+
+fn rendition_bits(attributes: TextAttribute) -> u8 {
+    u8::from(attributes.is_intense())
+        | (u8::from(attributes.is_underlined()) << 1)
+        | (u8::from(attributes.is_blinking()) << 2)
+        | (u8::from(attributes.is_reverse_video()) << 3)
+        | (u8::from(attributes.is_invisible()) << 4)
+}
+
+fn flag_char(bits: u8) -> char {
+    char::from(b'@'.saturating_add(bits & 0x3f))
+}
+
+fn parse_flag(text: &str) -> Option<u8> {
+    let [byte] = text.as_bytes() else {
+        return None;
+    };
+    (*byte >= b'@').then_some(*byte - b'@')
+}
+
+fn charset_id_from_value(mut value: u64) -> String {
+    let mut bytes = Vec::new();
+    while value != 0 {
+        bytes.push((value & 0xff) as u8);
+        value >>= 8;
+    }
+    String::from_utf8(bytes).unwrap_or_default()
+}
+
+fn parse_charset_ids(payload: &str) -> Option<[String; 4]> {
+    let bytes = payload.as_bytes();
+    let mut offset = 0usize;
+    let mut ids = Vec::with_capacity(4);
+    for _ in 0..4 {
+        let start = offset;
+        while offset < bytes.len() && (0x20..=0x2f).contains(&bytes[offset]) {
+            offset += 1;
+        }
+        if offset >= bytes.len() || !(0x30..=0x7e).contains(&bytes[offset]) {
+            return None;
+        }
+        offset += 1;
+        ids.push(String::from_utf8(bytes[start..offset].to_vec()).ok()?);
+    }
+    if offset != bytes.len() {
+        return None;
+    }
+    ids.try_into().ok()
+}
+
+fn parse_cursor_restore(payload: &str) -> Option<CursorRestore> {
+    let fields = payload.split(';').collect::<Vec<_>>();
+    if fields.len() != 10 {
+        return None;
+    }
+
+    let row = fields[0].parse::<i32>().ok()?.max(1);
+    let column = fields[1].parse::<i32>().ok()?.max(1);
+    let page = fields[2].parse::<i32>().ok()?.max(1);
+    let rendition = parse_flag(fields[3])?;
+    let protected = parse_flag(fields[4])?;
+    let flags = parse_flag(fields[5])?;
+    let gl = fields[6].parse::<u8>().ok()?;
+    let gr = fields[7].parse::<u8>().ok()?;
+    let sizes = parse_flag(fields[8])?;
+    let charsets = parse_charset_ids(fields[9])?;
+
+    let mut attributes = TextAttribute::default();
+    attributes.set_intense(rendition & 0b00001 != 0);
+    if rendition & 0b00010 != 0 {
+        attributes.set_underline_style(UnderlineStyle::Single);
+    }
+    attributes.set_blinking(rendition & 0b00100 != 0);
+    attributes.set_reverse_video(rendition & 0b01000 != 0);
+    attributes.set_invisible(rendition & 0b10000 != 0);
+    attributes.set_protected(protected & 0b1 != 0);
+
+    Some(CursorRestore {
+        row,
+        column,
+        page,
+        attributes,
+        origin_mode: flags & 0b0001 != 0,
+        single_shift: if flags & 0b0100 != 0 {
+            Some(3)
+        } else if flags & 0b0010 != 0 {
+            Some(2)
+        } else {
+            None
+        },
+        delayed_eol_wrap: flags & 0b1000 != 0,
+        gl,
+        gr,
+        charset96: std::array::from_fn(|index| sizes & (1u8 << index) != 0),
+        charsets,
+    })
+}
+
 #[derive(Debug, Clone)]
 pub struct PresentationReportEngine {
     width: i32,
     tabulation_stops: TabulationStopState,
+    cursor_information: CursorInformationState,
     responses: VtResponseEngine,
 }
 
@@ -114,6 +399,7 @@ impl PresentationReportEngine {
         Self {
             width: width.max(1),
             tabulation_stops: TabulationStopState::default(),
+            cursor_information: CursorInformationState::default(),
             responses: VtResponseEngine::default(),
         }
     }
@@ -128,6 +414,15 @@ impl PresentationReportEngine {
     }
 
     #[must_use]
+    pub const fn cursor_information(&self) -> &CursorInformationState {
+        &self.cursor_information
+    }
+
+    pub fn observe(&mut self, action: &OutputAction) {
+        self.cursor_information.observe(action);
+    }
+
+    #[must_use]
     pub fn response(&self) -> &str {
         self.responses.response()
     }
@@ -138,6 +433,16 @@ impl PresentationReportEngine {
 
     pub const fn set_response_writable(&mut self, writable: bool) {
         self.responses.set_writable(writable);
+    }
+
+    #[must_use]
+    pub fn is_cursor_information_report(action: &OutputAction) -> bool {
+        matches!(
+            action,
+            OutputAction::AdvancedCsi { id, parameters }
+                if *id == VtId::from_ascii("$w")
+                    && parameters.at(0).unwrap_or(0) == CURSOR_INFORMATION_REPORT
+        )
     }
 
     #[must_use]
@@ -160,8 +465,30 @@ impl PresentationReportEngine {
         matches!(
             action,
             DcsAction::RestorePresentationState(parameters)
-                if parameters.at(0).unwrap_or(0) == TABULATION_STOP_REPORT
+                if matches!(parameters.at(0).unwrap_or(0), CURSOR_INFORMATION_REPORT | TABULATION_STOP_REPORT)
         )
+    }
+
+    pub fn request_cursor_information_report(
+        &mut self,
+        cursor: Point,
+        viewport_top: i32,
+        attributes: TextAttribute,
+        origin_mode: bool,
+        delayed_eol_wrap: bool,
+    ) -> bool {
+        let response = self.cursor_information.report(
+            cursor,
+            viewport_top,
+            attributes,
+            origin_mode,
+            delayed_eol_wrap,
+        );
+        self.responses.return_response(&response)
+    }
+
+    pub(crate) fn take_cursor_restore(&mut self) -> Option<CursorRestore> {
+        self.cursor_information.take_restore()
     }
 
     fn request_tabulation_report(&mut self) -> bool {
@@ -176,20 +503,30 @@ impl TermDispatch for PresentationReportEngine {
             let _ = self.request_tabulation_report();
         } else if Self::is_clear_all_tabs(&action) {
             self.tabulation_stops.clear_all();
+        } else {
+            self.observe(&action);
         }
     }
 
     fn begin_dcs(&mut self, action: DcsAction) -> bool {
         match action {
             DcsAction::RestorePresentationState(parameters) => {
-                self.tabulation_stops.begin_restore(&parameters)
+                if parameters.at(0).unwrap_or(0) == CURSOR_INFORMATION_REPORT {
+                    self.cursor_information.begin_restore(&parameters)
+                } else {
+                    self.tabulation_stops.begin_restore(&parameters)
+                }
             }
             _ => false,
         }
     }
 
     fn dcs_put(&mut self, code_unit: u16) -> bool {
-        self.tabulation_stops.put_restore(code_unit)
+        if self.cursor_information.restore_buffer.is_some() {
+            self.cursor_information.put_restore(code_unit)
+        } else {
+            self.tabulation_stops.put_restore(code_unit)
+        }
     }
 }
 
@@ -269,6 +606,69 @@ mod tests {
         machine.engine_mut().dispatch_mut().clear_response();
         machine.process_str("\u{1b}[3g\u{1b}[2$w");
         assert_eq!(machine.engine().dispatch().response(), "\u{1b}P2$u\u{1b}\\");
+    }
+
+    #[test]
+    fn microsoft_cursor_information_protocol_bits_match_source_encoding() {
+        let mut state = CursorInformationState::default();
+        let mut attributes = TextAttribute::default();
+        attributes.set_intense(true);
+        attributes.set_underline_style(UnderlineStyle::Single);
+        attributes.set_blinking(true);
+        attributes.set_reverse_video(true);
+        attributes.set_invisible(true);
+        attributes.set_protected(true);
+        state.observe(&OutputAction::SingleShift(3));
+        state.observe(&OutputAction::LockingShift(1));
+        state.observe(&OutputAction::LockingShiftRight(3));
+        state.observe(&OutputAction::Designate94Charset {
+            slot: 0,
+            charset: VtId::from_ascii("%5").value(),
+        });
+        state.observe(&OutputAction::Designate96Charset {
+            slot: 1,
+            charset: VtId::from_ascii("H").value(),
+        });
+        state.observe(&OutputAction::Designate96Charset {
+            slot: 2,
+            charset: VtId::from_ascii("M").value(),
+        });
+        state.observe(&OutputAction::Designate96Charset {
+            slot: 3,
+            charset: VtId::from_ascii("B").value(),
+        });
+
+        assert_eq!(
+            state.report(Point { x: 99, y: 20 }, 20, attributes, true, true),
+            "\u{1b}P1$u1;100;1;_;A;M;1;3;N;%5HMB\u{1b}\\"
+        );
+        state.observe(&OutputAction::Print(u16::from(b'*')));
+        assert_eq!(
+            state.report(Point { x: 99, y: 20 }, 20, attributes, true, true),
+            "\u{1b}P1$u1;100;1;_;A;I;1;3;N;%5HMB\u{1b}\\"
+        );
+    }
+
+    #[test]
+    fn microsoft_cursor_information_restore_decodes_rendition_flags_and_charsets() {
+        let mut state = CursorInformationState::default();
+        assert!(state.begin_restore(&Parameters::from_values(vec![Some(1)])));
+        let payload = "3;4;1;J;A;J;1;3;N;%5HMB";
+        for unit in payload.encode_utf16() {
+            assert!(state.put_restore(unit));
+        }
+        assert!(!state.put_restore(ESC));
+        let restored = state.take_restore().expect("valid DECCIR restore");
+        assert_eq!((restored.row, restored.column, restored.page), (3, 4, 1));
+        assert!(restored.attributes.is_underlined());
+        assert!(restored.attributes.is_reverse_video());
+        assert!(restored.attributes.is_protected());
+        assert!(!restored.origin_mode);
+        assert_eq!(restored.single_shift, Some(2));
+        assert!(restored.delayed_eol_wrap);
+        assert_eq!((restored.gl, restored.gr), (1, 3));
+        assert_eq!(restored.charset96, [false, true, true, true]);
+        assert_eq!(restored.charsets, ["%5", "H", "M", "B"]);
     }
 
     #[test]
