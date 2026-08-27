@@ -24,7 +24,10 @@ fn microsoft_theme_parse_simple_theme() {
     let tab_row = theme.tab_row().expect("tab row should exist");
     let background = tab_row.background().expect("background should exist");
     assert_eq!(background.color_type(), ThemeColorType::Color);
-    assert_eq!(background.color(), Some(Color::rgba(0xff, 0xff, 0x88, 0x00)));
+    assert_eq!(
+        background.color(),
+        Some(Color::rgba(0xff, 0xff, 0x88, 0x00))
+    );
     assert_eq!(
         tab_row
             .unfocused_background()
@@ -39,8 +42,8 @@ fn microsoft_theme_parse_simple_theme() {
 
 #[test]
 fn microsoft_theme_parse_empty_theme() {
-    let theme = Theme::from_json(r#"{ "name": "empty" }"#)
-        .expect("Microsoft empty theme should parse");
+    let theme =
+        Theme::from_json(r#"{ "name": "empty" }"#).expect("Microsoft empty theme should parse");
 
     assert_eq!(theme.name(), "empty");
     assert!(theme.tab_row().is_none());
@@ -64,7 +67,10 @@ fn microsoft_theme_parse_no_window_theme() {
     assert_eq!(theme.name(), "noWindow");
     let tab_row = theme.tab_row().expect("tab row should exist");
     assert_eq!(
-        tab_row.background().expect("background should exist").color(),
+        tab_row
+            .background()
+            .expect("background should exist")
+            .color(),
         Some(Color::rgb(0x11, 0x22, 0x33))
     );
     assert!(theme.window().is_none());
@@ -119,13 +125,24 @@ fn microsoft_theme_parse_theme_with_null_theme_color() {
         .theme("backgroundEmpty")
         .expect("backgroundEmpty should exist");
     assert!(empty.tab_row().is_some());
-    assert!(empty.tab_row().expect("tab row should exist").background().is_none());
+    assert!(
+        empty
+            .tab_row()
+            .expect("tab row should exist")
+            .background()
+            .is_none()
+    );
 
     let null = settings
         .theme("backgroundNull")
         .expect("backgroundNull should exist");
     assert!(null.tab_row().is_some());
-    assert!(null.tab_row().expect("tab row should exist").background().is_none());
+    assert!(
+        null.tab_row()
+            .expect("tab row should exist")
+            .background()
+            .is_none()
+    );
 
     let omitted = settings
         .theme("backgroundOmittedEntirely")
@@ -152,6 +169,11 @@ fn microsoft_theme_invalid_current_theme() {
     assert_eq!(settings.warnings(), &[SettingsLoadWarning::UnknownTheme]);
     let bar = settings.theme("bar").expect("bar theme should exist");
     assert!(bar.tab_row().is_some());
-    assert!(bar.tab_row().expect("tab row should exist").background().is_none());
+    assert!(
+        bar.tab_row()
+            .expect("tab row should exist")
+            .background()
+            .is_none()
+    );
     assert_eq!(settings.current_theme().name(), "system");
 }
