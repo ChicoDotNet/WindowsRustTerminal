@@ -1,9 +1,11 @@
 //! Portable profile inheritance semantics from `SettingsModel`.
 //!
 //! This slice owns deterministic fallback, local-ownership (`HasXxx`), clear,
-//! and nullable icon layering behavior for profile settings. `WinRT` projection
-//! and the broader profile surface remain outside this owner until their
-//! Microsoft contracts migrate.
+//! nullable icon layering and profile environment-map behavior. `WinRT`
+//! projection and the broader profile surface remain outside this owner until
+//! their Microsoft contracts migrate.
+
+use std::collections::BTreeMap;
 
 use crate::settings_json::{self, JsonMember, JsonObject, JsonValue};
 
@@ -50,7 +52,7 @@ where
     }
 }
 
-/// Safe Rust owner for the currently migrated profile inheritance surface.
+/// Safe Rust owner for the currently migrated profile surface.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Profile {
     name: Option<String>,
@@ -58,6 +60,7 @@ pub struct Profile {
     snap_on_input: LayeredSetting<bool>,
     tab_title: LayeredSetting<String>,
     icon: LayeredSetting<String>,
+    environment_variables: BTreeMap<String, String>,
 }
 
 impl Default for Profile {
@@ -68,6 +71,7 @@ impl Default for Profile {
             snap_on_input: LayeredSetting::new(DEFAULT_SNAP_ON_INPUT),
             tab_title: LayeredSetting::new(String::new()),
             icon: LayeredSetting::new(String::new()),
+            environment_variables: BTreeMap::new(),
         }
     }
 }
@@ -99,6 +103,7 @@ impl Profile {
             snap_on_input: LayeredSetting::inherited_from(&self.snap_on_input),
             tab_title: LayeredSetting::inherited_from(&self.tab_title),
             icon: LayeredSetting::inherited_from(&self.icon),
+            environment_variables: self.environment_variables.clone(),
         }
     }
 
@@ -150,6 +155,21 @@ impl Profile {
             JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
         }
 
+        match JsonMember::from_object(object, "environment") {
+            JsonMember::Missing | JsonMember::Null => {}
+            JsonMember::Value(JsonValue::Object(environment)) => {
+                let mut values = BTreeMap::new();
+                for (name, value) in environment {
+                    let JsonValue::String(value) = value else {
+                        return Err(ProfileParseError::InvalidEnvironmentVariable);
+                    };
+                    values.insert(name.clone(), value.clone());
+                }
+                self.environment_variables = values;
+            }
+            JsonMember::Value(_) => return Err(ProfileParseError::ExpectedObject),
+        }
+
         Ok(())
     }
 
@@ -199,6 +219,11 @@ impl Profile {
     #[must_use]
     pub fn icon_path(&self) -> String {
         self.icon.resolved()
+    }
+
+    #[must_use]
+    pub const fn environment_variables(&self) -> &BTreeMap<String, String> {
+        &self.environment_variables
     }
 }
 
@@ -272,7 +297,7 @@ impl ProfileSettings {
     }
 }
 
-/// Parse failures for the migrated profile inheritance slice.
+/// Parse failures for the migrated profile slice.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProfileParseError {
     InvalidJson,
@@ -281,6 +306,7 @@ pub enum ProfileParseError {
     InvalidInteger,
     InvalidBoolean,
     InvalidString,
+    InvalidEnvironmentVariable,
 }
 
 fn parse_i32(value: f64) -> Result<i32, ProfileParseError> {
