@@ -3,9 +3,9 @@
   "description": "F05 VT response-engine coverage checkpoint. Method promotions remain consolidated in the historical base ledger to avoid duplicate source identities.",
   "expectedGlobalCoveragePriority": 25,
   "expectedGlobalCoverage": {
-    "Exact": 250,
+    "Exact": 260,
     "Stronger": 11,
-    "Partial": 334,
+    "Partial": 324,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 418
