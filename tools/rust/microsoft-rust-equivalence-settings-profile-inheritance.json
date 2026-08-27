@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering, legacy profile-array identity merging and canonical cmd/PowerShell commandline fixups have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 41,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering, legacy profile-array identity merging, canonical cmd/PowerShell commandline fixups and profile environment-case validation warnings have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 42,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 31,
-      "Missing": 126
+      "Exact": 32,
+      "Missing": 125
     }
   },
-  "expectedGlobalCoveragePriority": 41,
+  "expectedGlobalCoveragePriority": 42,
   "expectedGlobalCoverage": {
-    "Exact": 308,
+    "Exact": 309,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 387
+    "Missing": 386
   },
   "entries": [
     {
@@ -107,6 +107,16 @@
         "microsoft_correct_old_default_shell_paths_only_for_canonical_guids"
       ],
       "notes": "The safe Rust ProfileCollection fixup owner reproduces Microsoft's hard-coded compatibility table: only the canonical Windows PowerShell and Command Prompt GUIDs replace the legacy powershell.exe/cmd.exe commandlines with their %SystemRoot% paths, while profiles with lookalike noncanonical GUIDs remain unchanged and list order is preserved."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "ProfileWithEnvVarsSameNameDifferentCases",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_profile_environment_case_collision_emits_two_warnings"
+      ],
+      "notes": "The safe Rust ProfileCollection validation owner reproduces the Microsoft source vector end-to-end: with no defaultProfile it first records MissingDefaultProfile, then detects FOO/Foo as one ordinal-insensitive environment-name collision and records InvalidProfileEnvironmentVariables, yielding exactly two warnings in constructor order."
     }
   ]
 }
