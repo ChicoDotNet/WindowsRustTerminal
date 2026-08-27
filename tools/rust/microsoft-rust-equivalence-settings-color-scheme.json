@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: the first ColorScheme contract now has direct safe Rust ownership and a Microsoft-derived witness.",
-  "expectedCoveragePriority": 32,
+  "description": "Modified-sandwich SettingsModel checkpoint: simple ColorScheme parsing/round-trip and non-colliding inbox+user array layering now have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 33,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 16,
-      "Missing": 141
+      "Exact": 17,
+      "Missing": 140
     }
   },
-  "expectedGlobalCoveragePriority": 32,
+  "expectedGlobalCoveragePriority": 33,
   "expectedGlobalCoverage": {
-    "Exact": 293,
+    "Exact": 294,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 402
+    "Missing": 401
   },
   "entries": [
     {
@@ -25,6 +25,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_color_scheme_parse_simple_color_scheme"],
       "notes": "The safe Rust ColorScheme owner parses Microsoft's full Campbell scheme including name, foreground/background, selection/cursor colors and all 16 table entries, then projects the same typed JSON object for the round-trip assertion."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ColorSchemeTests.cpp",
+      "method": "LayerColorSchemesOnArray",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_color_scheme_layer_color_schemes_on_array"],
+      "notes": "The safe Rust ColorSchemeCollection layers Microsoft's inbox Campbell scheme and distinct user Campbell Powershell scheme into one two-entry collection while preserving each foreground/background value. Name collisions deliberately return an explicit deferred error until the separate collision-retargeting contracts are owned."
     }
   ]
 }
