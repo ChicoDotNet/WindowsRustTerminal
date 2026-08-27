@@ -5,7 +5,7 @@
 //! (macro memory checksum), keeping storage accounting out of the response
 //! engine while making the eventual live dispatch wiring trivial.
 
-use crate::macro_buffer::{MAX_SPACE, MacroBuffer};
+use crate::macro_buffer::MacroBuffer;
 
 /// DEC reports macro space in blocks of 16 bytes via `CSI Ps * {`.
 #[must_use]
@@ -27,7 +27,7 @@ pub fn macro_checksum_report(buffer: &MacroBuffer, request_id: i32) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::macro_buffer::{MacroDeleteControl, MacroEncoding};
+    use crate::macro_buffer::{MAX_SPACE, MacroDeleteControl, MacroEncoding};
 
     fn define_text_macro(buffer: &mut MacroBuffer, id: usize, text: &str) {
         assert!(buffer.init_parser(id, MacroDeleteControl::DeleteId, MacroEncoding::Text));
