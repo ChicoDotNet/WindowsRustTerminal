@@ -51,10 +51,7 @@ pub fn set_ansi_mode<E: StateMachineEngine>(machine: &mut StateMachine<E>, enabl
 }
 
 /// Applies Microsoft's `AcceptC1Controls` back-edge to the live parser.
-pub fn set_accept_c1_controls<E: StateMachineEngine>(
-    machine: &mut StateMachine<E>,
-    enabled: bool,
-) {
+pub fn set_accept_c1_controls<E: StateMachineEngine>(machine: &mut StateMachine<E>, enabled: bool) {
     machine.set_parser_mode(ParserMode::AcceptC1, enabled);
 }
 
