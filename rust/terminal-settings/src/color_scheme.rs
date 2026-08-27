@@ -68,7 +68,7 @@ impl ColorScheme {
     /// not an object, a required member is missing/wrongly typed, or a color is
     /// not a six-digit `#RRGGBB` value.
     pub fn from_json(input: &str) -> Result<Self, ColorSchemeParseError> {
-        let value = settings_json::parse(input).map_err(|_| ColorSchemeParseError::InvalidJson)?;
+        let value = parse_document(input)?;
         let object = value
             .as_object()
             .ok_or(ColorSchemeParseError::ExpectedObject)?;
@@ -569,7 +569,10 @@ pub enum ColorSchemeParseError {
 fn parse_user_profiles(
     input: &str,
 ) -> Result<(AppearanceReferences, Vec<ProfileReferences>), ColorSchemeParseError> {
-    let root = parse_root(input)?;
+    let document = parse_document(input)?;
+    let root = document
+        .as_object()
+        .ok_or(ColorSchemeParseError::ExpectedObject)?;
     let mut defaults = AppearanceReferences::fallback();
     let mut profile_values: &[JsonValue] = &[];
 
@@ -610,15 +613,20 @@ fn parse_fragment_profiles(
     input: &str,
     defaults: &AppearanceReferences,
 ) -> Result<Vec<ProfileReferences>, ColorSchemeParseError> {
-    let root = parse_root(input)?;
+    let document = parse_document(input)?;
+    let root = document
+        .as_object()
+        .ok_or(ColorSchemeParseError::ExpectedObject)?;
     let values = match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => values,
-        JsonMember::Value(JsonValue::Object(profiles)) => match JsonMember::from_object(profiles, "list") {
-            JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
-            JsonMember::Value(JsonValue::Array(values)) => values,
-            JsonMember::Value(_) => return Err(ColorSchemeParseError::ExpectedArray),
-        },
+        JsonMember::Value(JsonValue::Object(profiles)) => {
+            match JsonMember::from_object(profiles, "list") {
+                JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
+                JsonMember::Value(JsonValue::Array(values)) => values,
+                JsonMember::Value(_) => return Err(ColorSchemeParseError::ExpectedArray),
+            }
+        }
         JsonMember::Value(_) => return Err(ColorSchemeParseError::ExpectedArray),
     };
 
@@ -640,11 +648,14 @@ fn parse_profile(
     local_is_explicit: bool,
 ) -> Result<ProfileReferences, ColorSchemeParseError> {
     let name = required_string(object, "name")?.to_owned();
-    let mut default_appearance = AppearanceReferences::inherited_from(defaults, ReferenceSource::Defaults);
+    let mut default_appearance =
+        AppearanceReferences::inherited_from(defaults, ReferenceSource::Defaults);
     apply_reference_member(object, &mut default_appearance, local_source, local_is_explicit)?;
 
-    let mut unfocused_appearance =
-        AppearanceReferences::inherited_from(&default_appearance, ReferenceSource::DefaultAppearance);
+    let mut unfocused_appearance = AppearanceReferences::inherited_from(
+        &default_appearance,
+        ReferenceSource::DefaultAppearance,
+    );
     match JsonMember::from_object(object, "unfocusedAppearance") {
         JsonMember::Missing | JsonMember::Null => {}
         JsonMember::Value(JsonValue::Object(unfocused)) => {
@@ -723,7 +734,9 @@ fn retarget_default_collision_slot(
     if slot.value != old_name {
         return;
     }
-    if slot.explicit || (slot.source == ReferenceSource::Fallback && collided_origin == OriginTag::InBox) {
+    if slot.explicit
+        || (slot.source == ReferenceSource::Fallback && collided_origin == OriginTag::InBox)
+    {
         slot.set(new_name, ReferenceSource::Explicit, true);
     }
 }
@@ -732,7 +745,10 @@ fn retarget_collision_slot(slot: &mut SchemeSlot, old_name: &str, new_name: &str
     if slot.value != old_name {
         return;
     }
-    if matches!(slot.source, ReferenceSource::Explicit | ReferenceSource::FragmentParent) {
+    if matches!(
+        slot.source,
+        ReferenceSource::Explicit | ReferenceSource::FragmentParent
+    ) {
         slot.set(new_name, ReferenceSource::Explicit, true);
     }
 }
@@ -748,7 +764,10 @@ fn refresh_slot_from_parent(
 }
 
 fn parse_schemes(input: &str) -> Result<Vec<ColorScheme>, ColorSchemeParseError> {
-    let root = parse_root(input)?;
+    let document = parse_document(input)?;
+    let root = document
+        .as_object()
+        .ok_or(ColorSchemeParseError::ExpectedObject)?;
     match JsonMember::from_object(root, "schemes") {
         JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => values
@@ -765,11 +784,8 @@ fn parse_schemes(input: &str) -> Result<Vec<ColorScheme>, ColorSchemeParseError>
     }
 }
 
-fn parse_root(input: &str) -> Result<&JsonObject, ColorSchemeParseError> {
-    // This helper cannot return a reference into a temporary parsed value, so
-    // callers that need a root object parse directly. Kept unreachable by design.
-    let _ = input;
-    unreachable!("parse_root is replaced by owned root helpers")
+fn parse_document(input: &str) -> Result<JsonValue, ColorSchemeParseError> {
+    settings_json::parse(input).map_err(|_| ColorSchemeParseError::InvalidJson)
 }
 
 fn required_string<'a>(
