@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod adapt_dispatch;
+pub mod checksum_reports;
 pub mod dcs_dispatch;
 pub mod decrqss;
 pub mod decrqss_color_alias;
