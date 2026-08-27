@@ -8,3 +8,4 @@
 
 pub mod application_state;
 pub mod new_tab_menu;
+pub mod theme;
