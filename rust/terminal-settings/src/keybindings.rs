@@ -18,6 +18,26 @@ pub enum KeyBindingError {
     ExpectedKeys,
     ExpectedKeyString,
     ExpectedIdString,
+    InvalidActionArguments,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SplitDirection {
+    Right,
+    Down,
+    Automatic,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandPaletteLaunchMode {
+    Action,
+    CommandLine,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MoveTabDirection {
+    Forward,
+    Backward,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -41,7 +61,8 @@ impl LayeredActionMap {
     ///
     /// # Errors
     ///
-    /// Returns [`KeyBindingError`] when the JSON or keybinding shape is invalid.
+    /// Returns [`KeyBindingError`] when the JSON, keybinding shape, or a
+    /// recognized action's typed arguments are invalid.
     pub fn layer_json(&mut self, input: &str) -> Result<(), KeyBindingError> {
         let root = settings_json::parse(input).map_err(|_| KeyBindingError::InvalidJson)?;
         let JsonValue::Array(entries) = root else {
@@ -123,6 +144,104 @@ impl LayeredActionMap {
     }
 
     #[must_use]
+    pub fn adjust_font_delta_for_key(&self, key: &str) -> Option<i32> {
+        let JsonValue::Object(command) = self.action_for_key(key)? else {
+            return None;
+        };
+        (command.get("action").and_then(JsonValue::as_str) == Some("adjustFontSize"))
+            .then(|| command.get("delta").and_then(JsonValue::as_f64).map(|v| v as i32))
+            .flatten()
+    }
+
+    #[must_use]
+    pub fn split_direction_for_key(&self, key: &str) -> Option<SplitDirection> {
+        match self.action_for_key(key)? {
+            JsonValue::String(name) if name == "splitPane" => Some(SplitDirection::Automatic),
+            JsonValue::Object(command)
+                if command.get("action").and_then(JsonValue::as_str) == Some("splitPane") =>
+            {
+                match command.get("split").and_then(JsonValue::as_str) {
+                    Some("vertical") => Some(SplitDirection::Right),
+                    Some("horizontal") => Some(SplitDirection::Down),
+                    Some("auto") | None => Some(SplitDirection::Automatic),
+                    Some(_) => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns a Windows COLORREF value (0x00BBGGRR) when SetTabColor carries
+    /// a color. The inner None represents Microsoft's nullable/default color.
+    #[must_use]
+    pub fn tab_color_for_key(&self, key: &str) -> Option<Option<u32>> {
+        match self.action_for_key(key)? {
+            JsonValue::String(name) if name == "setTabColor" => Some(None),
+            JsonValue::Object(command)
+                if command.get("action").and_then(JsonValue::as_str) == Some("setTabColor") =>
+            {
+                match command.get("color") {
+                    None | Some(JsonValue::Null) => Some(None),
+                    Some(JsonValue::String(color)) => parse_colorref(color).map(Some),
+                    _ => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns rowsToScroll for scrollUp/scrollDown. The inner None means the
+    /// property was omitted and Microsoft's default scrolling amount applies.
+    #[must_use]
+    pub fn rows_to_scroll_for_key(&self, key: &str) -> Option<Option<u32>> {
+        let action = self.action_for_key(key)?;
+        match action {
+            JsonValue::String(name) if matches!(name.as_str(), "scrollUp" | "scrollDown") => Some(None),
+            JsonValue::Object(command)
+                if command
+                    .get("action")
+                    .and_then(JsonValue::as_str)
+                    .is_some_and(|name| matches!(name, "scrollUp" | "scrollDown")) =>
+            {
+                Some(command.get("rowsToScroll").and_then(JsonValue::as_f64).map(|v| v as u32))
+            }
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn command_palette_launch_mode_for_key(&self, key: &str) -> Option<CommandPaletteLaunchMode> {
+        match self.action_for_key(key)? {
+            JsonValue::String(name) if name == "commandPalette" => Some(CommandPaletteLaunchMode::Action),
+            JsonValue::Object(command)
+                if command.get("action").and_then(JsonValue::as_str) == Some("commandPalette") =>
+            {
+                match command.get("launchMode").and_then(JsonValue::as_str) {
+                    None | Some("action") => Some(CommandPaletteLaunchMode::Action),
+                    Some("commandLine") => Some(CommandPaletteLaunchMode::CommandLine),
+                    Some(_) => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
+    #[must_use]
+    pub fn move_tab_direction_for_key(&self, key: &str) -> Option<MoveTabDirection> {
+        let JsonValue::Object(command) = self.action_for_key(key)? else {
+            return None;
+        };
+        if command.get("action").and_then(JsonValue::as_str) != Some("moveTab") {
+            return None;
+        }
+        match command.get("direction").and_then(JsonValue::as_str) {
+            Some("forward") => Some(MoveTabDirection::Forward),
+            Some("backward") => Some(MoveTabDirection::Backward),
+            _ => None,
+        }
+    }
+
+    #[must_use]
     pub fn semantic_hash_for_key(&self, key: &str) -> Option<u64> {
         self.action_for_key(key).map(semantic_hash)
     }
@@ -147,6 +266,11 @@ impl LayeredActionMap {
             self.unbind(keys);
             return Ok(());
         };
+
+        if !validate_action_arguments(command)? {
+            self.unbind(keys);
+            return Ok(());
+        }
 
         let id = match entry.get("id") {
             Some(JsonValue::String(id)) => id.clone(),
@@ -201,6 +325,75 @@ fn recognized_command(command: &JsonValue) -> bool {
             .is_some_and(is_known_action),
         JsonValue::Null | JsonValue::Bool(_) | JsonValue::Number(_) | JsonValue::Array(_) => false,
     }
+}
+
+fn validate_action_arguments(command: &JsonValue) -> Result<bool, KeyBindingError> {
+    match command {
+        JsonValue::String(name) => return Ok(name != "moveTab"),
+        JsonValue::Object(command) => {
+            let Some(action) = command.get("action").and_then(JsonValue::as_str) else {
+                return Ok(false);
+            };
+            match action {
+                "moveTab" => match command.get("direction").and_then(JsonValue::as_str) {
+                    Some("forward" | "backward") => {}
+                    _ => return Err(KeyBindingError::InvalidActionArguments),
+                },
+                "commandPalette" => {
+                    if command
+                        .get("launchMode")
+                        .and_then(JsonValue::as_str)
+                        .is_some_and(|mode| !matches!(mode, "action" | "commandLine"))
+                    {
+                        return Err(KeyBindingError::InvalidActionArguments);
+                    }
+                }
+                "scrollUp" | "scrollDown" => {
+                    if let Some(value) = command.get("rowsToScroll") {
+                        let Some(rows) = value.as_f64() else {
+                            return Err(KeyBindingError::InvalidActionArguments);
+                        };
+                        if rows < 0.0 || rows.fract() != 0.0 {
+                            return Err(KeyBindingError::InvalidActionArguments);
+                        }
+                    }
+                }
+                "splitPane" => {
+                    if command
+                        .get("split")
+                        .and_then(JsonValue::as_str)
+                        .is_some_and(|direction| !matches!(direction, "vertical" | "horizontal" | "auto"))
+                    {
+                        return Err(KeyBindingError::InvalidActionArguments);
+                    }
+                }
+                "setTabColor" => {
+                    if let Some(value) = command.get("color") {
+                        match value {
+                            JsonValue::Null => {}
+                            JsonValue::String(color) if parse_colorref(color).is_some() => {}
+                            _ => return Err(KeyBindingError::InvalidActionArguments),
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+        _ => return Ok(false),
+    }
+    Ok(true)
+}
+
+fn parse_colorref(color: &str) -> Option<u32> {
+    let hex = color.strip_prefix('#')?;
+    if hex.len() != 6 {
+        return None;
+    }
+    let rgb = u32::from_str_radix(hex, 16).ok()?;
+    let red = (rgb >> 16) & 0xff;
+    let green = (rgb >> 8) & 0xff;
+    let blue = rgb & 0xff;
+    Some(red | (green << 8) | (blue << 16))
 }
 
 fn is_known_action(name: &str) -> bool {

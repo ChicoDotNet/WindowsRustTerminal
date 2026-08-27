@@ -1,86 +1,36 @@
 {
   "schemaVersion": 1,
-  "description": "Capacity-sized R08 KeyBindings checkpoint: the portable ActionMap layering seam owns key-chord accumulation/override, semantic action deduplication, argument-sensitive identity, explicit unbind, string key syntax and reverse action-ID lookup for eight Microsoft KeyBindingsTests contracts.",
-  "expectedCoveragePriority": 76,
+  "description": "R08 KeyBindings checkpoint: LayeredActionMap owns portable layering plus typed specialized action-argument semantics for fourteen Microsoft KeyBindingsTests contracts.",
+  "expectedCoveragePriority": 82,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 67,
-      "Missing": 90
+      "Exact": 73,
+      "Missing": 84
     }
   },
-  "expectedGlobalCoveragePriority": 76,
+  "expectedGlobalCoveragePriority": 82,
   "expectedGlobalCoverage": {
-    "Exact": 344,
+    "Exact": 350,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 351
+    "Missing": 345
   },
   "entries": [
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "ManyKeysSameAction",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_many_keys_same_action_contract"],
-      "notes": "Microsoft layers copy on ctrl+c and enter, then paste on ctrl+v and ctrl+shift+v, requiring the key map to grow 0→1→2→4 while both chords for each action remain independently resolvable. LayeredActionMap reproduces the same additive chord semantics and direct action lookup."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "LayerKeybindings",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_layer_keybindings_contract"],
-      "notes": "Microsoft layers copy and then paste onto ctrl+c and requires later-layer replacement without increasing key-map cardinality, followed by an additive enter binding. LayeredActionMap uses last-layer-wins chord assignment and the witness verifies both cardinality and effective command identity."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "HashDeduplication",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_hash_deduplication_contract"],
-      "notes": "Microsoft layers the same splitPane command/chord twice as user data and requires one semantic action in ActionMap. Safe Rust derives stable semantic identity from the typed command tree, so identical commands deduplicate while the keybinding remains intact."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "HashContentArgs",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_hash_content_args_contract"],
-      "notes": "Microsoft requires newTab with default terminal args and newTab with index=0 to produce distinct content-argument hashes and two ActionMap entries. Rust preserves nullable profile-index semantics and hashes the complete typed command value, proving both argument observables and distinct semantic identities."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "UnbindKeybindings",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_unbind_keybindings_contract"],
-      "notes": "Microsoft treats command=unbound, null, an unknown command string and a non-command numeric value as recoverable explicit unbinds: the chord remains represented while action lookup becomes null. Rust reproduces all four forms plus unbinding a previously unused chord."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "TestExplicitUnbind",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_explicit_unbind_contract"],
-      "notes": "Microsoft exposes IsKeyChordExplicitlyUnbound and requires false initially/after binding, true after explicit unbind, then false again after rebinding. LayeredActionMap tracks that state separately from action resolution and reproduces the complete transition sequence."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "TestStringOverload",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_string_overload_contract"],
-      "notes": "Microsoft accepts keys as the scalar string ctrl+c, resolves the explicit Test.Copy action, and observes CopyTextArgs.SingleLine=false for the simple copy command. Rust accepts both scalar and array key syntax and exposes the same effective default argument."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "TestGetKeyBindingForAction",
-      "coverage": "Exact",
-      "rustWitnesses": ["microsoft_keybindings_get_key_binding_for_action_contract"],
-      "notes": "Microsoft layers four explicit IDs spanning simple commands, object args, new-terminal args and commandPalette, then performs reverse ID→KeyChord lookup. Rust preserves the same explicit IDs and proves bidirectional lookup for Test.CloseWindow/ctrl+a, Test.Copy/ctrl+b, Test.NewTab/ctrl+c and Test.CmdPal/ctrl+shift+p."
-    }
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"ManyKeysSameAction","coverage":"Exact","rustWitnesses":["microsoft_keybindings_many_keys_same_action_contract"],"notes":"Multiple chords bind one semantic action while preserving independent lookup."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"LayerKeybindings","coverage":"Exact","rustWitnesses":["microsoft_keybindings_layer_keybindings_contract"],"notes":"Later layers replace the same chord while distinct chords remain additive."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"HashDeduplication","coverage":"Exact","rustWitnesses":["microsoft_keybindings_hash_deduplication_contract"],"notes":"Identical splitPane commands deduplicate to one semantic action."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"HashContentArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_hash_content_args_contract"],"notes":"newTab default content args and index=0 keep distinct semantic hashes."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"UnbindKeybindings","coverage":"Exact","rustWitnesses":["microsoft_keybindings_unbind_keybindings_contract"],"notes":"unbound/null/unknown/non-command inputs produce recoverable explicit unbinds."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestExplicitUnbind","coverage":"Exact","rustWitnesses":["microsoft_keybindings_explicit_unbind_contract"],"notes":"Explicit-unbound state follows Microsoft bind/unbind/rebind transitions."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestStringOverload","coverage":"Exact","rustWitnesses":["microsoft_keybindings_string_overload_contract"],"notes":"Scalar key syntax and default CopyText args are preserved."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestGetKeyBindingForAction","coverage":"Exact","rustWitnesses":["microsoft_keybindings_get_key_binding_for_action_contract"],"notes":"Explicit action IDs support reverse ID-to-key lookup."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestArbitraryArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_arbitrary_args_contract"],"notes":"Copy/newTab/adjustFontSize typed defaults, explicit values, ignored unknown members and signed deltas reproduce Microsoft's ten-binding vector."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestSplitPaneArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_split_pane_args_contract"],"notes":"vertical/horizontal/default/auto split arguments project to Right/Down/Automatic exactly."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestSetTabColorArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_set_tab_color_args_contract"],"notes":"nullable/default tab colors and #RRGGBB to COLORREF projection are owned in Rust."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestScrollArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_scroll_args_contract"],"notes":"scroll defaults, rowsToScroll=10 and rejection of negative row counts match Microsoft."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestToggleCommandPaletteArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_toggle_command_palette_args_contract"],"notes":"default/action/commandLine launch modes and invalid-value rejection match Microsoft."},
+    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","method":"TestMoveTabArgs","coverage":"Exact","rustWitnesses":["microsoft_keybindings_move_tab_args_contract"],"notes":"forward/backward directions, no-args unbind behavior and invalid-direction failure match Microsoft."}
   ]
 }
