@@ -13,5 +13,6 @@ pub mod profile;
 pub mod profile_collection;
 pub mod profile_duplication;
 pub mod profile_identity;
+pub mod serialization;
 pub mod settings_json;
 pub mod theme;
