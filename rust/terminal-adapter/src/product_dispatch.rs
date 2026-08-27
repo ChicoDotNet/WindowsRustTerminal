@@ -84,8 +84,7 @@ impl AdaptDispatchProductState {
         self.writable = writable;
         self.responses.set_response_writable(writable);
         self.macros.set_response_writable(writable);
-        self.user_preference_charset
-            .set_response_writable(writable);
+        self.user_preference_charset.set_response_writable(writable);
     }
 
     fn collect_responses(&mut self) {
@@ -144,9 +143,7 @@ impl TermDispatch for AdaptDispatchProductState {
                 status: status @ (62 | 63),
                 id,
             } => self.dispatch_macro_report(status, id),
-            OutputAction::AdvancedCsi { id, parameters }
-                if id == VtId::from_ascii("&u") =>
-            {
+            OutputAction::AdvancedCsi { id, parameters } if id == VtId::from_ascii("&u") => {
                 self.dispatch_user_preference_report(id, parameters);
             }
             other => {
@@ -274,7 +271,10 @@ mod tests {
 
         machine.process_str("\u{1b}P0!u%5\u{1b}\\");
         machine.process_str("\u{1b}[&u");
-        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P0!u%5\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P0!u%5\u{1b}\\"
+        );
         assert_eq!(
             machine
                 .engine()
@@ -296,7 +296,10 @@ mod tests {
 
         machine.engine_mut().dispatch_mut().clear_response();
         machine.process_str("\u{1b}P1!uA\u{1b}\\\u{1b}[&u");
-        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P1!uA\u{1b}\\");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P1!uA\u{1b}\\"
+        );
         assert_eq!(
             machine
                 .engine()
