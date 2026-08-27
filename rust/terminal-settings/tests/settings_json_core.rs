@@ -6,8 +6,14 @@ fn settings_json_distinguishes_missing_null_and_value() {
         .expect("settings JSON should parse");
     let object = document.as_object().expect("root should be an object");
 
-    assert_eq!(JsonMember::from_object(object, "missing"), JsonMember::Missing);
-    assert_eq!(JsonMember::from_object(object, "explicit"), JsonMember::Null);
+    assert_eq!(
+        JsonMember::from_object(object, "missing"),
+        JsonMember::Missing
+    );
+    assert_eq!(
+        JsonMember::from_object(object, "explicit"),
+        JsonMember::Null
+    );
     assert!(matches!(
         JsonMember::from_object(object, "value"),
         JsonMember::Value(JsonValue::String(value)) if value == "set"
@@ -27,7 +33,10 @@ fn settings_json_accepts_jsonc_and_trailing_commas() {
     .expect("JSONC settings should parse");
 
     let object = document.as_object().expect("root should be an object");
-    assert_eq!(object.get("enabled").and_then(JsonValue::as_bool), Some(true));
+    assert_eq!(
+        object.get("enabled").and_then(JsonValue::as_bool),
+        Some(true)
+    );
     let items = object
         .get("items")
         .and_then(JsonValue::as_array)
@@ -38,8 +47,8 @@ fn settings_json_accepts_jsonc_and_trailing_commas() {
 
 #[test]
 fn settings_json_decodes_unicode_surrogate_pairs() {
-    let document = settings_json::parse(r#"{ "icon": "\uD83D\uDE80" }"#)
-        .expect("surrogate pair should parse");
+    let document =
+        settings_json::parse(r#"{ "icon": "\uD83D\uDE80" }"#).expect("surrogate pair should parse");
     let object = document.as_object().expect("root should be an object");
     assert_eq!(object.get("icon").and_then(JsonValue::as_str), Some("🚀"));
 }
