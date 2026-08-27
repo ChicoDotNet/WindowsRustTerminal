@@ -7,6 +7,7 @@
 #![forbid(unsafe_code)]
 
 pub mod application_state;
+pub mod color_scheme;
 pub mod new_tab_menu;
 pub mod settings_json;
 pub mod theme;
