@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering, legacy profile-array identity merging, canonical cmd/PowerShell commandline fixups and profile environment-case validation warnings have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 42,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict and generated GUID identity, appearance/property layering, legacy profile-array identity merging, prohibited profiles.defaults identity fields, canonical cmd/PowerShell commandline fixups and profile environment-case validation warnings have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 43,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 32,
-      "Missing": 125
+      "Exact": 34,
+      "Missing": 123
     }
   },
-  "expectedGlobalCoveragePriority": 42,
+  "expectedGlobalCoveragePriority": 43,
   "expectedGlobalCoverage": {
-    "Exact": 309,
+    "Exact": 311,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 386
+    "Missing": 384
   },
   "entries": [
     {
@@ -117,6 +117,26 @@
         "microsoft_profile_environment_case_collision_emits_two_warnings"
       ],
       "notes": "The safe Rust ProfileCollection validation owner reproduces the Microsoft source vector end-to-end. With no inbox schemes, the inherited AppearanceConfig default Campbell scheme is unknown and records UnknownColorScheme first; _validateProfileEnvironmentVariables then detects FOO/Foo through case-insensitive name comparison and records InvalidProfileEnvironmentVariables, yielding exactly the two warnings asserted by Microsoft. An absent defaultProfile does not itself warn because _resolveDefaultProfile only appends MissingDefaultProfile for a non-empty unresolved request."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "TestGenGuidsForProfiles",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_test_gen_guids_for_profiles_distinguishes_source_identity"
+      ],
+      "notes": "The safe Rust ProfileIdentitySettings owner generates stable nonzero profile identity when GUID is omitted, includes source in that identity, reconciles the matching inbox/user dynamic profile, preserves the unmatched inbox profile, and keeps an otherwise identical source-less profile distinct, reproducing the Microsoft assertions without exposing a platform projection dependency."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "ProfileDefaultsProhibitedSettings",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_profile_defaults_prohibited_settings_do_not_inherit_identity_or_commandline"
+      ],
+      "notes": "The safe Rust profile identity policy deliberately excludes guid, name, source, and commandline from profiles.defaults inheritance. Local profile identity is preserved or generated independently, source remains absent unless local, and the canonical PowerShell commandline fixup still applies to the explicitly identified PowerShell profile."
     }
   ]
 }
