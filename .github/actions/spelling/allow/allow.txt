@@ -13,6 +13,10 @@ commandlines
 consvc
 copyable
 dcs
+decac
+DECMAC
+decsca
+decscusr
 deselection
 diffing
 Dimidium
@@ -37,6 +41,7 @@ Llast
 Lmid
 locl
 lol
+lookalike
 Lorigin
 maxed
 megathread
@@ -51,6 +56,7 @@ passthrough
 perlw
 postmodern
 Powerline
+preexisting
 ptys
 pwn
 pwshw
@@ -63,6 +69,7 @@ reimplementation
 Remappings
 reserialization
 reserializes
+retargeting
 Retargets
 rlig
 rubyw

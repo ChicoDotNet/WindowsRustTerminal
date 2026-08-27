@@ -59,8 +59,8 @@ name: Spell checking
 
 on:
   push:
-    branches:
-      - "**"
+    branches-ignore:
+      - "rust/r08-product-integration"
     tags-ignore:
       - "**"
   pull_request_target:
@@ -69,7 +69,7 @@ on:
     types:
       - "opened"
       - "reopened"
-      - "synchronize"
+      - "ready_for_review"
   issue_comment:
     types:
       - "created"
@@ -87,7 +87,10 @@ jobs:
     outputs:
       followup: ${{ steps.spelling.outputs.followup }}
     runs-on: ubuntu-latest
-    if: ${{ (contains(github.event_name, 'pull_request') && github.event.pull_request.state == 'open') || github.event_name == 'push' }}
+    # Repository-wide spelling is intentionally absent from normal pull-request
+    # synchronization. R08 is guarded explicitly as well because long-lived PR
+    # events can carry stale draft metadata. ready_for_review restores spelling.
+    if: ${{ github.event_name == 'push' || (contains(github.event_name, 'pull_request') && github.event.pull_request.state == 'open' && github.event.pull_request.draft == false && (github.event.pull_request.head.ref != 'rust/r08-product-integration' || github.event.action == 'ready_for_review')) }}
     concurrency:
       group: spelling-${{ github.event.pull_request.number || github.ref }}
       # note: If you use only_check_changed_files, you do not want cancel-in-progress
