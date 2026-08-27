@@ -288,8 +288,8 @@ fn profiles_have_unknown_color_scheme(
     let known_schemes = known_color_scheme_names(root)?;
     for profile in profiles {
         let (dark, light) = profile_color_scheme_names(profile)?;
-        if !known_schemes.iter().any(|name| name == dark)
-            || !known_schemes.iter().any(|name| name == light)
+        if !known_schemes.iter().any(|name| *name == dark)
+            || !known_schemes.iter().any(|name| *name == light)
         {
             return Ok(true);
         }
