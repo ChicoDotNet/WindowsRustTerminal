@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon layering, environment-map, strict GUID identity and appearance/property layering contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 39,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering and legacy profile-array identity merging have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 40,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 29,
-      "Missing": 128
+      "Exact": 30,
+      "Missing": 127
     }
   },
-  "expectedGlobalCoveragePriority": 39,
+  "expectedGlobalCoveragePriority": 40,
   "expectedGlobalCoverage": {
-    "Exact": 306,
+    "Exact": 307,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 389
+    "Missing": 388
   },
   "entries": [
     {
@@ -23,7 +23,9 @@
       "source": "ProfileTests.cpp",
       "method": "SettingInheritanceFallback",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_setting_inheritance_fallback"],
+      "rustWitnesses": [
+        "microsoft_profile_setting_inheritance_fallback"
+      ],
       "notes": "The safe Rust ProfileSettings owner resolves historySize from profiles.defaults, retains the built-in snapOnInput=true fallback when no layer defines it, and lets an explicit profile value override only that child layer."
     },
     {
@@ -31,7 +33,9 @@
       "source": "ProfileTests.cpp",
       "method": "ClearSettingRestoresInheritance",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_clear_setting_restores_inheritance"],
+      "rustWitnesses": [
+        "microsoft_profile_clear_setting_restores_inheritance"
+      ],
       "notes": "A child profile initially owns layered historySize/tabTitle values; clearing each local value flips HasXxx false and resolves the corresponding parent value without copying it into the child layer."
     },
     {
@@ -39,7 +43,9 @@
       "source": "ProfileTests.cpp",
       "method": "HasSettingAtSpecificLayer",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_has_setting_at_specific_layer"],
+      "rustWitnesses": [
+        "microsoft_profile_has_setting_at_specific_layer"
+      ],
       "notes": "The Rust owner distinguishes local ownership from inherited resolution: explicit profile historySize reports Has=true, inherited defaults historySize/tabTitle report Has=false on children, and profiles.defaults itself retains Has=true for its locally-defined value."
     },
     {
@@ -47,7 +53,9 @@
       "source": "ProfileTests.cpp",
       "method": "LayerProfileIcon",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_layer_icon_preserves_null_and_missing_semantics"],
+      "rustWitnesses": [
+        "microsoft_profile_layer_icon_preserves_null_and_missing_semantics"
+      ],
       "notes": "The safe Rust Profile owner reproduces Microsoft's nullable icon layering: an explicit null clears the icon, an omitted icon preserves the current layer result, and a later string replaces it."
     },
     {
@@ -55,7 +63,9 @@
       "source": "ProfileTests.cpp",
       "method": "ProfileWithEnvVars",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_with_env_vars_preserves_entries_verbatim"],
+      "rustWitnesses": [
+        "microsoft_profile_with_env_vars_preserves_entries_verbatim"
+      ],
       "notes": "The safe Rust Profile owner parses the environment object as a typed string map and preserves all three Microsoft values verbatim, including the self-referential %VAR_3%;value3 payload without premature expansion."
     },
     {
@@ -63,7 +73,9 @@
       "source": "ProfileTests.cpp",
       "method": "ProfileGeneratesGuid",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_profile_generates_guid_accepts_only_braced_guid_format"],
+      "rustWitnesses": [
+        "microsoft_profile_generates_guid_accepts_only_braced_guid_format"
+      ],
       "notes": "The safe Rust Profile owner keeps absent/null GUIDs unset, accepts zero/lowercase/uppercase braced format-B GUIDs as the same identity, and rejects Microsoft's hyphenless, raw and parenthesized presentations."
     },
     {
@@ -71,8 +83,20 @@
       "source": "ProfileTests.cpp",
       "method": "LayerProfileProperties",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_layer_profile_properties_preserves_inherited_appearance_and_directory"],
+      "rustWitnesses": [
+        "microsoft_layer_profile_properties_preserves_inherited_appearance_and_directory"
+      ],
       "notes": "Profile children inherit background, selection background and starting directory from the resolved parent while locally layered foreground/name/directory values replace only their own layer, matching Microsoft's three-profile chain."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "LayerProfilesOnArray",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_layer_profiles_on_array_merges_by_guid_and_preserves_inbox_order"
+      ],
+      "notes": "The safe Rust ProfileCollection owner layers user profile objects over matching inbox entries by strict GUID identity, preserves inbox positions and unmatched inbox profiles, and yields Microsoft's exact [profile3, profile4, profile2] observable order."
     }
   ]
 }
