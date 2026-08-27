@@ -122,6 +122,14 @@ impl VtResponseEngine {
         self.push(&format!("\u{1b}[{height};{width};{left};1;{page}\"w"))
     }
 
+    /// Serializes a DECRQCRA checksum response. Checksum computation itself is
+    /// deliberately owned by the text-buffer layer; the adapter response owner
+    /// is responsible only for the exact DCS framing observed by Microsoft.
+    #[must_use]
+    pub fn checksum_report(&mut self, request_id: u16, checksum: u16) -> bool {
+        self.push(&format!("\u{1b}P{request_id}!~{checksum:04X}\u{1b}\\"))
+    }
+
     /// Serializes a DECRQM/DECRPM mode report for a mode owned by the Rust
     /// adapter. DEC reports `1` for set and `2` for reset. Recognition is
     /// deliberately decided by the caller so unsupported modes remain at the
@@ -232,6 +240,16 @@ mod tests {
     }
 
     #[test]
+    fn microsoft_checksum_report_uses_exact_decrqcra_dcs_framing() {
+        let mut responses = VtResponseEngine::default();
+        assert!(responses.checksum_report(99, 0xFF4F));
+        assert_eq!(responses.response(), "\u{1b}P99!~FF4F\u{1b}\\");
+        responses.clear();
+        assert!(responses.checksum_report(99, 0xFDEA));
+        assert_eq!(responses.response(), "\u{1b}P99!~FDEA\u{1b}\\");
+    }
+
+    #[test]
     fn microsoft_decrqm_serializes_standard_private_and_permanent_mode_states() {
         let mut responses = VtResponseEngine::default();
         assert!(responses.mode_report(false, 4, true));
@@ -265,6 +283,7 @@ mod tests {
         assert!(!responses.tertiary_device_attributes());
         assert!(!responses.terminal_parameters(0));
         assert!(!responses.displayed_extent(24, 80, 0, 1));
+        assert!(!responses.checksum_report(99, 0xFF4F));
         assert!(!responses.mode_report(true, 25, true));
         assert!(!responses.mode_report_state(true, 2027, 3));
         assert!(responses.response().is_empty());
