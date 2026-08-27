@@ -57,7 +57,7 @@ pub fn set_accept_c1_controls<E: StateMachineEngine>(machine: &mut StateMachine<
 
 /// Applies Microsoft's coding-system side effects and returns the code page the
 /// native boundary must select. `ISO-2022` enables C1 parsing and selects
-/// ISO-8859-1; UTF-8 disables C1 parsing and selects CP_UTF8.
+/// ISO-8859-1; UTF-8 disables C1 parsing and selects `CP_UTF8`.
 pub fn designate_coding_system<E: StateMachineEngine>(
     machine: &mut StateMachine<E>,
     system: CodingSystem,
