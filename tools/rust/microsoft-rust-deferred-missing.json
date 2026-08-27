@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 345,
+  "expectedMissingTotal": 342,
   "sources": [
     {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
@@ -18,7 +18,6 @@
     {"suite":"localTerminalApp","source":"SettingsTests.cpp","reason":"TerminalApp settings integration remains native product logic."},
     {"suite":"unitSettingsModel","source":"CommandTests.cpp","reason":"Settings command-model semantics remain native."},
     {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","reason":"Settings deserialization/layering semantics remain native."},
-    {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","expectedMissing":3,"reason":"Fourteen portable layering/action-argument contracts are Exact in Rust; the remaining three share key-chord/scancode normalization and are deferred to the dedicated chord seam."},
     {"suite":"unitSettingsModel","source":"MediaResourceTests.cpp","reason":"Settings media-resource semantics remain native."},
     {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native."}
   ]

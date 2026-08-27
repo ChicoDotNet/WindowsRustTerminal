@@ -11,6 +11,7 @@ pub mod application_state;
 pub mod cascadia_settings;
 pub mod color_scheme;
 pub mod keybindings;
+pub mod keybindings_model;
 pub mod new_tab_menu;
 pub mod profile;
 pub mod profile_collection;
