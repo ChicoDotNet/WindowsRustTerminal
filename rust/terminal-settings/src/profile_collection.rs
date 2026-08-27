@@ -1,13 +1,23 @@
-//! Portable profile-collection layering semantics from `SettingsModel`.
+//! Portable profile-collection layering and fixup semantics from `SettingsModel`.
 //!
 //! This owner keeps legacy top-level `profiles` arrays as full JSON objects,
-//! layers user objects over inbox objects by strict profile GUID identity, and
-//! preserves source order for profiles that are not replaced.
+//! layers user objects over inbox objects by strict profile GUID identity,
+//! preserves source order for profiles that are not replaced, and owns the
+//! deterministic legacy cmd/PowerShell commandline fixups applied by the
+//! settings loader.
 
 use crate::{
     profile::{ProfileGuid, ProfileParseError},
     settings_json::{self, JsonMember, JsonObject, JsonValue},
 };
+
+const DEFAULT_WINDOWS_POWERSHELL_GUID: &str = "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}";
+const DEFAULT_COMMAND_PROMPT_GUID: &str = "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}";
+const LEGACY_POWERSHELL_COMMANDLINE: &str = "powershell.exe";
+const CANONICAL_POWERSHELL_COMMANDLINE: &str =
+    "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+const LEGACY_COMMAND_PROMPT_COMMANDLINE: &str = "cmd.exe";
+const CANONICAL_COMMAND_PROMPT_COMMANDLINE: &str = "%SystemRoot%\\System32\\cmd.exe";
 
 /// One layered profile object together with the identity fields needed by the
 /// settings loader to reconcile inbox and user entries.
@@ -50,6 +60,39 @@ impl LayeredProfile {
         Ok(())
     }
 
+    fn apply_legacy_shell_commandline_fixup(
+        &mut self,
+        powershell_guid: ProfileGuid,
+        command_prompt_guid: ProfileGuid,
+    ) {
+        let Some(guid) = self.guid else {
+            return;
+        };
+        let commandline = match JsonMember::from_object(&self.object, "commandline") {
+            JsonMember::Value(JsonValue::String(value)) => value.as_str(),
+            _ => return,
+        };
+
+        let replacement = if guid == powershell_guid
+            && commandline.eq_ignore_ascii_case(LEGACY_POWERSHELL_COMMANDLINE)
+        {
+            Some(CANONICAL_POWERSHELL_COMMANDLINE)
+        } else if guid == command_prompt_guid
+            && commandline.eq_ignore_ascii_case(LEGACY_COMMAND_PROMPT_COMMANDLINE)
+        {
+            Some(CANONICAL_COMMAND_PROMPT_COMMANDLINE)
+        } else {
+            None
+        };
+
+        if let Some(replacement) = replacement {
+            self.object.insert(
+                "commandline".to_owned(),
+                JsonValue::String(replacement.to_owned()),
+            );
+        }
+    }
+
     #[must_use]
     pub fn name(&self) -> Option<&str> {
         self.name.as_deref()
@@ -60,6 +103,14 @@ impl LayeredProfile {
         self.guid
     }
 
+    #[must_use]
+    pub fn commandline(&self) -> Option<&str> {
+        match JsonMember::from_object(&self.object, "commandline") {
+            JsonMember::Value(JsonValue::String(value)) => Some(value.as_str()),
+            _ => None,
+        }
+    }
+
     /// Returns the fully layered JSON object, including properties that are not
     /// yet projected into the portable `Profile` owner.
     #[must_use]
@@ -68,7 +119,8 @@ impl LayeredProfile {
     }
 }
 
-/// Safe Rust owner for legacy inbox/user profile-array reconciliation.
+/// Safe Rust owner for profile collection reconciliation and deterministic
+/// profile fixups.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct ProfileCollection {
     profiles: Vec<LayeredProfile>,
@@ -88,12 +140,12 @@ impl ProfileCollection {
         user_json: &str,
         inbox_json: &str,
     ) -> Result<Self, ProfileParseError> {
-        let mut profiles = parse_profile_objects(inbox_json)?
+        let mut profiles = parse_legacy_profile_objects(inbox_json)?
             .into_iter()
             .map(LayeredProfile::from_object)
             .collect::<Result<Vec<_>, _>>()?;
 
-        for object in parse_profile_objects(user_json)? {
+        for object in parse_legacy_profile_objects(user_json)? {
             let incoming = LayeredProfile::from_object(object.clone())?;
             let matching_index = incoming.guid().and_then(|guid| {
                 profiles
@@ -111,13 +163,39 @@ impl ProfileCollection {
         Ok(Self { profiles })
     }
 
+    /// Parses a modern `profiles.list` user layer and applies the deterministic
+    /// commandline compatibility patches used by Microsoft's `FixupUserSettings`.
+    /// Only the canonical Windows PowerShell and Command Prompt GUIDs are
+    /// eligible, and the old executable names are matched ASCII-case-insensitively.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ProfileParseError`] when the settings/profile structure or a
+    /// profile identity is invalid.
+    pub fn from_user_json_with_legacy_shell_path_fixups(
+        user_json: &str,
+    ) -> Result<Self, ProfileParseError> {
+        let powershell_guid = ProfileGuid::parse(DEFAULT_WINDOWS_POWERSHELL_GUID)?;
+        let command_prompt_guid = ProfileGuid::parse(DEFAULT_COMMAND_PROMPT_GUID)?;
+        let mut profiles = parse_modern_profile_objects(user_json)?
+            .into_iter()
+            .map(LayeredProfile::from_object)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        for profile in &mut profiles {
+            profile.apply_legacy_shell_commandline_fixup(powershell_guid, command_prompt_guid);
+        }
+
+        Ok(Self { profiles })
+    }
+
     #[must_use]
     pub fn profiles(&self) -> &[LayeredProfile] {
         &self.profiles
     }
 }
 
-fn parse_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
+fn parse_legacy_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
     let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
     let root = value
         .as_object()
@@ -128,6 +206,29 @@ fn parse_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseErr
         JsonMember::Value(_) => return Err(ProfileParseError::ExpectedArray),
     };
 
+    clone_profile_objects(values)
+}
+
+fn parse_modern_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
+    let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
+    let root = value
+        .as_object()
+        .ok_or(ProfileParseError::ExpectedObject)?;
+    let profiles = match JsonMember::from_object(root, "profiles") {
+        JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
+        JsonMember::Value(JsonValue::Object(profiles)) => profiles,
+        JsonMember::Value(_) => return Err(ProfileParseError::ExpectedObject),
+    };
+    let values = match JsonMember::from_object(profiles, "list") {
+        JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
+        JsonMember::Value(JsonValue::Array(values)) => values,
+        JsonMember::Value(_) => return Err(ProfileParseError::ExpectedArray),
+    };
+
+    clone_profile_objects(values)
+}
+
+fn clone_profile_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, ProfileParseError> {
     values
         .iter()
         .map(|value| {
