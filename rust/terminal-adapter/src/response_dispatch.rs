@@ -22,6 +22,10 @@ use crate::{
 
 const ESC: u16 = 0x1b;
 const PERMANENT_GRAPHEME_CLUSTER_MODE: i32 = 2027;
+const STANDARD_REPORT_ONLY_MODES: &[i32] = &[20];
+const PRIVATE_REPORT_ONLY_MODES: &[i32] = &[
+    1, 3, 5, 8, 12, 40, 66, 67, 1000, 1002, 1003, 1004, 1005, 1006, 1007, 1049, 2004, 9001,
+];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AdaptDispatchResponseState {
@@ -34,6 +38,7 @@ pub struct AdaptDispatchResponseState {
     cursor_style: CursorStyleState,
     color_aliases: ColorAliasIndices,
     request_setting_buffer: Option<String>,
+    report_only_modes: Vec<(bool, i32, bool)>,
 }
 
 impl AdaptDispatchResponseState {
@@ -55,6 +60,7 @@ impl AdaptDispatchResponseState {
             cursor_style: CursorStyleState::default(),
             color_aliases: ColorAliasIndices::default(),
             request_setting_buffer: None,
+            report_only_modes: Vec::new(),
         }
     }
 
@@ -83,6 +89,39 @@ impl AdaptDispatchResponseState {
     }
     pub const fn set_color_alias_indices(&mut self, aliases: ColorAliasIndices) {
         self.color_aliases = aliases;
+    }
+
+    fn is_report_only_mode(private: bool, mode: i32) -> bool {
+        if private {
+            PRIVATE_REPORT_ONLY_MODES.contains(&mode)
+        } else {
+            STANDARD_REPORT_ONLY_MODES.contains(&mode)
+        }
+    }
+
+    fn report_only_mode_status(&self, private: bool, mode: i32) -> Option<bool> {
+        if !Self::is_report_only_mode(private, mode) {
+            return None;
+        }
+
+        Some(
+            self.report_only_modes
+                .iter()
+                .find(|entry| entry.0 == private && entry.1 == mode)
+                .is_some_and(|entry| entry.2),
+        )
+    }
+
+    fn set_report_only_mode(&mut self, private: bool, mode: i32, enabled: bool) {
+        if let Some(entry) = self
+            .report_only_modes
+            .iter_mut()
+            .find(|entry| entry.0 == private && entry.1 == mode)
+        {
+            entry.2 = enabled;
+        } else {
+            self.report_only_modes.push((private, mode, enabled));
+        }
     }
 
     fn device_status_report(&mut self, private: bool, status: i32, id: Option<i32>) -> bool {
@@ -145,7 +184,10 @@ impl AdaptDispatchResponseState {
         let status = if private && mode == 25 {
             Some(self.presentation.cursor_visible())
         } else {
-            self.presentation.core().mode_status(private, mode)
+            self.presentation
+                .core()
+                .mode_status(private, mode)
+                .or_else(|| self.report_only_mode_status(private, mode))
         };
         status.is_some_and(|enabled| self.responses.mode_report(private, mode, enabled))
     }
@@ -304,6 +346,18 @@ impl TermDispatch for AdaptDispatchResponseState {
                 if enabled && !was_coupled {
                     self.visible_page = self.active_page;
                 }
+            }
+            OutputAction::SetMode {
+                private,
+                mode,
+                enabled,
+            } if Self::is_report_only_mode(private, mode) => {
+                self.set_report_only_mode(private, mode, enabled);
+                self.presentation.dispatch(OutputAction::SetMode {
+                    private,
+                    mode,
+                    enabled,
+                });
             }
             other => self.presentation.dispatch(other),
         }
@@ -522,40 +576,91 @@ mod tests {
     }
 
     #[test]
-    fn decrqm_reports_only_modes_owned_by_rust_adapter_state() {
+    fn microsoft_standard_decrqm_matrix_tracks_owned_and_report_only_state() {
+        for mode in [4, 20] {
+            let mut state = state();
+            state.dispatch(OutputAction::SetMode {
+                private: false,
+                mode,
+                enabled: true,
+            });
+            state.dispatch(OutputAction::RequestMode {
+                private: false,
+                mode,
+            });
+            assert_eq!(state.response(), format!("\u{1b}[{mode};1$y"));
+
+            state.clear_response();
+            state.dispatch(OutputAction::SetMode {
+                private: false,
+                mode,
+                enabled: false,
+            });
+            state.dispatch(OutputAction::RequestMode {
+                private: false,
+                mode,
+            });
+            assert_eq!(state.response(), format!("\u{1b}[{mode};2$y"));
+
+            if mode == 4 {
+                assert!(state.presentation().core().deferred_actions().is_empty());
+            } else {
+                assert_eq!(state.presentation().core().deferred_actions().len(), 2);
+            }
+        }
+    }
+
+    #[test]
+    fn microsoft_private_decrqm_matrix_reports_all_source_modes_without_swallowing_effects() {
+        const MODES: [i32; 23] = [
+            1, 3, 5, 6, 7, 8, 12, 25, 40, 66, 67, 69, 117, 1000, 1002, 1003, 1004, 1005,
+            1006, 1007, 1049, 2004, 9001,
+        ];
+
+        for mode in MODES {
+            let mut state = state();
+            if mode == 3 {
+                state.dispatch(OutputAction::SetMode {
+                    private: true,
+                    mode: 40,
+                    enabled: true,
+                });
+            }
+
+            state.dispatch(OutputAction::SetMode {
+                private: true,
+                mode,
+                enabled: true,
+            });
+            state.dispatch(OutputAction::RequestMode {
+                private: true,
+                mode,
+            });
+            assert_eq!(state.response(), format!("\u{1b}[?{mode};1$y"));
+
+            state.clear_response();
+            state.dispatch(OutputAction::SetMode {
+                private: true,
+                mode,
+                enabled: false,
+            });
+            state.dispatch(OutputAction::RequestMode {
+                private: true,
+                mode,
+            });
+            assert_eq!(state.response(), format!("\u{1b}[?{mode};2$y"));
+
+            if matches!(mode, 6 | 7 | 25 | 69 | 117) {
+                assert!(state.presentation().core().deferred_actions().is_empty());
+            } else {
+                assert!(!state.presentation().core().deferred_actions().is_empty());
+            }
+        }
+    }
+
+    #[test]
+    fn unsupported_decrqm_modes_remain_deferred() {
         let mut state = state();
-
-        state.dispatch(OutputAction::RequestMode {
-            private: false,
-            mode: 4,
-        });
-        assert_eq!(state.response(), "\u{1b}[4;2$y");
-
-        state.clear_response();
-        state.dispatch(OutputAction::SetMode {
-            private: false,
-            mode: 4,
-            enabled: true,
-        });
-        state.dispatch(OutputAction::RequestMode {
-            private: false,
-            mode: 4,
-        });
-        assert_eq!(state.response(), "\u{1b}[4;1$y");
-
-        state.clear_response();
-        state.dispatch(OutputAction::SetMode {
-            private: true,
-            mode: 25,
-            enabled: false,
-        });
-        state.dispatch(OutputAction::RequestMode {
-            private: true,
-            mode: 25,
-        });
-        assert_eq!(state.response(), "\u{1b}[?25;2$y");
-
-        state.clear_response();
         state.dispatch(OutputAction::RequestMode {
             private: true,
             mode: 9999,
