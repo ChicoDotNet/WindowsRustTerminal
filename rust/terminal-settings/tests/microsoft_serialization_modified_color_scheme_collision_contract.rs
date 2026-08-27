@@ -5,7 +5,7 @@ use terminal_settings::{
 
 #[test]
 fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contract() {
-    let old_settings = r#"
+    let old_settings = r##"
     {
         "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
         "profiles": [
@@ -68,9 +68,9 @@ fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contra
             }
         ]
     }
-    "#;
+    "##;
 
-    let new_settings = r#"
+    let new_settings = r##"
     {
         "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
         "profiles": {
@@ -116,12 +116,12 @@ fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contra
             }
         ]
     }
-    "#;
+    "##;
 
     // Minimal inbox slice needed by the Microsoft collision contract. Campbell
     // differs from the user's scheme; Tango Dark is byte-for-byte semantically
     // equivalent under SettingsModel's foreground/background/table merge key.
-    let inbox = r#"
+    let inbox = r##"
     {
         "schemes": [
             {
@@ -172,7 +172,7 @@ fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contra
             }
         ]
     }
-    "#;
+    "##;
 
     let fixed = SettingsDocument::from_json_with_color_scheme_fixup(old_settings, inbox)
         .expect("safe Rust SettingsLoader slice fixes the Microsoft collision vector");

@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, RoundtripUserModifiedColorSchemeCollision, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 57,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, both user-modified color-scheme collision round-trips, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 58,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 48,
-      "Missing": 109
+      "Exact": 49,
+      "Missing": 108
     }
   },
-  "expectedGlobalCoveragePriority": 57,
+  "expectedGlobalCoveragePriority": 58,
   "expectedGlobalCoverage": {
-    "Exact": 325,
+    "Exact": 326,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 370
+    "Missing": 369
   },
   "entries": [
     {
@@ -97,6 +97,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contract"],
       "notes": "Microsoft layers a user-modified Campbell over the inbox Campbell plus a user Tango Dark identical to inbox, then FixupUserSettings must preserve the modified Campbell user definition, remove the redundant Tango Dark definition, canonicalize profiles, emit actions=[], and materialize profiles.defaults.colorScheme=Campbell (modified). Safe Rust reuses ColorSchemeSettings::from_layers for collision/reference semantics and SettingsDocument now projects that layered result back to the exact Microsoft user-settings write-back shape; the witness compares Microsoft's complete old/new vectors structurally."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "RoundtripUserModifiedColorSchemeCollisionUnusedByProfiles",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_roundtrip_user_modified_color_scheme_collision_unused_by_profiles_contract"],
+      "notes": "Microsoft layers a user-modified Tango Dark over inbox Tango Dark while no profile references that scheme, then FixupUserSettings must rename only the user definition to Tango Dark (modified), canonicalize profiles, emit actions=[] and avoid materializing profiles.defaults. Safe Rust uses the same ColorSchemeSettings collision owner, deterministically reproduces its modified-name allocation, checks whether the generated target is effectively referenced, and renames only unreferenced modified collisions in the serialized user tree. The witness compares Microsoft's complete old/new vectors structurally and verifies all #111111 colors survive unchanged."
     },
     {
       "suite": "unitSettingsModel",

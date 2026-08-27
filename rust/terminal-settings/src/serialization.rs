@@ -5,7 +5,7 @@
 //! mirrors `CascadiaSettings::ToJson` for the portable portion of the model
 //! without reimplementing WinRT projection.
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use crate::{
     color_scheme::ColorSchemeSettings,
@@ -73,10 +73,10 @@ impl SettingsDocument {
     ///
     /// The layered [`ColorSchemeSettings`] owner decides which user collisions
     /// are modified and retargets inherited/default references. This serializer
-    /// then removes user schemes that are semantically identical to inbox
-    /// schemes, writes the effective profile-default scheme reference, emits the
-    /// modern `profiles.list` shape and materializes the empty actions array
-    /// expected by Cascadia settings serialization.
+    /// removes user schemes that are semantically identical to inbox schemes,
+    /// renames unused modified collisions, writes effective profile-default
+    /// references, emits the modern `profiles.list` shape and materializes the
+    /// empty actions array expected by Cascadia settings serialization.
     ///
     /// # Errors
     ///
@@ -89,11 +89,12 @@ impl SettingsDocument {
         let layered = ColorSchemeSettings::from_layers(user, inbox, &[])
             .map_err(|_| SerializationError::InvalidColorSchemeFixup)?;
         let redundant = redundant_user_scheme_names(user, inbox)?;
+        let renames = unused_modified_user_scheme_renames(user, inbox, &layered)?;
 
         let mut document = Self::from_json(user)?;
         document.canonicalize_legacy_profiles()?;
         document.ensure_actions_array()?;
-        document.apply_color_scheme_fixup(&layered, &redundant)?;
+        document.apply_color_scheme_fixup(&layered, &redundant, &renames)?;
         Ok(document)
     }
 
@@ -311,6 +312,7 @@ impl SettingsDocument {
         &mut self,
         layered: &ColorSchemeSettings,
         redundant: &BTreeSet<String>,
+        renames: &BTreeMap<String, String>,
     ) -> Result<(), SerializationError> {
         let defaults = layered.profile_defaults();
         let light = defaults
@@ -325,6 +327,19 @@ impl SettingsDocument {
             let JsonValue::Array(schemes) = value else {
                 return Err(SerializationError::ExpectedSchemesArray);
             };
+            for value in schemes.iter_mut() {
+                let JsonValue::Object(scheme) = value else {
+                    return Err(SerializationError::ExpectedSchemeObject);
+                };
+                let name = scheme
+                    .get("name")
+                    .and_then(JsonValue::as_str)
+                    .ok_or(SerializationError::ExpectedSchemeObject)?
+                    .to_owned();
+                if let Some(target) = renames.get(&name) {
+                    scheme.insert("name".to_owned(), JsonValue::String(target.clone()));
+                }
+            }
             schemes.retain(|value| {
                 let remove = value
                     .as_object()
@@ -459,6 +474,115 @@ fn redundant_user_scheme_names(
         }
     }
     Ok(redundant)
+}
+
+fn unused_modified_user_scheme_renames(
+    user: &str,
+    inbox: &str,
+    layered: &ColorSchemeSettings,
+) -> Result<BTreeMap<String, String>, SerializationError> {
+    let user = settings_json::parse(user).map_err(|_| SerializationError::InvalidJson)?;
+    let inbox = settings_json::parse(inbox).map_err(|_| SerializationError::InvalidJson)?;
+    let user = user
+        .as_object()
+        .ok_or(SerializationError::ExpectedRootObject)?;
+    let inbox = inbox
+        .as_object()
+        .ok_or(SerializationError::ExpectedRootObject)?;
+    let user_schemes = schemes_array(user)?;
+    let inbox_schemes = schemes_array(inbox)?;
+
+    let mut reserved_user_names = BTreeSet::new();
+    for value in user_schemes {
+        let scheme = value
+            .as_object()
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        let name = scheme
+            .get("name")
+            .and_then(JsonValue::as_str)
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        reserved_user_names.insert(name.to_owned());
+    }
+
+    let mut occupied_names = BTreeSet::new();
+    for value in inbox_schemes {
+        let scheme = value
+            .as_object()
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        let name = scheme
+            .get("name")
+            .and_then(JsonValue::as_str)
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        occupied_names.insert(name.to_owned());
+    }
+
+    let mut renames = BTreeMap::new();
+    for value in user_schemes {
+        let user_scheme = value
+            .as_object()
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        let name = user_scheme
+            .get("name")
+            .and_then(JsonValue::as_str)
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+
+        let inbox_scheme = inbox_schemes.iter().find_map(|value| {
+            let scheme = value.as_object()?;
+            (scheme.get("name").and_then(JsonValue::as_str) == Some(name)).then_some(scheme)
+        });
+
+        let Some(inbox_scheme) = inbox_scheme else {
+            occupied_names.insert(name.to_owned());
+            continue;
+        };
+        if equivalent_for_settings_merge(user_scheme, inbox_scheme)? {
+            continue;
+        }
+
+        let target = next_modified_name(name, &occupied_names, &reserved_user_names);
+        if !color_scheme_name_is_effectively_referenced(layered, &target) {
+            renames.insert(name.to_owned(), target.clone());
+        }
+        occupied_names.insert(target);
+    }
+    Ok(renames)
+}
+
+fn next_modified_name(
+    original: &str,
+    occupied_names: &BTreeSet<String>,
+    reserved_user_names: &BTreeSet<String>,
+) -> String {
+    let first = format!("{original} (modified)");
+    if !occupied_names.contains(&first) && !reserved_user_names.contains(&first) {
+        return first;
+    }
+    for index in 2_u32.. {
+        let candidate = format!("{original} (modified {index})");
+        if !occupied_names.contains(&candidate) && !reserved_user_names.contains(&candidate) {
+            return candidate;
+        }
+    }
+    unreachable!("u32 candidate space cannot be exhausted by a settings document")
+}
+
+fn color_scheme_name_is_effectively_referenced(
+    layered: &ColorSchemeSettings,
+    name: &str,
+) -> bool {
+    let defaults = layered.profile_defaults();
+    if defaults.light_name() == name || defaults.dark_name() == name {
+        return true;
+    }
+
+    layered.profiles().iter().any(|profile| {
+        let default = profile.default_appearance();
+        let unfocused = profile.unfocused_appearance();
+        default.light_name() == name
+            || default.dark_name() == name
+            || unfocused.light_name() == name
+            || unfocused.dark_name() == name
+    })
 }
 
 fn schemes_array(root: &JsonObject) -> Result<&[JsonValue], SerializationError> {
