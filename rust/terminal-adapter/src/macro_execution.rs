@@ -14,8 +14,7 @@ use terminal_parser::{
 };
 
 use crate::{
-    adapt_dispatch::PageGeometry,
-    macro_buffer::InvocationContext,
+    adapt_dispatch::PageGeometry, macro_buffer::InvocationContext,
     product_dispatch::AdaptDispatchProductState,
 };
 
@@ -27,9 +26,6 @@ struct PendingMacroInvocation {
     context: InvocationContext,
 }
 
-/// Decorates the live product dispatch with the parser back-edge required by
-/// DEC macro invocation. All non-invocation actions continue to the canonical
-/// product aggregate unchanged.
 pub struct MacroExecutionDispatch {
     product: AdaptDispatchProductState,
     invocation_context: InvocationContext,
@@ -129,8 +125,6 @@ impl TermDispatch for MacroExecutionDispatch {
     }
 }
 
-/// Product parser driver that executes DEC macros synchronously through the same
-/// Rust `StateMachine`, preserving output order and Microsoft's depth context.
 pub struct MacroExecutingProduct {
     machine: StateMachine<OutputStateMachineEngine<MacroExecutionDispatch>>,
 }
@@ -146,9 +140,7 @@ impl MacroExecutingProduct {
     }
 
     #[must_use]
-    pub const fn machine(
-        &self,
-    ) -> &StateMachine<OutputStateMachineEngine<MacroExecutionDispatch>> {
+    pub const fn machine(&self) -> &StateMachine<OutputStateMachineEngine<MacroExecutionDispatch>> {
         &self.machine
     }
 
