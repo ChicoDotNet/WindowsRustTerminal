@@ -112,26 +112,71 @@ impl AdaptDispatchPresentationState {
         Self::underline_style_from_bits((current_bits & !bit) | (saved_bits & bit))
     }
 
+    fn byte_or_default(value: Option<i32>) -> Option<u8> {
+        u8::try_from(value.unwrap_or(0)).ok()
+    }
+
     fn extended_color_from_subparams(sub_params: &[Option<i32>]) -> Option<TextColor> {
         match sub_params.first().copied().flatten()? {
             2 => {
-                let red = u8::try_from(sub_params.get(1).copied().flatten()?).ok()?;
-                let green = u8::try_from(sub_params.get(2).copied().flatten()?).ok()?;
-                let blue = u8::try_from(sub_params.get(3).copied().flatten()?).ok()?;
+                let (red_index, green_index, blue_index) = if sub_params.len() == 4 {
+                    (1, 2, 3)
+                } else {
+                    if sub_params.get(1).copied().flatten().is_some() {
+                        return None;
+                    }
+                    (2, 3, 4)
+                };
+                let red = Self::byte_or_default(sub_params.get(red_index).copied().flatten())?;
+                let green =
+                    Self::byte_or_default(sub_params.get(green_index).copied().flatten())?;
+                let blue = Self::byte_or_default(sub_params.get(blue_index).copied().flatten())?;
                 Some(TextColor::rgb(red, green, blue))
             }
             5 => {
-                let index = u8::try_from(sub_params.get(1).copied().flatten()?).ok()?;
+                let index = Self::byte_or_default(sub_params.get(1).copied().flatten())?;
                 Some(TextColor::index256(index))
             }
             _ => None,
         }
     }
 
+    fn extended_color_from_parameters(
+        parameters: &Parameters,
+        index: usize,
+    ) -> (Option<TextColor>, usize) {
+        let sub_params = parameters.sub_params_for(index);
+        if !sub_params.is_empty() {
+            return (Self::extended_color_from_subparams(sub_params), 0);
+        }
+
+        match parameters.at(index.saturating_add(1)) {
+            Some(2) => {
+                let red = Self::byte_or_default(parameters.at(index.saturating_add(2)));
+                let green = Self::byte_or_default(parameters.at(index.saturating_add(3)));
+                let blue = Self::byte_or_default(parameters.at(index.saturating_add(4)));
+                (
+                    red.zip(green)
+                        .zip(blue)
+                        .map(|((red, green), blue)| TextColor::rgb(red, green, blue)),
+                    4,
+                )
+            }
+            Some(5) => (
+                Self::byte_or_default(parameters.at(index.saturating_add(2)))
+                    .map(TextColor::index256),
+                2,
+            ),
+            _ => (None, 0),
+        }
+    }
+
     fn apply_graphics_rendition(&mut self, parameters: &Parameters) {
-        for index in 0..parameters.size() {
+        let mut index = 0usize;
+        while index < parameters.size() {
             let option = parameters.at(index).unwrap_or(0);
             let sub_params = parameters.sub_params_for(index);
+            let mut consumed = 0usize;
             match option {
                 0 => self.current_attributes = TextAttribute::default(),
                 1 => self.current_attributes.set_intense(true),
@@ -159,7 +204,10 @@ impl AdaptDispatchPresentationState {
                     u8::try_from(option - 30).unwrap_or_default(),
                 )),
                 38 => {
-                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                    let (color, color_consumed) =
+                        Self::extended_color_from_parameters(parameters, index);
+                    consumed = color_consumed;
+                    if let Some(color) = color {
                         self.current_attributes.set_foreground(color);
                     }
                 }
@@ -168,7 +216,10 @@ impl AdaptDispatchPresentationState {
                     u8::try_from(option - 40).unwrap_or_default(),
                 )),
                 48 => {
-                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                    let (color, color_consumed) =
+                        Self::extended_color_from_parameters(parameters, index);
+                    consumed = color_consumed;
+                    if let Some(color) = color {
                         self.current_attributes.set_background(color);
                     }
                 }
@@ -176,7 +227,10 @@ impl AdaptDispatchPresentationState {
                 53 => self.current_attributes.set_overlined(true),
                 55 => self.current_attributes.set_overlined(false),
                 58 => {
-                    if let Some(color) = Self::extended_color_from_subparams(sub_params) {
+                    let (color, color_consumed) =
+                        Self::extended_color_from_parameters(parameters, index);
+                    consumed = color_consumed;
+                    if let Some(color) = color {
                         self.current_attributes.set_underline_color(color);
                     }
                 }
@@ -188,6 +242,7 @@ impl AdaptDispatchPresentationState {
                 )),
                 _ => {}
             }
+            index = index.saturating_add(consumed).saturating_add(1);
         }
     }
 
