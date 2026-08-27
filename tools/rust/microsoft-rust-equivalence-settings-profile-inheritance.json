@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering and legacy profile-array identity merging have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 40,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon/environment semantics, strict GUID identity, appearance/property layering, legacy profile-array identity merging and canonical cmd/PowerShell commandline fixups have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 41,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 30,
-      "Missing": 127
+      "Exact": 31,
+      "Missing": 126
     }
   },
-  "expectedGlobalCoveragePriority": 40,
+  "expectedGlobalCoveragePriority": 41,
   "expectedGlobalCoverage": {
-    "Exact": 307,
+    "Exact": 308,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 388
+    "Missing": 387
   },
   "entries": [
     {
@@ -97,6 +97,16 @@
         "microsoft_layer_profiles_on_array_merges_by_guid_and_preserves_inbox_order"
       ],
       "notes": "The safe Rust ProfileCollection owner layers user profile objects over matching inbox entries by strict GUID identity, preserves inbox positions and unmatched inbox profiles, and yields Microsoft's exact [profile3, profile4, profile2] observable order."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "TestCorrectOldDefaultShellPaths",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_correct_old_default_shell_paths_only_for_canonical_guids"
+      ],
+      "notes": "The safe Rust ProfileCollection fixup owner reproduces Microsoft's hard-coded compatibility table: only the canonical Windows PowerShell and Command Prompt GUIDs replace the legacy powershell.exe/cmd.exe commandlines with their %SystemRoot% paths, while profiles with lookalike noncanonical GUIDs remain unchanged and list order is preserved."
     }
   ]
 }
