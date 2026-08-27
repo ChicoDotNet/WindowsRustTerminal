@@ -46,6 +46,12 @@ impl NewTabMenuSettings {
     /// Microsoft defaults an absent `newTabMenu` property to one
     /// `RemainingProfiles` entry. A present array is preserved as provided; in
     /// particular, a folder with no name or child entries remains a valid entry.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`NewTabMenuParseError`] when a present `newTabMenu` fragment is
+    /// not an array, has unterminated delimiters, or contains an unsupported
+    /// entry type in this incremental migration slice.
     pub fn from_user_settings_json(input: &str) -> Result<Self, NewTabMenuParseError> {
         let Some(key_offset) = input.find("\"newTabMenu\"") else {
             return Ok(Self {
