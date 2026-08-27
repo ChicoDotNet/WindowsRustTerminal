@@ -5,5 +5,8 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 
+[dependencies]
+terminal-foundation = { path = "../terminal-foundation" }
+
 [lints]
 workspace = true
