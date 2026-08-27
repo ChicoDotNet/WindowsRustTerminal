@@ -5,12 +5,16 @@
 //! mirrors `CascadiaSettings::ToJson` for the portable portion of the model
 //! without reimplementing WinRT projection.
 
-use crate::settings_json::{self, JsonObject, JsonValue};
+use crate::{
+    profile::Profile,
+    settings_json::{self, JsonObject, JsonValue},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerializationError {
     InvalidJson,
     ExpectedRootObject,
+    InvalidProfile,
     ExpectedSchemesArray,
     ExpectedSchemeObject,
     SchemeNotFound,
@@ -37,6 +41,25 @@ impl SettingsDocument {
             return Err(SerializationError::ExpectedRootObject);
         }
         Ok(Self { root })
+    }
+
+    /// Parses one profile serialization vector through the safe Rust `Profile`
+    /// owner while retaining the complete typed tree for lossless projection.
+    ///
+    /// The profile owner validates the migrated semantic surface (GUID,
+    /// inheritance-backed values, nullable colors/icon, directory and
+    /// environment), while the shared JSON tree preserves settings that have
+    /// not yet moved into that owner. This keeps one serialization source of
+    /// truth instead of introducing a parallel profile serializer.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError::InvalidProfile`] when the migrated profile
+    /// semantics reject the vector, or another serialization error when the
+    /// JSON itself cannot be retained as a root object.
+    pub fn from_profile_json(input: &str) -> Result<Self, SerializationError> {
+        Profile::from_json(input).map_err(|_| SerializationError::InvalidProfile)?;
+        Self::from_json(input)
     }
 
     /// Changes the foreground of one named user color scheme in-place.
