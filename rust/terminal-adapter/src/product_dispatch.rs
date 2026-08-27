@@ -2,10 +2,12 @@
 //!
 //! `AdaptDispatchResponseState` owns the ordinary VT response path while
 //! `MacroReportEngine` owns DECDMAC storage plus DSR 62/63,
-//! `UserPreferenceCharsetEngine` owns DECAUPSS/DECRQUPSS, and
-//! `WindowReportEngine` owns deterministic window-size reports. This aggregate
-//! is the single `TermDispatch` surface that composes those owners, preventing
-//! parser and response state from becoming disconnected reporting copies.
+//! `UserPreferenceCharsetEngine` owns DECAUPSS/DECRQUPSS,
+//! `WindowReportEngine` owns deterministic window-size reports, and
+//! `TerminalInputDispatchState` owns Adapter-to-TerminalInput mode coupling.
+//! This aggregate is the single `TermDispatch` surface that composes those
+//! owners, preventing parser and product state from becoming disconnected
+//! reporting copies.
 
 use terminal_parser::{
     output_engine::{DcsAction, OutputAction, TermDispatch},
@@ -13,8 +15,8 @@ use terminal_parser::{
 };
 
 use crate::{
-    adapt_dispatch::PageGeometry, macro_reports::MacroReportEngine,
-    response_dispatch::AdaptDispatchResponseState,
+    adapt_dispatch::PageGeometry, input_mode_dispatch::TerminalInputDispatchState,
+    macro_reports::MacroReportEngine, response_dispatch::AdaptDispatchResponseState,
     user_preference_charset::UserPreferenceCharsetEngine, window_reports::WindowReportEngine,
 };
 
@@ -27,9 +29,9 @@ enum DcsOwner {
     UserPreferenceCharset,
 }
 
-#[derive(Debug, Clone)]
 pub struct AdaptDispatchProductState {
     responses: AdaptDispatchResponseState,
+    input_modes: TerminalInputDispatchState,
     macros: MacroReportEngine,
     user_preference_charset: UserPreferenceCharsetEngine,
     window_reports: WindowReportEngine,
@@ -43,6 +45,7 @@ impl AdaptDispatchProductState {
     pub fn new(geometry: PageGeometry) -> Self {
         Self {
             responses: AdaptDispatchResponseState::new(geometry),
+            input_modes: TerminalInputDispatchState::default(),
             macros: MacroReportEngine::default(),
             user_preference_charset: UserPreferenceCharsetEngine::default(),
             window_reports: WindowReportEngine::new(geometry),
@@ -59,6 +62,15 @@ impl AdaptDispatchProductState {
 
     pub const fn response_state_mut(&mut self) -> &mut AdaptDispatchResponseState {
         &mut self.responses
+    }
+
+    #[must_use]
+    pub const fn input_modes(&self) -> &TerminalInputDispatchState {
+        &self.input_modes
+    }
+
+    pub const fn input_modes_mut(&mut self) -> &mut TerminalInputDispatchState {
+        &mut self.input_modes
     }
 
     #[must_use]
@@ -161,10 +173,42 @@ impl AdaptDispatchProductState {
             self.responses.dispatch(action);
         }
     }
+
+    fn dispatch_input_mode(&mut self, action: OutputAction) {
+        match action {
+            OutputAction::SetMode {
+                private,
+                mode,
+                enabled,
+            } => {
+                self.input_modes.dispatch(OutputAction::SetMode {
+                    private,
+                    mode,
+                    enabled,
+                });
+                if !self
+                    .responses
+                    .record_report_only_mode(private, mode, enabled)
+                {
+                    self.responses.dispatch(OutputAction::SetMode {
+                        private,
+                        mode,
+                        enabled,
+                    });
+                }
+            }
+            other => self.input_modes.dispatch(other),
+        }
+    }
 }
 
 impl TermDispatch for AdaptDispatchProductState {
     fn dispatch(&mut self, action: OutputAction) {
+        if TerminalInputDispatchState::handles(&action) {
+            self.dispatch_input_mode(action);
+            return;
+        }
+
         match action {
             OutputAction::DeviceStatusReport {
                 private: true,
@@ -234,6 +278,7 @@ impl TermDispatch for AdaptDispatchProductState {
 mod tests {
     use super::*;
     use crate::{macro_buffer::MAX_SPACE, user_preference_charset::CharsetSize};
+    use terminal_input::Mode;
     use terminal_parser::{
         output_engine::OutputStateMachineEngine,
         state_machine::{Parameters, StateMachine},
@@ -356,6 +401,175 @@ mod tests {
         assert_eq!(
             machine.engine().dispatch().response(),
             "\u{1b}[8;29;100t\u{1b}[4;580;1000t\u{1b}[6;20;10t"
+        );
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn microsoft_cursor_key_mode_updates_live_terminal_input_without_deferred_work() {
+        let dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 80, 24));
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("\u{1b}[?1h");
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::CursorKey)
+        );
+        machine.process_str("\u{1b}[?1l");
+        assert!(
+            !machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::CursorKey)
+        );
+        machine.process_str("\u{1b}[?1h");
+        machine.engine_mut().dispatch_mut().dispatch(OutputAction::RequestMode {
+            private: true,
+            mode: 1,
+        });
+        assert_eq!(machine.engine().dispatch().response(), "\u{1b}[?1;1$y");
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn microsoft_keypad_mode_flows_parser_to_live_terminal_input() {
+        let dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 80, 24));
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("\u{1b}=");
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::Keypad)
+        );
+        machine.process_str("\u{1b}>");
+        assert!(
+            !machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::Keypad)
+        );
+        machine.process_str("\u{1b}=");
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::Keypad)
+        );
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .response_state()
+                .presentation()
+                .core()
+                .deferred_actions()
+                .is_empty()
+        );
+    }
+
+    #[test]
+    fn microsoft_mouse_mode_matrix_flows_parser_to_live_terminal_input() {
+        let cases = [
+            (1000, Mode::DefaultMouseTracking),
+            (1005, Mode::Utf8MouseEncoding),
+            (1006, Mode::SgrMouseEncoding),
+            (1002, Mode::ButtonEventMouseTracking),
+            (1003, Mode::AnyEventMouseTracking),
+            (1007, Mode::AlternateScroll),
+        ];
+
+        for (mode, input_mode) in cases {
+            let dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 80, 24));
+            let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+            machine.process_str(&format!("\u{1b}[?{mode}l"));
+            assert!(
+                !machine
+                    .engine()
+                    .dispatch()
+                    .input_modes()
+                    .input()
+                    .get_input_mode(input_mode),
+                "mouse mode {mode} should reset"
+            );
+            machine.process_str(&format!("\u{1b}[?{mode}h"));
+            assert!(
+                machine
+                    .engine()
+                    .dispatch()
+                    .input_modes()
+                    .input()
+                    .get_input_mode(input_mode),
+                "mouse mode {mode} should set"
+            );
+            assert!(
+                machine
+                    .engine()
+                    .dispatch()
+                    .response_state()
+                    .presentation()
+                    .core()
+                    .deferred_actions()
+                    .is_empty(),
+                "mouse mode {mode} should be consumed by terminal-input"
+            );
+        }
+    }
+
+    #[test]
+    fn send_c1_sequences_update_live_terminal_input_without_deferred_work() {
+        let dispatch = AdaptDispatchProductState::new(PageGeometry::new(0, 80, 24));
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+
+        machine.process_str("\u{1b} G");
+        assert!(
+            machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::SendC1)
+        );
+        machine.process_str("\u{1b} F");
+        assert!(
+            !machine
+                .engine()
+                .dispatch()
+                .input_modes()
+                .input()
+                .get_input_mode(Mode::SendC1)
         );
         assert!(
             machine
