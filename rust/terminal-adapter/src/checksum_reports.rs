@@ -8,9 +8,7 @@
 //! `TextBuffer` implementation to reproduce Microsoft's contract.
 
 use terminal_buffer::{
-    text_attribute::TextAttribute,
-    text_buffer::TextBuffer,
-    text_color::TextColor,
+    text_attribute::TextAttribute, text_buffer::TextBuffer, text_color::TextColor,
 };
 use terminal_parser::state_machine::{Parameters, VtId};
 
@@ -166,8 +164,11 @@ impl ChecksumReportEngine {
                 checksum = checksum.wrapping_sub(if attribute.is_protected() { 0x04 } else { 0 });
                 checksum = checksum.wrapping_sub(if attribute.is_invisible() { 0x08 } else { 0 });
                 checksum = checksum.wrapping_sub(if attribute.is_underlined() { 0x10 } else { 0 });
-                checksum =
-                    checksum.wrapping_sub(if attribute.is_reverse_video() { 0x20 } else { 0 });
+                checksum = checksum.wrapping_sub(if attribute.is_reverse_video() {
+                    0x20
+                } else {
+                    0
+                });
                 checksum = checksum.wrapping_sub(if attribute.is_blinking() { 0x40 } else { 0 });
                 checksum = checksum.wrapping_sub(if attribute.is_intense() { 0x80 } else { 0 });
 
@@ -192,10 +193,7 @@ impl ChecksumReportEngine {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use terminal_buffer::{
-        text_attribute::UnderlineStyle,
-        text_color::TextColor,
-    };
+    use terminal_buffer::{text_attribute::UnderlineStyle, text_color::TextColor};
 
     fn report(text: &str, attributes: TextAttribute) -> String {
         let mut engine = ChecksumReportEngine::new(PageGeometry::new(0, 100, 29));
@@ -286,27 +284,15 @@ mod tests {
     #[test]
     fn disabled_or_unrepresented_pages_report_zero_and_sink_failure_is_atomic() {
         let mut engine = ChecksumReportEngine::new(PageGeometry::new(0, 80, 24));
-        let request = Parameters::from_values(vec![
-            Some(7),
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(1),
-        ]);
+        let request =
+            Parameters::from_values(vec![Some(7), Some(1), Some(1), Some(1), Some(1), Some(1)]);
         assert!(engine.request(&request));
         assert_eq!(engine.response(), "\u{1b}P7!~0000\u{1b}\\");
 
         engine.clear_response();
         engine.set_enabled(true);
-        let page_zero = Parameters::from_values(vec![
-            Some(8),
-            Some(0),
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(1),
-        ]);
+        let page_zero =
+            Parameters::from_values(vec![Some(8), Some(0), Some(1), Some(1), Some(1), Some(1)]);
         assert!(engine.request(&page_zero));
         assert_eq!(engine.response(), "\u{1b}P8!~0000\u{1b}\\");
 
