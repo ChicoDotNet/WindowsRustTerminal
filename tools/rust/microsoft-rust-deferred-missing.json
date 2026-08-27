@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 393,
+  "expectedMissingTotal": 392,
   "sources": [
     {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
@@ -20,7 +20,7 @@
     {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","reason":"Settings deserialization/layering semantics remain native."},
     {"suite":"unitSettingsModel","source":"KeyBindingsTests.cpp","reason":"Settings key-binding/action-binding semantics remain native."},
     {"suite":"unitSettingsModel","source":"MediaResourceTests.cpp","reason":"Settings media-resource semantics remain native."},
-    {"suite":"unitSettingsModel","source":"ProfileTests.cpp","expectedMissing":10,"reason":"SettingInheritanceFallback, ClearSettingRestoresInheritance and HasSettingAtSpecificLayer are Exact in safe Rust; GUID/property/icon/environment/duplication/profile-default prohibited-setting semantics remain deferred."},
+    {"suite":"unitSettingsModel","source":"ProfileTests.cpp","expectedMissing":9,"reason":"SettingInheritanceFallback, ClearSettingRestoresInheritance, HasSettingAtSpecificLayer and LayerProfileIcon are Exact in safe Rust; GUID/property/environment/duplication/profile-default prohibited-setting semantics remain deferred."},
     {"suite":"unitSettingsModel","source":"SerializationTests.cpp","reason":"Settings serialization/round-trip semantics remain native."},
     {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native."}
   ]
