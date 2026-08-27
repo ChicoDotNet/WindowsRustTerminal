@@ -40,21 +40,11 @@ pub fn macro_checksum_report(buffer: &MacroBuffer, request_id: i32) -> String {
 /// This is intentionally narrower than the full adapter aggregate. It exists so
 /// the response dispatcher can embed one live macro owner instead of maintaining
 /// a reporting-only copy of macro memory.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct MacroReportEngine {
     buffer: MacroBuffer,
     responses: VtResponseEngine,
     active_macro: bool,
-}
-
-impl Default for MacroReportEngine {
-    fn default() -> Self {
-        Self {
-            buffer: MacroBuffer::default(),
-            responses: VtResponseEngine::default(),
-            active_macro: false,
-        }
-    }
 }
 
 impl MacroReportEngine {
