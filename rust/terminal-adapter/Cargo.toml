@@ -8,6 +8,7 @@ repository.workspace = true
 
 [dependencies]
 terminal-buffer = { path = "../terminal-buffer" }
+terminal-input = { path = "../terminal-input" }
 terminal-parser = { path = "../terminal-parser" }
 
 [lints]
