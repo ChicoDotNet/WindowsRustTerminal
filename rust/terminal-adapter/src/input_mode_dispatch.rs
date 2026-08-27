@@ -10,7 +10,7 @@
 use terminal_input::{Mode, TerminalInput};
 use terminal_parser::output_engine::{OutputAction, TermDispatch};
 
-#[derive(Debug, Clone, Default)]
+#[derive(Default)]
 pub struct TerminalInputDispatchState {
     input: TerminalInput,
 }
