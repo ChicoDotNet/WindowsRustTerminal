@@ -5,22 +5,46 @@
 //! mirrors `CascadiaSettings::ToJson` for the portable portion of the model
 //! without reimplementing WinRT projection.
 
+use std::collections::BTreeSet;
+
 use crate::{
+    color_scheme::ColorSchemeSettings,
     profile::Profile,
     settings_json::{self, JsonObject, JsonValue},
 };
+
+const COLOR_SCHEME_TABLE_KEYS: [&str; 16] = [
+    "black",
+    "red",
+    "green",
+    "yellow",
+    "blue",
+    "purple",
+    "cyan",
+    "white",
+    "brightBlack",
+    "brightRed",
+    "brightGreen",
+    "brightYellow",
+    "brightBlue",
+    "brightPurple",
+    "brightCyan",
+    "brightWhite",
+];
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerializationError {
     InvalidJson,
     ExpectedRootObject,
     InvalidProfile,
+    InvalidColorSchemeFixup,
     ExpectedSchemesArray,
     ExpectedSchemeObject,
     SchemeNotFound,
     ExpectedProfilesArray,
     ExpectedProfilesDefaultsObject,
     ExpectedProfileObject,
+    ExpectedActionsArray,
     ProfileNotFound,
 }
 
@@ -42,6 +66,35 @@ impl SettingsDocument {
             return Err(SerializationError::ExpectedRootObject);
         }
         Ok(Self { root })
+    }
+
+    /// Parses user settings and applies the portable color-scheme collision
+    /// write-back performed by `SettingsLoader::FixupUserSettings`.
+    ///
+    /// The layered [`ColorSchemeSettings`] owner decides which user collisions
+    /// are modified and retargets inherited/default references. This serializer
+    /// then removes user schemes that are semantically identical to inbox
+    /// schemes, writes the effective profile-default scheme reference, emits the
+    /// modern `profiles.list` shape and materializes the empty actions array
+    /// expected by Cascadia settings serialization.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] for malformed user/inbox settings,
+    /// invalid scheme/profile/action shapes or a color-scheme layering failure.
+    pub fn from_json_with_color_scheme_fixup(
+        user: &str,
+        inbox: &str,
+    ) -> Result<Self, SerializationError> {
+        let layered = ColorSchemeSettings::from_layers(user, inbox, &[])
+            .map_err(|_| SerializationError::InvalidColorSchemeFixup)?;
+        let redundant = redundant_user_scheme_names(user, inbox)?;
+
+        let mut document = Self::from_json(user)?;
+        document.canonicalize_legacy_profiles()?;
+        document.ensure_actions_array()?;
+        document.apply_color_scheme_fixup(&layered, &redundant)?;
+        Ok(document)
     }
 
     /// Parses one profile serialization vector through the safe Rust `Profile`
@@ -241,6 +294,82 @@ impl SettingsDocument {
         }
     }
 
+    fn ensure_actions_array(&mut self) -> Result<(), SerializationError> {
+        let root = self.root_object_mut()?;
+        if !root.contains_key("actions") {
+            root.insert("actions".to_owned(), JsonValue::Array(Vec::new()));
+            return Ok(());
+        }
+        if matches!(root.get("actions"), Some(JsonValue::Array(_))) {
+            Ok(())
+        } else {
+            Err(SerializationError::ExpectedActionsArray)
+        }
+    }
+
+    fn apply_color_scheme_fixup(
+        &mut self,
+        layered: &ColorSchemeSettings,
+        redundant: &BTreeSet<String>,
+    ) -> Result<(), SerializationError> {
+        let defaults = layered.profile_defaults();
+        let light = defaults
+            .has_light_name()
+            .then(|| defaults.light_name().to_owned());
+        let dark = defaults
+            .has_dark_name()
+            .then(|| defaults.dark_name().to_owned());
+
+        let root = self.root_object_mut()?;
+        if let Some(value) = root.get_mut("schemes") {
+            let JsonValue::Array(schemes) = value else {
+                return Err(SerializationError::ExpectedSchemesArray);
+            };
+            schemes.retain(|value| {
+                let remove = value
+                    .as_object()
+                    .and_then(|scheme| scheme.get("name"))
+                    .and_then(JsonValue::as_str)
+                    .map(|name| redundant.contains(name))
+                    .unwrap_or(false);
+                !remove
+            });
+        }
+
+        if light.is_none() && dark.is_none() {
+            return Ok(());
+        }
+
+        let profiles = root
+            .get_mut("profiles")
+            .ok_or(SerializationError::ExpectedProfilesArray)?;
+        let JsonValue::Object(profiles) = profiles else {
+            return Err(SerializationError::ExpectedProfilesArray);
+        };
+        let defaults = profiles
+            .entry("defaults".to_owned())
+            .or_insert_with(|| JsonValue::Object(JsonObject::new()));
+        let JsonValue::Object(defaults) = defaults else {
+            return Err(SerializationError::ExpectedProfilesDefaultsObject);
+        };
+
+        let color_scheme = match (light, dark) {
+            (Some(light), Some(dark)) if light == dark => JsonValue::String(light),
+            (light, dark) => {
+                let mut value = JsonObject::new();
+                if let Some(light) = light {
+                    value.insert("light".to_owned(), JsonValue::String(light));
+                }
+                if let Some(dark) = dark {
+                    value.insert("dark".to_owned(), JsonValue::String(dark));
+                }
+                JsonValue::Object(value)
+            }
+        };
+        defaults.insert("colorScheme".to_owned(), color_scheme);
+        Ok(())
+    }
+
     fn canonicalize_legacy_profile_font(&mut self) -> Result<(), SerializationError> {
         let root = self.root_object_mut()?;
         let face = root.remove("fontFace");
@@ -291,4 +420,101 @@ impl SettingsDocument {
             _ => Err(SerializationError::ExpectedProfileObject),
         }
     }
+}
+
+fn redundant_user_scheme_names(
+    user: &str,
+    inbox: &str,
+) -> Result<BTreeSet<String>, SerializationError> {
+    let user = settings_json::parse(user).map_err(|_| SerializationError::InvalidJson)?;
+    let inbox = settings_json::parse(inbox).map_err(|_| SerializationError::InvalidJson)?;
+    let user = user
+        .as_object()
+        .ok_or(SerializationError::ExpectedRootObject)?;
+    let inbox = inbox
+        .as_object()
+        .ok_or(SerializationError::ExpectedRootObject)?;
+    let user_schemes = schemes_array(user)?;
+    let inbox_schemes = schemes_array(inbox)?;
+
+    let mut redundant = BTreeSet::new();
+    for user_scheme in user_schemes {
+        let user_scheme = user_scheme
+            .as_object()
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        let name = user_scheme
+            .get("name")
+            .and_then(JsonValue::as_str)
+            .ok_or(SerializationError::ExpectedSchemeObject)?;
+        for inbox_scheme in inbox_schemes {
+            let inbox_scheme = inbox_scheme
+                .as_object()
+                .ok_or(SerializationError::ExpectedSchemeObject)?;
+            if inbox_scheme.get("name").and_then(JsonValue::as_str) == Some(name)
+                && equivalent_for_settings_merge(user_scheme, inbox_scheme)?
+            {
+                redundant.insert(name.to_owned());
+                break;
+            }
+        }
+    }
+    Ok(redundant)
+}
+
+fn schemes_array(root: &JsonObject) -> Result<&[JsonValue], SerializationError> {
+    match root.get("schemes") {
+        None => Ok(&[]),
+        Some(JsonValue::Array(schemes)) => Ok(schemes),
+        Some(_) => Err(SerializationError::ExpectedSchemesArray),
+    }
+}
+
+fn equivalent_for_settings_merge(
+    left: &JsonObject,
+    right: &JsonObject,
+) -> Result<bool, SerializationError> {
+    if color_member(left, "background", "#000000")?
+        != color_member(right, "background", "#000000")?
+        || color_member(left, "foreground", "#C0C0C0")?
+            != color_member(right, "foreground", "#C0C0C0")?
+    {
+        return Ok(false);
+    }
+
+    for key in COLOR_SCHEME_TABLE_KEYS {
+        if required_color_member(left, key)? != required_color_member(right, key)? {
+            return Ok(false);
+        }
+    }
+    Ok(true)
+}
+
+fn color_member(
+    object: &JsonObject,
+    key: &str,
+    default: &str,
+) -> Result<u32, SerializationError> {
+    match object.get(key) {
+        None => parse_rgb(default).ok_or(SerializationError::InvalidColorSchemeFixup),
+        Some(JsonValue::String(value)) => {
+            parse_rgb(value).ok_or(SerializationError::InvalidColorSchemeFixup)
+        }
+        Some(_) => Err(SerializationError::InvalidColorSchemeFixup),
+    }
+}
+
+fn required_color_member(object: &JsonObject, key: &str) -> Result<u32, SerializationError> {
+    match object.get(key) {
+        Some(JsonValue::String(value)) => {
+            parse_rgb(value).ok_or(SerializationError::InvalidColorSchemeFixup)
+        }
+        _ => Err(SerializationError::InvalidColorSchemeFixup),
+    }
+}
+
+fn parse_rgb(value: &str) -> Option<u32> {
+    if value.len() != 7 || !value.starts_with('#') || !value.is_ascii() {
+        return None;
+    }
+    u32::from_str_radix(&value[1..], 16).ok()
 }
