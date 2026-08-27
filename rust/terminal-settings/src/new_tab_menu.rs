@@ -49,9 +49,7 @@ impl NewTabMenuSettings {
     pub fn from_user_settings_json(input: &str) -> Result<Self, NewTabMenuParseError> {
         let Some(key_offset) = input.find("\"newTabMenu\"") else {
             return Ok(Self {
-                entries: vec![NewTabMenuEntry::new(
-                    NewTabMenuEntryType::RemainingProfiles,
-                )],
+                entries: vec![NewTabMenuEntry::new(NewTabMenuEntryType::RemainingProfiles)],
                 warnings: Vec::new(),
             });
         };
@@ -135,12 +133,7 @@ fn parse_entry_type(object: &str) -> Result<NewTabMenuEntryType, NewTabMenuParse
     }
 }
 
-fn find_matching_delimiter(
-    input: &str,
-    start: usize,
-    open: char,
-    close: char,
-) -> Option<usize> {
+fn find_matching_delimiter(input: &str, start: usize, open: char, close: char) -> Option<usize> {
     let mut depth = 0usize;
     let mut in_string = false;
     let mut escaped = false;
