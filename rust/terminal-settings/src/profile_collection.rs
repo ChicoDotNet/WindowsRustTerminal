@@ -18,11 +18,13 @@ const CANONICAL_POWERSHELL_COMMANDLINE: &str =
     "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 const LEGACY_COMMAND_PROMPT_COMMANDLINE: &str = "cmd.exe";
 const CANONICAL_COMMAND_PROMPT_COMMANDLINE: &str = "%SystemRoot%\\System32\\cmd.exe";
+const DEFAULT_COLOR_SCHEME_NAME: &str = "Campbell";
 
 /// Profile-related settings warnings currently owned by safe Rust.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum SettingsLoadWarning {
     MissingDefaultProfile,
+    UnknownColorScheme,
     InvalidProfileEnvironmentVariables,
 }
 
@@ -206,9 +208,10 @@ impl ProfileCollection {
     /// Parses the user profile collection and runs the deterministic validation
     /// slice currently migrated from `CascadiaSettings`.
     ///
-    /// Warning order follows the Microsoft constructor pipeline: default-profile
-    /// resolution happens before `_validateSettings`, whose profile environment
-    /// validation then rejects case-colliding names such as `FOO` and `Foo`.
+    /// Warning order follows the Microsoft constructor pipeline: an explicitly
+    /// requested but unresolved default profile is handled first, color schemes
+    /// are validated before the rest of `_validateSettings`, and profile
+    /// environment names are checked afterward.
     ///
     /// # Errors
     ///
@@ -227,8 +230,12 @@ impl ProfileCollection {
             .collect::<Result<Vec<_>, _>>()?;
 
         let mut warnings = Vec::new();
-        if !profiles.is_empty() && !default_profile_resolves(root, &profiles)? {
+        if requested_default_profile_is_missing(root, &profiles)? {
             warnings.push(SettingsLoadWarning::MissingDefaultProfile);
+        }
+
+        if profiles_have_unknown_color_scheme(root, &profiles)? {
+            warnings.push(SettingsLoadWarning::UnknownColorScheme);
         }
 
         for profile in &profiles {
@@ -252,25 +259,84 @@ impl ProfileCollection {
     }
 }
 
-fn default_profile_resolves(
+fn requested_default_profile_is_missing(
     root: &JsonObject,
     profiles: &[LayeredProfile],
 ) -> Result<bool, ProfileParseError> {
     let requested = match JsonMember::from_object(root, "defaultProfile") {
         JsonMember::Missing | JsonMember::Null => return Ok(false),
+        JsonMember::Value(JsonValue::String(value)) if value.is_empty() => return Ok(false),
         JsonMember::Value(JsonValue::String(value)) => value.as_str(),
         JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
     };
 
     if let Ok(guid) = ProfileGuid::parse(requested) {
         if profiles.iter().any(|profile| profile.guid() == Some(guid)) {
-            return Ok(true);
+            return Ok(false);
         }
     }
 
-    Ok(profiles
+    Ok(!profiles
         .iter()
         .any(|profile| profile.name() == Some(requested)))
+}
+
+fn profiles_have_unknown_color_scheme(
+    root: &JsonObject,
+    profiles: &[LayeredProfile],
+) -> Result<bool, ProfileParseError> {
+    let known_schemes = known_color_scheme_names(root)?;
+    for profile in profiles {
+        let (dark, light) = profile_color_scheme_names(profile)?;
+        if !known_schemes.iter().any(|name| name == dark)
+            || !known_schemes.iter().any(|name| name == light)
+        {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+
+fn known_color_scheme_names(root: &JsonObject) -> Result<Vec<&str>, ProfileParseError> {
+    let schemes = match JsonMember::from_object(root, "schemes") {
+        JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
+        JsonMember::Value(JsonValue::Array(schemes)) => schemes,
+        JsonMember::Value(_) => return Err(ProfileParseError::ExpectedArray),
+    };
+
+    let mut names = Vec::with_capacity(schemes.len());
+    for scheme in schemes {
+        let object = scheme
+            .as_object()
+            .ok_or(ProfileParseError::ExpectedObject)?;
+        if let JsonMember::Value(JsonValue::String(name)) = JsonMember::from_object(object, "name") {
+            names.push(name.as_str());
+        }
+    }
+    Ok(names)
+}
+
+fn profile_color_scheme_names(profile: &LayeredProfile) -> Result<(&str, &str), ProfileParseError> {
+    match JsonMember::from_object(profile.object(), "colorScheme") {
+        JsonMember::Missing | JsonMember::Null => {
+            Ok((DEFAULT_COLOR_SCHEME_NAME, DEFAULT_COLOR_SCHEME_NAME))
+        }
+        JsonMember::Value(JsonValue::String(value)) => Ok((value.as_str(), value.as_str())),
+        JsonMember::Value(JsonValue::Object(value)) => {
+            let dark = match JsonMember::from_object(value, "dark") {
+                JsonMember::Missing | JsonMember::Null => DEFAULT_COLOR_SCHEME_NAME,
+                JsonMember::Value(JsonValue::String(value)) => value.as_str(),
+                JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
+            };
+            let light = match JsonMember::from_object(value, "light") {
+                JsonMember::Missing | JsonMember::Null => DEFAULT_COLOR_SCHEME_NAME,
+                JsonMember::Value(JsonValue::String(value)) => value.as_str(),
+                JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
+            };
+            Ok((dark, light))
+        }
+        JsonMember::Value(_) => Err(ProfileParseError::InvalidString),
+    }
 }
 
 fn profile_has_environment_name_collision(
