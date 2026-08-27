@@ -14,7 +14,8 @@ mod title_state;
 mod viewport_update;
 
 pub use attribute_color_policy::{
-    AttributeColorFlags, AttributeColors, apply_attribute_alpha, apply_attribute_effects,
+    AttributeColorFlags, AttributeColors, ResolvedAttributeColors, apply_attribute_alpha,
+    apply_attribute_effects, resolve_text_attribute_colors,
 };
 pub use css_length_percentage::{CssLengthPercentage, ReferenceFrame};
 pub use font_info_base_policy::{

@@ -2,8 +2,10 @@
 resolver = "3"
 members = [
     "rust/terminal-adapter",
+    "rust/terminal-app",
     "rust/terminal-buffer",
     "rust/terminal-core",
+    "rust/terminal-foundation",
     "rust/terminal-host",
     "rust/terminal-input",
     "rust/terminal-parser",
