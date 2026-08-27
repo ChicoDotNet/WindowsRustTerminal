@@ -7,6 +7,7 @@ name = "terminal-adapter"
 version = "0.0.0"
 dependencies = [
  "terminal-buffer",
+ "terminal-input",
  "terminal-parser",
 ]
 
