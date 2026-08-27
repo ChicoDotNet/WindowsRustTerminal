@@ -11,7 +11,10 @@ fn microsoft_application_state_save_and_lookup_workspace() {
 
     state.save_workspace("win1", expected.clone());
 
-    assert_eq!(state.all_persisted_workspaces().get("win1"), Some(&expected));
+    assert_eq!(
+        state.all_persisted_workspaces().get("win1"),
+        Some(&expected)
+    );
 }
 
 #[test]
