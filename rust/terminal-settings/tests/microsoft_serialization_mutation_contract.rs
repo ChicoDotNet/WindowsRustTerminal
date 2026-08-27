@@ -72,3 +72,52 @@ fn microsoft_modify_color_scheme_and_roundtrip_contract() {
     assert_eq!(root.get("defaultProfile"), before_root.get("defaultProfile"));
     assert_eq!(root.get("profiles"), before_root.get("profiles"));
 }
+
+#[test]
+fn microsoft_modify_profile_setting_and_roundtrip_contract() {
+    // Microsoft: SerializationTests::ModifyProfileSettingAndRoundtrip.
+    let input = r#"
+    {
+        "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
+        "profiles": [
+            {
+                "name": "profile0",
+                "guid": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
+                "historySize": 1000,
+                "commandline": "cmd.exe"
+            }
+        ]
+    }
+    "#;
+
+    let mut settings = SettingsDocument::from_json(input).expect("Microsoft settings JSON parses");
+    settings
+        .set_profile_i32(0, "historySize", 5000)
+        .expect("profile zero exists");
+    settings
+        .set_profile_string(0, "tabTitle", "NewTitle")
+        .expect("profile zero exists");
+
+    let root = settings
+        .to_json_value()
+        .as_object()
+        .expect("settings root remains an object");
+    let profiles = root
+        .get("profiles")
+        .and_then(JsonValue::as_array)
+        .expect("legacy profiles remains an array");
+    let profile = profiles[0].as_object().expect("profile remains an object");
+
+    assert_eq!(
+        profile.get("historySize").and_then(JsonValue::as_f64),
+        Some(5000.0)
+    );
+    assert_eq!(
+        profile.get("commandline").and_then(JsonValue::as_str),
+        Some("cmd.exe")
+    );
+    assert_eq!(
+        profile.get("tabTitle").and_then(JsonValue::as_str),
+        Some("NewTitle")
+    );
+}
