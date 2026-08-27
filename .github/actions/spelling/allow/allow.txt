@@ -13,6 +13,10 @@ commandlines
 consvc
 copyable
 dcs
+decac
+DECMAC
+decsca
+decscusr
 deselection
 diffing
 Dimidium
@@ -51,6 +55,7 @@ passthrough
 perlw
 postmodern
 Powerline
+preexisting
 ptys
 pwn
 pwshw
@@ -63,6 +68,7 @@ reimplementation
 Remappings
 reserialization
 reserializes
+retargeting
 Retargets
 rlig
 rubyw
