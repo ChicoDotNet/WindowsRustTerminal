@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon layering and environment-map contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
-  "expectedCoveragePriority": 37,
+  "description": "Modified-sandwich SettingsModel checkpoint: Profile inheritance/local-ownership, nullable icon layering, environment-map, strict GUID identity and appearance/property layering contracts have direct safe Rust ownership and Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 39,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 27,
-      "Missing": 130
+      "Exact": 29,
+      "Missing": 128
     }
   },
-  "expectedGlobalCoveragePriority": 37,
+  "expectedGlobalCoveragePriority": 39,
   "expectedGlobalCoverage": {
-    "Exact": 304,
+    "Exact": 306,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 391
+    "Missing": 389
   },
   "entries": [
     {
@@ -57,6 +57,22 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_profile_with_env_vars_preserves_entries_verbatim"],
       "notes": "The safe Rust Profile owner parses the environment object as a typed string map and preserves all three Microsoft values verbatim, including the self-referential %VAR_3%;value3 payload without premature expansion."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "ProfileGeneratesGuid",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_profile_generates_guid_accepts_only_braced_guid_format"],
+      "notes": "The safe Rust Profile owner keeps absent/null GUIDs unset, accepts zero/lowercase/uppercase braced format-B GUIDs as the same identity, and rejects Microsoft's hyphenless, raw and parenthesized presentations."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "ProfileTests.cpp",
+      "method": "LayerProfileProperties",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_layer_profile_properties_preserves_inherited_appearance_and_directory"],
+      "notes": "Profile children inherit background, selection background and starting directory from the resolved parent while locally layered foreground/name/directory values replace only their own layer, matching Microsoft's three-profile chain."
     }
   ]
 }
