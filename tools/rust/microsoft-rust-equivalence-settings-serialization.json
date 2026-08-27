@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 48,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 49,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 39,
-      "Missing": 118
+      "Exact": 40,
+      "Missing": 117
     }
   },
-  "expectedGlobalCoveragePriority": 48,
+  "expectedGlobalCoveragePriority": 49,
   "expectedGlobalCoverage": {
-    "Exact": 316,
+    "Exact": 317,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 379
+    "Missing": 378
   },
   "entries": [
     {
@@ -25,6 +25,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_color_scheme_parse_simple_color_scheme"],
       "notes": "Microsoft SerializationTests::ColorScheme uses the same Campbell object as the existing ColorScheme contract: foreground #F2F2F2, background #0C0C0C, cursor #FFFFFF, selection #131313 and all sixteen ANSI table colors. The safe Rust ColorScheme owner parses that exact vector and projects a structure-identical typed JSON value, satisfying the FromJson/ToJson round-trip without introducing a second settings owner."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "GlobalSettings",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_global_settings_contract"],
+      "notes": "Microsoft round-trips both the full GlobalAppSettings vector and a minimal defaultProfile/actions/keybindings vector. Safe Rust SettingsDocument retains the shared typed JSON tree as its serialization source of truth; the Microsoft-derived witness uses those exact vectors, verifies structure-identical round-trip, and checks representative numeric, boolean, string, warning and empty-array settings without inventing a parallel serializer."
     },
     {
       "suite": "unitSettingsModel",
