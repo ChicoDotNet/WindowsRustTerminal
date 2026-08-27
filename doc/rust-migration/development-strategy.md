@@ -16,7 +16,7 @@ Draft is a development mode, not a relaxation of product correctness:
 
 These corrective CI steps operate in the runner checkout. They prevent mechanical fmt/Clippy drift from obscuring functional feedback during rapid development, but they do not rewrite the source branch. Before a PR becomes integration-ready, any remaining mechanical diff must be folded into the current functional increment or the final certification change rather than creating avoidable one-off repair history.
 
-Syntax errors, type errors, failing tests and semantic regressions are not mechanical drift and cannot be waived by the preflight. They are corrected as soon as authoritative CI identifies them, preferably inside the next coherent functional increment when that preserves reviewability.
+Syntax errors, type errors, failing tests and semantic regressions are not mechanical drift and cannot be waived by the preflight. They are corrected as soon as authoritative CI identifies them, preferably inside the same coherent functional batch when that preserves reviewability.
 
 A migration PR is marked **Ready for review only when it is an exit candidate**. That transition intentionally restores the strict integration gates: rustfmt verification, Clippy with `-D warnings`, spelling, zero functional debt where required, boundary/stage contracts and final certification appropriate to the phase.
 
@@ -48,7 +48,7 @@ Missing contract
 
 Selection rules:
 
-1. Prefer contracts that extend an owner or boundary touched by the previous increment.
+1. Prefer contracts that extend an owner or boundary touched by the previous work.
 2. Alternate Missing and functional Partial work when an adjacent candidate exists; do not exhaust an easy Missing list while leaving the same end-to-end path Partial.
 3. Favor vertical behavior that crosses parsing/model/fixup/projection boundaries over isolated test-count wins.
 4. Promote a contract only with a real Rust owner or a direct witness proving that the existing Rust owner already satisfies it.
@@ -57,30 +57,96 @@ Selection rules:
 
 This is the migration "sandwich": new Rust ownership grows from one side while nearby partial ownership is hardened from the other, repeatedly closing complete functional slices instead of creating a wide front of disconnected ports.
 
-## Increment capacity and selection
+## CI-amortized implementation policy
 
-The unit of work is a **coherent Microsoft functionality slice**, not one source test and not an arbitrary count of Rust `#[test]` functions.
+The primary unit of planning is **the largest coherent Microsoft functionality slice for which the marginal cost of adding the next adjacent behavior is lower than the expected cost of rediscovering that context and paying another full integration validation**.
 
-As a planning heuristic, each normal increment should retire approximately **seven functional Missing and/or Partial cases**, with **5–9 cases** as the usual operating range. Seven is a capacity target rather than a hard limit:
+The former 5–9 range is retained only as a decision checkpoint:
 
-- stop at five or six when that is the natural end-to-end seam;
-- extend to eight or nine when the remaining adjacent cases reuse the same owner, state machine, API, implementation or already-loaded context;
-- do not cut a coherent feature merely to hit seven;
-- do not absorb an L/XL contract wholesale merely to increase the count—take the largest safe 5–9-case vertical slice instead.
+1. At roughly five cases, ask whether a complete functional unit already exists.
+2. Between five and nine, actively search for the natural end of the current seam.
+3. Nine is not a stop condition.
+4. Continue to 10, 12, 17 or more cases when the remaining contracts substantially reuse the same Rust owner, data representation, parser/state machine, fixtures, Microsoft vectors, APIs, test infrastructure and already-loaded technical context.
 
-Selection optimizes, in order, for completed Microsoft behavior, reuse of loaded technical context, real reduction of Missing/Partial debt, Exact potential, Exact-to-effort/risk ratio, and CI/architecture health. A one-case contract receives no automatic preference over a six-case seam when both have the same discovery and context cost.
+Stop because a **real boundary** appears, not because a count was reached. Real boundaries include a new owner or architecture, a material platform dependency, a new state machine, a substantially different regression class, independent Microsoft research, a diff that is no longer reasonably diagnosable, or the natural completion of the seam/family.
 
-`Exact > Partial > Missing` remains the governing quality rule. Partial is used only when a concrete limitation blocks Exact; the capacity target is never satisfied by cosmetic relabeling. When one implementation change unlocks several neighboring Microsoft cases essentially for free, those cases belong in the same increment if the resulting unit remains reviewable and testable.
+For each adjacent group after the first checkpoint, ask:
 
-## Commit and PR discipline
+> Is implementing these cases now substantially cheaper than rediscovering this context and paying another full CI validation later?
+
+If yes, include them. In particular, when one common implementation unlocks several Microsoft tests at negligible marginal cost, all tests belonging to that behavior should be included even when the batch exceeds nine.
+
+`Exact > Partial > Missing` remains the governing quality rule. Larger batches do not authorize weaker evidence, cosmetic metadata promotions, hidden debt or unrelated owners.
+
+## Family-first planning
+
+When entering a Microsoft source family:
+
+1. census the complete family;
+2. cluster contracts by owner/seam;
+3. start with the highest-ROI coherent cluster;
+4. after implementing that cluster, reevaluate the marginal cost of the remainder;
+5. if the remaining family now shares the owner/abstractions already built, attempt to close the complete family in the same batch.
+
+A source family must not be split merely to preserve a preferred test count. A family may still span multiple batches when the census demonstrates real ownership, architecture, platform or diagnostic boundaries.
+
+## CI is a checkpoint, not the development metronome
+
+Optimize for **Microsoft-certified functionality per full GitHub Actions cycle**, not for the probability that each tiny push is green.
+
+Before publishing a batch, execute all cheap validation that is actually available in the working environment: targeted crate compilation/tests, new contract witnesses, neighboring owner tests, rustfmt/Clippy/check, and census/equivalence consistency. If a particular local capability is unavailable, do not pretend it ran; use the remaining cheap checks and let Actions be the authoritative integration checkpoint.
+
+GitHub Actions should primarily answer:
+
+> Does this coherent slice integrate correctly with the whole system?
+
+It should not be used as a substitute for reasoning or as an interactive compiler for each small edit.
+
+While CI is running, continue useful work that does not move the published ref: inspect the next family, read Microsoft sources, identify owners, prepare vectors or design the next slice. Avoid continuously publishing newer HEADs that turn useful compute into superseded/cancelled runs.
+
+## Expected-compute and failure policy
+
+Do not optimize for "probability this push is green." Optimize for **the expected number of complete CI rounds required to retire the functional debt**. One coherent, moderately more ambitious batch can be cheaper than several individually safer micro-batches when it amortizes the same discovery and integration fan-out.
+
+When CI fails, classify the failure before changing scope:
+
+1. infrastructure/runner;
+2. mechanical formatting/lint;
+3. localized new-test/implementation defect;
+4. neighboring regression;
+5. transversal architectural error.
+
+Cases 1–3 normally remain inside the same batch. Split retroactively only when the failure demonstrates that independent responsibilities were actually mixed and separation materially improves diagnosis or ownership clarity. Do not microfragment preventively out of fear of a possible failure.
+
+## Commit, publication and PR discipline
 
 - `rust/main` is the compact migration baseline (`Initial rust migration effort`).
-- Each functional increment should be one self-contained reviewable commit whenever practical.
-- Mechanical API-edit commits may be used while constructing an increment, but are squashed before the increment is considered complete.
-- The active PR description is a living Microsoft-style review artifact: Summary, References, Detailed Description, Validation Steps and Checklist are updated with every increment.
-- CI queued/pending is a writing window: continue safe adjacent increments. A real failure with authoritative logs takes priority over widening the branch.
-- Do not merge, start the next migration phase or mark Ready for review merely because individual increments are green.
+- Preserve logical/reviewable commits when they improve traceability, but do not publish every microcommit merely to obtain CI feedback.
+- The CI-relevant atomic event is the **visible branch update**. When tooling permits, prepare one or more coherent commits without moving the remote PR head, then publish the validated batch once at the CI checkpoint.
+- Mechanical construction commits may be compacted before publication when doing so improves reviewability without losing useful history.
+- Never sacrifice traceability merely to reduce CI, and never use commit granularity as an excuse to trigger avoidable full fan-out.
+- Feature branches are validated by their pull-request checkpoint; direct `push` validation is reserved for `rust/main` so the same feature SHA does not pay duplicate `push` and `pull_request` fan-out.
+- The active PR description is a living Microsoft-style review artifact: Summary, References, Detailed Description, Validation Steps and Checklist are updated as certified slices accumulate.
+- CI queued/pending is a research/design window; a real failure with authoritative logs takes priority over publishing a wider head.
+- Do not merge, start the next migration phase or mark Ready for review merely because individual batches are green.
+
+## Iteration accounting
+
+Every completed iteration records at least:
+
+- Microsoft source family and cases examined;
+- cases implemented;
+- `Missing -> Exact`, `Missing -> Partial`, and `Partial -> Exact`;
+- total functional debt retired;
+- new owners and reused owners;
+- tests/witnesses added;
+- whether the complete family closed;
+- the real boundary that ended the batch;
+- the next excluded case and the marginal cost/risk that justified excluding it;
+- visible remote branch updates / full CI checkpoints used to obtain the delivery.
+
+The last metric is deliberate: `12 Exact / 1 CI checkpoint` communicates operational efficiency that `12 Exact` alone does not.
 
 ## R08 exit discipline
 
-R08 is not exit-ready until known functional debt has been eliminated or explicitly proven to be a genuine non-Rust/product boundary. The final integration-ready head must pass the strict gates after development mode is turned off. Draft-mode speed is therefore a way to shorten the feedback loop, not a substitute for the final proof.
+R08 is not exit-ready until known functional debt has been eliminated or explicitly proven to be a genuine non-Rust/product boundary. The final integration-ready head must pass the strict gates after development mode is turned off. Draft-mode speed and CI amortization shorten the path to that proof; they do not substitute for it.
