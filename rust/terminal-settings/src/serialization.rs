@@ -5,7 +5,7 @@
 //! mirrors `CascadiaSettings::ToJson` for the portable portion of the model
 //! without reimplementing WinRT projection.
 
-use crate::settings_json::{self, JsonValue};
+use crate::settings_json::{self, JsonObject, JsonValue};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SerializationError {
@@ -14,6 +14,9 @@ pub enum SerializationError {
     ExpectedSchemesArray,
     ExpectedSchemeObject,
     SchemeNotFound,
+    ExpectedProfilesArray,
+    ExpectedProfileObject,
+    ProfileNotFound,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -48,10 +51,7 @@ impl SettingsDocument {
         name: &str,
         foreground: &str,
     ) -> Result<(), SerializationError> {
-        let root = match &mut self.root {
-            JsonValue::Object(root) => root,
-            _ => return Err(SerializationError::ExpectedRootObject),
-        };
+        let root = self.root_object_mut()?;
         let schemes = root
             .get_mut("schemes")
             .ok_or(SerializationError::ExpectedSchemesArray)?;
@@ -77,8 +77,75 @@ impl SettingsDocument {
         Err(SerializationError::SchemeNotFound)
     }
 
+    /// Sets an integer member on the indexed profile while preserving all
+    /// unrelated serialized members.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] when the profiles shape is invalid or the
+    /// requested profile index is absent.
+    pub fn set_profile_i32(
+        &mut self,
+        index: usize,
+        member: &str,
+        value: i32,
+    ) -> Result<(), SerializationError> {
+        self.profile_object_mut(index)?
+            .insert(member.to_owned(), JsonValue::Number(f64::from(value)));
+        Ok(())
+    }
+
+    /// Sets a string member on the indexed profile while preserving all
+    /// unrelated serialized members.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`SerializationError`] when the profiles shape is invalid or the
+    /// requested profile index is absent.
+    pub fn set_profile_string(
+        &mut self,
+        index: usize,
+        member: &str,
+        value: &str,
+    ) -> Result<(), SerializationError> {
+        self.profile_object_mut(index)?.insert(
+            member.to_owned(),
+            JsonValue::String(value.to_owned()),
+        );
+        Ok(())
+    }
+
     #[must_use]
     pub const fn to_json_value(&self) -> &JsonValue {
         &self.root
+    }
+
+    fn root_object_mut(&mut self) -> Result<&mut JsonObject, SerializationError> {
+        match &mut self.root {
+            JsonValue::Object(root) => Ok(root),
+            _ => Err(SerializationError::ExpectedRootObject),
+        }
+    }
+
+    fn profile_object_mut(&mut self, index: usize) -> Result<&mut JsonObject, SerializationError> {
+        let root = self.root_object_mut()?;
+        let profiles = root
+            .get_mut("profiles")
+            .ok_or(SerializationError::ExpectedProfilesArray)?;
+        let profiles = match profiles {
+            JsonValue::Array(profiles) => profiles,
+            JsonValue::Object(profiles) => match profiles.get_mut("list") {
+                Some(JsonValue::Array(profiles)) => profiles,
+                _ => return Err(SerializationError::ExpectedProfilesArray),
+            },
+            _ => return Err(SerializationError::ExpectedProfilesArray),
+        };
+        let profile = profiles
+            .get_mut(index)
+            .ok_or(SerializationError::ProfileNotFound)?;
+        match profile {
+            JsonValue::Object(profile) => Ok(profile),
+            _ => Err(SerializationError::ExpectedProfileObject),
+        }
     }
 }
