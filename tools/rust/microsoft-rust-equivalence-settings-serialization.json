@@ -1,21 +1,21 @@
 {
   "schemaVersion": 1,
-  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, all three color-scheme collision round-trips, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
-  "expectedCoveragePriority": 59,
+  "description": "Modified-sandwich SettingsModel checkpoint: SerializationTests::ColorScheme, GlobalSettings, Actions, Profile, CascadiaSettings, LegacyFontSettings, ProfileWithInvalidIcon, DontRoundtripNoReloadEnvVars, RoundtripReloadEnvVars, all three color-scheme collision round-trips, RoundtripGenerateActionID, plus color-scheme/profile/global mutation round-trips are backed by safe Rust owners with Microsoft-derived typed JSON evidence.",
+  "expectedCoveragePriority": 60,
   "expectedCoverage": {
     "unitSettingsModel": {
-      "Exact": 50,
-      "Missing": 107
+      "Exact": 51,
+      "Missing": 106
     }
   },
-  "expectedGlobalCoveragePriority": 59,
+  "expectedGlobalCoveragePriority": 60,
   "expectedGlobalCoverage": {
-    "Exact": 327,
+    "Exact": 328,
     "Stronger": 11,
     "Partial": 307,
     "Platform-only": 63,
     "UI-managed": 22,
-    "Missing": 368
+    "Missing": 367
   },
   "entries": [
     {
@@ -113,6 +113,14 @@
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_serialization_roundtrip_user_deleted_color_scheme_collision_contract"],
       "notes": "Microsoft layers a user Tango Dark definition that is merge-equivalent to the inbox Tango Dark and expects FixupUserSettings to delete the redundant user copy, canonicalize profiles, emit actions=[] and serialize schemes=[]. The existing safe Rust SettingsDocument collision write-back already removes semantically redundant user schemes using the same foreground/background/16-color-table merge fingerprint; the direct witness uses Microsoft's complete old/new vectors and additionally verifies no profiles.defaults is synthesized."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "SerializationTests.cpp",
+      "method": "RoundtripGenerateActionID",
+      "coverage": "Exact",
+      "rustWitnesses": ["microsoft_serialization_roundtrip_generate_action_id_contract"],
+      "notes": "Microsoft loads a legacy sendInput action without an explicit ID, resolves it through the ctrl+shift+w key chord and expects ActionAndArgs::GenerateID to produce User.sendInput.<hash>. Safe Rust ActionMapDocument now resolves legacy keys-inside-action bindings and reproduces Microsoft's TIL hash over UTF-16 sendInput arguments, including the architecture-specific 32-bit 56911147 and 64-bit A020D2 vectors, instead of hardcoding the observed ID."
     },
     {
       "suite": "unitSettingsModel",

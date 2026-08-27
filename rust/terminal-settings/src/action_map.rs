@@ -1,8 +1,7 @@
 //! Portable serialization owner for Windows Terminal actions and keybindings.
 //!
 //! The action map keeps the shared typed JSON tree as its serialization source
-//! of truth. R08 can therefore prove Microsoft's round-trip contract without
-//! prematurely reimplementing command execution or generated-ID semantics.
+//! of truth while progressively owning portable ActionMap fixup semantics.
 
 use crate::settings_json::{self, JsonValue};
 
@@ -16,6 +15,8 @@ pub enum ActionMapError {
     ExpectedCommand,
     ExpectedActionName,
     ExpectedNestedCommandsArray,
+    ExpectedSendInput,
+    UnsupportedGeneratedIdArguments,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -45,6 +46,58 @@ impl ActionMapDocument {
     #[must_use]
     pub const fn to_json_value(&self) -> &JsonValue {
         &self.root
+    }
+
+    /// Resolves the action ID associated with a key chord, including the legacy
+    /// `keys`-inside-action form used by SettingsLoader before action fixup.
+    ///
+    /// If the action does not already have an explicit ID, this method applies
+    /// Microsoft's portable `ActionAndArgs::GenerateID` rule. Argument hashing
+    /// is currently owned for `sendInput`, the generated-ID family exercised by
+    /// Microsoft's serialization contracts.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ActionMapError`] if the matching action has malformed or as-yet
+    /// unsupported generated-ID arguments.
+    pub fn action_id_for_key_chord(
+        &self,
+        key_chord: &str,
+    ) -> Result<Option<String>, ActionMapError> {
+        let JsonValue::Object(root) = &self.root else {
+            return Ok(None);
+        };
+
+        if let Some(JsonValue::Array(keybindings)) = root.get("keybindings") {
+            for binding in keybindings {
+                let JsonValue::Object(binding) = binding else {
+                    return Err(ActionMapError::ExpectedEntryObject);
+                };
+                if binding.get("keys").and_then(JsonValue::as_str) == Some(key_chord) {
+                    if let Some(id) = binding.get("id").and_then(JsonValue::as_str) {
+                        return Ok(Some(id.to_owned()));
+                    }
+                }
+            }
+        }
+
+        let Some(actions) = root.get("actions") else {
+            return Ok(None);
+        };
+        let JsonValue::Array(actions) = actions else {
+            return Err(ActionMapError::ExpectedActionsArray);
+        };
+
+        for action in actions {
+            let JsonValue::Object(entry) = action else {
+                return Err(ActionMapError::ExpectedEntryObject);
+            };
+            if entry.get("keys").and_then(JsonValue::as_str) == Some(key_chord) {
+                return generated_or_explicit_action_id(action).map(Some);
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -119,4 +172,182 @@ fn validate_keybindings(keybindings: &[JsonValue]) -> Result<(), ActionMapError>
         }
     }
     Ok(())
+}
+
+fn generated_or_explicit_action_id(action: &JsonValue) -> Result<String, ActionMapError> {
+    let JsonValue::Object(entry) = action else {
+        return Err(ActionMapError::ExpectedEntryObject);
+    };
+
+    if let Some(id) = entry.get("id").and_then(JsonValue::as_str) {
+        return Ok(id.to_owned());
+    }
+
+    let Some(command) = entry.get("command") else {
+        return Err(ActionMapError::ExpectedCommand);
+    };
+    match command {
+        JsonValue::String(action_name) => Ok(format!("User.{action_name}")),
+        JsonValue::Object(command) => {
+            let action_name = command
+                .get("action")
+                .and_then(JsonValue::as_str)
+                .ok_or(ActionMapError::ExpectedActionName)?;
+
+            if action_name == "sendInput" {
+                let input = command
+                    .get("input")
+                    .and_then(JsonValue::as_str)
+                    .ok_or(ActionMapError::ExpectedSendInput)?;
+                return Ok(format!(
+                    "User.sendInput.{:X}",
+                    microsoft_send_input_hash(input)
+                ));
+            }
+
+            if command.len() == 1 {
+                Ok(format!("User.{action_name}"))
+            } else {
+                Err(ActionMapError::UnsupportedGeneratedIdArguments)
+            }
+        }
+        _ => Err(ActionMapError::ExpectedCommand),
+    }
+}
+
+fn microsoft_send_input_hash(input: &str) -> u32 {
+    let mut bytes = Vec::with_capacity(input.encode_utf16().count() * 2);
+    for unit in input.encode_utf16() {
+        bytes.extend_from_slice(&unit.to_le_bytes());
+    }
+
+    if usize::BITS == 32 {
+        til_hash32(&bytes, 0)
+    } else {
+        til_hash64(&bytes, 0) as u32
+    }
+}
+
+fn read_u32(data: &[u8], offset: usize) -> u32 {
+    u32::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+    ])
+}
+
+fn read_u64(data: &[u8], offset: usize) -> u64 {
+    u64::from_le_bytes([
+        data[offset],
+        data[offset + 1],
+        data[offset + 2],
+        data[offset + 3],
+        data[offset + 4],
+        data[offset + 5],
+        data[offset + 6],
+        data[offset + 7],
+    ])
+}
+
+fn mix64(lhs: u64, rhs: u64) -> u64 {
+    let product = u128::from(lhs) * u128::from(rhs);
+    product as u64 ^ (product >> 64) as u64
+}
+
+fn til_hash64(data: &[u8], mut seed: u64) -> u64 {
+    const S0: u64 = 0xa076_1d64_78bd_642f;
+    const S1: u64 = 0xe703_7ed1_a0b4_28db;
+    const S2: u64 = 0x8ebc_6af0_9c88_c6e3;
+    const S3: u64 = 0x5899_65cc_7537_4cc3;
+
+    let len = data.len();
+    seed ^= S0;
+
+    let (a, b) = if len <= 16 {
+        if len >= 4 {
+            let shift = (len >> 3) << 2;
+            (
+                (u64::from(read_u32(data, 0)) << 32) | u64::from(read_u32(data, shift)),
+                (u64::from(read_u32(data, len - 4)) << 32)
+                    | u64::from(read_u32(data, len - 4 - shift)),
+            )
+        } else if len > 0 {
+            let a = (u64::from(data[0]) << 16)
+                | (u64::from(data[len >> 1]) << 8)
+                | u64::from(data[len - 1]);
+            (a, 0)
+        } else {
+            (0, 0)
+        }
+    } else {
+        let mut offset = 0usize;
+        let mut remaining = len;
+
+        if remaining > 48 {
+            let mut seed1 = seed;
+            let mut seed2 = seed;
+            while remaining > 48 {
+                seed = mix64(read_u64(data, offset) ^ S1, read_u64(data, offset + 8) ^ seed);
+                seed1 = mix64(
+                    read_u64(data, offset + 16) ^ S2,
+                    read_u64(data, offset + 24) ^ seed1,
+                );
+                seed2 = mix64(
+                    read_u64(data, offset + 32) ^ S3,
+                    read_u64(data, offset + 40) ^ seed2,
+                );
+                offset += 48;
+                remaining -= 48;
+            }
+            seed ^= seed1 ^ seed2;
+        }
+
+        while remaining > 16 {
+            seed = mix64(read_u64(data, offset) ^ S1, read_u64(data, offset + 8) ^ seed);
+            offset += 16;
+            remaining -= 16;
+        }
+
+        (
+            read_u64(data, offset + remaining - 16),
+            read_u64(data, offset + remaining - 8),
+        )
+    };
+
+    mix64(S1 ^ len as u64, mix64(a ^ S1, b ^ seed))
+}
+
+fn mix32(a: &mut u32, b: &mut u32) {
+    let product = u64::from(*a ^ 0x53c5_ca59) * u64::from(*b ^ 0x7474_3c1b);
+    *a = product as u32;
+    *b = (product >> 32) as u32;
+}
+
+fn til_hash32(data: &[u8], mut seed: u32) -> u32 {
+    let mut remaining = data.len();
+    let mut offset = 0usize;
+    let mut secondary = remaining as u32;
+    mix32(&mut seed, &mut secondary);
+
+    while remaining > 8 {
+        seed ^= read_u32(data, offset);
+        secondary ^= read_u32(data, offset + 4);
+        mix32(&mut seed, &mut secondary);
+        offset += 8;
+        remaining -= 8;
+    }
+
+    if remaining >= 4 {
+        seed ^= read_u32(data, offset);
+        secondary ^= read_u32(data, offset + remaining - 4);
+    } else if remaining > 0 {
+        seed ^= (u32::from(data[offset]) << 16)
+            | (u32::from(data[offset + (remaining >> 1)]) << 8)
+            | u32::from(data[offset + remaining - 1]);
+    }
+
+    mix32(&mut seed, &mut secondary);
+    mix32(&mut seed, &mut secondary);
+    seed ^ secondary
 }
