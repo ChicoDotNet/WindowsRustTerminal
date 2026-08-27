@@ -3,9 +3,15 @@
 //! Windows Terminal's DECRQPSR tabulation-stop report is deterministic and
 //! depends only on the live text width plus the terminal's stored tab stops.
 //! This owner keeps the default eight-column cadence, DCS restore semantics,
-//! resize filtering, ordering, and clear-all behavior in safe Rust.
+//! resize filtering, ordering, clear-all behavior, and exact response framing
+//! in safe Rust.
 
-use terminal_parser::state_machine::Parameters;
+use terminal_parser::{
+    output_engine::{DcsAction, OutputAction, TermDispatch},
+    state_machine::{Parameters, VtId},
+};
+
+use crate::vt_response::VtResponseEngine;
 
 const ESC: u16 = 0x1b;
 const TABULATION_STOP_REPORT: i32 = 2;
@@ -95,9 +101,102 @@ impl TabulationStopState {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct PresentationReportEngine {
+    width: i32,
+    tabulation_stops: TabulationStopState,
+    responses: VtResponseEngine,
+}
+
+impl PresentationReportEngine {
+    #[must_use]
+    pub fn new(width: i32) -> Self {
+        Self {
+            width: width.max(1),
+            tabulation_stops: TabulationStopState::default(),
+            responses: VtResponseEngine::default(),
+        }
+    }
+
+    pub fn set_width(&mut self, width: i32) {
+        self.width = width.max(1);
+    }
+
+    #[must_use]
+    pub const fn tabulation_stops(&self) -> &TabulationStopState {
+        &self.tabulation_stops
+    }
+
+    #[must_use]
+    pub fn response(&self) -> &str {
+        self.responses.response()
+    }
+
+    pub fn clear_response(&mut self) {
+        self.responses.clear();
+    }
+
+    pub const fn set_response_writable(&mut self, writable: bool) {
+        self.responses.set_writable(writable);
+    }
+
+    #[must_use]
+    pub fn is_tabulation_report(action: &OutputAction) -> bool {
+        matches!(
+            action,
+            OutputAction::AdvancedCsi { id, parameters }
+                if *id == VtId::from_ascii("$w")
+                    && parameters.at(0).unwrap_or(0) == TABULATION_STOP_REPORT
+        )
+    }
+
+    #[must_use]
+    pub fn is_clear_all_tabs(action: &OutputAction) -> bool {
+        matches!(action, OutputAction::TabClear(3))
+    }
+
+    #[must_use]
+    pub fn handles_restore(action: &DcsAction) -> bool {
+        matches!(
+            action,
+            DcsAction::RestorePresentationState(parameters)
+                if parameters.at(0).unwrap_or(0) == TABULATION_STOP_REPORT
+        )
+    }
+
+    fn request_tabulation_report(&mut self) -> bool {
+        let response = self.tabulation_stops.report(self.width);
+        self.responses.return_response(&response)
+    }
+}
+
+impl TermDispatch for PresentationReportEngine {
+    fn dispatch(&mut self, action: OutputAction) {
+        if Self::is_tabulation_report(&action) {
+            let _ = self.request_tabulation_report();
+        } else if Self::is_clear_all_tabs(&action) {
+            self.tabulation_stops.clear_all();
+        }
+    }
+
+    fn begin_dcs(&mut self, action: DcsAction) -> bool {
+        match action {
+            DcsAction::RestorePresentationState(parameters) => {
+                self.tabulation_stops.begin_restore(&parameters)
+            }
+            _ => false,
+        }
+    }
+
+    fn dcs_put(&mut self, code_unit: u16) -> bool {
+        self.tabulation_stops.put_restore(code_unit)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use terminal_parser::{output_engine::OutputStateMachineEngine, state_machine::StateMachine};
 
     fn restore(state: &mut TabulationStopState, payload: &str) {
         assert!(state.begin_restore(&Parameters::from_values(vec![Some(2)])));
@@ -137,6 +236,39 @@ mod tests {
 
         state.clear_all();
         assert_eq!(state.report(80), "\u{1b}P2$u\u{1b}\\");
+    }
+
+    #[test]
+    fn microsoft_tabulation_stop_report_runs_through_the_real_vt_parser() {
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(
+            PresentationReportEngine::new(80),
+        ));
+
+        machine.process_str("\u{1b}[2$w");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P2$u9/17/25/33/41/49/57/65/73\u{1b}\\"
+        );
+        machine.engine_mut().dispatch_mut().clear_response();
+
+        machine.process_str("\u{1b}P2$t30/60/120/240\u{1b}\\");
+        machine.process_str("\u{1b}[2$w");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P2$u30/60\u{1b}\\"
+        );
+
+        machine.engine_mut().dispatch_mut().clear_response();
+        machine.engine_mut().dispatch_mut().set_width(132);
+        machine.process_str("\u{1b}[2$w");
+        assert_eq!(
+            machine.engine().dispatch().response(),
+            "\u{1b}P2$u30/60/120\u{1b}\\"
+        );
+
+        machine.engine_mut().dispatch_mut().clear_response();
+        machine.process_str("\u{1b}[3g\u{1b}[2$w");
+        assert_eq!(machine.engine().dispatch().response(), "\u{1b}P2$u\u{1b}\\");
     }
 
     #[test]
