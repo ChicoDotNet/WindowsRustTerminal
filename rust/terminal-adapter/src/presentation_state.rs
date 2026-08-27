@@ -128,8 +128,7 @@ impl AdaptDispatchPresentationState {
                     (2, 3, 4)
                 };
                 let red = Self::byte_or_default(sub_params.get(red_index).copied().flatten())?;
-                let green =
-                    Self::byte_or_default(sub_params.get(green_index).copied().flatten())?;
+                let green = Self::byte_or_default(sub_params.get(green_index).copied().flatten())?;
                 let blue = Self::byte_or_default(sub_params.get(blue_index).copied().flatten())?;
                 Some(TextColor::rgb(red, green, blue))
             }
