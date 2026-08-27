@@ -10,11 +10,14 @@
 use terminal_buffer::{
     text_attribute::TextAttribute, text_buffer::TextBuffer, text_color::TextColor,
 };
-use terminal_parser::state_machine::{Parameters, VtId};
+use terminal_parser::{
+    output_engine::{OutputAction, TermDispatch},
+    state_machine::{Parameters, VtId},
+};
 
 use crate::{
     adapt_dispatch::PageGeometry, decrqss_color_alias::ColorAliasIndices,
-    vt_response::VtResponseEngine,
+    presentation_state::AdaptDispatchPresentationState, vt_response::VtResponseEngine,
 };
 
 const CHECKSUM_REPORT_ID: &str = "*y";
@@ -24,6 +27,7 @@ const MAX_ROW_WIDTH: i32 = 0x7fff;
 
 #[derive(Debug, Clone)]
 pub struct ChecksumReportEngine {
+    presentation: AdaptDispatchPresentationState,
     buffer: Option<TextBuffer>,
     cursor_x: u16,
     cursor_y: u16,
@@ -38,6 +42,7 @@ impl ChecksumReportEngine {
         let width = u16::try_from(geometry.width.clamp(1, MAX_ROW_WIDTH)).unwrap_or(1);
         let height = u16::try_from(geometry.height.clamp(1, i32::from(u16::MAX))).unwrap_or(1);
         Self {
+            presentation: AdaptDispatchPresentationState::new(geometry),
             buffer: TextBuffer::new(width, height, TextAttribute::default()).ok(),
             cursor_x: 0,
             cursor_y: 0,
@@ -45,6 +50,15 @@ impl ChecksumReportEngine {
             aliases: ColorAliasIndices::default(),
             responses: VtResponseEngine::default(),
         }
+    }
+
+    #[must_use]
+    pub const fn presentation(&self) -> &AdaptDispatchPresentationState {
+        &self.presentation
+    }
+
+    pub const fn presentation_mut(&mut self) -> &mut AdaptDispatchPresentationState {
+        &mut self.presentation
     }
 
     #[must_use]
@@ -190,25 +204,49 @@ impl ChecksumReportEngine {
     }
 }
 
+impl TermDispatch for ChecksumReportEngine {
+    fn dispatch(&mut self, action: OutputAction) {
+        match action {
+            OutputAction::Print(unit) => {
+                let attributes = self.presentation.current_attributes();
+                self.write_text(&[unit], attributes);
+                self.presentation.dispatch(OutputAction::Print(unit));
+            }
+            OutputAction::PrintString(text) => {
+                let attributes = self.presentation.current_attributes();
+                self.write_text(&text, attributes);
+                self.presentation.dispatch(OutputAction::PrintString(text));
+            }
+            OutputAction::AdvancedCsi { id, parameters } if Self::handles(id) => {
+                if !self.request(&parameters) {
+                    self.presentation
+                        .dispatch(OutputAction::AdvancedCsi { id, parameters });
+                }
+            }
+            other => self.presentation.dispatch(other),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use terminal_buffer::{text_attribute::UnderlineStyle, text_color::TextColor};
+    use terminal_parser::{output_engine::OutputStateMachineEngine, state_machine::StateMachine};
 
     fn report(text: &str, attributes: TextAttribute) -> String {
-        let mut engine = ChecksumReportEngine::new(PageGeometry::new(0, 100, 29));
-        engine.set_enabled(true);
-        let encoded = text.encode_utf16().collect::<Vec<_>>();
-        engine.write_text(&encoded, attributes);
-        assert!(engine.request(&Parameters::from_values(vec![
-            Some(99),
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(1),
-            Some(i32::try_from(encoded.len()).unwrap_or_default()),
-        ])));
-        engine.response().to_owned()
+        let mut dispatch = ChecksumReportEngine::new(PageGeometry::new(0, 100, 29));
+        dispatch.set_enabled(true);
+        dispatch
+            .presentation_mut()
+            .set_current_attributes(attributes);
+        let encoded_len = text.encode_utf16().count();
+        let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
+        machine.process_str(text);
+        machine.process_str(&format!(
+            "\u{1b}[99;1;1;1;1;{encoded_len}*y"
+        ));
+        machine.engine().dispatch().response().to_owned()
     }
 
     #[test]
@@ -298,7 +336,11 @@ mod tests {
 
         engine.clear_response();
         engine.set_response_writable(false);
-        assert!(!engine.request(&request));
+        engine.dispatch(OutputAction::AdvancedCsi {
+            id: VtId::from_ascii(CHECKSUM_REPORT_ID),
+            parameters: request,
+        });
         assert!(engine.response().is_empty());
+        assert_eq!(engine.presentation().core().deferred_actions().len(), 1);
     }
 }
