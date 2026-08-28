@@ -1,4 +1,4 @@
-use terminal_buffer::alternate_buffer::{AlternateBufferState, CursorShape};
+use terminal_buffer::alternate_buffer::{AlternateBufferState, CursorShape, ViewportSize};
 
 #[test]
 fn microsoft_screen_buffer_single_alternate_buffer_creation_contract() {
@@ -101,4 +101,46 @@ fn microsoft_screen_buffer_alt_buffer_ris_contract() {
     assert!(state.is_alternate_active());
     state.ris();
     assert!(!state.is_alternate_active());
+}
+
+#[test]
+fn microsoft_screen_buffer_resize_alt_buffer_contract() {
+    let mut state = AlternateBufferState::with_main_viewport(80, 25);
+    let original_main = state.main().viewport;
+    state.use_alternate();
+    assert_eq!(state.alternate().unwrap().viewport, original_main);
+
+    state.resize_alternate_viewport(82, 27);
+    assert_eq!(state.alternate().unwrap().viewport, ViewportSize::new(82, 27));
+    assert_eq!(state.main().viewport, original_main);
+
+    state.use_main();
+    assert!(!state.is_alternate_active());
+    assert!(state.alternate().is_none());
+    assert_eq!(state.main().viewport, original_main);
+}
+
+#[test]
+fn microsoft_screen_buffer_resize_alt_buffer_get_screen_buffer_info_contract() {
+    const DELTAS: [i16; 4] = [-10, -1, 1, 10];
+
+    for dx in DELTAS {
+        for dy in DELTAS {
+            let mut state = AlternateBufferState::with_main_viewport(80, 25);
+            let original_main = state.main().viewport;
+            state.use_alternate();
+            let original_alt = state.alternate().unwrap().viewport;
+            assert_eq!(original_alt, original_main);
+
+            let width = u16::try_from(i32::from(original_main.width) + i32::from(dx)).unwrap();
+            let height = u16::try_from(i32::from(original_main.height) + i32::from(dy)).unwrap();
+            state.resize_alternate_viewport(width, height);
+
+            let resized_alt = state.alternate().unwrap().viewport;
+            assert_ne!(resized_alt.width, original_alt.width);
+            assert_ne!(resized_alt.height, original_alt.height);
+            assert_eq!(state.main().viewport, original_main);
+            assert_eq!(state.api_viewport(), resized_alt);
+        }
+    }
 }

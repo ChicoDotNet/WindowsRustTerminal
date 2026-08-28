@@ -1,4 +1,4 @@
-//! Safe alternate-screen-buffer lifecycle and cursor-state semantics.
+//! Safe alternate-screen-buffer lifecycle, cursor-state and viewport semantics.
 //!
 //! This owner captures the deterministic product behavior beneath the Host
 //! alternate-buffer tests. Win32 locking, renderer attachment and VT byte
@@ -34,11 +34,42 @@ impl Default for CursorState {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ViewportSize {
+    pub width: u16,
+    pub height: u16,
+}
+
+impl ViewportSize {
+    #[must_use]
+    pub const fn new(width: u16, height: u16) -> Self {
+        Self { width, height }
+    }
+}
+
+impl Default for ViewportSize {
+    fn default() -> Self {
+        Self::new(80, 25)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BufferState {
     pub cursor: CursorState,
+    pub viewport: ViewportSize,
     pub magenta_background: bool,
     pub text: String,
+}
+
+impl Default for BufferState {
+    fn default() -> Self {
+        Self {
+            cursor: CursorState::default(),
+            viewport: ViewportSize::default(),
+            magenta_background: false,
+            text: String::new(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,6 +95,13 @@ impl AlternateBufferState {
             active_alternate: false,
             generation: 0,
         }
+    }
+
+    #[must_use]
+    pub fn with_main_viewport(width: u16, height: u16) -> Self {
+        let mut state = Self::new();
+        state.main.viewport = ViewportSize::new(width, height);
+        state
     }
 
     #[must_use]
@@ -98,17 +136,47 @@ impl AlternateBufferState {
         }
     }
 
+    #[must_use]
+    pub fn active_viewport(&self) -> ViewportSize {
+        if self.active_alternate {
+            self.alternate
+                .as_ref()
+                .expect("active alternate exists")
+                .viewport
+        } else {
+            self.main.viewport
+        }
+    }
+
+    /// Console screen-buffer information is projected from the active buffer,
+    /// even when the persistent main SCREEN_INFORMATION owns the API call.
+    #[must_use]
+    pub fn api_viewport(&self) -> ViewportSize {
+        self.active_viewport()
+    }
+
+    /// Resizes only the active alternate viewport. The persistent main viewport
+    /// remains untouched and becomes visible again when alternate state exits.
+    pub fn resize_alternate_viewport(&mut self, width: u16, height: u16) {
+        if let Some(alternate) = self.alternate.as_mut() {
+            alternate.viewport = ViewportSize::new(width, height);
+        }
+    }
+
     /// Creates/replaces the alternate buffer. A replacement always links back
     /// to the same main buffer, even when requested while an alternate is active.
     pub fn use_alternate(&mut self) {
-        let inherited_cursor = if self.active_alternate {
-            self.alternate.as_ref().map_or(self.main.cursor, |buffer| buffer.cursor)
+        let inherited = if self.active_alternate {
+            self.alternate.as_ref().unwrap_or(&self.main)
         } else {
-            self.main.cursor
+            &self.main
         };
+        let inherited_cursor = inherited.cursor;
+        let inherited_viewport = inherited.viewport;
         self.generation = self.generation.saturating_add(1);
         self.alternate = Some(BufferState {
             cursor: inherited_cursor,
+            viewport: inherited_viewport,
             ..BufferState::default()
         });
         self.active_alternate = true;
