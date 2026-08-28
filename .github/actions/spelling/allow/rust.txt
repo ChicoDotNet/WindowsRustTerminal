@@ -1,3 +1,5 @@
+AAAAZ
+AAZZZ
 altgr
 azerty
 autowrap
@@ -5,6 +7,8 @@ backtab
 clippy
 colorref
 condvar
+decoalesces
+fdd
 ffi
 hpr
 microcommit
@@ -12,7 +16,20 @@ microfragment
 misrouted
 nuls
 psobject
+rposition
 rustup
 subparams
+TEs
 usize
 vpr
+ZAAAA
+ZAAZZ
+ZABBZ
+ZAZZZ
+ZBAZZ
+ZBBBZ
+ZZBBZ
+ZZZAA
+ZZZAZ
+ZZZBB
+ZZZBZ
