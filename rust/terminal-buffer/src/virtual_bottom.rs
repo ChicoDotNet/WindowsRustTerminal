@@ -1,8 +1,14 @@
 //! Safe viewport/cursor/virtual-bottom semantics derived from Host ScreenBuffer tests.
 //!
-//! This owner intentionally excludes text reflow. It models the portable state
-//! transitions shared by cursor movement, viewport sizing, offscreen line feeds,
-//! cursor visibility and returning to the virtual viewport.
+//! The core owner models the portable state transitions shared by cursor movement,
+//! viewport sizing, offscreen line feeds, cursor visibility and returning to the
+//! virtual viewport. Reflow coordination composes that state with the existing
+//! safe `TextBuffer` reflow owner so the screen-buffer virtual-bottom invariants
+//! remain explicit rather than being hidden in test metadata.
+
+use crate::reflow::resize_with_reflow;
+use crate::text_attribute::TextAttribute;
+use crate::text_buffer::{TextBuffer, TextBufferError};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ViewportState {
@@ -125,6 +131,49 @@ impl VirtualBottomState {
         self.viewport.height = height;
     }
 
+    /// Screen-buffer reflow composes the existing safe text reflow with the
+    /// virtual-bottom contract from `ScreenBufferTests.cpp`.
+    ///
+    /// Reflow may create additional physical rows. The virtual viewport must
+    /// include the final non-space row, but a resize performed while the viewport
+    /// is already at the top must never shrink virtual bottom above the viewport
+    /// bottom. Cursor distance from virtual bottom is preserved when possible so
+    /// a shrink/grow round trip keeps the cleared-screen cursor anchored to the
+    /// same virtual viewport row.
+    ///
+    /// # Errors
+    ///
+    /// Propagates invalid-dimension or row-storage errors from the safe reflow owner.
+    pub fn resize_with_reflow(
+        &mut self,
+        buffer: &mut TextBuffer,
+        new_width: u16,
+        fill_attribute: TextAttribute,
+    ) -> Result<(), TextBufferError> {
+        let cursor_distance_from_bottom = self.virtual_bottom.saturating_sub(self.cursor.y);
+
+        resize_with_reflow(buffer, new_width, buffer.height(), fill_attribute)?;
+        self.viewport.width = new_width;
+
+        let last_non_space_row = buffer
+            .logical_rows()
+            .enumerate()
+            .rev()
+            .find_map(|(row, content)| (content.measure_right() != 0).then_some(row as u16));
+
+        let minimum_bottom = last_non_space_row
+            .map_or(self.viewport.bottom(), |row| row.max(self.viewport.bottom()));
+        self.virtual_bottom = self.virtual_bottom.max(minimum_bottom);
+
+        if self.cursor.y <= self.virtual_bottom {
+            self.cursor.y = self
+                .virtual_bottom
+                .saturating_sub(cursor_distance_from_bottom);
+        }
+
+        Ok(())
+    }
+
     /// A line feed issued while the cursor is outside the visible viewport must
     /// not perturb the virtual bottom unless the cursor actually crosses it.
     pub fn offscreen_linefeed(&mut self) {
@@ -146,5 +195,77 @@ impl VirtualBottomState {
     /// Returns to the virtual viewport while retaining horizontal scroll offset.
     pub fn move_to_virtual_bottom(&mut self) {
         self.viewport.top = self.virtual_viewport().top;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn write_ascii_row(buffer: &mut TextBuffer, row: u16, width: u16) {
+        let row = buffer.row_mut(i32::from(row));
+        for column in 0..width {
+            row.replace_glyph(i32::from(column), 1, &[u16::from(b'X')])
+                .expect("fixture glyph fits");
+        }
+    }
+
+    #[test]
+    fn microsoft_virtual_bottom_reflow_contract() {
+        let fill = TextAttribute::default();
+        let mut buffer = TextBuffer::new(10, 20, fill).expect("fixture dimensions are valid");
+        let mut state = VirtualBottomState::new(10, 5);
+
+        // Microsoft emits two viewport-pages of almost-full logical lines.
+        for row in 0..10_u16 {
+            write_ascii_row(&mut buffer, row, 9);
+        }
+        state.set_cursor_direct(0, 4);
+        state.advance_output_lines(5);
+        state.set_viewport_origin(0, 0, false);
+
+        state
+            .resize_with_reflow(&mut buffer, 5, fill)
+            .expect("Microsoft shrink-with-reflow succeeds");
+
+        let last_non_space_row = buffer
+            .logical_rows()
+            .enumerate()
+            .rev()
+            .find_map(|(row, content)| (content.measure_right() != 0).then_some(row as u16))
+            .expect("fixture retains printable content");
+        assert!(state.virtual_bottom() >= last_non_space_row);
+
+        // Microsoft then clears the virtual viewport, homes the cursor there,
+        // and requires a grow reflow to retain cursor distance from its bottom.
+        buffer.reset(fill);
+        let virtual_top = state.virtual_viewport().top;
+        state.set_cursor_direct(0, virtual_top);
+        let distance = state.virtual_bottom() - state.cursor().y;
+        assert_eq!(distance, state.viewport().height - 1);
+
+        state
+            .resize_with_reflow(&mut buffer, 10, fill)
+            .expect("Microsoft grow-with-reflow succeeds");
+        assert_eq!(distance, state.virtual_bottom() - state.cursor().y);
+    }
+
+    #[test]
+    fn microsoft_virtual_bottom_reflow_at_top_does_not_shrink_contract() {
+        let fill = TextAttribute::default();
+        let mut buffer = TextBuffer::new(10, 20, fill).expect("fixture dimensions are valid");
+        let mut state = VirtualBottomState::new(10, 5);
+
+        state.set_viewport_origin(0, 0, true);
+        state.set_cursor_direct(0, 0);
+        let initial_bottom = state.virtual_bottom();
+        assert_eq!(initial_bottom, state.viewport().bottom());
+
+        state
+            .resize_with_reflow(&mut buffer, 5, fill)
+            .expect("Microsoft top-of-buffer shrink succeeds");
+
+        assert_eq!(state.virtual_bottom(), initial_bottom);
+        assert_eq!(state.virtual_bottom(), state.viewport().bottom());
     }
 }
