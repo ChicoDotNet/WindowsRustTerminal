@@ -8,6 +8,7 @@
 pub mod alternate_buffer;
 pub mod clipboard_text;
 pub mod cursor_movement;
+pub mod deferred_resize;
 pub mod extended_attributes;
 pub mod geometry;
 pub mod hyperlink;
