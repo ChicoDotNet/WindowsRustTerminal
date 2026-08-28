@@ -2,9 +2,10 @@
 //!
 //! This module keeps the mode state that is independent of the VT parser:
 //! LNM couples output newline-auto-return with input line-feed mode, DECSCNM
-//! reverses rendered foreground/background colors, and DECAWM controls
-//! cell-aware output wrapping. Cursor-origin addressing remains in
-//! `cursor_movement`, where DEC margins are already owned.
+//! reverses rendered foreground/background colors, DECAWM controls cell-aware
+//! output wrapping, and DECECM selects whether erase producers use active or
+//! default colors. Cursor-origin addressing remains in `cursor_movement`, where
+//! DEC margins are already owned.
 
 use crate::output_cell::OutputCellIterator;
 use crate::row::{DbcsAttribute, RowError};
@@ -19,6 +20,7 @@ pub struct TerminalModeState {
     input_line_feed: bool,
     screen_reversed: bool,
     auto_wrap: bool,
+    erase_color_mode: bool,
     cursor: TextBufferPoint,
     pending_wrap: bool,
 }
@@ -30,6 +32,7 @@ impl Default for TerminalModeState {
             input_line_feed: false,
             screen_reversed: false,
             auto_wrap: true,
+            erase_color_mode: false,
             cursor: TextBufferPoint::new(0, 0),
             pending_wrap: false,
         }
@@ -89,6 +92,32 @@ impl TerminalModeState {
     #[must_use]
     pub const fn auto_wrap(&self) -> bool {
         self.auto_wrap
+    }
+
+    /// Applies DEC Erase Color Mode (DECECM / private mode 117).
+    ///
+    /// When enabled, erase-producing controls receive default attributes as
+    /// their source. When disabled, they receive the active attributes and keep
+    /// their existing standard-erase transformation. This keeps color policy at
+    /// the terminal-mode boundary while each cell/scroll owner retains its own
+    /// erase mechanics.
+    pub fn set_erase_color_mode(&mut self, enabled: bool) {
+        self.erase_color_mode = enabled;
+    }
+
+    #[must_use]
+    pub const fn erase_color_mode(&self) -> bool {
+        self.erase_color_mode
+    }
+
+    /// Resolves the source attributes passed to an erase-producing owner.
+    #[must_use]
+    pub fn erase_source_attribute(&self, active_attribute: TextAttribute) -> TextAttribute {
+        if self.erase_color_mode {
+            TextAttribute::default()
+        } else {
+            active_attribute
+        }
     }
 
     pub fn set_cursor(&mut self, x: u16, y: u16, buffer: &TextBuffer) {
@@ -221,14 +250,18 @@ mod tests {
         let mut modes = TerminalModeState::new();
 
         modes.set_cursor(77, 0, &buffer);
-        modes.write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>()).unwrap();
+        modes
+            .write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>())
+            .unwrap();
         assert_eq!(text(&buffer, 0, 77, 80), "abc");
         assert_eq!(text(&buffer, 1, 0, 3), "def");
         assert_eq!(modes.cursor(), TextBufferPoint::new(3, 1));
 
         modes.set_auto_wrap(false);
         modes.set_cursor(77, 2, &buffer);
-        modes.write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>()).unwrap();
+        modes
+            .write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>())
+            .unwrap();
         assert_eq!(text(&buffer, 2, 77, 80), "abf");
         assert_eq!(modes.cursor(), TextBufferPoint::new(79, 2));
 
@@ -238,7 +271,13 @@ mod tests {
         assert_eq!(text(&buffer, 2, 77, 80), "a b");
         assert_eq!(modes.cursor(), TextBufferPoint::new(79, 2));
 
-        let final_cell_smile = [u16::from(b'a'), u16::from(b'b'), 0xd83d, 0xde04, u16::from(b'c')];
+        let final_cell_smile = [
+            u16::from(b'a'),
+            u16::from(b'b'),
+            0xd83d,
+            0xde04,
+            u16::from(b'c'),
+        ];
         modes.set_cursor(77, 2, &buffer);
         modes.write_text(&mut buffer, &final_cell_smile).unwrap();
         assert_eq!(text(&buffer, 2, 77, 80), "abc");
@@ -246,10 +285,28 @@ mod tests {
 
         modes.set_auto_wrap(true);
         modes.set_cursor(77, 4, &buffer);
-        modes.write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>()).unwrap();
+        modes
+            .write_text(&mut buffer, &"abcdef".encode_utf16().collect::<Vec<_>>())
+            .unwrap();
         assert_eq!(text(&buffer, 4, 77, 80), "abc");
         assert_eq!(text(&buffer, 5, 0, 3), "def");
         assert_eq!(modes.cursor(), TextBufferPoint::new(3, 5));
+    }
+
+    #[test]
+    fn dececm_selects_the_erase_source_attribute() {
+        let active = TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
+        let mut modes = TerminalModeState::new();
+
+        assert!(!modes.erase_color_mode());
+        assert_eq!(modes.erase_source_attribute(active), active);
+
+        modes.set_erase_color_mode(true);
+        assert!(modes.erase_color_mode());
+        assert_eq!(
+            modes.erase_source_attribute(active),
+            TextAttribute::default()
+        );
     }
 
     #[test]
