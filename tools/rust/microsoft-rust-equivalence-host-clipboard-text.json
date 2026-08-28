@@ -1,26 +1,5 @@
 {
   "schemaVersion": 1,
-  "description": "R08 Host Clipboard checkpoint: safe Rust TextBuffer ownership now reproduces Microsoft's block- and line-selection CopyRequest/GetPlainText extraction contracts, including wide glyphs, trailing whitespace, forced wraps and CRLF boundaries.",
-  "expectedCoveragePriority": 211,
-  "expectedCoverage": {
-    "host": {
-      "Exact": 110,
-      "Partial": 82,
-      "Platform-only": 5,
-      "Missing": 134
-    }
-  },
-  "expectedGlobalCoveragePriority": 211,
-  "expectedGlobalCoverage": {
-    "Exact": 514,
-    "Stronger": 11,
-    "Partial": 316,
-    "Platform-only": 63,
-    "UI-managed": 22,
-    "Missing": 172
-  },
-  "entries": [
-    {"suite":"host","source":"ClipboardTests.cpp","method":"TestRetrieveBlockSelectionFromBuffer","coverage":"Exact","rustWitnesses":["microsoft_clipboard_block_selection_contract"],"notes":"Rust preserves the first 15 selected columns on every physical row, including six trailing spaces and wide Japanese glyphs, and inserts CRLF between each block-selection row."},
-    {"suite":"host","source":"ClipboardTests.cpp","method":"TestRetrieveLineSelectionFromBuffer","coverage":"Exact","rustWitnesses":["microsoft_clipboard_line_selection_contract"],"notes":"Rust trims trailing whitespace and emits CRLF only on non-wrapped rows while retaining complete width on forced-wrap rows and clipping the final selected row to 15 columns."}
-  ]
+  "description": "R08 Host Clipboard implementation checkpoint. Safe Rust TextBuffer ownership and Microsoft-derived witnesses now reproduce the block- and line-selection CopyRequest/GetPlainText behavior. Coverage promotion remains on the canonical R06-A ledger to avoid duplicate method identities; this checkpoint therefore records implementation evidence without overriding census metadata.",
+  "entries": []
 }
