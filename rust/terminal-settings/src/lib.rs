@@ -11,6 +11,7 @@ pub mod application_state;
 pub mod cascadia_settings;
 pub mod color_scheme;
 pub mod command_model;
+pub mod deserialization_actions;
 pub mod keybindings;
 pub mod keybindings_model;
 pub mod new_tab_menu;
