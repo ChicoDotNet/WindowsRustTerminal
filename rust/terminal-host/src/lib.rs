@@ -5,6 +5,7 @@
 pub mod alias;
 pub mod api_detection;
 pub mod api_message_buffers;
+pub mod api_routines;
 pub mod api_sorter;
 pub mod attribute_format;
 pub mod command_history;

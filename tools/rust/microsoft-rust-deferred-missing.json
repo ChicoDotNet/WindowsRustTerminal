@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 213,
+  "expectedMissingTotal": 204,
   "sources": [
-    {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
+    {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":7,"reason":"SetConsoleInputModeImpl portable state semantics are now Rust-owned; console title encoding, WriteConsole A/W and ScrollConsoleScreenBuffer still require title/codepage/screen-buffer owners."},
     {"suite":"host","source":"ClipboardTests.cpp","expectedMissing":2,"reason":"Only the two CopyRequest/GetPlainText extraction contracts remain unported; keyboard/platform methods are separately Platform-only."},
     {"suite":"host","source":"InputBufferTests.cpp","expectedMissing":1,"reason":"Only ReadingDbcsCharsPadsOutputArray remains: Rust owns DBCS padding/order once encoded bytes are supplied, but CP_JAPANESE conversion remains a Windows codepage adapter responsibility."},
     {"suite":"host","source":"ScreenBufferTests.cpp","expectedMissing":113,"reason":"No safe Rust screen-buffer aggregate owns the complete cursor/viewport/renderer/selection/API coordination surface."},
