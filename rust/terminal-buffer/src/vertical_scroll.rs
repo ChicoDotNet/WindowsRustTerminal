@@ -165,6 +165,12 @@ fn scroll_up_rect(
         ScreenRect::new(region.left, region.top + count, region.right, region.bottom),
         TextBufferPoint::new(region.left, region.top),
         erase,
+    )?;
+    fill_rect(
+        buffer,
+        ScreenRect::new(region.left, region.bottom - count, region.right, region.bottom),
+        u16::from(b' '),
+        erase,
     )
 }
 
@@ -184,6 +190,12 @@ fn scroll_down_rect(
         buffer,
         ScreenRect::new(region.left, region.top, region.right, region.bottom - count),
         TextBufferPoint::new(region.left, region.top + count),
+        erase,
+    )?;
+    fill_rect(
+        buffer,
+        ScreenRect::new(region.left, region.top, region.right, region.top + count),
+        u16::from(b' '),
         erase,
     )
 }
@@ -242,7 +254,7 @@ mod tests {
 
     #[test]
     fn microsoft_screen_buffer_scroll_up_in_margins_contract() {
-        let (mut buffer, mut state, attr) = common_fixture();
+        let (mut buffer, state, attr) = common_fixture();
         state.scroll_up(&mut buffer, 1, attr).unwrap();
         for (y, ch) in [(0, b'A'), (1, b'6'), (2, b'7'), (3, b' '), (4, b' '), (5, b'B')] {
             assert_cell(&buffer, 0, y, ch, attr);
@@ -258,7 +270,7 @@ mod tests {
 
     #[test]
     fn microsoft_screen_buffer_scroll_down_in_margins_contract() {
-        let (mut buffer, mut state, attr) = common_fixture();
+        let (mut buffer, state, attr) = common_fixture();
         state.scroll_down(&mut buffer, 1, attr).unwrap();
         for (y, ch) in [(0, b'A'), (1, b' '), (2, b'5'), (3, b'6'), (4, b'7'), (5, b'B')] {
             assert_cell(&buffer, 0, y, ch, attr);
@@ -337,7 +349,7 @@ mod tests {
             }
             let mut erase = attr;
             erase.set_standard_erase();
-            let mut buffer = TextBuffer::new(8, 6, TextAttribute::default()).unwrap();
+            let buffer = TextBuffer::new(8, 6, TextAttribute::default()).unwrap();
             let mut state = VerticalScrollState::new(8, 0, 6);
             state.set_vertical_margins(0, 3);
             state.set_cursor(0, 0);
