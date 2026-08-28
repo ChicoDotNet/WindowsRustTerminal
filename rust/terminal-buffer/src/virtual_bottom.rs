@@ -158,12 +158,12 @@ impl VirtualBottomState {
         let last_non_space_row = buffer
             .logical_rows()
             .enumerate()
-            .rev()
-            .find_map(|(row, content)| {
+            .filter_map(|(row, content)| {
                 (content.measure_right() != 0).then(|| {
                     u16::try_from(row).expect("TextBuffer row index always fits u16")
                 })
-            });
+            })
+            .last();
 
         let minimum_bottom = last_non_space_row
             .map_or(self.viewport.bottom(), |row| row.max(self.viewport.bottom()));
@@ -235,12 +235,11 @@ mod tests {
         let last_non_space_row = buffer
             .logical_rows()
             .enumerate()
-            .rev()
-            .find_map(|(row, content)| {
-                (content.measure_right() != 0).then(|| {
-                    u16::try_from(row).expect("fixture row index fits u16")
-                })
+            .filter_map(|(row, content)| {
+                (content.measure_right() != 0)
+                    .then(|| u16::try_from(row).expect("fixture row index fits u16"))
             })
+            .last()
             .expect("fixture retains printable content");
         assert!(state.virtual_bottom() >= last_non_space_row);
 
