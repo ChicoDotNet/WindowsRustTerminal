@@ -24,6 +24,7 @@ pub mod presentation_state;
 pub mod product_dispatch;
 pub mod reporting_product_dispatch;
 pub mod response_dispatch;
+pub mod screen_buffer_cursor;
 pub mod sixel;
 pub mod user_preference_charset;
 pub mod vt_response;
