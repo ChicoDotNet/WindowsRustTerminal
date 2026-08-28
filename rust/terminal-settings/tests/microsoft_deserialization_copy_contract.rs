@@ -2,7 +2,7 @@ use terminal_settings::deserialization_copy::CloneableCascadiaSettings;
 
 #[test]
 fn microsoft_deserialization_copy_contract() {
-    let json = r#"{
+    let json = r##"{
         "defaultProfile": "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}",
         "initialCols": 50,
         "profiles": [
@@ -50,7 +50,7 @@ fn microsoft_deserialization_copy_contract() {
                 ]
             }
         ]
-    }"#;
+    }"##;
 
     let settings = CloneableCascadiaSettings::from_json(json).unwrap();
     let mut copy = settings.deep_copy();
