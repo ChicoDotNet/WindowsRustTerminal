@@ -7,6 +7,7 @@
 
 pub mod alternate_buffer;
 pub mod clipboard_text;
+pub mod cursor_movement;
 pub mod geometry;
 pub mod hyperlink;
 pub mod image_slice;
