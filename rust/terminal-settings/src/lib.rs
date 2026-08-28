@@ -17,6 +17,7 @@ pub mod deserialization_fragments;
 pub mod deserialization_profile_properties;
 pub mod deserialization_profiles;
 pub mod deserialization_validation;
+pub mod json_utils;
 pub mod keybindings;
 pub mod keybindings_model;
 pub mod media_resource;
