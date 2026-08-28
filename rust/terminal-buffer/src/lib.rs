@@ -7,6 +7,7 @@
 
 pub mod alternate_buffer;
 pub mod clipboard_text;
+pub mod command_regions;
 pub mod cursor_movement;
 pub mod deferred_resize;
 pub mod extended_attributes;
