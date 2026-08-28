@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 162,
+  "expectedMissingTotal": 155,
   "sources": [
     {"suite":"host","source":"InputBufferTests.cpp","expectedMissing":1,"reason":"Only ReadingDbcsCharsPadsOutputArray remains: Rust owns DBCS padding/order once encoded bytes are supplied, but CP_JAPANESE conversion remains a Windows codepage adapter responsibility."},
-    {"suite":"host","source":"ScreenBufferTests.cpp","expectedMissing":94,"reason":"Safe Rust now owns the screen-buffer reflow-color, tab-stop, horizontal line-edit, wide-glyph movement and rectangular-area seams; the remaining methods require other cursor/viewport/renderer/selection/API coordination seams."},
+    {"suite":"host","source":"ScreenBufferTests.cpp","expectedMissing":87,"reason":"Safe Rust now owns the screen-buffer reflow-color, tab-stop, horizontal line-edit, wide-glyph movement, rectangular-area and alternate-buffer lifecycle seams; the remaining methods require other cursor/viewport/renderer/selection/API coordination seams."},
     {"suite":"host","source":"TextBufferIteratorTests.cpp","expectedMissing":29,"reason":"The C++ iterator operator API has no direct migrated Rust product abstraction."},
     {"suite":"localTerminalApp","source":"CommandlineTest.cpp","reason":"Terminal application command-line behavior remains native product logic."},
     {"suite":"localTerminalApp","source":"FilteredCommandTests.cpp","reason":"Filtered-command product action semantics remain native."},
