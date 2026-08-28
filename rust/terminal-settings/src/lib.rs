@@ -13,6 +13,7 @@ pub mod color_scheme;
 pub mod command_model;
 pub mod deserialization_actions;
 pub mod deserialization_copy;
+pub mod deserialization_fragments;
 pub mod deserialization_profile_properties;
 pub mod deserialization_profiles;
 pub mod deserialization_validation;

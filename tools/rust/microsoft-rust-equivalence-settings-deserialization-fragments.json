@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "description": "R08 DeserializationTests fragment seam: portable Rust owns fragment profile updates, fragment-only action materialization, ignored fragment key bindings, nested/iterable commands and non-persistence across user-settings round-trip.",
+  "expectedCoveragePriority": 129,
+  "expectedCoverage": {
+    "unitSettingsModel": {
+      "Exact": 124,
+      "Partial": 2,
+      "Missing": 31
+    }
+  },
+  "expectedGlobalCoveragePriority": 129,
+  "expectedGlobalCoverage": {
+    "Exact": 401,
+    "Stronger": 11,
+    "Partial": 309,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 292
+  },
+  "entries": [
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"LoadFragmentsWithMultipleUpdates","coverage":"Exact","rustWitnesses":["microsoft_load_fragments_with_multiple_updates_contract"],"notes":"FragmentSettings applies multiple updates to existing builtin profile identities without creating duplicates, permits fragment name override, and materializes a new explicit profile."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionSimple","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_simple_contract"],"notes":"Named fragment actions are materialized into the runtime fragment action map."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionNoKeys","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_no_keys_contract"],"notes":"Fragment action keys are deliberately ignored while the named action remains available."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionNested","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_nested_contract"],"notes":"Named fragment parents preserve valid nested command collections."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionNestedNoName","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_nested_no_name_contract"],"notes":"Unnamed fragment nested-command parents are ignored, matching the normal ActionMap rule that nested parents cannot auto-generate names."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionIterable","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_iterable_contract"],"notes":"iterateOn=schemes expands one fragment nested-command template once per currently available color scheme."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","method":"FragmentActionRoundtrip","coverage":"Exact","rustWitnesses":["microsoft_fragment_action_roundtrip_contract"],"notes":"Fragment actions are runtime additions and are intentionally absent from the serialized user settings, so reparsing user JSON alone does not resurrect them."}
+  ]
+}
