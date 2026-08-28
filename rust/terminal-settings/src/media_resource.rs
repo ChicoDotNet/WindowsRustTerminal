@@ -64,7 +64,7 @@ impl MediaResource {
     }
 
     #[must_use]
-    pub const fn ok(&self) -> bool {
+    pub fn ok(&self) -> bool {
         self.state == MediaResourceState::Resolved
     }
 
