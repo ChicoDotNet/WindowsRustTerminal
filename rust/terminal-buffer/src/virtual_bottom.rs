@@ -6,7 +6,7 @@
 //! safe `TextBuffer` reflow owner so the screen-buffer virtual-bottom invariants
 //! remain explicit rather than being hidden in test metadata.
 
-use crate::reflow::resize_with_reflow;
+use crate::reflow::resize_with_reflow as resize_text_buffer_with_reflow;
 use crate::text_attribute::TextAttribute;
 use crate::text_buffer::{TextBuffer, TextBufferError};
 
@@ -152,14 +152,18 @@ impl VirtualBottomState {
     ) -> Result<(), TextBufferError> {
         let cursor_distance_from_bottom = self.virtual_bottom.saturating_sub(self.cursor.y);
 
-        resize_with_reflow(buffer, new_width, buffer.height(), fill_attribute)?;
+        resize_text_buffer_with_reflow(buffer, new_width, buffer.height(), fill_attribute)?;
         self.viewport.width = new_width;
 
         let last_non_space_row = buffer
             .logical_rows()
             .enumerate()
             .rev()
-            .find_map(|(row, content)| (content.measure_right() != 0).then_some(row as u16));
+            .find_map(|(row, content)| {
+                (content.measure_right() != 0).then(|| {
+                    u16::try_from(row).expect("TextBuffer row index always fits u16")
+                })
+            });
 
         let minimum_bottom = last_non_space_row
             .map_or(self.viewport.bottom(), |row| row.max(self.viewport.bottom()));
@@ -232,7 +236,11 @@ mod tests {
             .logical_rows()
             .enumerate()
             .rev()
-            .find_map(|(row, content)| (content.measure_right() != 0).then_some(row as u16))
+            .find_map(|(row, content)| {
+                (content.measure_right() != 0).then(|| {
+                    u16::try_from(row).expect("fixture row index fits u16")
+                })
+            })
             .expect("fixture retains printable content");
         assert!(state.virtual_bottom() >= last_non_space_row);
 
