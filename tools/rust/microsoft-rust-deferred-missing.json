@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 256,
+  "expectedMissingTotal": 249,
   "sources": [
     {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
     {"suite":"host","source":"ClipboardTests.cpp","expectedMissing":2,"reason":"Only the two CopyRequest/GetPlainText extraction contracts remain unported; keyboard/platform methods are separately Platform-only."},
-    {"suite":"host","source":"HistoryTests.cpp","expectedMissing":11,"reason":"Command history allocation, resize, duplicate policy and persistence remain unported."},
+    {"suite":"host","source":"HistoryTests.cpp","expectedMissing":4,"reason":"Only the four duplicate-add policy contracts remain unported after lifecycle/capacity ownership moved to Rust."},
     {"suite":"host","source":"InputBufferTests.cpp","expectedMissing":20,"reason":"Input queue/coalescing/wait and DBCS stream behavior remain unported."},
     {"suite":"host","source":"ScreenBufferTests.cpp","expectedMissing":113,"reason":"No safe Rust screen-buffer aggregate owns the complete cursor/viewport/renderer/selection/API coordination surface."},
     {"suite":"host","source":"SearchTests.cpp","expectedMissing":13,"reason":"ICU-backed console search remains unported."},

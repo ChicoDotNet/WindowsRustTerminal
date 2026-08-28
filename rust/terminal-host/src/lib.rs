@@ -7,6 +7,7 @@ pub mod api_detection;
 pub mod api_message_buffers;
 pub mod api_sorter;
 pub mod attribute_format;
+pub mod command_history;
 pub mod console_argument_parser;
 pub mod console_arguments;
 pub mod console_shim_policy;
