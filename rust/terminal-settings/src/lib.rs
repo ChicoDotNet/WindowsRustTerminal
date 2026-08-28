@@ -29,4 +29,5 @@ pub mod profile_lookup;
 pub mod serialization;
 pub mod settings_fixup;
 pub mod settings_json;
+pub mod terminal_settings;
 pub mod theme;

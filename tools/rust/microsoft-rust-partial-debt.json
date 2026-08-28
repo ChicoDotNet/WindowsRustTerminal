@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "H11 classifies every effective Partial Microsoft source contract for the R08 exit gate. Classification is deliberately conservative: Partial is functional debt unless an explicit evidence-backed exception proves the remaining difference is platform-boundary, language/API-shape, or upstream-ignored.",
-  "expectedPartialTotal": 313,
+  "expectedPartialTotal": 316,
   "defaultClass": "functional",
   "allowedClasses": [
     "functional",
@@ -43,7 +43,7 @@
       "source": "KeyBindingsTests.cpp",
       "method": "KeyChords",
       "class": "platform-boundary",
-      "reason": "Rust owns the KeyChord representation and all deterministic serialization/parsing vectors, but Microsoft's raw-scancode roundtrip derives the effective VKey through active-layout MapVirtualKeyW."
+      "reason": "Rust owns the KeyChord representation and all deterministic serialization/parsing vectors, but Microsoft's raw-scancode roundtrip derives the effective VKey for a raw scan code through active-layout MapVirtualKeyW."
     },
     {
       "suite": "unitSettingsModel",
@@ -79,6 +79,27 @@
       "method": "RealResolverUNCCases",
       "class": "platform-boundary",
       "reason": "Rust preserves UNC and Win32-namespace path candidates and resolver decisions through MediaPlatform; real network-share and local-path existence remain platform operations."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "CommandLineToArgvW",
+      "class": "language/API-shape",
+      "reason": "Rust owns the Windows argument value and quoting semantics used by command-line normalization; Microsoft's remaining assertion is the HLOCAL/argv contiguous-memory layout of the Win32 CommandLineToArgvW API, which is intentionally replaced by Rust Vec ownership."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "NormalizeCommandLine",
+      "class": "platform-boundary",
+      "reason": "Rust owns tokenization, progressive unquoted executable reconstruction and NUL-separated normalized arguments; ExpandEnvironmentStringsW, SearchPathW, file attributes and filesystem canonical casing remain behind CommandLinePlatform."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "GetProfileForArgsWithCommandline",
+      "class": "platform-boundary",
+      "reason": "Rust owns connectionType exclusion, normalized longest-prefix profile selection, invalid-path preservation and defaults fallback; production normalization still depends on the classified Windows environment/SearchPath/filesystem adapter."
     },
     {
       "suite": "til",
