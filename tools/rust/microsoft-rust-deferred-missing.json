@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 327,
+  "expectedMissingTotal": 316,
   "sources": [
     {
       "suite": "host",
@@ -81,7 +81,8 @@
     {
       "suite": "unitSettingsModel",
       "source": "DeserializationTests.cpp",
-      "reason": "The remaining profile/default/fragments/copy/fixup deserialization clusters are not yet owned by the portable Rust SettingsModel aggregate."
+      "expectedMissing": 24,
+      "reason": "The remaining color-scheme/default-property/fragments/copy/fixup deserialization clusters are not yet owned by the portable Rust SettingsModel aggregates."
     },
     {
       "suite": "unitSettingsModel",

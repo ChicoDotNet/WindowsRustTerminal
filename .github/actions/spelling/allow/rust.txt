@@ -3,9 +3,12 @@ azerty
 autowrap
 backtab
 clippy
+colorref
 condvar
 ffi
 hpr
+microcommit
+microfragment
 misrouted
 nuls
 psobject
