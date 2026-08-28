@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "description": "R08 Host ScreenBuffer alternate-buffer checkpoint: safe Rust owns alternate-buffer replacement/linkage, cursor inheritance/restoration, active-buffer VT dispatch and RIS return-to-main semantics.",
-  "expectedCoveragePriority": 213,
+  "expectedCoveragePriority": 214,
   "expectedCoverage": {
     "host": {"Exact":127,"Partial":82,"Platform-only":5,"Missing":117}
   },
-  "expectedGlobalCoveragePriority": 213,
+  "expectedGlobalCoveragePriority": 214,
   "expectedGlobalCoverage": {"Exact":531,"Stronger":11,"Partial":316,"Platform-only":63,"UI-managed":22,"Missing":155},
   "entries": [
     {"suite":"host","source":"ScreenBufferTests.cpp","method":"SingleAlternateBufferCreationTest","coverage":"Exact","rustWitnesses":["microsoft_screen_buffer_single_alternate_buffer_creation_contract"],"notes":"Safe Rust creates a distinct alternate state linked to the persistent main owner and removes that transient linkage when returning to main."},
