@@ -1,98 +1,23 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 316,
+  "expectedMissingTotal": 310,
   "sources": [
-    {
-      "suite": "host",
-      "source": "AliasTests.cpp",
-      "expectedMissing": 5,
-      "reason": "DOSKEY alias storage and macro expansion remain unported."
-    },
-    {
-      "suite": "host",
-      "source": "ApiRoutinesTests.cpp",
-      "expectedMissing": 16,
-      "reason": "Full console API/global-state behavior remains native aggregate backlog."
-    },
-    {
-      "suite": "host",
-      "source": "ClipboardTests.cpp",
-      "expectedMissing": 2,
-      "reason": "Only the two CopyRequest/GetPlainText extraction contracts remain unported; keyboard/platform methods are separately Platform-only."
-    },
-    {
-      "suite": "host",
-      "source": "HistoryTests.cpp",
-      "expectedMissing": 11,
-      "reason": "Command history allocation, resize, duplicate policy and persistence remain unported."
-    },
-    {
-      "suite": "host",
-      "source": "InputBufferTests.cpp",
-      "expectedMissing": 20,
-      "reason": "Input queue/coalescing/wait and DBCS stream behavior remain unported."
-    },
-    {
-      "suite": "host",
-      "source": "ScreenBufferTests.cpp",
-      "expectedMissing": 113,
-      "reason": "No safe Rust screen-buffer aggregate owns the complete cursor/viewport/renderer/selection/API coordination surface."
-    },
-    {
-      "suite": "host",
-      "source": "SearchTests.cpp",
-      "expectedMissing": 13,
-      "reason": "ICU-backed console search remains unported."
-    },
-    {
-      "suite": "host",
-      "source": "TextBufferIteratorTests.cpp",
-      "expectedMissing": 29,
-      "reason": "The C++ iterator operator API has no direct migrated Rust product abstraction."
-    },
-    {
-      "suite": "host",
-      "source": "TitleTests.cpp",
-      "expectedMissing": 1,
-      "reason": "Console title environment unexpansion/path translation remains unported."
-    },
-    {
-      "suite": "terminalApp",
-      "source": "JsonUtilsTests.cpp",
-      "expectedMissing": 13,
-      "reason": "TerminalApp JSON utility behavior has not transferred to a Rust product owner."
-    },
-    {
-      "suite": "localTerminalApp",
-      "source": "CommandlineTest.cpp",
-      "reason": "Terminal application command-line behavior remains native product logic."
-    },
-    {
-      "suite": "localTerminalApp",
-      "source": "FilteredCommandTests.cpp",
-      "reason": "Filtered-command product action semantics remain native."
-    },
-    {
-      "suite": "localTerminalApp",
-      "source": "SettingsTests.cpp",
-      "reason": "TerminalApp settings integration remains native product logic."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "DeserializationTests.cpp",
-      "expectedMissing": 24,
-      "reason": "The remaining color-scheme/default-property/fragments/copy/fixup deserialization clusters are not yet owned by the portable Rust SettingsModel aggregates."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "MediaResourceTests.cpp",
-      "reason": "Settings media-resource semantics remain native."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "TerminalSettingsTests.cpp",
-      "reason": "Terminal-settings composition/projection remains native product logic."
-    }
+    {"suite":"host","source":"AliasTests.cpp","expectedMissing":5,"reason":"DOSKEY alias storage and macro expansion remain unported."},
+    {"suite":"host","source":"ApiRoutinesTests.cpp","expectedMissing":16,"reason":"Full console API/global-state behavior remains native aggregate backlog."},
+    {"suite":"host","source":"ClipboardTests.cpp","expectedMissing":2,"reason":"Only the two CopyRequest/GetPlainText extraction contracts remain unported; keyboard/platform methods are separately Platform-only."},
+    {"suite":"host","source":"HistoryTests.cpp","expectedMissing":11,"reason":"Command history allocation, resize, duplicate policy and persistence remain unported."},
+    {"suite":"host","source":"InputBufferTests.cpp","expectedMissing":20,"reason":"Input queue/coalescing/wait and DBCS stream behavior remain unported."},
+    {"suite":"host","source":"ScreenBufferTests.cpp","expectedMissing":113,"reason":"No safe Rust screen-buffer aggregate owns the complete cursor/viewport/renderer/selection/API coordination surface."},
+    {"suite":"host","source":"SearchTests.cpp","expectedMissing":13,"reason":"ICU-backed console search remains unported."},
+    {"suite":"host","source":"TextBufferIteratorTests.cpp","expectedMissing":29,"reason":"The C++ iterator operator API has no direct migrated Rust product abstraction."},
+    {"suite":"host","source":"TitleTests.cpp","expectedMissing":1,"reason":"Console title environment unexpansion/path translation remains unported."},
+    {"suite":"terminalApp","source":"JsonUtilsTests.cpp","expectedMissing":13,"reason":"TerminalApp JSON utility behavior has not transferred to a Rust product owner."},
+    {"suite":"localTerminalApp","source":"CommandlineTest.cpp","reason":"Terminal application command-line behavior remains native product logic."},
+    {"suite":"localTerminalApp","source":"FilteredCommandTests.cpp","reason":"Filtered-command product action semantics remain native."},
+    {"suite":"localTerminalApp","source":"SettingsTests.cpp","reason":"TerminalApp settings integration remains native product logic."},
+    {"suite":"unitSettingsModel","source":"DeserializationTests.cpp","expectedMissing":18,"reason":"The remaining color-scheme validation, helper/generated-guid, keybinding warning, startup clamp/trailing-comma, fragments/copy/fixup deserialization clusters are not yet owned by the portable Rust SettingsModel aggregates."},
+    {"suite":"unitSettingsModel","source":"MediaResourceTests.cpp","reason":"Settings media-resource semantics remain native."},
+    {"suite":"unitSettingsModel","source":"TerminalSettingsTests.cpp","reason":"Terminal-settings composition/projection remains native product logic."}
   ]
 }
