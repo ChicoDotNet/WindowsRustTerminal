@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "H11 classifies every effective Partial Microsoft source contract for the R08 exit gate. Classification is deliberately conservative: Partial is functional debt unless an explicit evidence-backed exception proves the remaining difference is platform-boundary, language/API-shape, or upstream-ignored.",
-  "expectedPartialTotal": 309,
+  "expectedPartialTotal": 313,
   "defaultClass": "functional",
   "allowedClasses": [
     "functional",
@@ -51,6 +51,34 @@
       "method": "LayerScancodeKeybindings",
       "class": "platform-boundary",
       "reason": "Rust owns effective-chord layering and reproduces the Microsoft US-layout sc(41)/grave vector; general scancode-to-VKey/character equivalence remains an active Windows keyboard-layout mapping responsibility."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverFilePaths",
+      "class": "platform-boundary",
+      "reason": "Rust owns Windows-style path normalization, relative traversal, environment-expansion flow and candidate validation; actual file existence and environment lookup remain Win32 adapter responsibilities."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverSpecialKeywords",
+      "class": "platform-boundary",
+      "reason": "Rust owns the none/desktopWallpaper decision and success/failure behavior; desktop-wallpaper discovery remains a Windows system-parameter operation."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverUrlCases",
+      "class": "platform-boundary",
+      "reason": "Rust owns the file/HTTPS/ms-resource/ms-appx and rejected-scheme decisions plus local-leaf fallback; file existence and package context remain Windows adapter responsibilities."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverUNCCases",
+      "class": "platform-boundary",
+      "reason": "Rust preserves UNC and Win32-namespace path candidates and resolver decisions through MediaPlatform; real network-share and local-path existence remain platform operations."
     },
     {
       "suite": "til",

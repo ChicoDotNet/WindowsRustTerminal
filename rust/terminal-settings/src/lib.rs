@@ -19,6 +19,7 @@ pub mod deserialization_profiles;
 pub mod deserialization_validation;
 pub mod keybindings;
 pub mod keybindings_model;
+pub mod media_resource;
 pub mod new_tab_menu;
 pub mod profile;
 pub mod profile_collection;
