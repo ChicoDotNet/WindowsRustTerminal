@@ -8,6 +8,7 @@
 pub mod alternate_buffer;
 pub mod clipboard_text;
 pub mod geometry;
+pub mod hyperlink;
 pub mod image_slice;
 pub mod line_edit;
 pub mod line_rendition;
