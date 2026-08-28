@@ -30,6 +30,7 @@ pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;
 pub mod uia_text_range;
+pub mod vertical_scroll;
 pub mod viewport;
 pub mod virtual_bottom;
 pub mod width_detector;
