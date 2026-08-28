@@ -15,6 +15,7 @@ pub mod row;
 pub mod row_writer;
 pub mod search;
 pub mod sixel_store;
+pub mod tab_stops;
 pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;
