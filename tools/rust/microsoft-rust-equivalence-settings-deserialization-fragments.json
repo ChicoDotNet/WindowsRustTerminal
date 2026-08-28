@@ -33,7 +33,7 @@
       "method": "FragmentActionSimple",
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_deserialization_fragment_action_simple_contract"],
-      "notes": "A named/id'd fragment action is materialized in the runtime fragment overlay and remains discoverable by name."
+      "notes": "A named fragment action with an explicit ID is materialized in the runtime fragment overlay and remains discoverable by name."
     },
     {
       "suite": "unitSettingsModel",
@@ -41,7 +41,7 @@
       "method": "FragmentActionNoKeys",
       "coverage": "Exact",
       "rustWitnesses": ["microsoft_deserialization_fragment_action_no_keys_contract"],
-      "notes": "The fragment action is present by name while its legacy `keys` member is deliberately ignored; lookup still delegates to the pre-fragment ActionMap, so pre-existing bindings remain authoritative and ctrl+f stays unbound for the Microsoft vector."
+      "notes": "The fragment action is present by name while its legacy `keys` member is deliberately ignored; lookup still delegates to the pre-fragment ActionMap, so preexisting bindings remain authoritative and ctrl+f stays unbound for the Microsoft vector."
     },
     {
       "suite": "unitSettingsModel",
