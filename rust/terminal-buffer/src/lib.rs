@@ -26,6 +26,7 @@ pub mod screen_alignment;
 pub mod search;
 pub mod sixel_store;
 pub mod tab_stops;
+pub mod terminal_modes;
 pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_color;

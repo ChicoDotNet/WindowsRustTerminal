@@ -18,6 +18,7 @@ pub struct CursorMovementState {
     vertical_margins: Option<(u16, u16)>,
     horizontal_margins: Option<(u16, u16)>,
     horizontal_margin_mode: bool,
+    origin_mode: bool,
 }
 
 impl CursorMovementState {
@@ -32,6 +33,7 @@ impl CursorMovementState {
             vertical_margins: None,
             horizontal_margins: None,
             horizontal_margin_mode: false,
+            origin_mode: false,
         }
     }
 
@@ -63,6 +65,63 @@ impl CursorMovementState {
         assert!(left <= right);
         assert!(right < self.width);
         self.horizontal_margins = Some((left, right));
+    }
+
+    /// Applies DECOM and homes the cursor to the resolved addressing origin.
+    pub fn set_origin_mode(&mut self, enabled: bool) {
+        self.origin_mode = enabled;
+        self.home();
+    }
+
+    #[must_use]
+    pub const fn origin_mode(&self) -> bool {
+        self.origin_mode
+    }
+
+    /// Applies DECSTBM and the cursor-home side effect required by DECOM.
+    pub fn set_vertical_margins_and_home(&mut self, top: u16, bottom: u16) {
+        self.set_vertical_margins(top, bottom);
+        self.home();
+    }
+
+    pub fn clear_vertical_margins_and_home(&mut self) {
+        self.clear_vertical_margins();
+        self.home();
+    }
+
+    /// Applies DECSLRM and the cursor-home side effect required by DECOM.
+    pub fn set_horizontal_margins_and_home(&mut self, left: u16, right: u16) {
+        self.set_horizontal_margins(left, right);
+        self.home();
+    }
+
+    pub fn clear_horizontal_margins_and_home(&mut self) {
+        self.horizontal_margins = None;
+        self.home();
+    }
+
+    /// Resolves 1-based CUP/HVP coordinates using DECOM and active margins.
+    pub fn cursor_position(&mut self, row: u16, column: u16) {
+        let row = row.max(1) - 1;
+        let column = column.max(1) - 1;
+        if self.origin_mode {
+            let (top, bottom) = self.vertical_bounds();
+            let (left, right) = self.horizontal_bounds();
+            self.cursor.x = left.saturating_add(column).min(right);
+            self.cursor.y = top.saturating_add(row).min(bottom);
+        } else {
+            self.cursor.x = column.min(self.width - 1);
+            self.cursor.y = row.min(self.height - 1);
+        }
+    }
+
+    fn home(&mut self) {
+        if self.origin_mode {
+            self.cursor.x = self.horizontal_bounds().0;
+            self.cursor.y = self.vertical_bounds().0;
+        } else {
+            self.cursor = CursorPosition { x: 0, y: 0 };
+        }
     }
 
     fn vertical_bounds(&self) -> (u16, u16) {
@@ -165,5 +224,57 @@ impl CursorMovementState {
     /// VPR is relative to the full viewport and intentionally ignores vertical margins.
     pub fn vertical_position_relative(&mut self, count: u16) {
         self.cursor.y = self.cursor.y.saturating_add(count.max(1)).min(self.height - 1);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn microsoft_screen_buffer_set_origin_mode_contract() {
+        let mut state = CursorMovementState::new(80, 30);
+        state.set_horizontal_margin_mode(true);
+        state.set_vertical_margins(5, 19);
+        state.set_horizontal_margins(30, 49);
+
+        state.set_cursor(40, 12);
+        state.set_origin_mode(true);
+        assert!(state.origin_mode());
+        assert_eq!(state.cursor(), CursorPosition { x: 30, y: 5 });
+
+        state.set_cursor(40, 12);
+        state.set_vertical_margins_and_home(5, 19);
+        assert_eq!(state.cursor(), CursorPosition { x: 30, y: 5 });
+        state.set_cursor(40, 12);
+        state.set_horizontal_margins_and_home(30, 49);
+        assert_eq!(state.cursor(), CursorPosition { x: 30, y: 5 });
+
+        state.cursor_position(8, 11);
+        assert_eq!(state.cursor(), CursorPosition { x: 40, y: 12 });
+        state.cursor_position(100, 100);
+        assert_eq!(state.cursor(), CursorPosition { x: 49, y: 19 });
+
+        state.set_cursor(40, 12);
+        state.set_origin_mode(false);
+        assert!(!state.origin_mode());
+        assert_eq!(state.cursor(), CursorPosition { x: 0, y: 0 });
+        state.set_cursor(40, 12);
+        state.set_vertical_margins_and_home(5, 19);
+        assert_eq!(state.cursor(), CursorPosition { x: 0, y: 0 });
+        state.set_cursor(40, 12);
+        state.set_horizontal_margins_and_home(30, 49);
+        assert_eq!(state.cursor(), CursorPosition { x: 0, y: 0 });
+        state.cursor_position(13, 41);
+        assert_eq!(state.cursor(), CursorPosition { x: 40, y: 12 });
+        state.cursor_position(23, 61);
+        assert_eq!(state.cursor(), CursorPosition { x: 60, y: 22 });
+
+        state.clear_vertical_margins_and_home();
+        state.clear_horizontal_margins_and_home();
+        state.set_origin_mode(true);
+        assert_eq!(state.cursor(), CursorPosition { x: 0, y: 0 });
+        state.cursor_position(13, 41);
+        assert_eq!(state.cursor(), CursorPosition { x: 40, y: 12 });
     }
 }
