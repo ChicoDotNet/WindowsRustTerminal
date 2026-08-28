@@ -100,6 +100,8 @@ impl DeserializedProfiles {
     /// inbox identity, the inbox object is first used as its base and the user
     /// layer replaces its members. Unmatched inbox profiles append afterward.
     /// Duplicate user identities keep the first occurrence and emit one warning.
+    /// Portable global startup dimensions are clamped to Microsoft's supported
+    /// `1..=999` range after layering.
     ///
     /// # Errors
     ///
@@ -116,6 +118,8 @@ impl DeserializedProfiles {
         for (key, value) in &user_root {
             globals.insert(key.clone(), value.clone());
         }
+        clamp_global_i32(&mut globals, "initialCols", 1, 999);
+        clamp_global_i32(&mut globals, "initialRows", 1, 999);
 
         let user_profiles = parse_profiles(&user_root)?;
         let inbox_profiles = parse_profiles(&inbox_root)?;
@@ -328,4 +332,14 @@ fn resolve_default_profile(requested: &str, profiles: &[DeserializedProfile]) ->
     profiles
         .iter()
         .position(|profile| profile.name() == Some(requested))
+}
+
+fn clamp_global_i32(globals: &mut JsonObject, key: &str, min: i32, max: i32) {
+    let Some(JsonValue::Number(value)) = globals.get_mut(key) else {
+        return;
+    };
+    if value.fract() != 0.0 || *value < f64::from(i32::MIN) || *value > f64::from(i32::MAX) {
+        return;
+    }
+    *value = f64::from((*value as i32).clamp(min, max));
 }

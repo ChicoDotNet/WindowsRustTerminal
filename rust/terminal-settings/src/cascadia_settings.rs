@@ -22,13 +22,15 @@ pub enum CascadiaSettingsError {
 #[derive(Debug, Clone, PartialEq)]
 pub struct CascadiaSettingsDocument {
     document: SettingsDocument,
+    fixups_applied_during_load: bool,
 }
 
 impl CascadiaSettingsDocument {
     /// Parses a complete settings document through the shared serialization
     /// owner and validates portable aggregate members when they are present.
     /// Legacy root profile arrays are canonicalized to `profiles.list`, matching
-    /// the modern shape emitted by CascadiaSettings serialization.
+    /// the modern shape emitted by CascadiaSettings serialization. The portable
+    /// load-fixup flag records migration of legacy root reload-environment state.
     ///
     /// # Errors
     ///
@@ -37,6 +39,10 @@ impl CascadiaSettingsDocument {
     pub fn from_json(input: &str) -> Result<Self, CascadiaSettingsError> {
         let mut document = SettingsDocument::from_json(input)
             .map_err(CascadiaSettingsError::Serialization)?;
+        let fixups_applied_during_load = document
+            .to_json_value()
+            .as_object()
+            .is_some_and(|root| root.contains_key("compatibility.reloadEnvironmentVariables"));
         document
             .canonicalize_legacy_profiles()
             .map_err(CascadiaSettingsError::Serialization)?;
@@ -62,11 +68,34 @@ impl CascadiaSettingsDocument {
             return Err(CascadiaSettingsError::InvalidKeybindingsShape);
         }
 
-        Ok(Self { document })
+        Ok(Self {
+            document,
+            fixups_applied_during_load,
+        })
     }
 
     #[must_use]
     pub const fn to_json_value(&self) -> &JsonValue {
         self.document.to_json_value()
+    }
+
+    /// Reports whether a portable legacy setting required a load-time migration.
+    #[must_use]
+    pub const fn fixups_applied_during_load(&self) -> bool {
+        self.fixups_applied_during_load
+    }
+
+    /// Reads one boolean value from modern `profiles.defaults` after load fixups.
+    #[must_use]
+    pub fn profile_default_bool(&self, key: &str) -> Option<bool> {
+        self.document
+            .to_json_value()
+            .as_object()?
+            .get("profiles")?
+            .as_object()?
+            .get("defaults")?
+            .as_object()?
+            .get(key)?
+            .as_bool()
     }
 }
