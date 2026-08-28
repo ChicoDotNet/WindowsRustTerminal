@@ -9,6 +9,7 @@ pub mod geometry;
 pub mod image_slice;
 pub mod line_rendition;
 pub mod output_cell;
+pub mod reflow;
 pub mod rle;
 pub mod row;
 pub mod row_writer;
