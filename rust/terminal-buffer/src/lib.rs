@@ -20,6 +20,7 @@ pub mod rle;
 pub mod row;
 pub mod row_writer;
 pub mod saved_cursor;
+pub mod screen_alignment;
 pub mod search;
 pub mod sixel_store;
 pub mod tab_stops;
