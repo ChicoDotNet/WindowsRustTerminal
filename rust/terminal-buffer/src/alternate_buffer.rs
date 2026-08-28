@@ -1,4 +1,4 @@
-//! Safe alternate-screen-buffer lifecycle, cursor-state and viewport semantics.
+//! Safe alternate-screen-buffer lifecycle, cursor-state, viewport and terminal-scrolling semantics.
 //!
 //! This owner captures the deterministic product behavior beneath the Host
 //! alternate-buffer tests. Win32 locking, renderer attachment and VT byte
@@ -57,15 +57,20 @@ impl Default for ViewportSize {
 pub struct BufferState {
     pub cursor: CursorState,
     pub viewport: ViewportSize,
+    pub viewport_top: u16,
+    pub virtual_bottom: u16,
     pub magenta_background: bool,
     pub text: String,
 }
 
 impl Default for BufferState {
     fn default() -> Self {
+        let viewport = ViewportSize::default();
         Self {
             cursor: CursorState::default(),
-            viewport: ViewportSize::default(),
+            viewport,
+            viewport_top: 0,
+            virtual_bottom: viewport.height.saturating_sub(1),
             magenta_background: false,
             text: String::new(),
         }
@@ -78,6 +83,7 @@ pub struct AlternateBufferState {
     alternate: Option<BufferState>,
     active_alternate: bool,
     generation: u64,
+    terminal_scrolling: bool,
 }
 
 impl Default for AlternateBufferState {
@@ -94,6 +100,7 @@ impl AlternateBufferState {
             alternate: None,
             active_alternate: false,
             generation: 0,
+            terminal_scrolling: false,
         }
     }
 
@@ -101,7 +108,12 @@ impl AlternateBufferState {
     pub fn with_main_viewport(width: u16, height: u16) -> Self {
         let mut state = Self::new();
         state.main.viewport = ViewportSize::new(width, height);
+        state.main.virtual_bottom = height.saturating_sub(1);
         state
+    }
+
+    pub fn set_terminal_scrolling(&mut self, enabled: bool) {
+        self.terminal_scrolling = enabled;
     }
 
     #[must_use]
@@ -160,7 +172,62 @@ impl AlternateBufferState {
     pub fn resize_alternate_viewport(&mut self, width: u16, height: u16) {
         if let Some(alternate) = self.alternate.as_mut() {
             alternate.viewport = ViewportSize::new(width, height);
+            if self.terminal_scrolling {
+                alternate.viewport_top = 0;
+                alternate.virtual_bottom = height.saturating_sub(1);
+            }
         }
+    }
+
+    /// Models ProcessResizeWindow for the alternate-buffer terminal-scrolling
+    /// path: maximize/restore keeps the alternate anchored at the top and keeps
+    /// virtual bottom aligned with the active viewport bottom.
+    pub fn process_alternate_window_resize(&mut self, width: u16, height: u16) {
+        self.resize_alternate_viewport(width, height);
+    }
+
+    /// Moves the active viewport. When `update_virtual_bottom` is true this is
+    /// a terminal output movement; mouse-style scrollback leaves virtual bottom
+    /// unchanged.
+    pub fn set_active_viewport_top(&mut self, top: u16, update_virtual_bottom: bool) {
+        let active = self.active_mut();
+        active.viewport_top = top;
+        if update_virtual_bottom {
+            active.virtual_bottom = top.saturating_add(active.viewport.height.saturating_sub(1));
+        }
+    }
+
+    /// API cursor positioning is routed through the active screen buffer even
+    /// when the caller holds the main SCREEN_INFORMATION. Under terminal
+    /// scrolling it also snaps the viewport back to the cursor's output origin.
+    pub fn set_console_cursor_position(&mut self, x: u16, y: u16) {
+        let terminal_scrolling = self.terminal_scrolling;
+        let active = self.active_mut();
+        active.cursor.x = x;
+        active.cursor.y = y;
+        if terminal_scrolling {
+            active.viewport_top = y;
+        }
+    }
+
+    /// Minimal text writer for the Microsoft clear-alternate regression seam.
+    pub fn write_active_text(&mut self, text: &str) {
+        let active = self.active_mut();
+        active.text.push_str(text);
+        for ch in text.chars() {
+            if ch == '\n' {
+                active.cursor.x = 0;
+                active.cursor.y = active.cursor.y.saturating_add(1);
+            } else {
+                active.cursor.x = active.cursor.x.saturating_add(1);
+            }
+        }
+    }
+
+    /// ScrollConsoleScreenBufferWImpl with the CMD clear parameters targets the
+    /// active buffer and leaves persistent main contents untouched.
+    pub fn clear_active_text(&mut self) {
+        self.active_mut().text.clear();
     }
 
     /// Creates/replaces the alternate buffer. A replacement always links back
@@ -177,6 +244,8 @@ impl AlternateBufferState {
         self.alternate = Some(BufferState {
             cursor: inherited_cursor,
             viewport: inherited_viewport,
+            viewport_top: 0,
+            virtual_bottom: inherited_viewport.height.saturating_sub(1),
             ..BufferState::default()
         });
         self.active_alternate = true;

@@ -144,3 +144,58 @@ fn microsoft_screen_buffer_resize_alt_buffer_get_screen_buffer_info_contract() {
         }
     }
 }
+
+#[test]
+fn microsoft_screen_buffer_restore_down_alt_buffer_terminal_scrolling_contract() {
+    let mut state = AlternateBufferState::with_main_viewport(80, 25);
+    state.set_terminal_scrolling(true);
+    state.use_alternate();
+    assert_eq!(state.alternate().unwrap().viewport_top, 0);
+    assert_eq!(state.alternate().unwrap().virtual_bottom, 24);
+
+    state.process_alternate_window_resize(160, 50);
+    assert_eq!(state.alternate().unwrap().viewport_top, 0);
+    assert_eq!(state.alternate().unwrap().virtual_bottom, 49);
+
+    state.process_alternate_window_resize(80, 25);
+    assert_eq!(state.alternate().unwrap().viewport_top, 0);
+    assert_eq!(state.alternate().unwrap().virtual_bottom, 24);
+}
+
+#[test]
+fn microsoft_screen_buffer_snap_cursor_terminal_scrolling_contract() {
+    let mut state = AlternateBufferState::with_main_viewport(80, 25);
+    state.set_terminal_scrolling(true);
+    state.set_active_viewport_top(10, true);
+    assert_eq!(state.main().viewport_top, 10);
+    assert_eq!(state.main().virtual_bottom, 34);
+
+    state.set_active_viewport_top(2, false);
+    assert_eq!(state.main().viewport_top, 2);
+    assert_eq!(state.main().virtual_bottom, 34);
+
+    state.set_console_cursor_position(0, 10);
+    assert_eq!((state.main().cursor.x, state.main().cursor.y), (0, 10));
+    assert_eq!(state.main().viewport_top, 10);
+    assert_eq!(state.main().virtual_bottom, 34);
+}
+
+#[test]
+fn microsoft_screen_buffer_clear_alternate_buffer_contract() {
+    let mut state = AlternateBufferState::with_main_viewport(80, 25);
+    state.write_active_text("foo\nfoo");
+    assert_eq!(state.main().text, "foo\nfoo");
+    assert_eq!((state.main().cursor.x, state.main().cursor.y), (3, 1));
+
+    state.use_alternate();
+    state.set_console_cursor_position(0, 0);
+    state.write_active_text("foo\nfoo");
+    assert_eq!(state.alternate().unwrap().text, "foo\nfoo");
+    state.clear_active_text();
+    assert!(state.alternate().unwrap().text.is_empty());
+    state.set_console_cursor_position(0, 0);
+    assert_eq!((state.alternate().unwrap().cursor.x, state.alternate().unwrap().cursor.y), (0, 0));
+
+    assert_eq!(state.main().text, "foo\nfoo");
+    assert_eq!((state.main().cursor.x, state.main().cursor.y), (3, 1));
+}
