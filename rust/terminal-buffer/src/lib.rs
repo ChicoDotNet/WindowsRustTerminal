@@ -5,6 +5,7 @@
 
 #![forbid(unsafe_code)]
 
+pub mod clipboard_text;
 pub mod geometry;
 pub mod image_slice;
 pub mod line_rendition;
