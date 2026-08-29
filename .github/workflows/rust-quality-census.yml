@@ -69,6 +69,8 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
           key: quality-census-tools-${{ runner.os }}-${{ hashFiles('tools/rust/quality-census-tools.json') }}
+          restore-keys: |
+            quality-census-tools-${{ runner.os }}-
 
       - name: Install pinned analysis tools
         shell: bash
