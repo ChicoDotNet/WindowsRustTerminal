@@ -31,7 +31,7 @@ impl TilColor {
 
     #[must_use]
     pub const fn to_colorref(self) -> u32 {
-        u32::from(self.r) | (u32::from(self.g) << 8) | (u32::from(self.b) << 16)
+        (self.r as u32) | ((self.g as u32) << 8) | ((self.b as u32) << 16)
     }
 
     #[must_use]
