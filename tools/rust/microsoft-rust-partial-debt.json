@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "H11 classifies every effective Partial Microsoft source contract for the R08 exit gate. Classification is deliberately conservative: Partial is functional debt unless an explicit evidence-backed exception proves the remaining difference is platform-boundary, language/API-shape, or upstream-ignored.",
-  "expectedPartialTotal": 294,
+  "expectedPartialTotal": 236,
   "defaultClass": "functional",
   "allowedClasses": [
     "functional",
@@ -13,9 +13,9 @@
     {
       "suite": "adapter",
       "source": "inputTest.cpp",
-      "method": "TerminalInputTests",
+      "method": "DifferentModifiersTest",
       "class": "platform-boundary",
-      "reason": "The remaining Microsoft branches are MapVirtualKeyW/default-character translation and native non-KEY INPUT_RECORD dispatch, while the deterministic VT key semantics are already witnessed in Rust."
+      "reason": "The remaining key-identity observations are derived through Windows keyboard-layout translation; deterministic emitted VT semantics already have direct Rust evidence."
     },
     {
       "suite": "adapter",
@@ -27,9 +27,9 @@
     {
       "suite": "adapter",
       "source": "inputTest.cpp",
-      "method": "DifferentModifiersTest",
+      "method": "TerminalInputTests",
       "class": "platform-boundary",
-      "reason": "The remaining key-identity observations are derived through Windows keyboard-layout translation; deterministic emitted VT semantics already have direct Rust evidence."
+      "reason": "The remaining Microsoft branches are MapVirtualKeyW/default-character translation and native non-KEY INPUT_RECORD dispatch, while the deterministic VT key semantics are already witnessed in Rust."
     },
     {
       "suite": "adapter",
@@ -39,67 +39,10 @@
       "reason": "The Rust core already preserves the dead-key no-output semantic; only the Windows ToUnicodeEx KeyboardMapper adapter remains outside the portable owner."
     },
     {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "KeyChords",
-      "class": "platform-boundary",
-      "reason": "Rust owns the KeyChord representation and all deterministic serialization/parsing vectors, but Microsoft's raw-scancode roundtrip derives the effective VKey for a raw scan code through active-layout MapVirtualKeyW."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "KeyBindingsTests.cpp",
-      "method": "LayerScancodeKeybindings",
-      "class": "platform-boundary",
-      "reason": "Rust owns effective-chord layering and reproduces the Microsoft US-layout sc(41)/grave vector; general scancode-to-VKey/character equivalence remains an active Windows keyboard-layout mapping responsibility."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "MediaResourceTests.cpp",
-      "method": "RealResolverFilePaths",
-      "class": "platform-boundary",
-      "reason": "Rust owns Windows-style path normalization, relative traversal, environment-expansion flow and candidate validation; actual file existence and environment lookup remain Win32 adapter responsibilities."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "MediaResourceTests.cpp",
-      "method": "RealResolverSpecialKeywords",
-      "class": "platform-boundary",
-      "reason": "Rust owns the none/desktopWallpaper decision and success/failure behavior; desktop-wallpaper discovery remains a Windows system-parameter operation."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "MediaResourceTests.cpp",
-      "method": "RealResolverUrlCases",
-      "class": "platform-boundary",
-      "reason": "Rust owns the file/HTTPS/ms-resource/ms-appx and rejected-scheme decisions plus local-leaf fallback; file existence and package context remain Windows adapter responsibilities."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "MediaResourceTests.cpp",
-      "method": "RealResolverUNCCases",
-      "class": "platform-boundary",
-      "reason": "Rust preserves UNC and Win32-namespace path candidates and resolver decisions through MediaPlatform; real network-share and local-path existence remain platform operations."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "TerminalSettingsTests.cpp",
-      "method": "CommandLineToArgvW",
-      "class": "language/API-shape",
-      "reason": "Rust owns the Windows argument value and quoting semantics used by command-line normalization; Microsoft's remaining assertion is the HLOCAL/argv contiguous-memory layout of the Win32 CommandLineToArgvW API, which is intentionally replaced by Rust Vec ownership."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "TerminalSettingsTests.cpp",
-      "method": "NormalizeCommandLine",
-      "class": "platform-boundary",
-      "reason": "Rust owns tokenization, progressive unquoted executable reconstruction and NUL-separated normalized arguments; ExpandEnvironmentStringsW, SearchPathW, file attributes and filesystem canonical casing remain behind CommandLinePlatform."
-    },
-    {
-      "suite": "unitSettingsModel",
-      "source": "TerminalSettingsTests.cpp",
-      "method": "GetProfileForArgsWithCommandline",
-      "class": "platform-boundary",
-      "reason": "Rust owns connectionType exclusion, normalized longest-prefix profile selection, invalid-path preservation and defaults fallback; production normalization still depends on the classified Windows environment/SearchPath/filesystem adapter."
+      "suite": "terminalApp",
+      "source": "FzfTests.cpp",
+      "class": "upstream-ignored",
+      "reason": "Microsoft marks this source method Ignore=true because its current C++ matcher does not implement the ß-to-ss multi-code-point full-fold expectation."
     },
     {
       "suite": "til",
@@ -133,21 +76,15 @@
     },
     {
       "suite": "til",
-      "source": "mutex.cpp",
-      "class": "platform-boundary",
-      "reason": "Portable exclusion/ownership semantics are represented by Rust Mutex; the remaining implementation details are Windows synchronization mechanics."
+      "source": "SPSCTests.cpp",
+      "class": "language/API-shape",
+      "reason": "The portable producer/consumer ordering baseline is represented by Rust synchronization; TIL revolution/drop internals are implementation mechanics rather than product semantics."
     },
     {
       "suite": "til",
       "source": "SmallVectorTests.cpp",
       "class": "language/API-shape",
       "reason": "Insertion/copy/vector observables use Rust Vec; small-buffer optimization and C++ self-move mechanics are implementation-shape differences."
-    },
-    {
-      "suite": "til",
-      "source": "SPSCTests.cpp",
-      "class": "language/API-shape",
-      "reason": "The portable producer/consumer ordering baseline is represented by Rust synchronization; TIL revolution/drop internals are implementation mechanics rather than product semantics."
     },
     {
       "suite": "til",
@@ -162,11 +99,73 @@
       "reason": "Rust decode_utf16 owns surrogate pairing/replacement; TIL's borrowed-slice utf16_next iterator API is intentionally not reproduced."
     },
     {
-      "suite": "terminalApp",
-      "source": "FzfTests.cpp",
-      "method": "German_CaseMisMatch_FoldResultsInMultipleCodePoints",
-      "class": "upstream-ignored",
-      "reason": "Microsoft marks this source method Ignore=true because its current C++ matcher does not implement the ß-to-ss multi-code-point full-fold expectation."
+      "suite": "til",
+      "source": "mutex.cpp",
+      "class": "platform-boundary",
+      "reason": "Portable exclusion/ownership semantics are represented by Rust Mutex; the remaining implementation details are Windows synchronization mechanics."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "KeyBindingsTests.cpp",
+      "method": "KeyChords",
+      "class": "platform-boundary",
+      "reason": "Rust owns the KeyChord representation and all deterministic serialization/parsing vectors, but Microsoft's raw-scancode roundtrip derives the effective VKey for a raw scan code through active-layout MapVirtualKeyW."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "KeyBindingsTests.cpp",
+      "method": "LayerScancodeKeybindings",
+      "class": "platform-boundary",
+      "reason": "Rust owns effective-chord layering and reproduces the Microsoft US-layout sc(41)/grave vector; general scancode-to-VKey/character equivalence remains an active Windows keyboard-layout mapping responsibility."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverFilePaths",
+      "class": "platform-boundary",
+      "reason": "Rust owns Windows-style path normalization, relative traversal, environment-expansion flow and candidate validation; actual file existence and environment lookup remain Win32 adapter responsibilities."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverSpecialKeywords",
+      "class": "platform-boundary",
+      "reason": "Rust owns the none/desktopWallpaper decision and success/failure behavior; desktop-wallpaper discovery remains a Windows system-parameter operation."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverUNCCases",
+      "class": "platform-boundary",
+      "reason": "Rust preserves UNC and Win32-namespace path candidates and resolver decisions through MediaPlatform; real network-share and local-path existence remain platform operations."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "MediaResourceTests.cpp",
+      "method": "RealResolverUrlCases",
+      "class": "platform-boundary",
+      "reason": "Rust owns the file/HTTPS/ms-resource/ms-appx and rejected-scheme decisions plus local-leaf fallback; file existence and package context remain Windows adapter responsibilities."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "CommandLineToArgvW",
+      "class": "language/API-shape",
+      "reason": "Rust owns the Windows argument value and quoting semantics used by command-line normalization; Microsoft's remaining assertion is the HLOCAL/argv contiguous-memory layout of the Win32 CommandLineToArgvW API, which is intentionally replaced by Rust Vec ownership."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "GetProfileForArgsWithCommandline",
+      "class": "platform-boundary",
+      "reason": "Rust owns connectionType exclusion, normalized longest-prefix profile selection, invalid-path preservation and defaults fallback; production normalization still depends on the classified Windows environment/SearchPath/filesystem adapter."
+    },
+    {
+      "suite": "unitSettingsModel",
+      "source": "TerminalSettingsTests.cpp",
+      "method": "NormalizeCommandLine",
+      "class": "platform-boundary",
+      "reason": "Rust owns tokenization, progressive unquoted executable reconstruction and NUL-separated normalized arguments; ExpandEnvironmentStringsW, SearchPathW, file attributes and filesystem canonical casing remain behind CommandLinePlatform."
     }
   ]
 }
