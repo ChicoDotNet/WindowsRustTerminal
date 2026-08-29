@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "description": "H11 classifies every effective Partial Microsoft source contract for the R08 exit gate. Classification is deliberately conservative: Partial is functional debt unless an explicit evidence-backed exception proves the remaining difference is platform-boundary, language/API-shape, or upstream-ignored.",
-  "expectedPartialTotal": 122,
+  "expectedPartialTotal": 124,
   "defaultClass": "functional",
   "allowedClasses": [
     "functional",
