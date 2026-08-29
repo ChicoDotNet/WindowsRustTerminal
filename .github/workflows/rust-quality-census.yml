@@ -36,6 +36,9 @@ jobs:
     name: structural + runtime quality census
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: write
     env:
       QUALITY_ROOT: artifacts/quality-census
       QUALITY_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
@@ -331,3 +334,83 @@ jobs:
           path: artifacts/quality-census/
           if-no-files-found: error
           retention-days: 90
+
+      - name: Prune superseded Quality Census caches on this ref
+        if: success() && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          QUALITY_CACHE_REF: ${{ github.ref }}
+          QUALITY_TOOLS_CACHE_KEY: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
+          QUALITY_COVERAGE_CACHE_KEY: ${{ steps.cache-coverage-restore.outputs.cache-primary-key }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          from urllib.error import HTTPError
+          from urllib.parse import urlencode
+          from urllib.request import Request, urlopen
+
+          repo = os.environ["GITHUB_REPOSITORY"]
+          token = os.environ["GH_TOKEN"]
+          ref = os.environ["QUALITY_CACHE_REF"]
+          keep_keys = {
+              os.environ["QUALITY_TOOLS_CACHE_KEY"],
+              os.environ["QUALITY_COVERAGE_CACHE_KEY"],
+          }
+          prefixes = ("quality-census-tools-", "quality-census-llvm-cov-")
+          headers = {
+              "Accept": "application/vnd.github+json",
+              "Authorization": f"Bearer {token}",
+              "X-GitHub-Api-Version": "2022-11-28",
+          }
+          api = f"https://api.github.com/repos/{repo}/actions/caches"
+          stale = []
+          page = 1
+
+          while True:
+              query = urlencode({"ref": ref, "per_page": 100, "page": page})
+              request = Request(f"{api}?{query}", headers=headers)
+              with urlopen(request) as response:
+                  payload = json.load(response)
+              caches = payload.get("actions_caches", [])
+              stale.extend(
+                  cache
+                  for cache in caches
+                  if cache["key"].startswith(prefixes) and cache["key"] not in keep_keys
+              )
+              if len(caches) < 100:
+                  break
+              page += 1
+
+          deleted = 0
+          freed_bytes = 0
+          for cache in stale:
+              request = Request(f"{api}/{cache['id']}", headers=headers, method="DELETE")
+              try:
+                  with urlopen(request) as response:
+                      response.read()
+              except HTTPError as exc:
+                  if exc.code == 404:
+                      continue
+                  raise
+              deleted += 1
+              freed_bytes += int(cache.get("size_in_bytes", 0))
+              print(f"Deleted stale Quality Census cache: {cache['key']} ({cache['id']})")
+
+          freed_mib = freed_bytes / (1024 * 1024)
+          print(f"Kept current Quality Census cache keys: {sorted(keep_keys)}")
+          print(f"Pruned {deleted} stale cache(s) from {ref}; freed {freed_mib:.1f} MiB.")
+
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with Path(summary).open("a", encoding="utf-8") as stream:
+                  stream.write(
+                      f"\n## Quality Census cache hygiene\n\n"
+                      f"Pruned **{deleted}** superseded cache(s) from `{ref}`, "
+                      f"freeing **{freed_mib:.1f} MiB**. Only the current tools and "
+                      f"coverage keys were retained for this ref.\n"
+                  )
+          PY
