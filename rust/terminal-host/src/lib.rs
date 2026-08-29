@@ -34,5 +34,6 @@ pub mod vt_console_output;
 pub mod vt_handles;
 pub mod vt_io_protocol;
 pub mod vt_io_state;
+pub mod vt_legacy_console_write;
 pub mod vt_screen_dump;
 pub mod vt_writer_sequences;
