@@ -1,11 +1,11 @@
 {
   "schemaVersion": 1,
   "description": "R08 Host ScreenBuffer DECSTR checkpoint: safe Rust owns soft-reset cursor preservation, DECOM reset semantics and main/alternate cursor-state isolation.",
-  "expectedCoveragePriority": 234,
+  "expectedCoveragePriority": 235,
   "expectedCoverage": {
     "host": {"Exact":198,"Partial":82,"Platform-only":5,"Missing":46}
   },
-  "expectedGlobalCoveragePriority": 234,
+  "expectedGlobalCoveragePriority": 235,
   "expectedGlobalCoverage": {"Exact":602,"Stronger":11,"Partial":316,"Platform-only":63,"UI-managed":22,"Missing":84},
   "entries": [
     {"suite":"host","source":"ScreenBufferTests.cpp","method":"VtSoftResetCursorPosition","coverage":"Exact","rustWitnesses":["microsoft_vt_soft_reset_cursor_position_contract"],"notes":"SoftResetState reproduces Microsoft's DECSTR observable: the active cursor position is preserved, DECOM is reset, existing margins may be reapplied, and subsequent CUP addressing resolves from the screen origin rather than the margin origin."},
