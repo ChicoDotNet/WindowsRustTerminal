@@ -1,4 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+
+use crate::text_buffer::TextBuffer;
 
 /// Safe, platform-neutral ownership of the hyperlink map semantics used by TextBuffer.
 ///
@@ -53,6 +55,22 @@ impl HyperlinkStore {
         self.uri_by_id.is_empty()
     }
 
+    /// Drops hyperlink-map entries that are no longer referenced by any live
+    /// text-buffer cell. Custom-id aliases are pruned with the numeric map so the
+    /// two registries cannot diverge after circular-buffer rotation.
+    pub fn trim_to_buffer(&mut self, buffer: &TextBuffer) {
+        let live_ids: HashSet<u16> = buffer
+            .logical_rows()
+            .flat_map(|row| row.attributes().iter().copied())
+            .map(|attribute| attribute.hyperlink_id())
+            .filter(|&id| id != 0)
+            .collect();
+
+        self.uri_by_id.retain(|id, _| live_ids.contains(id));
+        self.custom_pair_to_id
+            .retain(|_, id| live_ids.contains(id));
+    }
+
     fn allocate_id(&mut self) -> u16 {
         let id = self.next_id;
         self.next_id = self.next_id.checked_add(1).expect("hyperlink id space exhausted");
@@ -63,6 +81,8 @@ impl HyperlinkStore {
 #[cfg(test)]
 mod tests {
     use super::HyperlinkStore;
+    use crate::text_attribute::TextAttribute;
+    use crate::text_buffer::TextBuffer;
 
     #[test]
     fn anonymous_hyperlinks_are_independent() {
@@ -91,5 +111,47 @@ mod tests {
         assert_ne!(first, second);
         assert_eq!(store.uri(first), Some("https://example.test/a"));
         assert_eq!(store.uri(second), Some("https://example.test/b"));
+    }
+
+    #[test]
+    fn microsoft_text_buffer_hyperlink_trim_contract() {
+        let fill = TextAttribute::default();
+        let mut buffer = TextBuffer::new(80, 10, fill).unwrap();
+        let mut store = HyperlinkStore::new();
+        let obsolete = store.add("test.url", Some("CustomId"));
+        let live = store.add("other.url", Some("OtherCustomId"));
+
+        let mut obsolete_attr = fill;
+        obsolete_attr.set_hyperlink_id(obsolete);
+        buffer.row_mut(0).set_attr_to_end(70, obsolete_attr);
+        let mut live_attr = fill;
+        live_attr.set_hyperlink_id(live);
+        buffer.row_mut(5).set_attr_to_end(70, live_attr);
+
+        buffer.rotate_up(1, fill);
+        store.trim_to_buffer(&buffer);
+
+        assert_eq!(store.uri(obsolete), None);
+        assert_eq!(store.uri(live), Some("other.url"));
+        assert_eq!(store.len(), 1);
+    }
+
+    #[test]
+    fn microsoft_text_buffer_no_hyperlink_trim_contract() {
+        let fill = TextAttribute::default();
+        let mut buffer = TextBuffer::new(80, 10, fill).unwrap();
+        let mut store = HyperlinkStore::new();
+        let id = store.add("test.url", Some("CustomId"));
+
+        let mut attribute = fill;
+        attribute.set_hyperlink_id(id);
+        buffer.row_mut(0).set_attr_to_end(70, attribute);
+        buffer.row_mut(5).set_attr_to_end(70, attribute);
+
+        buffer.rotate_up(1, fill);
+        store.trim_to_buffer(&buffer);
+
+        assert_eq!(store.uri(id), Some("test.url"));
+        assert_eq!(store.len(), 1);
     }
 }
