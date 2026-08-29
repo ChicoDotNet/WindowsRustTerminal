@@ -92,6 +92,67 @@ impl ColorTableState {
         }
     }
 
+    /// Applies the color definitions carried by DEC's DCS `2$p` report.
+    ///
+    /// Each slash-separated definition is `index;color-space;p1;p2;p3`, where
+    /// color-space 1 is DEC HLS and color-space 2 is RGB percentage. Omitted
+    /// components are zero, hue wraps at 360 degrees, percentage components are
+    /// clamped to 100, and the complete payload is applied transactionally.
+    pub fn apply_dec_color_definitions(&mut self, payload: &str) -> bool {
+        let mut updates = Vec::new();
+
+        for definition in payload.split('/') {
+            if definition.is_empty() {
+                return false;
+            }
+
+            let fields: Vec<_> = definition.split(';').collect();
+            if fields.len() < 2 || fields.len() > 5 {
+                return false;
+            }
+
+            let Ok(index) = fields[0].parse::<usize>() else {
+                return false;
+            };
+            if index >= PALETTE_SIZE {
+                return false;
+            }
+
+            let Ok(color_space) = fields[1].parse::<u16>() else {
+                return false;
+            };
+            let Some(first) = parse_dec_parameter(fields.get(2).copied()) else {
+                return false;
+            };
+            let Some(second) = parse_dec_parameter(fields.get(3).copied()) else {
+                return false;
+            };
+            let Some(third) = parse_dec_parameter(fields.get(4).copied()) else {
+                return false;
+            };
+
+            let color = match color_space {
+                1 => dec_hls_to_rgb(first, second, third),
+                2 => Rgb::new(
+                    percentage_to_byte(first),
+                    percentage_to_byte(second),
+                    percentage_to_byte(third),
+                ),
+                _ => return false,
+            };
+            updates.push((index, color));
+        }
+
+        if updates.is_empty() {
+            return false;
+        }
+
+        for (index, color) in updates {
+            self.table[index] = color;
+        }
+        true
+    }
+
     /// Applies DEC item color assignment. Item 1 owns normal-text aliases and
     /// item 2 owns frame aliases; unsupported items are ignored.
     pub fn assign_color_aliases(&mut self, item: u16, foreground: usize, background: usize) -> bool {
@@ -198,6 +259,72 @@ fn parse_xterm_component(component: &str) -> Option<u8> {
     u8::try_from(scaled).ok()
 }
 
+fn parse_dec_parameter(parameter: Option<&str>) -> Option<u32> {
+    match parameter {
+        None | Some("") => Some(0),
+        Some(value) => value.parse::<u32>().ok(),
+    }
+}
+
+fn percentage_to_byte(percentage: u32) -> u8 {
+    let bounded = percentage.min(100);
+    u8::try_from((bounded * 255 + 50) / 100).expect("bounded percentage maps to one byte")
+}
+
+fn dec_hls_to_rgb(hue: u32, lightness: u32, saturation: u32) -> Rgb {
+    let lightness = f64::from(lightness.min(100)) / 100.0;
+    let saturation_percent = saturation.min(100);
+
+    if saturation_percent == 0 {
+        let gray = unit_to_byte(lightness);
+        return Rgb::new(gray, gray, gray);
+    }
+
+    let saturation = f64::from(saturation_percent) / 100.0;
+    let standard_hue = (f64::from(hue % 360) + 240.0) / 360.0;
+    let standard_hue = if standard_hue >= 1.0 {
+        standard_hue - 1.0
+    } else {
+        standard_hue
+    };
+
+    let upper = if lightness < 0.5 {
+        lightness * (1.0 + saturation)
+    } else {
+        lightness + saturation - lightness * saturation
+    };
+    let lower = 2.0 * lightness - upper;
+
+    Rgb::new(
+        unit_to_byte(hue_channel(lower, upper, standard_hue + 1.0 / 3.0)),
+        unit_to_byte(hue_channel(lower, upper, standard_hue)),
+        unit_to_byte(hue_channel(lower, upper, standard_hue - 1.0 / 3.0)),
+    )
+}
+
+fn hue_channel(lower: f64, upper: f64, mut hue: f64) -> f64 {
+    if hue < 0.0 {
+        hue += 1.0;
+    }
+    if hue > 1.0 {
+        hue -= 1.0;
+    }
+
+    if hue < 1.0 / 6.0 {
+        lower + (upper - lower) * 6.0 * hue
+    } else if hue < 0.5 {
+        upper
+    } else if hue < 2.0 / 3.0 {
+        lower + (upper - lower) * (2.0 / 3.0 - hue) * 6.0
+    } else {
+        lower
+    }
+}
+
+fn unit_to_byte(value: f64) -> u8 {
+    (value * 255.0).round().clamp(0.0, 255.0) as u8
+}
+
 fn initial_aliases() -> [usize; 4] {
     [
         DEFAULT_FOREGROUND,
@@ -252,5 +379,13 @@ mod tests {
         let before = state.clone();
         assert!(!state.apply_osc(4, "5;rgb:09/09/09;6;rgb://"));
         assert_eq!(state, before);
+    }
+
+    #[test]
+    fn dec_hls_matches_vt340_reference_vectors() {
+        assert_eq!(dec_hls_to_rgb(0, 49, 59), Rgb::new(51, 51, 199));
+        assert_eq!(dec_hls_to_rgb(120, 46, 71), Rgb::new(201, 34, 34));
+        assert_eq!(dec_hls_to_rgb(240, 49, 59), Rgb::new(51, 199, 51));
+        assert_eq!(dec_hls_to_rgb(480, 50, 100), Rgb::new(255, 0, 0));
     }
 }
