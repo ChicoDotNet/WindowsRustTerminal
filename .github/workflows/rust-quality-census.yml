@@ -1,0 +1,207 @@
+name: Quality Census C++ ↔ Rust
+
+on:
+  push:
+    branches:
+      - "rust/main"
+    paths:
+      - "rust/**"
+  pull_request:
+    branches:
+      - "rust/main"
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "rust/**"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rust-quality-census-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  census:
+    name: structural + runtime quality census
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      QUALITY_ROOT: artifacts/quality-census
+      QUALITY_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
+    steps:
+      - name: Checkout measured revision
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Confirm Rust workspace and toolchain
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f Cargo.toml
+          test -f Cargo.lock
+          test -f rust-toolchain.toml
+          test -d rust
+          python3 tools/rust/quality_census.py validate-tools \
+            --path tools/rust/quality-census-tools.json
+          rustup show
+          cargo metadata --no-deps --format-version 1 > /dev/null
+
+      - name: Cache pinned analysis tools
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: quality-census-tools-${{ runner.os }}-${{ hashFiles('tools/rust/quality-census-tools.json') }}
+
+      - name: Install pinned analysis tools
+        shell: bash
+        run: |
+          set -euo pipefail
+          eval "$(
+            python3 - <<'PY'
+          import json
+          with open("tools/rust/quality-census-tools.json", encoding="utf-8") as f:
+              data = json.load(f)
+          for key, value in data["tools"].items():
+              shell_key = key.upper().replace("-", "_")
+              print(f'{shell_key}_VERSION={value["version"]}')
+          PY
+          )"
+
+          rustup component add llvm-tools-preview
+
+          if ! cargo-llvm-cov --version 2>/dev/null | grep -Fq "$CARGO_LLVM_COV_VERSION"; then
+            cargo install --locked --version "$CARGO_LLVM_COV_VERSION" cargo-llvm-cov
+          fi
+          if ! rust-code-analysis-cli --version 2>/dev/null | grep -Fq "$RUST_CODE_ANALYSIS_CLI_VERSION"; then
+            cargo install --locked --version "$RUST_CODE_ANALYSIS_CLI_VERSION" rust-code-analysis-cli
+          fi
+          if ! cargo-modules --version 2>/dev/null | grep -Fq "$CARGO_MODULES_VERSION"; then
+            cargo install --locked --version "$CARGO_MODULES_VERSION" cargo-modules
+          fi
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "$tmp_dir"' EXIT
+          if ! tokei --version 2>/dev/null | grep -Fq "$TOKEI_VERSION" ||
+             ! tokei "$tmp_dir" --output json >/dev/null 2>&1; then
+            cargo install --locked --version "$TOKEI_VERSION" --features all --force tokei
+          fi
+
+      - name: Record tool versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$QUALITY_ROOT/raw"
+          {
+            echo "rustc=$(rustc --version)"
+            echo "cargo=$(cargo --version)"
+            echo "cargo-llvm-cov=$(cargo-llvm-cov --version)"
+            echo "rust-code-analysis-cli=$(rust-code-analysis-cli --version)"
+            echo "tokei=$(tokei --version)"
+            echo "cargo-modules=$(cargo-modules --version)"
+            echo "python=$(python3 --version)"
+            echo "pwsh=$(pwsh --version)"
+          } > "$QUALITY_ROOT/raw/tool-versions.txt"
+
+      - name: Derive comparable C++ ↔ Rust scope from ownership maps
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/rust/quality_census.py scope --artifact-root "$QUALITY_ROOT"
+
+      - name: Capture authoritative R08 functional census
+        shell: bash
+        run: |
+          set -euo pipefail
+          set -o pipefail
+          pwsh -NoProfile -File ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1 2>&1 \
+            | tee "$QUALITY_ROOT/raw/functional-global.log"
+          pwsh -NoProfile -File ./tools/rust/Test-R08FunctionalDebt.ps1 2>&1 \
+            | tee "$QUALITY_ROOT/raw/functional-debt.log"
+
+      - name: Measure Rust runtime coverage
+        shell: bash
+        run: |
+          set -euo pipefail
+          cargo llvm-cov clean --workspace
+          cargo llvm-cov --workspace --all-targets --locked --no-report
+          cargo llvm-cov report \
+            --json \
+            --ignore-filename-regex '(^|/)rust/[^/]+/tests/' \
+            --output-path "$QUALITY_ROOT/raw/coverage.json"
+          cargo llvm-cov report \
+            --lcov \
+            --ignore-filename-regex '(^|/)rust/[^/]+/tests/' \
+            --output-path "$QUALITY_ROOT/raw/coverage.lcov"
+          cargo llvm-cov report \
+            --html \
+            --ignore-filename-regex '(^|/)rust/[^/]+/tests/' \
+            --output-dir "$QUALITY_ROOT/coverage-html"
+
+      - name: Measure LOC, complexity, maintainability and Halstead
+        shell: bash
+        run: |
+          set -euo pipefail
+          for dir in \
+            rca-rust-workspace \
+            rca-rust-comparable \
+            rca-cpp-comparable \
+            rca-rust-production \
+            rca-rust-tests
+          do
+            mkdir -p "$QUALITY_ROOT/raw/$dir"
+          done
+
+          rust-code-analysis-cli -m -p rust \
+            -O json -o "$QUALITY_ROOT/raw/rca-rust-workspace"
+          rust-code-analysis-cli -m -p "$QUALITY_ROOT/staging/rust-comparable" \
+            -O json -o "$QUALITY_ROOT/raw/rca-rust-comparable"
+          rust-code-analysis-cli -m -p "$QUALITY_ROOT/staging/cpp-comparable" \
+            -O json -o "$QUALITY_ROOT/raw/rca-cpp-comparable"
+          rust-code-analysis-cli -m -p "$QUALITY_ROOT/staging/rust-production" \
+            -O json -o "$QUALITY_ROOT/raw/rca-rust-production"
+          rust-code-analysis-cli -m -p "$QUALITY_ROOT/staging/rust-tests" \
+            -O json -o "$QUALITY_ROOT/raw/rca-rust-tests"
+
+      - name: Cross-check physical size with tokei
+        shell: bash
+        run: |
+          set -euo pipefail
+          tokei rust --output json > "$QUALITY_ROOT/raw/tokei-rust-workspace.json"
+          tokei "$QUALITY_ROOT/staging/rust-comparable" --output json \
+            > "$QUALITY_ROOT/raw/tokei-rust-comparable.json"
+          tokei "$QUALITY_ROOT/staging/cpp-comparable" --output json \
+            > "$QUALITY_ROOT/raw/tokei-cpp-comparable.json"
+
+      - name: Measure internal Rust coupling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/rust/quality_census.py coupling --artifact-root "$QUALITY_ROOT"
+
+      - name: Build stable census and Step Summary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/rust/quality_census.py aggregate \
+            --artifact-root "$QUALITY_ROOT" \
+            --output "$QUALITY_ROOT/quality-census.json" \
+            --summary "$QUALITY_ROOT/summary.md"
+          python3 -m json.tool "$QUALITY_ROOT/quality-census.json" >/dev/null
+          cat "$QUALITY_ROOT/summary.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload machine-readable census and raw evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: rust-quality-census-${{ github.run_id }}
+          path: artifacts/quality-census/
+          if-no-files-found: error
+          retention-days: 90
