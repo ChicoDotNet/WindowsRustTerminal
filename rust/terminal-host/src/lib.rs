@@ -29,6 +29,7 @@ pub mod search;
 pub mod title_translation;
 pub mod vt_api_redirection;
 pub mod vt_char_info;
+pub mod vt_handles;
 pub mod vt_io_protocol;
 pub mod vt_io_state;
 pub mod vt_screen_dump;
