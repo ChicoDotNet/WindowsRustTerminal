@@ -1,10 +1,11 @@
-//! Safe host output coordination for printable text and backspace.
+//! Safe host output coordination for printable text, inactive controls and backspace.
 //!
 //! The VT parser and Win32 adapters decide which path supplies the text. Once
 //! text reaches the buffer, both the VT stream and `WriteCharsLegacy` must store
 //! the complete modern `TextAttribute` without converting it back to a legacy
 //! WORD. Backspace is cursor movement only: it never rewrites the cell being
-//! left or the cell the cursor moves onto.
+//! left or the cell the cursor moves onto. C0 controls that Windows Terminal
+//! classifies as inactive are discarded without writing or moving the cursor.
 
 use crate::row::RowError;
 use crate::row_writer::replace_text_with_attribute;
@@ -12,6 +13,11 @@ use crate::text_attribute::TextAttribute;
 use crate::text_buffer::{TextBuffer, TextBufferPoint};
 
 const BACKSPACE: u16 = 0x0008;
+
+#[must_use]
+const fn is_inactive_control(unit: u16) -> bool {
+    matches!(unit, 0x0000..=0x0007 | 0x000e..=0x0019 | 0x001c..=0x001f)
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct HostWriteState {
@@ -42,7 +48,8 @@ impl HostWriteState {
         self.current_attribute = attribute;
     }
 
-    /// Applies the screen-buffer side of ordinary VT text plus BS controls.
+    /// Applies the screen-buffer side of ordinary VT text, inactive C0 controls
+    /// and BS cursor movement.
     pub fn write_vt(&mut self, buffer: &mut TextBuffer, text: &[u16]) -> Result<(), RowError> {
         self.write_stream(buffer, text)
     }
@@ -68,12 +75,14 @@ impl HostWriteState {
         let mut run_start = 0;
 
         for (index, unit) in text.iter().copied().enumerate() {
-            if unit != BACKSPACE {
+            if unit != BACKSPACE && !is_inactive_control(unit) {
                 continue;
             }
 
             self.write_run(buffer, &text[run_start..index])?;
-            self.cursor_left(1);
+            if unit == BACKSPACE {
+                self.cursor_left(1);
+            }
             run_start = index + 1;
         }
 
