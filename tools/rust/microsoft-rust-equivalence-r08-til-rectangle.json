@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "description": "R08 functional-debt checkpoint: close the complete Microsoft til RectangleTests.cpp family with a dedicated safe Rust rectangle algebra owner and direct Microsoft-derived witnesses.",
+  "expectedCoveragePriority": 304,
+  "expectedCoverage": {
+    "til": {
+      "Exact": 84,
+      "Partial": 110,
+      "Platform-only": 5
+    }
+  },
+  "expectedGlobalCoveragePriority": 304,
+  "expectedGlobalCoverage": {
+    "Exact": 766,
+    "Stronger": 11,
+    "Partial": 236,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 0
+  },
+  "sourceRules": [
+    {
+      "suite": "til",
+      "source": "RectangleTests.cpp",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_rectangle_construction_value_contract",
+        "microsoft_rectangle_boolean_union_intersection_contract",
+        "microsoft_rectangle_subtraction_contract",
+        "microsoft_rectangle_translation_scaling_contract",
+        "microsoft_rectangle_accessors_contains_index_contract",
+        "microsoft_rectangle_projection_contract",
+        "microsoft_rectangle_iterator_contract",
+        "microsoft_rectangle_float_math_contract"
+      ],
+      "notes": "The dedicated safe Rust TilRect owner reproduces all 58 Microsoft RectangleTests contracts: construction/value semantics, validity, union/intersection/subtraction, point translation, checked scale up/down, accessors and narrow casts, containment, row-major point/index mapping, portable projections of SMALL_RECT/RECT/D2D/WinRT values, row-major iterator observables, and ceiling/floor/round float conversion. Native layout reinterpretation is not required by any source test method and no platform API is invoked."
+    }
+  ]
+}
