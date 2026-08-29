@@ -12,6 +12,7 @@ pub mod codepage;
 pub mod command_history;
 pub mod console_argument_parser;
 pub mod console_arguments;
+pub mod console_output_mode;
 pub mod console_shim_policy;
 pub mod event_synthesis;
 pub mod host_signal;
