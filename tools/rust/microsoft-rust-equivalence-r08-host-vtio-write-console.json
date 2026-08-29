@@ -4,17 +4,17 @@
   "expectedCoveragePriority": 326,
   "expectedCoverage": {
     "host": {
-      "Exact": 311,
-      "Partial": 15,
+      "Exact": 310,
+      "Partial": 16,
       "Platform-only": 5,
       "Missing": 0
     }
   },
   "expectedGlobalCoveragePriority": 326,
   "expectedGlobalCoverage": {
-    "Exact": 881,
+    "Exact": 880,
     "Stronger": 11,
-    "Partial": 121,
+    "Partial": 122,
     "Platform-only": 63,
     "UI-managed": 22,
     "Missing": 0
