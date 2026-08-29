@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "description": "R08 Host VT I/O checkpoint: close SetConsoleTextAttribute through the existing safe-Rust legacy attribute formatter and a direct Microsoft exhaustive color/reverse-video vector.",
+  "expectedCoveragePriority": 325,
+  "expectedCoverage": {
+    "host": {
+      "Exact": 310,
+      "Partial": 16,
+      "Platform-only": 5,
+      "Missing": 0
+    }
+  },
+  "expectedGlobalCoveragePriority": 325,
+  "expectedGlobalCoverage": {
+    "Exact": 880,
+    "Stronger": 11,
+    "Partial": 122,
+    "Platform-only": 63,
+    "UI-managed": 22,
+    "Missing": 0
+  },
+  "entries": [
+    {
+      "suite": "host",
+      "source": "VtIoTests.cpp",
+      "method": "SetConsoleTextAttribute",
+      "coverage": "Exact",
+      "rustWitnesses": [
+        "microsoft_vt_io_set_console_text_attribute_matches_exact_vectors"
+      ],
+      "notes": "The existing safe-Rust attribute_format owner reproduces Microsoft's complete legacy SetConsoleTextAttribute observable: all 16 foreground colors against red background, all 16 background colors against red foreground, default-color elision, bright variants, and reverse-video combinations with exact SGR ordering."
+    }
+  ]
+}
