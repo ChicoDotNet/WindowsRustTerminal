@@ -121,6 +121,49 @@ pub fn erase_display(
     Ok(())
 }
 
+/// Applies Windows Terminal's scrollback-aware ED 2 policy.
+///
+/// Erase All advances the viewport until its top is immediately below the
+/// pre-erase cursor row, unless the physical buffer bottom prevents that move.
+/// The cursor keeps the same viewport-relative position, prior rows remain in
+/// scrollback, and the newly visible viewport is erased with the active standard
+/// erase attributes. Horizontal viewport coordinates are preserved.
+pub fn erase_all_with_scrollback(
+    buffer: &mut TextBuffer,
+    viewport: &mut ScreenRect,
+    cursor: &mut TextBufferPoint,
+    active_attribute: TextAttribute,
+) -> Result<(), RowError> {
+    let buffer_height = buffer.height();
+    let top = viewport.top.min(buffer_height);
+    let bottom = viewport.bottom.min(buffer_height);
+    if top >= bottom {
+        return Ok(());
+    }
+
+    let viewport_height = bottom - top;
+    let relative_x = cursor.x.saturating_sub(viewport.left);
+    let relative_y = cursor.y.saturating_sub(top);
+    let max_top = buffer_height.saturating_sub(viewport_height);
+    let new_top = cursor.y.saturating_add(1).min(max_top);
+    let new_bottom = new_top.saturating_add(viewport_height).min(buffer_height);
+
+    *viewport = ScreenRect::new(viewport.left, new_top, viewport.right, new_bottom);
+    cursor.x = viewport
+        .left
+        .saturating_add(relative_x)
+        .min(buffer.width().saturating_sub(1));
+    cursor.y = new_top
+        .saturating_add(relative_y)
+        .min(buffer_height.saturating_sub(1));
+
+    erase_rect(
+        buffer,
+        ScreenRect::new(0, new_top, buffer.width(), new_bottom),
+        active_attribute,
+    )
+}
+
 /// Implements ED 3 (erase scrollback): viewport rows move to logical row zero,
 /// the cursor keeps its viewport-relative position, and all rows below the
 /// moved viewport are reset to the initial attributes.
