@@ -40,6 +40,7 @@ pub mod text_buffer;
 pub mod text_buffer_iterator;
 pub mod text_color;
 pub mod til_rect;
+pub mod til_rect_index;
 pub mod uia_text_range;
 pub mod vertical_scroll;
 pub mod viewport;
