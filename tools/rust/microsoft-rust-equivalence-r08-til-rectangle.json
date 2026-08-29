@@ -29,11 +29,12 @@
         "microsoft_rectangle_subtraction_contract",
         "microsoft_rectangle_translation_scaling_contract",
         "microsoft_rectangle_accessors_contains_index_contract",
+        "microsoft_rectangle_index_overflow_contract",
         "microsoft_rectangle_projection_contract",
         "microsoft_rectangle_iterator_contract",
         "microsoft_rectangle_float_math_contract"
       ],
-      "notes": "The dedicated safe Rust TilRect owner reproduces all 58 Microsoft RectangleTests contracts: construction/value semantics, validity, union/intersection/subtraction, point translation, checked scale up/down, accessors and narrow casts, containment, row-major point/index mapping, portable projections of SMALL_RECT/RECT/D2D/WinRT values, row-major iterator observables, and ceiling/floor/round float conversion. Native layout reinterpretation is not required by any source test method and no platform API is invoked."
+      "notes": "The dedicated safe Rust TilRect owner reproduces all 58 Microsoft RectangleTests contracts: construction/value semantics, validity, union/intersection/subtraction, point translation, checked scale up/down, accessors and narrow casts, containment, bounded row-major point/index mapping including the Microsoft overflow vector, portable projections of SMALL_RECT/RECT/D2D/WinRT values, row-major iterator observables, and ceiling/floor/round float conversion. Native layout reinterpretation is not required by any source test method and no platform API is invoked."
     }
   ]
 }
