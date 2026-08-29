@@ -4,6 +4,7 @@ ABG
 KLMNOPQRSTUVWXY
 KLMNOPQRSTY
 MNOPQRSTUVWXY
+abf
 altgr
 azerty
 autowrap
@@ -11,6 +12,9 @@ backtab
 clippy
 colorref
 condvar
+deccolm
+dececm
+decstbm
 decoalesces
 fdd
 ffi
@@ -18,6 +22,7 @@ hpr
 microcommit
 microfragment
 misrouted
+nhelp
 nuls
 psobject
 rposition

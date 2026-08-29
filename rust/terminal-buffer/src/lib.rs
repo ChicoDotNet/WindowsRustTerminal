@@ -36,6 +36,7 @@ pub mod tab_stops;
 pub mod terminal_modes;
 pub mod text_attribute;
 pub mod text_buffer;
+pub mod text_buffer_iterator;
 pub mod text_color;
 pub mod uia_text_range;
 pub mod vertical_scroll;
