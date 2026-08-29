@@ -39,6 +39,7 @@ pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_buffer_iterator;
 pub mod text_color;
+pub mod til_point;
 pub mod til_rect;
 pub mod til_rect_index;
 pub mod uia_text_range;
