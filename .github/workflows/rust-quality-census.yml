@@ -68,6 +68,7 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
           key: quality-census-tools-${{ runner.os }}-${{ hashFiles('tools/rust/quality-census-tools.json') }}
+          save-always: true
 
       - name: Install pinned analysis tools
         shell: bash
@@ -110,6 +111,7 @@ jobs:
           key: quality-census-llvm-cov-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.event.pull_request.head.sha || github.sha }}
           restore-keys: |
             quality-census-llvm-cov-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
+          save-always: true
 
       - name: Record tool versions
         shell: bash
@@ -154,7 +156,7 @@ jobs:
           mkdir -p "$QUALITY_COVERAGE_TARGET"
           find "$QUALITY_COVERAGE_TARGET" -type f \
             \( -name '*.profraw' -o -name '*.profdata' \) -delete
-          cargo llvm-cov --workspace --all-targets --locked --no-clean --no-report
+          cargo llvm-cov --workspace --all-targets --locked --no-clean
           cargo llvm-cov report \
             --json \
             --ignore-filename-regex '(^|/)rust/[^/]+/tests/' \
