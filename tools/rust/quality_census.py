@@ -271,12 +271,32 @@ def validate(path):
     print("Quality census tool manifest is valid.")
 
 def do_coupling(root):
-    out=root/"raw/coupling";out.mkdir(parents=True,exist_ok=True)
+    out=root/"raw/coupling"
+    if out.exists():shutil.rmtree(out)
+    out.mkdir(parents=True,exist_ok=True)
     md=json.loads(run(["cargo","metadata","--no-deps","--format-version","1"]));members=set(md["workspace_members"]);count=0
     for p in md["packages"]:
         if p["id"] not in members or not any("lib" in t.get("kind",[]) for t in p.get("targets",[])):continue
-        count+=1;dot=run(["cargo","modules","dependencies","-p",p["name"],"--lib","--no-externs","--no-fns","--no-sysroot","--no-traits","--no-types","--no-uses"])
-        (out/f"{p['name']}.dot").write_text(dot,encoding="utf-8")
+        crate=p["name"]
+        cmd=["cargo","modules","dependencies","-p",crate,"--lib","--no-externs","--no-fns","--no-sysroot","--no-traits","--no-types","--no-uses"]
+        count+=1
+        try:
+            dot=run(cmd)
+        except subprocess.CalledProcessError as e:
+            diagnostic="\n".join((
+                f"crate: {crate}",
+                f"command: {json.dumps(cmd)}",
+                f"exit_code: {e.returncode}",
+                "stdout:",
+                e.stdout or "<empty>",
+                "stderr:",
+                e.stderr or "<empty>",
+            ))+"\n"
+            error_path=out/f"{crate}.error.txt"
+            error_path.write_text(diagnostic,encoding="utf-8")
+            print(diagnostic,flush=True)
+            raise RuntimeError(f"cargo-modules failed for crate {crate} with exit code {e.returncode}; see {error_path}") from e
+        (out/f"{crate}.dot").write_text(dot,encoding="utf-8")
     if not count:raise RuntimeError("cargo-modules found no workspace library crates")
     print(f"Generated module graphs for {count} crates.")
 
