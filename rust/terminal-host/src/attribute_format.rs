@@ -77,4 +77,63 @@ mod tests {
         attributes.set_background(TextColor::index256(42));
         assert_eq!(format_attributes(attributes), "\x1b[0m");
     }
+
+    #[test]
+    fn microsoft_vt_io_set_console_text_attribute_matches_exact_vectors() {
+        let defaults = LegacyColorDefaults::default();
+        let expected_foregrounds = [
+            "\x1b[0;30;41m",
+            "\x1b[0;34;41m",
+            "\x1b[0;32;41m",
+            "\x1b[0;36;41m",
+            "\x1b[0;31;41m",
+            "\x1b[0;35;41m",
+            "\x1b[0;33;41m",
+            "\x1b[0;41m",
+            "\x1b[0;90;41m",
+            "\x1b[0;94;41m",
+            "\x1b[0;92;41m",
+            "\x1b[0;96;41m",
+            "\x1b[0;91;41m",
+            "\x1b[0;95;41m",
+            "\x1b[0;93;41m",
+            "\x1b[0;97;41m",
+        ];
+        for (foreground, expected) in expected_foregrounds.into_iter().enumerate() {
+            let legacy = u16::try_from(foreground).expect("foreground index fits") | 0x0040;
+            assert_eq!(format_attributes(TextAttribute::from_legacy(legacy, defaults)), expected);
+        }
+
+        let expected_backgrounds = [
+            "\x1b[0;31m",
+            "\x1b[0;31;44m",
+            "\x1b[0;31;42m",
+            "\x1b[0;31;46m",
+            "\x1b[0;31;41m",
+            "\x1b[0;31;45m",
+            "\x1b[0;31;43m",
+            "\x1b[0;31;47m",
+            "\x1b[0;31;100m",
+            "\x1b[0;31;104m",
+            "\x1b[0;31;102m",
+            "\x1b[0;31;106m",
+            "\x1b[0;31;101m",
+            "\x1b[0;31;105m",
+            "\x1b[0;31;103m",
+            "\x1b[0;31;107m",
+        ];
+        for (background, expected) in expected_backgrounds.into_iter().enumerate() {
+            let legacy = (u16::try_from(background).expect("background index fits") << 4) | 0x0004;
+            assert_eq!(format_attributes(TextAttribute::from_legacy(legacy, defaults)), expected);
+        }
+
+        assert_eq!(
+            format_attributes(TextAttribute::from_legacy(0x402d, defaults)),
+            "\x1b[0;7;95;42m"
+        );
+        assert_eq!(
+            format_attributes(TextAttribute::from_legacy(0x4007, defaults)),
+            "\x1b[0;7m"
+        );
+    }
 }
