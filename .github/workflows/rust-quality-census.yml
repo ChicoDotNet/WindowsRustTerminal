@@ -261,6 +261,55 @@ jobs:
             --output "$QUALITY_ROOT/quality-census.json" \
             --summary "$QUALITY_ROOT/summary.md"
           python3 -m json.tool "$QUALITY_ROOT/quality-census.json" >/dev/null
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+
+          root = Path("artifacts/quality-census")
+          data = json.loads((root / "quality-census.json").read_text(encoding="utf-8"))
+          cpp = data["cpp"]["comparable"]
+          rust = data["rust"]["comparable"]
+          runtime = data["rust"]["runtimeCoverage"]
+          comparative = data["comparative"]
+
+          def fmt(value):
+              if value is None:
+                  return "n/a"
+              if isinstance(value, int):
+                  return f"{value:,}"
+              if isinstance(value, float):
+                  return f"{value:,.2f}"
+              return str(value)
+
+          executive = "\n".join([
+              "## Executive C++ ↔ Rust comparison",
+              "",
+              "Comparable mapped product scope; lower complexity/effort and higher Maintainability Index are favorable.",
+              "",
+              "| Metric | C++ | Rust | Rust/C++ / delta |",
+              "|---|---:|---:|---:|",
+              f"| Runtime line coverage | not measured | {fmt(runtime['lines']['percent'])}% | — |",
+              f"| LLOC | {fmt(cpp['loc']['lloc'])} | {fmt(rust['loc']['lloc'])} | {fmt(comparative['effectiveCodeCompression']['rustToCppLlocRatio'])} |",
+              f"| SLOC | {fmt(cpp['loc']['sloc'])} | {fmt(rust['loc']['sloc'])} | {fmt(rust['loc']['sloc'] / cpp['loc']['sloc'])} |",
+              f"| Cyclomatic mean | {fmt(cpp['cyclomatic']['mean'])} | {fmt(rust['cyclomatic']['mean'])} | {fmt(comparative['cyclomaticRatio']['mean'])} |",
+              f"| Cyclomatic p95 | {fmt(cpp['cyclomatic']['p95'])} | {fmt(rust['cyclomatic']['p95'])} | {fmt(comparative['cyclomaticRatio']['p95'])} |",
+              f"| Cognitive mean | {fmt(cpp['cognitive']['mean'])} | {fmt(rust['cognitive']['mean'])} | {fmt(comparative['cognitiveRatio']['mean'])} |",
+              f"| Cognitive p95 | {fmt(cpp['cognitive']['p95'])} | {fmt(rust['cognitive']['p95'])} | {fmt(comparative['cognitiveRatio']['p95'])} |",
+              f"| Maintainability Index | {fmt(cpp['maintainabilityIndex']['weightedMeanByLloc'])} | {fmt(rust['maintainabilityIndex']['weightedMeanByLloc'])} | Δ {fmt(comparative['maintainability']['miDelta'])} |",
+              f"| Halstead effort | {fmt(cpp['halstead']['totalEffort'])} | {fmt(rust['halstead']['totalEffort'])} | {fmt(comparative['maintainability']['halsteadEffortRatio'])} |",
+              f"| Files in comparable scope | {fmt(cpp['files'])} | {fmt(rust['files'])} | — |",
+              "",
+              "C++ runtime coverage remains **unavailable/not measured** because the comparable Windows-native owners do not currently share a proportional instrumented runtime-coverage pipeline with the Ubuntu Rust job. Microsoft contractual parity remains the cross-language functional reference.",
+          ])
+
+          summary_path = root / "summary.md"
+          summary = summary_path.read_text(encoding="utf-8")
+          marker = "\n## Functional parity"
+          if marker not in summary:
+              raise RuntimeError("summary.md lacks Functional parity insertion point")
+          summary = summary.replace(marker, f"\n{executive}\n{marker}", 1)
+          summary_path.write_text(summary, encoding="utf-8")
+          PY
           cat "$QUALITY_ROOT/summary.md" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload machine-readable census and raw evidence
