@@ -23,6 +23,7 @@ pub mod pty_signal;
 pub mod pty_signal_session;
 pub mod pty_signal_state;
 pub mod pty_signal_stream;
+pub mod raw_console_arguments;
 pub mod remote_console_control;
 pub mod search;
 pub mod title_translation;
