@@ -1,12 +1,29 @@
 {
   "schemaVersion": 1,
   "description": "Explicit allowlist for Microsoft source families that remain Missing only because their product responsibility is deliberately deferred beyond the already-completed Rust ownership slices. Any effective Missing contract outside this list fails the global inventory gate.",
-  "expectedMissingTotal": 68,
+  "expectedMissingTotal": 44,
   "sources": [
-    {"suite":"host","source":"InputBufferTests.cpp","expectedMissing":1,"reason":"Only ReadingDbcsCharsPadsOutputArray remains: Rust owns DBCS padding/order once encoded bytes are supplied, but CP_JAPANESE conversion remains a Windows codepage adapter responsibility."},
-    {"suite":"host","source":"TextBufferIteratorTests.cpp","expectedMissing":29,"reason":"The C++ iterator operator API has no direct migrated Rust product abstraction."},
-    {"suite":"localTerminalApp","source":"CommandlineTest.cpp","reason":"Terminal application command-line behavior remains native product logic."},
-    {"suite":"localTerminalApp","source":"FilteredCommandTests.cpp","reason":"Filtered-command product action semantics remain native."},
-    {"suite":"localTerminalApp","source":"SettingsTests.cpp","reason":"TerminalApp settings integration remains native product logic."}
+    {
+      "suite": "host",
+      "source": "InputBufferTests.cpp",
+      "expectedMissing": 1,
+      "reason": "Only ReadingDbcsCharsPadsOutputArray remains: Rust owns DBCS padding/order once encoded bytes are supplied, but CP_JAPANESE conversion remains a Windows codepage adapter responsibility."
+    },
+    {
+      "suite": "host",
+      "source": "TextBufferIteratorTests.cpp",
+      "expectedMissing": 29,
+      "reason": "The C++ iterator operator API has no direct migrated Rust product abstraction."
+    },
+    {
+      "suite": "localTerminalApp",
+      "source": "FilteredCommandTests.cpp",
+      "reason": "Filtered-command product action semantics remain native."
+    },
+    {
+      "suite": "localTerminalApp",
+      "source": "SettingsTests.cpp",
+      "reason": "TerminalApp settings integration remains native product logic."
+    }
   ]
 }
