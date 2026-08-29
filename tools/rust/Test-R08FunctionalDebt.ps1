@@ -180,10 +180,10 @@ if (-not [string]::IsNullOrWhiteSpace($JsonPath)) {
 
     $orderedRows = @($partialRows | Sort-Object suite, source, method)
     $functionalRows = @($orderedRows | Where-Object class -eq 'functional')
-    $bySuite = @($functionalRows | Group-Object suite | Sort-Object Count -Descending, Name | ForEach-Object {
+    $bySuite = @($functionalRows | Group-Object suite | Sort-Object @{ Expression = 'Count'; Descending = $true }, Name | ForEach-Object {
         [pscustomobject][ordered]@{ suite = $_.Name; count = $_.Count }
     })
-    $bySource = @($functionalRows | Group-Object suite, source | Sort-Object Count -Descending, Name | ForEach-Object {
+    $bySource = @($functionalRows | Group-Object suite, source | Sort-Object @{ Expression = 'Count'; Descending = $true }, Name | ForEach-Object {
         $first = $_.Group[0]
         [pscustomobject][ordered]@{ suite = $first.suite; source = $first.source; count = $_.Count }
     })
