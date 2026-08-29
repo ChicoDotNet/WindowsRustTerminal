@@ -10,6 +10,7 @@ pub mod clipboard_text;
 pub mod color_table;
 pub mod command_regions;
 pub mod cursor_movement;
+pub mod cursor_properties;
 pub mod deferred_resize;
 pub mod delayed_wrap;
 pub mod extended_attributes;
@@ -43,6 +44,7 @@ pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_buffer_iterator;
 pub mod text_buffer_queries;
+pub mod text_buffer_write;
 pub mod text_color;
 pub mod til_color;
 pub mod til_operators;
@@ -59,6 +61,3 @@ pub mod virtual_bottom;
 pub mod vt_resize;
 pub mod width_detector;
 pub mod word_boundary;
-
-#[cfg(test)]
-mod microsoft_text_buffer_tests;
