@@ -8,6 +8,7 @@
         "cargo",
         "install",
         "--locked",
+        "--force",
         "--version",
         "0.8.7",
         "cargo-llvm-cov"
@@ -19,6 +20,7 @@
         "cargo",
         "install",
         "--locked",
+        "--force",
         "--version",
         "0.0.25",
         "rust-code-analysis-cli"
@@ -30,6 +32,7 @@
         "cargo",
         "install",
         "--locked",
+        "--force",
         "--version",
         "14.0.0",
         "--features",
@@ -43,6 +46,7 @@
         "cargo",
         "install",
         "--locked",
+        "--force",
         "--version",
         "0.27.0",
         "cargo-modules"
