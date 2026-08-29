@@ -3,6 +3,21 @@
 version = 4
 
 [[package]]
+name = "cfg-if"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2fd1289c04a9ea8cb22300a459a72a385d7c73d3259e2ed7dcb2af674838cfa9"
+
+[[package]]
+name = "encoding_rs"
+version = "0.8.35"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "75030f3c4f45dafd7586dd6780965a8c7e8e285a5ecb86713e63a79c5b2766f3"
+dependencies = [
+ "cfg-if",
+]
+
+[[package]]
 name = "terminal-adapter"
 version = "0.0.0"
 dependencies = [
@@ -34,6 +49,7 @@ version = "0.0.0"
 name = "terminal-host"
 version = "0.0.0"
 dependencies = [
+ "encoding_rs",
  "terminal-buffer",
 ]
 

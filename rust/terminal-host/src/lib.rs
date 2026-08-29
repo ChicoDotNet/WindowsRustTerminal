@@ -8,6 +8,7 @@ pub mod api_message_buffers;
 pub mod api_routines;
 pub mod api_sorter;
 pub mod attribute_format;
+pub mod codepage;
 pub mod command_history;
 pub mod console_argument_parser;
 pub mod console_arguments;
