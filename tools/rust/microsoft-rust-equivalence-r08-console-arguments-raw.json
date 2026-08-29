@@ -8,8 +8,11 @@
       "source": "ConsoleArgumentsTests.cpp",
       "method": "ArgSplittingTests",
       "coverage": "Exact",
-      "rustWitnesses": ["microsoft_console_arguments_arg_splitting_contract"],
-      "notes": "Safe Rust now owns the raw command-line boundary: Windows quote/backslash tokenization feeds the existing conhost parser and reproduces Microsoft's headless, quoted client, server-handle, whitespace and implicit-client vectors."
+      "rustWitnesses": [
+        "microsoft_console_arguments_arg_splitting_contract",
+        "microsoft_console_arguments_backslash_whitespace_vectors"
+      ],
+      "notes": "Safe Rust now owns the raw command-line boundary: Windows quote/backslash tokenization feeds the existing conhost parser and reproduces Microsoft's headless, quoted client, server-handle, whitespace, backslash-space/tab and implicit-client vectors."
     },
     {
       "suite": "host",
