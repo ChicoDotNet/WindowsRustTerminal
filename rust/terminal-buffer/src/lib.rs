@@ -10,6 +10,7 @@ pub mod clipboard_text;
 pub mod command_regions;
 pub mod cursor_movement;
 pub mod deferred_resize;
+pub mod delayed_wrap;
 pub mod extended_attributes;
 pub mod geometry;
 pub mod hyperlink;
