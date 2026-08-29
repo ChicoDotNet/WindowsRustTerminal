@@ -59,8 +59,9 @@ jobs:
           rustup show
           cargo metadata --no-deps --format-version 1 > /dev/null
 
-      - name: Cache pinned analysis tools
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Restore pinned analysis tools
+        id: cache-tools-restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/bin
@@ -68,7 +69,6 @@ jobs:
             ~/.cargo/registry/cache
             ~/.cargo/git/db
           key: quality-census-tools-${{ runner.os }}-${{ hashFiles('tools/rust/quality-census-tools.json') }}
-          save-always: true
 
       - name: Install pinned analysis tools
         shell: bash
@@ -104,14 +104,25 @@ jobs:
             cargo install --locked --version "$TOKEI_VERSION" --features all --force tokei
           fi
 
-      - name: Cache instrumented Rust coverage build
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      - name: Save pinned analysis tools
+        if: steps.cache-tools-restore.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+          key: ${{ steps.cache-tools-restore.outputs.cache-primary-key }}
+
+      - name: Restore instrumented Rust coverage build
+        id: cache-coverage-restore
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.QUALITY_COVERAGE_TARGET }}
           key: quality-census-llvm-cov-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.event.pull_request.head.sha || github.sha }}
           restore-keys: |
             quality-census-llvm-cov-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-
-          save-always: true
 
       - name: Record tool versions
         shell: bash
@@ -169,6 +180,32 @@ jobs:
             --html \
             --ignore-filename-regex '(^|/)rust/[^/]+/tests/' \
             --output-dir "$QUALITY_ROOT/coverage-html"
+
+      - name: Remove runtime coverage profiles from build cache
+        if: always()
+        shell: bash
+        run: |
+          mkdir -p "$QUALITY_COVERAGE_TARGET"
+          find "$QUALITY_COVERAGE_TARGET" -type f \
+            \( -name '*.profraw' -o -name '*.profdata' \) -delete
+
+      - name: Check coverage build cache content
+        id: coverage-cache-state
+        if: always()
+        shell: bash
+        run: |
+          if find "$QUALITY_COVERAGE_TARGET" -mindepth 1 -print -quit 2>/dev/null | grep -q .; then
+            echo "has-content=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-content=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save instrumented Rust coverage build
+        if: always() && steps.cache-coverage-restore.outputs.cache-hit != 'true' && steps.coverage-cache-state.outputs.has-content == 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ env.QUALITY_COVERAGE_TARGET }}
+          key: ${{ steps.cache-coverage-restore.outputs.cache-primary-key }}
 
       - name: Measure LOC, complexity, maintainability and Halstead
         shell: bash
