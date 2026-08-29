@@ -25,6 +25,7 @@ pub mod rect_ops;
 pub mod reflow;
 pub mod resize_integrity;
 pub mod rle;
+pub mod rle_ops;
 pub mod row;
 pub mod row_writer;
 pub mod saved_cursor;
