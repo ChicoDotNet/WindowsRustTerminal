@@ -29,6 +29,7 @@ pub mod screen_alignment;
 pub mod screen_erase;
 pub mod search;
 pub mod sixel_store;
+pub mod soft_reset;
 pub mod tab_stops;
 pub mod terminal_modes;
 pub mod text_attribute;
