@@ -82,6 +82,15 @@ pub const fn restore_cursor() -> &'static [u8] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::vt_io_protocol::{encode_ucs2_utf8, sanitize_ucs2};
+
+    fn sanitized_title_utf8(input: &[u16]) -> Vec<u8> {
+        let mut output = Vec::new();
+        for unit in input.iter().copied() {
+            output.extend_from_slice(&encode_ucs2_utf8(sanitize_ucs2(unit)));
+        }
+        output
+    }
 
     #[test]
     fn cup_is_one_based() {
@@ -117,5 +126,49 @@ mod tests {
             b"\x1b]0;Windows Terminal\x1b\\"
         );
         assert_eq!(window_title(b""), b"\x1b]0;\x1b\\");
+    }
+
+    #[test]
+    fn microsoft_vt_io_set_console_cursor_position_matches_exact_vectors() {
+        let mut actual = Vec::new();
+        for (x, y) in [(2, 3), (0, 0), (7, 3), (3, 2)] {
+            actual.extend_from_slice(&cup(x, y));
+        }
+        assert_eq!(actual, b"\x1b[4;3H\x1b[1;1H\x1b[4;8H\x1b[3;4H");
+    }
+
+    #[test]
+    fn microsoft_vt_io_set_console_cursor_info_matches_exact_vectors() {
+        let mut actual = Vec::new();
+        actual.extend_from_slice(&dectcem(false));
+        actual.extend_from_slice(&dectcem(true));
+        assert_eq!(actual, b"\x1b[?25l\x1b[?25h");
+    }
+
+    #[test]
+    fn microsoft_vt_io_set_console_title_matches_exact_vectors() {
+        let cases: [(&[u16], &[u8]); 3] = [
+            (
+                &[0x0066, 0x006f, 0x006f, 0x0062, 0x0061, 0x0072],
+                b"\x1b]0;foobar\x1b\\",
+            ),
+            (
+                &[
+                    0x0066, 0x006f, 0x006f, 0x0001, 0x001f, 0x0062, 0x0061, 0x0072,
+                ],
+                b"\x1b]0;foo\xe2\x98\xba\xe2\x96\xbcbar\x1b\\",
+            ),
+            (
+                &[
+                    0x0066, 0x006f, 0x006f, 0x0001, 0x001f, 0x0062, 0x0061, 0x0072, 0x007f,
+                    0x009f,
+                ],
+                b"\x1b]0;foo\xe2\x98\xba\xe2\x96\xbcbar\xe2\x8c\x82?\x1b\\",
+            ),
+        ];
+
+        for (input, expected) in cases {
+            assert_eq!(window_title(&sanitized_title_utf8(input)), expected);
+        }
     }
 }
