@@ -40,6 +40,7 @@ pub mod text_attribute;
 pub mod text_buffer;
 pub mod text_buffer_iterator;
 pub mod text_color;
+pub mod til_color;
 pub mod til_operators;
 pub mod til_point;
 pub mod til_rect;
