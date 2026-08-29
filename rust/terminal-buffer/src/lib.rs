@@ -44,6 +44,7 @@ pub mod til_operators;
 pub mod til_point;
 pub mod til_rect;
 pub mod til_rect_index;
+pub mod til_replace;
 pub mod til_string;
 pub mod uia_text_range;
 pub mod vertical_scroll;
