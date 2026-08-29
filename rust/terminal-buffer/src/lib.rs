@@ -61,3 +61,6 @@ pub mod virtual_bottom;
 pub mod vt_resize;
 pub mod width_detector;
 pub mod word_boundary;
+
+#[cfg(test)]
+mod microsoft_text_buffer_tests;
