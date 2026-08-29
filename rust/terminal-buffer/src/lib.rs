@@ -34,6 +34,7 @@ pub mod saved_cursor;
 pub mod screen_alignment;
 pub mod screen_erase;
 pub mod search;
+pub mod sgr;
 pub mod sixel_store;
 pub mod soft_reset;
 pub mod tab_stops;
@@ -58,3 +59,6 @@ pub mod virtual_bottom;
 pub mod vt_resize;
 pub mod width_detector;
 pub mod word_boundary;
+
+#[cfg(test)]
+mod microsoft_text_buffer_tests;
