@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "rustToolchain": "1.97.0",
+  "rustToolchain": "1.98.0",
   "tools": {
     "cargo-llvm-cov": {
       "version": "0.8.7",
@@ -38,13 +38,13 @@
       ]
     },
     "cargo-modules": {
-      "version": "0.25.0",
+      "version": "0.27.0",
       "install": [
         "cargo",
         "install",
         "--locked",
         "--version",
-        "0.25.0",
+        "0.27.0",
         "cargo-modules"
       ]
     }
