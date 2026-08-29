@@ -6,12 +6,22 @@ on:
       - "rust/main"
     paths:
       - "rust/**"
+      - "tools/rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/rust-quality-census.yml"
   pull_request:
     branches:
       - "rust/main"
     types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - "rust/**"
+      - "tools/rust/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - ".github/workflows/rust-quality-census.yml"
   workflow_dispatch:
 
 permissions:
@@ -159,7 +169,8 @@ jobs:
           set -o pipefail
           pwsh -NoProfile -File ./tools/rust/Test-MicrosoftGlobalTestInventory.ps1 2>&1 \
             | tee "$QUALITY_ROOT/raw/functional-global.log"
-          pwsh -NoProfile -File ./tools/rust/Test-R08FunctionalDebt.ps1 2>&1 \
+          pwsh -NoProfile -File ./tools/rust/Test-R08FunctionalDebt.ps1 \
+            -JsonPath "$QUALITY_ROOT/raw/functional-debt.json" 2>&1 \
             | tee "$QUALITY_ROOT/raw/functional-debt.log"
 
       - name: Measure Rust runtime coverage
