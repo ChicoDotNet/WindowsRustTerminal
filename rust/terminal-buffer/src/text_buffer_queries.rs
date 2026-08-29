@@ -79,51 +79,36 @@ mod tests {
 
     #[test]
     fn microsoft_text_buffer_get_glyph_boundaries_contract() {
-        let starts = [
-            TextBufferPoint::new(0, 0),
-            TextBufferPoint::new(0, 1),
-            TextBufferPoint::new(1, 1),
-            TextBufferPoint::new(8, 1),
-            TextBufferPoint::new(7, 1),
-            TextBufferPoint::new(9, 9),
-        ];
-        let normal_ends = [
-            TextBufferPoint::new(1, 0),
-            TextBufferPoint::new(1, 1),
-            TextBufferPoint::new(2, 1),
-            TextBufferPoint::new(9, 1),
-            TextBufferPoint::new(8, 1),
-            TextBufferPoint::new(0, 10),
-        ];
-        let wide_ends = [
-            TextBufferPoint::new(2, 0),
-            TextBufferPoint::new(2, 1),
-            TextBufferPoint::new(3, 1),
-            TextBufferPoint::new(0, 2),
-            TextBufferPoint::new(9, 1),
-            TextBufferPoint::new(0, 10),
+        let vectors = [
+            (TextBufferPoint::new(0, 0), TextBufferPoint::new(1, 0), TextBufferPoint::new(2, 0)),
+            (TextBufferPoint::new(0, 1), TextBufferPoint::new(1, 1), TextBufferPoint::new(2, 1)),
+            (TextBufferPoint::new(1, 1), TextBufferPoint::new(2, 1), TextBufferPoint::new(3, 1)),
+            (TextBufferPoint::new(8, 1), TextBufferPoint::new(9, 1), TextBufferPoint::new(0, 2)),
+            (TextBufferPoint::new(7, 1), TextBufferPoint::new(8, 1), TextBufferPoint::new(9, 1)),
+            (TextBufferPoint::new(9, 9), TextBufferPoint::new(0, 10), TextBufferPoint::new(0, 10)),
         ];
 
-        for wide in [false, true] {
-            let mut buffer = TextBuffer::new(10, 10, TextAttribute::default()).unwrap();
-            for start in starts {
-                let row = buffer.row_mut(i32::from(start.y));
-                if wide && start.x < 9 {
-                    row.replace_glyph(i32::from(start.x), 2, &[0xd83c, 0xdf2f])
-                        .unwrap();
-                } else {
-                    row.replace_glyph(i32::from(start.x), 1, &[u16::from(b'X')])
-                        .unwrap();
-                }
-            }
+        for (start, normal_end, wide_end) in vectors {
+            let mut normal = TextBuffer::new(10, 10, TextAttribute::default()).unwrap();
+            normal
+                .row_mut(i32::from(start.y))
+                .replace_glyph(i32::from(start.x), 1, &[u16::from(b'X')])
+                .unwrap();
+            assert_eq!(glyph_start(&normal, start), start);
+            assert_eq!(glyph_end(&normal, start), normal_end);
 
-            for (index, start) in starts.into_iter().enumerate() {
-                assert_eq!(glyph_start(&buffer, start), start);
-                assert_eq!(
-                    glyph_end(&buffer, start),
-                    if wide { wide_ends[index] } else { normal_ends[index] }
-                );
+            let mut wide = TextBuffer::new(10, 10, TextAttribute::default()).unwrap();
+            if start.x < 9 {
+                wide.row_mut(i32::from(start.y))
+                    .replace_glyph(i32::from(start.x), 2, &[0xd83c, 0xdf2f])
+                    .unwrap();
+            } else {
+                wide.row_mut(i32::from(start.y))
+                    .replace_glyph(i32::from(start.x), 1, &[u16::from(b'X')])
+                    .unwrap();
             }
+            assert_eq!(glyph_start(&wide, start), start);
+            assert_eq!(glyph_end(&wide, start), wide_end);
         }
     }
 }
