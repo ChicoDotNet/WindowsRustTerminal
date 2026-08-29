@@ -22,6 +22,7 @@ pub mod line_rendition;
 pub mod output_cell;
 pub mod rect_ops;
 pub mod reflow;
+pub mod resize_integrity;
 pub mod rle;
 pub mod row;
 pub mod row_writer;
