@@ -30,13 +30,20 @@ jobs:
       QUALITY_ROOT: artifacts/quality-census
       QUALITY_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
       QUALITY_COVERAGE_TARGET: artifacts/cargo-target/llvm-cov-target
+      QUALITY_NODE_VERSION: 26.8.1
 
     steps:
       - name: Checkout measured revision
-        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           ref: ${{ github.event.pull_request.head.sha || github.sha }}
           persist-credentials: false
+
+      - name: Use current stable Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: ${{ env.QUALITY_NODE_VERSION }}
+          package-manager-cache: false
 
       - name: Confirm Rust workspace and toolchain
         shell: bash
@@ -48,11 +55,12 @@ jobs:
           test -d rust
           python3 tools/rust/quality_census.py validate-tools \
             --path tools/rust/quality-census-tools.json
+          node --version
           rustup show
           cargo metadata --no-deps --format-version 1 > /dev/null
 
       - name: Cache pinned analysis tools
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.cargo/bin
@@ -96,7 +104,7 @@ jobs:
           fi
 
       - name: Cache instrumented Rust coverage build
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ env.QUALITY_COVERAGE_TARGET }}
           key: quality-census-llvm-cov-${{ runner.os }}-${{ hashFiles('rust-toolchain.toml') }}-${{ hashFiles('Cargo.lock') }}-${{ github.event.pull_request.head.sha || github.sha }}
@@ -109,6 +117,8 @@ jobs:
           set -euo pipefail
           mkdir -p "$QUALITY_ROOT/raw"
           {
+            echo "node=$(node --version)"
+            echo "npm=$(npm --version)"
             echo "rustc=$(rustc --version)"
             echo "cargo=$(cargo --version)"
             echo "cargo-llvm-cov=$(cargo llvm-cov --version)"
@@ -212,7 +222,7 @@ jobs:
 
       - name: Upload machine-readable census and raw evidence
         if: always()
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: rust-quality-census-${{ github.run_id }}
           path: artifacts/quality-census/
