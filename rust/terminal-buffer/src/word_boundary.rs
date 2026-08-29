@@ -110,7 +110,7 @@ fn trimmed_numeric_start(row: &crate::row::Row, start: u16, end: u16) -> u16 {
         cursor = next;
     }
 
-    // Keep an all-zero word non-empty. Otherwise the first non-zero glyph is
+    // Keep an all-zero word non-empty. Otherwise, the first non-zero glyph is
     // the boundary start, matching the host's trim-leading-zero behavior.
     if cursor < end { cursor } else { start }
 }
