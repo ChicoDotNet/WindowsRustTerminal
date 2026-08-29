@@ -75,6 +75,8 @@ mod tests {
     use super::*;
 
     const DEFAULT_ATTRS: u16 = 0x0007;
+    const RED_ON_GREEN: u16 = 0x0004 | 0x0020;
+    const BLUE_ON_GREEN: u16 = 0x0001 | 0x0020;
 
     fn snapshot(ch: u8, cursor_visible: bool, wrap_at_eol: bool) -> ScreenSnapshot {
         ScreenSnapshot::new(
@@ -85,6 +87,19 @@ mod tests {
             cursor_visible,
             wrap_at_eol,
         )
+    }
+
+    fn cells(text: &str, attributes: u16) -> Vec<HostCharInfo> {
+        text.encode_utf16()
+            .map(|unit| HostCharInfo::new(unit, attributes))
+            .collect()
+    }
+
+    fn microsoft_vt_io_row(parts: &[(&str, u16)]) -> Vec<HostCharInfo> {
+        parts
+            .iter()
+            .flat_map(|(text, attributes)| cells(text, *attributes))
+            .collect()
     }
 
     #[test]
@@ -125,6 +140,48 @@ mod tests {
         assert_eq!(
             write_screen_info(&screen, None),
             b"\x1b[?1049l\x1b[1;1H\x1b[0mA\x1b[2;1H\x1b[0mB\x1b[2;4H\x1b[0m\x1b[?25h\x1b[?7l"
+        );
+    }
+
+    #[test]
+    fn microsoft_vt_io_set_console_active_screen_buffer_matches_exact_vector() {
+        let screen = ScreenSnapshot::new(
+            vec![
+                microsoft_vt_io_row(&[
+                    ("AB", RED_ON_GREEN),
+                    ("ab", BLUE_ON_GREEN),
+                    ("CD", RED_ON_GREEN),
+                    ("cd", BLUE_ON_GREEN),
+                ]),
+                microsoft_vt_io_row(&[
+                    ("EF", RED_ON_GREEN),
+                    ("ef", BLUE_ON_GREEN),
+                    ("GH", RED_ON_GREEN),
+                    ("gh", BLUE_ON_GREEN),
+                ]),
+                microsoft_vt_io_row(&[
+                    ("ij", BLUE_ON_GREEN),
+                    ("IJ", RED_ON_GREEN),
+                    ("kl", BLUE_ON_GREEN),
+                    ("KL", RED_ON_GREEN),
+                ]),
+                microsoft_vt_io_row(&[
+                    ("mn", BLUE_ON_GREEN),
+                    ("MN", RED_ON_GREEN),
+                    ("op", BLUE_ON_GREEN),
+                    ("OP", RED_ON_GREEN),
+                ]),
+            ],
+            0,
+            0,
+            DEFAULT_ATTRS,
+            true,
+            true,
+        );
+
+        assert_eq!(
+            write_screen_info(&screen, None),
+            b"\x1b[?1049l\x1b[1;1H\x1b[0;31;42mAB\x1b[0;34;42mab\x1b[0;31;42mCD\x1b[0;34;42mcd\x1b[2;1H\x1b[0;31;42mEF\x1b[0;34;42mef\x1b[0;31;42mGH\x1b[0;34;42mgh\x1b[3;1H\x1b[0;34;42mij\x1b[0;31;42mIJ\x1b[0;34;42mkl\x1b[0;31;42mKL\x1b[4;1H\x1b[0;34;42mmn\x1b[0;31;42mMN\x1b[0;34;42mop\x1b[0;31;42mOP\x1b[1;1H\x1b[0m\x1b[?25h\x1b[?7h"
         );
     }
 }
