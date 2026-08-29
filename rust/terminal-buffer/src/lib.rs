@@ -40,5 +40,6 @@ pub mod vertical_scroll;
 pub mod viewport;
 pub mod viewport_index;
 pub mod virtual_bottom;
+pub mod vt_resize;
 pub mod width_detector;
 pub mod word_boundary;
