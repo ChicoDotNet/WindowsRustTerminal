@@ -41,3 +41,4 @@ pub mod viewport;
 pub mod viewport_index;
 pub mod virtual_bottom;
 pub mod width_detector;
+pub mod word_boundary;
