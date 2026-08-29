@@ -85,9 +85,15 @@ impl ResizeIntegrityState {
 ///
 /// The operation is transactional: a new owned `TextBuffer` is built first and
 /// replaces the original only after all retained glyphs and attributes have
-/// been copied successfully. This deliberately avoids pointer/alias lifetime
-/// concerns from the native `ROW` attribute storage.
-fn resize_traditional(
+/// been copied successfully. When width grows, newly exposed cells are spaces
+/// carrying the source row's final attribute, matching the native traditional
+/// resize contract. Newly created rows use `fill_attribute`.
+///
+/// # Errors
+///
+/// Returns a validated text-buffer or row-storage error for invalid dimensions
+/// or an unrepresentable retained glyph.
+pub fn resize_traditional(
     buffer: &mut TextBuffer,
     new_width: u16,
     new_height: u16,
@@ -164,6 +170,11 @@ fn copy_row_traditionally(source: &Row, target: &mut Row) -> Result<(), TextBuff
                 column = column.saturating_add(2);
             }
         }
+    }
+
+    if target.size() > source.size() {
+        let extension = source.attribute_at(i32::from(source.size().saturating_sub(1)));
+        target.replace_attributes(i32::from(source.size()), i32::from(target.size()), extension);
     }
 
     Ok(())
