@@ -49,6 +49,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          mkdir -p "$QUALITY_ROOT/raw"
+          printf 'quality-census-started=%s\n' "$QUALITY_COMMIT_SHA" > "$QUALITY_ROOT/raw/workflow-started.txt"
           test -f Cargo.toml
           test -f Cargo.lock
           test -f rust-toolchain.toml
@@ -90,20 +92,20 @@ jobs:
           rustup component add llvm-tools-preview
 
           if ! cargo llvm-cov --version 2>/dev/null | grep -Fq "$CARGO_LLVM_COV_VERSION"; then
-            cargo install --locked --version "$CARGO_LLVM_COV_VERSION" cargo-llvm-cov
+            cargo install --locked --force --version "$CARGO_LLVM_COV_VERSION" cargo-llvm-cov
           fi
           if ! rust-code-analysis-cli --version 2>/dev/null | grep -Fq "$RUST_CODE_ANALYSIS_CLI_VERSION"; then
-            cargo install --locked --version "$RUST_CODE_ANALYSIS_CLI_VERSION" rust-code-analysis-cli
+            cargo install --locked --force --version "$RUST_CODE_ANALYSIS_CLI_VERSION" rust-code-analysis-cli
           fi
           if ! cargo modules --version 2>/dev/null | grep -Fq "$CARGO_MODULES_VERSION"; then
-            cargo install --locked --version "$CARGO_MODULES_VERSION" cargo-modules
+            cargo install --locked --force --version "$CARGO_MODULES_VERSION" cargo-modules
           fi
 
           tmp_dir="$(mktemp -d)"
           trap 'rm -rf "$tmp_dir"' EXIT
           if ! tokei --version 2>/dev/null | grep -Fq "$TOKEI_VERSION" ||
              ! tokei "$tmp_dir" --output json >/dev/null 2>&1; then
-            cargo install --locked --version "$TOKEI_VERSION" --features all --force tokei
+            cargo install --locked --force --version "$TOKEI_VERSION" --features all tokei
           fi
 
       - name: Save pinned analysis tools
