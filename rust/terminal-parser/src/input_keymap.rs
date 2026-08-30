@@ -31,16 +31,16 @@ const VK_F12: u16 = 0x7b;
 #[must_use]
 pub const fn cursor_virtual_key(final_character: u16) -> Option<u16> {
     match final_character {
-        b'A' as u16 => Some(VK_UP),
-        b'B' as u16 => Some(VK_DOWN),
-        b'C' as u16 => Some(VK_RIGHT),
-        b'D' as u16 => Some(VK_LEFT),
-        b'H' as u16 => Some(VK_HOME),
-        b'F' as u16 => Some(VK_END),
-        b'P' as u16 => Some(VK_F1),
-        b'Q' as u16 => Some(VK_F2),
-        b'R' as u16 => Some(VK_F3),
-        b'S' as u16 => Some(VK_F4),
+        0x41 => Some(VK_UP),
+        0x42 => Some(VK_DOWN),
+        0x43 => Some(VK_RIGHT),
+        0x44 => Some(VK_LEFT),
+        0x48 => Some(VK_HOME),
+        0x46 => Some(VK_END),
+        0x50 => Some(VK_F1),
+        0x51 => Some(VK_F2),
+        0x52 => Some(VK_F3),
+        0x53 => Some(VK_F4),
         _ => None,
     }
 }
@@ -80,9 +80,16 @@ mod tests {
     #[test]
     fn cursor_map_matches_microsoft_input_engine_table() {
         let expected = [
-            (b'A', 0x26), (b'B', 0x28), (b'C', 0x27), (b'D', 0x25),
-            (b'H', 0x24), (b'F', 0x23), (b'P', 0x70), (b'Q', 0x71),
-            (b'R', 0x72), (b'S', 0x73),
+            (b'A', 0x26),
+            (b'B', 0x28),
+            (b'C', 0x27),
+            (b'D', 0x25),
+            (b'H', 0x24),
+            (b'F', 0x23),
+            (b'P', 0x70),
+            (b'Q', 0x71),
+            (b'R', 0x72),
+            (b'S', 0x73),
         ];
         for (final_character, vkey) in expected {
             assert_eq!(cursor_virtual_key(u16::from(final_character)), Some(vkey));
@@ -93,9 +100,20 @@ mod tests {
     #[test]
     fn generic_map_matches_microsoft_input_engine_table() {
         let expected = [
-            (1, 0x24), (2, 0x2d), (3, 0x2e), (4, 0x23), (5, 0x21), (6, 0x22),
-            (15, 0x74), (17, 0x75), (18, 0x76), (19, 0x77), (20, 0x78),
-            (21, 0x79), (23, 0x7a), (24, 0x7b),
+            (1, 0x24),
+            (2, 0x2d),
+            (3, 0x2e),
+            (4, 0x23),
+            (5, 0x21),
+            (6, 0x22),
+            (15, 0x74),
+            (17, 0x75),
+            (18, 0x76),
+            (19, 0x77),
+            (20, 0x78),
+            (21, 0x79),
+            (23, 0x7a),
+            (24, 0x7b),
         ];
         for (identifier, vkey) in expected {
             assert_eq!(generic_virtual_key(identifier), Some(vkey));
