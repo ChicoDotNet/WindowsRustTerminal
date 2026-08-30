@@ -17,4 +17,5 @@ pub mod selection_rendering;
 pub mod terminal;
 pub mod terminal_api;
 pub mod terminal_buffer_state;
+pub mod terminal_wrap_state;
 pub mod update_selection;
