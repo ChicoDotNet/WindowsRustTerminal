@@ -1,3 +1,9 @@
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::too_many_lines
+)]
+
 use terminal_buffer::geometry::{InclusiveRect, Point};
 use terminal_host::api_routines::{
     ConsoleCodePage, ConsoleScreenBuffer, ConsoleTitleState, ConsoleWriteStatus, ConsoleWriter,
