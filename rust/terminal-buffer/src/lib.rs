@@ -24,6 +24,7 @@ pub mod output_cell;
 pub mod output_cell_runs;
 pub mod rect_ops;
 pub mod reflow;
+pub mod reflow_cursor;
 pub mod repeat_character;
 pub mod resize_integrity;
 pub mod rle;
