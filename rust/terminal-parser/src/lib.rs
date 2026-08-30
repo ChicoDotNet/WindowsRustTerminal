@@ -8,6 +8,7 @@
 
 pub mod base64;
 pub mod input_engine;
+pub mod input_layout;
 #[path = "output_engine_compat.rs"]
 pub mod output_engine;
 #[path = "output_engine.rs"]
