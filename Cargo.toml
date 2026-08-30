@@ -23,8 +23,8 @@ repository = "https://github.com/ChicoDotNet/terminal"
 unsafe_op_in_unsafe_fn = "deny"
 
 [workspace.lints.clippy]
-all = "warn"
-pedantic = "warn"
+all = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
 
 # Microsoft parity witnesses intentionally preserve source-vector shape,
 # case granularity, parameter layout, and source-contract attribution.
