@@ -1,3 +1,5 @@
+#![allow(clippy::needless_pass_by_value)]
+
 use terminal_settings::json_utils::{
     DeserializationError, DeserializationErrorKind, EnumMapper, FlagMapper, Guid, JsonConversion,
     JsonConverter, RgbColor, WideString, fill_value, fill_value_for_key, get_value,
