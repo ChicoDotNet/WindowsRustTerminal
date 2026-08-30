@@ -396,7 +396,7 @@ fn assert_matches_fixture(
 #[test]
 fn microsoft_reflow_test_cases_contract() {
     let cases = parse_microsoft_cases(MICROSOFT_REFLOW_SOURCE);
-    assert_eq!(cases.len(), 14, "all Microsoft ReflowTests.cpp scenarios are replayed");
+    assert_eq!(cases.len(), 15, "all 15 Microsoft ReflowTests.cpp scenarios are replayed");
 
     let attr = TextAttribute::default();
     for case in cases {
