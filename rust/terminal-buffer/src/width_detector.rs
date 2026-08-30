@@ -1,23 +1,100 @@
-//! Deterministic Unicode width classification for terminal buffer writes.
+//! Deterministic Unicode width classification and text measurement.
 //!
 //! Windows Terminal keeps codepoint-width detection separate from the row
 //! storage engine. This module preserves that boundary while providing a
-//! platform-neutral default implementation for the Unicode ranges that are
-//! unambiguously wide in a terminal grid.
+//! platform-neutral implementation for both cell classification and the
+//! Unicode text-measurement policies exercised by the Microsoft contract.
 
 use crate::output_cell::GlyphWidthDetector;
+use unicode_width::UnicodeWidthChar;
 
-/// Stateless Unicode width detector for UTF-16 glyph slices.
+/// Stateless width detector used by the output-cell iterator.
 ///
-/// Ambiguous-width characters remain narrow. That matches the conservative
-/// terminal behavior needed by the buffer core and keeps font-specific width
-/// decisions out of deterministic storage.
+/// Ambiguous-width characters remain narrow here. Stateful text measurement
+/// lives in [`TextMeasurementEngine`] so existing buffer consumers do not gain
+/// process-global or mutable width policy.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct CodepointWidthDetector;
 
 impl GlyphWidthDetector for CodepointWidthDetector {
     fn is_full_width(&self, glyph: &[u16]) -> bool {
         decode_first_scalar(glyph).is_some_and(is_unambiguous_wide)
+    }
+}
+
+/// The three measurement policies exposed by Microsoft's
+/// `CodepointWidthDetector`.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TextMeasurementMode {
+    /// UAX #29 extended grapheme clustering with terminal cell widths.
+    #[default]
+    Graphemes,
+    /// A non-zero-width scalar followed by zero-width scalars forms a cluster.
+    Wcswidth,
+    /// Legacy conhost-style scalar measurement.
+    Console,
+}
+
+/// Stateful policy owner corresponding to the mutable portion of Microsoft's
+/// `CodepointWidthDetector`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextMeasurementEngine {
+    mode: TextMeasurementMode,
+    ambiguous_width: u8,
+}
+
+impl Default for TextMeasurementEngine {
+    fn default() -> Self {
+        Self {
+            mode: TextMeasurementMode::Graphemes,
+            ambiguous_width: 1,
+        }
+    }
+}
+
+impl TextMeasurementEngine {
+    #[must_use]
+    pub const fn mode(self) -> TextMeasurementMode {
+        self.mode
+    }
+
+    #[must_use]
+    pub const fn ambiguous_width(self) -> u8 {
+        self.ambiguous_width
+    }
+
+    pub const fn set_ambiguous_width(&mut self, width: u8) {
+        self.ambiguous_width = width;
+    }
+
+    pub const fn reset(&mut self, mode: TextMeasurementMode) {
+        self.mode = mode;
+    }
+
+    #[must_use]
+    pub fn scalar_width(self, value: char) -> u8 {
+        let narrow = UnicodeWidthChar::width(value).unwrap_or(0) as u8;
+        let cjk = UnicodeWidthChar::width_cjk(value).unwrap_or(0) as u8;
+        if narrow != cjk {
+            self.ambiguous_width
+        } else {
+            narrow
+        }
+    }
+
+    #[must_use]
+    pub fn grapheme_width(self, grapheme: &str) -> u8 {
+        grapheme
+            .chars()
+            .map(|value| {
+                if value == '\u{fe0f}' {
+                    2
+                } else {
+                    self.scalar_width(value)
+                }
+            })
+            .fold(0_u8, u8::saturating_add)
+            .min(2)
     }
 }
 
@@ -140,5 +217,23 @@ mod tests {
         assert!(!detector.is_full_width(&[0xd83d]));
         assert!(!detector.is_full_width(&[0xde80]));
         assert!(!detector.is_full_width(&[0xd83d, u16::from(b'A')]));
+    }
+
+    #[test]
+    fn microsoft_ambiguous_width_policy_switches_arrow_width() {
+        let mut detector = TextMeasurementEngine::default();
+        for mode in [TextMeasurementMode::Graphemes, TextMeasurementMode::Wcswidth] {
+            detector.reset(mode);
+            detector.set_ambiguous_width(1);
+            assert_eq!(detector.grapheme_width("→"), 1);
+            detector.set_ambiguous_width(2);
+            assert_eq!(detector.grapheme_width("→"), 2);
+        }
+    }
+
+    #[test]
+    fn variation_selector_sixteen_promotes_cluster_to_wide() {
+        let detector = TextMeasurementEngine::default();
+        assert_eq!(detector.grapheme_width("🏳\u{fe0f}"), 2);
     }
 }
