@@ -12,6 +12,9 @@
 pub mod control_key_states;
 pub mod keyboard_selection;
 pub mod selection;
+pub mod selection_boundary;
 pub mod selection_rendering;
 pub mod terminal;
+pub mod terminal_api;
+pub mod terminal_buffer_state;
 pub mod update_selection;
