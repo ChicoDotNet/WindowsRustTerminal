@@ -36,9 +36,9 @@ fn microsoft_screen_buffer_vt_restore_color_table_report_contract() {
     ];
 
     for (index, hue, lightness, saturation, expected) in hls_vectors {
-        assert!(state.apply_dec_color_definitions(&format!(
-            "{index};1;{hue};{lightness};{saturation}"
-        )));
+        assert!(
+            state.apply_dec_color_definitions(&format!("{index};1;{hue};{lightness};{saturation}"))
+        );
         assert_eq!(state.color(index), Some(expected), "HLS index={index}");
     }
 
@@ -64,24 +64,18 @@ fn microsoft_screen_buffer_vt_restore_color_table_report_contract() {
     ];
 
     for (index, red, green, blue, expected) in rgb_vectors {
-        assert!(state.apply_dec_color_definitions(&format!(
-            "{index};2;{red};{green};{blue}"
-        )));
+        assert!(state.apply_dec_color_definitions(&format!("{index};2;{red};{green};{blue}")));
         assert_eq!(state.color(index), Some(expected), "RGB index={index}");
     }
 
     set_first_sixteen_white(&mut state);
 
-    assert!(state.apply_dec_color_definitions(
-        "0;1;120;50;100/2;1;240;50;100/4;1;360;50;100"
-    ));
+    assert!(state.apply_dec_color_definitions("0;1;120;50;100/2;1;240;50;100/4;1;360;50;100"));
     assert_eq!(state.color(0), Some(Rgb::new(255, 0, 0)));
     assert_eq!(state.color(2), Some(Rgb::new(0, 255, 0)));
     assert_eq!(state.color(4), Some(Rgb::new(0, 0, 255)));
 
-    assert!(state.apply_dec_color_definitions(
-        "1;2;100;0;0/3;2;0;100;0/5;2;0;0;100"
-    ));
+    assert!(state.apply_dec_color_definitions("1;2;100;0;0/3;2;0;100;0/5;2;0;0;100"));
     assert_eq!(state.color(1), Some(Rgb::new(255, 0, 0)));
     assert_eq!(state.color(3), Some(Rgb::new(0, 255, 0)));
     assert_eq!(state.color(5), Some(Rgb::new(0, 0, 255)));

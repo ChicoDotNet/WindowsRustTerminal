@@ -6,7 +6,10 @@ use terminal_settings::{
 };
 
 fn command_named<'a>(commands: &'a [PaletteCommand], name: &str) -> &'a PaletteCommand {
-    commands.iter().find(|command| command.name() == name).unwrap()
+    commands
+        .iter()
+        .find(|command| command.name() == name)
+        .unwrap()
 }
 
 fn assert_split(command: &PaletteCommand, profile: &str, direction: PaletteSplitDirection) {
@@ -41,7 +44,11 @@ fn microsoft_local_terminal_app_settings_test_iterate_commands_contract() {
     assert_eq!(settings.warning_count(), 0);
     let template = &settings.source_commands()[0];
     assert_eq!(template.name(), "iterable command ${profile.name}");
-    assert_split(template, "${profile.name}", PaletteSplitDirection::Automatic);
+    assert_split(
+        template,
+        "${profile.name}",
+        PaletteSplitDirection::Automatic,
+    );
 
     let expanded = settings.expanded_commands();
     assert_eq!(expanded.len(), 3);
@@ -64,11 +71,17 @@ fn microsoft_local_terminal_app_settings_test_iterate_on_generated_named_command
         profile_fixture("profile1")
     );
     let settings = ExpandedCommandSettings::from_json(&json).unwrap();
-    assert_eq!(settings.source_commands()[0].name(), "Split pane, profile: ${profile.name}");
+    assert_eq!(
+        settings.source_commands()[0].name(),
+        "Split pane, profile: ${profile.name}"
+    );
     assert_eq!(settings.expanded_commands().len(), 3);
     for name in ["profile0", "profile1", "profile2"] {
         assert_split(
-            command_named(settings.expanded_commands(), &format!("Split pane, profile: {name}")),
+            command_named(
+                settings.expanded_commands(),
+                &format!("Split pane, profile: {name}"),
+            ),
             name,
             PaletteSplitDirection::Automatic,
         );
@@ -133,8 +146,14 @@ fn microsoft_local_terminal_app_settings_test_nested_in_nested_command_contract(
     assert_eq!(grandparent.action(), PaletteAction::Invalid);
     assert_eq!(parent.action(), PaletteAction::Invalid);
     assert_eq!(parent.nested().len(), 2);
-    assert_eq!(parent.nested_named("child1").unwrap().commandline(), "ssh me@first.com");
-    assert_eq!(parent.nested_named("child2").unwrap().commandline(), "ssh me@second.com");
+    assert_eq!(
+        parent.nested_named("child1").unwrap().commandline(),
+        "ssh me@first.com"
+    );
+    assert_eq!(
+        parent.nested_named("child2").unwrap().commandline(),
+        "ssh me@second.com"
+    );
 }
 
 #[test]
@@ -156,17 +175,23 @@ fn microsoft_local_terminal_app_settings_test_nested_in_iterable_command_contrac
         assert_eq!(parent.action(), PaletteAction::Invalid);
         assert_eq!(parent.nested().len(), 3);
         assert_split(
-            parent.nested_named(&format!("Split pane, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Automatic,
         );
         assert_split(
-            parent.nested_named(&format!("Split pane, split: right, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, split: right, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Right,
         );
         assert_split(
-            parent.nested_named(&format!("Split pane, split: down, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, split: down, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Down,
         );
@@ -216,17 +241,23 @@ fn microsoft_local_terminal_app_settings_test_mixed_nested_and_iterable_command_
         let parent = root.nested_named(&format!("{profile}...")).unwrap();
         assert_eq!(parent.nested().len(), 3);
         assert_split(
-            parent.nested_named(&format!("Split pane, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Automatic,
         );
         assert_split(
-            parent.nested_named(&format!("Split pane, split: right, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, split: right, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Right,
         );
         assert_split(
-            parent.nested_named(&format!("Split pane, split: down, profile: {profile}")).unwrap(),
+            parent
+                .nested_named(&format!("Split pane, split: down, profile: {profile}"))
+                .unwrap(),
             profile,
             PaletteSplitDirection::Down,
         );
@@ -250,7 +281,10 @@ fn microsoft_local_terminal_app_settings_test_iterable_color_scheme_commands_con
     assert_eq!(settings.source_commands()[0].profile(), "${scheme.name}");
     for scheme in ["Campbell", "Campbell PowerShell", "Vintage"] {
         assert_split(
-            command_named(settings.expanded_commands(), &format!("iterable command {scheme}")),
+            command_named(
+                settings.expanded_commands(),
+                &format!("iterable command {scheme}"),
+            ),
             scheme,
             PaletteSplitDirection::Automatic,
         );

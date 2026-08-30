@@ -26,8 +26,16 @@ pub fn legacy_selection_spans(
     alternate_selection: bool,
 ) -> Vec<SelectionSpan> {
     let opposite = BufferPoint::new(
-        if anchor.x == rect.left { rect.right } else { rect.left },
-        if anchor.y == rect.top { rect.bottom } else { rect.top },
+        if anchor.x == rect.left {
+            rect.right
+        } else {
+            rect.left
+        },
+        if anchor.y == rect.top {
+            rect.bottom
+        } else {
+            rect.top
+        },
     );
     let block_selection = !(line_selection ^ alternate_selection);
 
@@ -127,8 +135,12 @@ fn is_word_delimiter(buffer: &TextBuffer, point: BufferPoint) -> bool {
 
 fn clamp_in_bounds(buffer: &TextBuffer, point: BufferPoint) -> BufferPoint {
     BufferPoint::new(
-        point.x.clamp(0, i32::from(buffer.width()).saturating_sub(1)),
-        point.y.clamp(0, i32::from(buffer.height()).saturating_sub(1)),
+        point
+            .x
+            .clamp(0, i32::from(buffer.width()).saturating_sub(1)),
+        point
+            .y
+            .clamp(0, i32::from(buffer.height()).saturating_sub(1)),
     )
 }
 
@@ -196,7 +208,10 @@ mod tests {
             (BufferPoint::new(1, 3), true, true),
             (BufferPoint::new(10, 3), true, true),
         ] {
-            assert_eq!(legacy_selection_spans(&buffer, rect, anchor, line, alternate), expected);
+            assert_eq!(
+                legacy_selection_spans(&buffer, rect, anchor, line, alternate),
+                expected
+            );
         }
     }
 
@@ -237,14 +252,20 @@ mod tests {
                 SelectionSpan::new(BufferPoint::new(1, 0), BufferPoint::new(11, 3)),
             ),
         ] {
-            assert_eq!(legacy_selection_spans(&buffer, rect, anchor, line, alternate), vec![expected]);
+            assert_eq!(
+                legacy_selection_spans(&buffer, rect, anchor, line, alternate),
+                vec![expected]
+            );
         }
 
         let single = InclusiveRect::new(1, 2, 10, 2);
         for anchor in [BufferPoint::new(1, 2), BufferPoint::new(10, 2)] {
             assert_eq!(
                 legacy_selection_spans(&buffer, single, anchor, true, false),
-                vec![SelectionSpan::new(BufferPoint::new(1, 2), BufferPoint::new(11, 2))]
+                vec![SelectionSpan::new(
+                    BufferPoint::new(1, 2),
+                    BufferPoint::new(11, 2)
+                )]
             );
         }
     }

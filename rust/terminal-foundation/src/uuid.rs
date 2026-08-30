@@ -127,18 +127,12 @@ fn sha1(input: &[u8]) -> [u8; 20] {
         let mut words = [0u32; 80];
         for (index, word) in words[..16].iter_mut().enumerate() {
             let start = index * 4;
-            *word = u32::from_be_bytes(
-                chunk[start..start + 4]
-                    .try_into()
-                    .expect("SHA-1 word"),
-            );
+            *word = u32::from_be_bytes(chunk[start..start + 4].try_into().expect("SHA-1 word"));
         }
         for index in 16..80 {
-            words[index] = (words[index - 3]
-                ^ words[index - 8]
-                ^ words[index - 14]
-                ^ words[index - 16])
-                .rotate_left(1);
+            words[index] =
+                (words[index - 3] ^ words[index - 8] ^ words[index - 14] ^ words[index - 16])
+                    .rotate_left(1);
         }
 
         let mut a = h0;
@@ -220,7 +214,10 @@ mod tests {
 
     #[test]
     fn microsoft_types_v5_uuid_u16_string_matches_source_contract() {
-        let name: Vec<u8> = "testing".encode_utf16().flat_map(u16::to_le_bytes).collect();
+        let name: Vec<u8> = "testing"
+            .encode_utf16()
+            .flat_map(u16::to_le_bytes)
+            .collect();
         let expected = Guid::new(
             0xe04f_b1f7,
             0x739d,

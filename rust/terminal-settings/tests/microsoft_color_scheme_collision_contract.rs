@@ -59,23 +59,59 @@ fn microsoft_color_scheme_update_scheme_references() {
 
     let profiles = settings.profiles();
     for profile in &profiles[0..2] {
-        assert_eq!(profile.default_appearance().dark_name(), "Campbell (renamed)");
-        assert_eq!(profile.default_appearance().light_name(), "Campbell (renamed)");
+        assert_eq!(
+            profile.default_appearance().dark_name(),
+            "Campbell (renamed)"
+        );
+        assert_eq!(
+            profile.default_appearance().light_name(),
+            "Campbell (renamed)"
+        );
         assert!(profile.default_appearance().has_dark_name());
         assert!(profile.default_appearance().has_light_name());
     }
-    assert_eq!(profiles[2].default_appearance().dark_name(), "Campbell (renamed)");
-    assert_eq!(profiles[2].default_appearance().light_name(), "Campbell (renamed)");
+    assert_eq!(
+        profiles[2].default_appearance().dark_name(),
+        "Campbell (renamed)"
+    );
+    assert_eq!(
+        profiles[2].default_appearance().light_name(),
+        "Campbell (renamed)"
+    );
     assert!(!profiles[2].default_appearance().has_dark_name());
     assert!(!profiles[2].default_appearance().has_light_name());
-    assert_eq!(profiles[3].default_appearance().dark_name(), "One Half Dark");
-    assert_eq!(profiles[3].default_appearance().light_name(), "One Half Dark");
-    assert_eq!(profiles[4].default_appearance().dark_name(), "One Half Dark");
-    assert_eq!(profiles[4].default_appearance().light_name(), "One Half Light");
-    assert_eq!(profiles[5].default_appearance().dark_name(), "One Half Dark");
-    assert_eq!(profiles[5].default_appearance().light_name(), "Campbell (renamed)");
-    assert_eq!(profiles[6].default_appearance().dark_name(), "Campbell (renamed)");
-    assert_eq!(profiles[6].default_appearance().light_name(), "One Half Light");
+    assert_eq!(
+        profiles[3].default_appearance().dark_name(),
+        "One Half Dark"
+    );
+    assert_eq!(
+        profiles[3].default_appearance().light_name(),
+        "One Half Dark"
+    );
+    assert_eq!(
+        profiles[4].default_appearance().dark_name(),
+        "One Half Dark"
+    );
+    assert_eq!(
+        profiles[4].default_appearance().light_name(),
+        "One Half Light"
+    );
+    assert_eq!(
+        profiles[5].default_appearance().dark_name(),
+        "One Half Dark"
+    );
+    assert_eq!(
+        profiles[5].default_appearance().light_name(),
+        "Campbell (renamed)"
+    );
+    assert_eq!(
+        profiles[6].default_appearance().dark_name(),
+        "Campbell (renamed)"
+    );
+    assert_eq!(
+        profiles[6].default_appearance().light_name(),
+        "One Half Light"
+    );
 }
 
 #[test]
@@ -147,21 +183,39 @@ fn microsoft_color_scheme_collision_retargets_all_profiles() {
     let profiles = settings.profiles();
     assert!(!profiles[0].default_appearance().has_light_name());
     assert!(!profiles[0].default_appearance().has_dark_name());
-    assert_eq!(profiles[0].default_appearance().light_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[0].default_appearance().light_name(),
+        "Campbell (modified)"
+    );
     assert_eq!(profiles[1].default_appearance().light_name(), "Antique");
-    assert_eq!(profiles[2].default_appearance().light_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[2].default_appearance().light_name(),
+        "Campbell (modified)"
+    );
     assert!(profiles[2].default_appearance().has_light_name());
 
     assert!(!profiles[3].default_appearance().has_light_name());
     assert!(profiles[3].unfocused_appearance().has_light_name());
-    assert_eq!(profiles[3].unfocused_appearance().light_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[3].unfocused_appearance().light_name(),
+        "Campbell (modified)"
+    );
     assert!(profiles[3].unfocused_appearance().has_dark_name());
-    assert_eq!(profiles[3].unfocused_appearance().dark_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[3].unfocused_appearance().dark_name(),
+        "Campbell (modified)"
+    );
 
     assert!(!profiles[4].unfocused_appearance().has_light_name());
-    assert_eq!(profiles[4].unfocused_appearance().light_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[4].unfocused_appearance().light_name(),
+        "Campbell (modified)"
+    );
     assert!(profiles[4].unfocused_appearance().has_dark_name());
-    assert_eq!(profiles[4].unfocused_appearance().dark_name(), "Campbell (modified)");
+    assert_eq!(
+        profiles[4].unfocused_appearance().dark_name(),
+        "Campbell (modified)"
+    );
 }
 
 #[test]
@@ -191,13 +245,32 @@ fn microsoft_color_scheme_collision_with_fragments() {
     );
 
     let settings = ColorSchemeSettings::from_layers(&user, &inbox, &[&fragment]).unwrap();
-    assert_eq!(settings.scheme("Campbell").unwrap().origin(), OriginTag::Fragment);
-    assert_eq!(settings.scheme("Campbell").unwrap().scheme().foreground(), rgb("#444444"));
-    assert_eq!(settings.scheme("Antique").unwrap().origin(), OriginTag::InBox);
-    assert_eq!(settings.scheme("Mango Light").unwrap().origin(), OriginTag::Fragment);
-    assert_eq!(settings.scheme("Mango Light (modified)").unwrap().origin(), OriginTag::User);
     assert_eq!(
-        settings.scheme("Mango Light (modified)").unwrap().scheme().foreground(),
+        settings.scheme("Campbell").unwrap().origin(),
+        OriginTag::Fragment
+    );
+    assert_eq!(
+        settings.scheme("Campbell").unwrap().scheme().foreground(),
+        rgb("#444444")
+    );
+    assert_eq!(
+        settings.scheme("Antique").unwrap().origin(),
+        OriginTag::InBox
+    );
+    assert_eq!(
+        settings.scheme("Mango Light").unwrap().origin(),
+        OriginTag::Fragment
+    );
+    assert_eq!(
+        settings.scheme("Mango Light (modified)").unwrap().origin(),
+        OriginTag::User
+    );
+    assert_eq!(
+        settings
+            .scheme("Mango Light (modified)")
+            .unwrap()
+            .scheme()
+            .foreground(),
         rgb("#121314")
     );
 
@@ -210,23 +283,29 @@ fn microsoft_color_scheme_collision_with_fragments() {
     let profiles = settings.profiles();
     assert_eq!(profiles[0].default_appearance().light_name(), "Campbell");
     assert_eq!(profiles[1].default_appearance().light_name(), "Antique");
-    assert_eq!(profiles[2].default_appearance().light_name(), "Mango Light (modified)");
+    assert_eq!(
+        profiles[2].default_appearance().light_name(),
+        "Mango Light (modified)"
+    );
     assert!(profiles[2].default_appearance().has_light_name());
     assert!(profiles[2].default_appearance().has_dark_name());
 
     let fragment_profile = &profiles[3];
     assert!(fragment_profile.default_appearance().has_light_name());
-    assert_eq!(fragment_profile.default_appearance().light_name(), "Mango Light (modified)");
+    assert_eq!(
+        fragment_profile.default_appearance().light_name(),
+        "Mango Light (modified)"
+    );
     assert!(!fragment_profile.default_appearance().has_dark_name());
-    assert_eq!(fragment_profile.default_appearance().dark_name(), "Mango Dark");
+    assert_eq!(
+        fragment_profile.default_appearance().dark_name(),
+        "Mango Dark"
+    );
 }
 
 #[test]
 fn microsoft_color_scheme_layer_multiple_user_collisions() {
-    let inbox = settings(
-        "[]",
-        &[scheme("Campbell", "#111111", "#111111", "#111111")],
-    );
+    let inbox = settings("[]", &[scheme("Campbell", "#111111", "#111111", "#111111")]);
     let user = settings(
         r#"[{"name":"profile0"}]"#,
         &[

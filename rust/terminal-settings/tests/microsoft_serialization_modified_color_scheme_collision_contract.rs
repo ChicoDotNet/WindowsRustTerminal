@@ -1,7 +1,4 @@
-use terminal_settings::{
-    serialization::SettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{serialization::SettingsDocument, settings_json::JsonValue};
 
 #[test]
 fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_contract() {

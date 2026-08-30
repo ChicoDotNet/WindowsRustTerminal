@@ -109,7 +109,10 @@ fn microsoft_deserialization_clone_inheritance_tree_contract() {
     assert_eq!(settings.profile_count(), copy.profile_count());
     for index in 0..settings.profile_count() {
         assert_eq!(settings.profile_name(index), copy.profile_name(index));
-        assert_eq!(settings.profile_tab_title(index), copy.profile_tab_title(index));
+        assert_eq!(
+            settings.profile_tab_title(index),
+            copy.profile_tab_title(index)
+        );
     }
     assert_eq!(
         settings.profile_defaults_tab_title(),
@@ -174,6 +177,9 @@ fn microsoft_deserialization_clone_inheritance_tree_contract() {
         assert_eq!(settings.active_profile_count(), 1);
         assert_eq!(settings.active_profile_count(), copy.active_profile_count());
         assert_eq!(settings.profile_parent_count(0), Some(1));
-        assert_eq!(settings.profile_parent_count(0), copy.profile_parent_count(0));
+        assert_eq!(
+            settings.profile_parent_count(0),
+            copy.profile_parent_count(0)
+        );
     }
 }

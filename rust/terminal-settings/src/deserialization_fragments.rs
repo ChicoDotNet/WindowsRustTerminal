@@ -72,7 +72,11 @@ impl FragmentActionOverlay {
         Ok(())
     }
 
-    fn layer_action(&mut self, action: &JsonObject, scheme_count: usize) -> Result<(), FragmentError> {
+    fn layer_action(
+        &mut self,
+        action: &JsonObject,
+        scheme_count: usize,
+    ) -> Result<(), FragmentError> {
         if let Some(commands) = action.get("commands") {
             return self.layer_nested_action(action, commands, scheme_count);
         }
@@ -86,10 +90,8 @@ impl FragmentActionOverlay {
             self.names.remove(name);
             return Ok(());
         }
-        self.names.insert(
-            name.to_owned(),
-            FragmentActionRecord { nested_count: 0 },
-        );
+        self.names
+            .insert(name.to_owned(), FragmentActionRecord { nested_count: 0 });
         Ok(())
     }
 
@@ -126,7 +128,8 @@ impl FragmentActionOverlay {
                 self.warnings += 1;
                 return Ok(());
             }
-            nested_count += if child.get("iterateOn").and_then(JsonValue::as_str) == Some("schemes") {
+            nested_count += if child.get("iterateOn").and_then(JsonValue::as_str) == Some("schemes")
+            {
                 scheme_count
             } else {
                 1

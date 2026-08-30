@@ -87,7 +87,8 @@ fn microsoft_profile_defaults_prohibited_settings_do_not_inherit_identity_or_com
         }
     }"#;
 
-    let settings = ProfileIdentitySettings::from_modern_json_with_prohibited_defaults(user).unwrap();
+    let settings =
+        ProfileIdentitySettings::from_modern_json_with_prohibited_defaults(user).unwrap();
     assert!(!settings.defaults_has_guid());
     assert!(!settings.defaults_has_name());
     assert!(!settings.defaults_has_source());

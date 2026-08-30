@@ -101,7 +101,10 @@ mod tests {
         ];
         for (foreground, expected) in expected_foregrounds.into_iter().enumerate() {
             let legacy = u16::try_from(foreground).expect("foreground index fits") | 0x0040;
-            assert_eq!(format_attributes(TextAttribute::from_legacy(legacy, defaults)), expected);
+            assert_eq!(
+                format_attributes(TextAttribute::from_legacy(legacy, defaults)),
+                expected
+            );
         }
 
         let expected_backgrounds = [
@@ -124,7 +127,10 @@ mod tests {
         ];
         for (background, expected) in expected_backgrounds.into_iter().enumerate() {
             let legacy = (u16::try_from(background).expect("background index fits") << 4) | 0x0004;
-            assert_eq!(format_attributes(TextAttribute::from_legacy(legacy, defaults)), expected);
+            assert_eq!(
+                format_attributes(TextAttribute::from_legacy(legacy, defaults)),
+                expected
+            );
         }
 
         assert_eq!(

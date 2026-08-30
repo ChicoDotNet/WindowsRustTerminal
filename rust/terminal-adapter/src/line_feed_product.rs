@@ -15,7 +15,9 @@ use terminal_buffer::{
 use terminal_input::Mode;
 use terminal_parser::output_engine::{DcsAction, LineFeedType, OutputAction, TermDispatch};
 
-use crate::{adapt_dispatch::PageGeometry, terminal_surface_product::TerminalSurfaceProductDispatch};
+use crate::{
+    adapt_dispatch::PageGeometry, terminal_surface_product::TerminalSurfaceProductDispatch,
+};
 
 pub struct LineFeedProductDispatch {
     inner: TerminalSurfaceProductDispatch,
@@ -34,7 +36,9 @@ impl LineFeedProductDispatch {
         let width = u16::try_from(geometry.width).expect("adapter width fits terminal buffer");
         let top = u16::try_from(geometry.top.max(0)).expect("adapter top fits terminal buffer");
         let height = u16::try_from(geometry.height).expect("adapter height fits terminal buffer");
-        let buffer_height = top.checked_add(height).expect("adapter buffer height fits u16");
+        let buffer_height = top
+            .checked_add(height)
+            .expect("adapter buffer height fits u16");
         let attribute = TextAttribute::default();
         let buffer = TextBuffer::new(width, buffer_height, attribute)
             .expect("normalized adapter geometry creates a valid buffer");

@@ -99,7 +99,10 @@ mod tests {
 
     #[test]
     fn microsoft_til_color_to_colorref_contract() {
-        assert_eq!(TilColor::rgba(0xf0, 0x0d, 0xca, 0xfe).to_colorref(), 0x00ca_0df0);
+        assert_eq!(
+            TilColor::rgba(0xf0, 0x0d, 0xca, 0xfe).to_colorref(),
+            0x00ca_0df0
+        );
     }
 
     #[test]
@@ -129,7 +132,10 @@ mod tests {
     #[test]
     fn microsoft_til_color_with_alpha_contract() {
         let color = TilColor::from_colorref(0x00fe_edfa);
-        assert_eq!(color.with_alpha(0x7f), TilColor::rgba(0xfa, 0xed, 0xfe, 0x7f));
+        assert_eq!(
+            color.with_alpha(0x7f),
+            TilColor::rgba(0xfa, 0xed, 0xfe, 0x7f)
+        );
         assert_ne!(color.with_alpha(0x7f), color);
     }
 
@@ -142,12 +148,18 @@ mod tests {
 
         assert_eq!(orange.layer_over(blue), orange);
         assert_eq!(blue.layer_over(orange), blue);
-        assert_eq!(orange_alpha.layer_over(blue), TilColor::rgba(165, 179, 90, 255));
+        assert_eq!(
+            orange_alpha.layer_over(blue),
+            TilColor::rgba(165, 179, 90, 255)
+        );
         assert_eq!(
             orange_alpha.layer_over(blue_alpha),
             TilColor::rgba(177, 177, 78, 237)
         );
-        assert_eq!(blue_alpha.layer_over(orange), TilColor::rgba(50, 197, 205, 255));
+        assert_eq!(
+            blue_alpha.layer_over(orange),
+            TilColor::rgba(50, 197, 205, 255)
+        );
         assert_eq!(
             blue_alpha.layer_over(orange_alpha),
             TilColor::rgba(35, 200, 220, 237)

@@ -1,5 +1,5 @@
 use terminal_host::console_argument_parser::{
-    parse_console_arguments, ConsoleArgumentError, ConsoleArgumentState,
+    ConsoleArgumentError, ConsoleArgumentState, parse_console_arguments,
 };
 
 fn tokens(values: &[&str]) -> Vec<String> {
@@ -22,7 +22,10 @@ fn microsoft_console_arguments_initial_size_contract() {
     assert_eq!((parsed.width, parsed.height), (0, 30));
 
     assert_eq!(parse(&["--width", "0"]).expect("zero width").width, 0);
-    assert_eq!(parse(&["--width", "-1"]).expect("minus one width").width, -1);
+    assert_eq!(
+        parse(&["--width", "-1"]).expect("minus one width").width,
+        -1
+    );
     assert_eq!(
         parse(&["--width", "foo"]),
         Err(ConsoleArgumentError::InvalidValue("dimension"))

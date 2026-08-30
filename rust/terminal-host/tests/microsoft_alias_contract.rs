@@ -15,7 +15,10 @@ fn microsoft_alias_test_match_and_copy_contract() {
         ("bar $7", "bar seven\r\n"),
         ("bar $8", "bar eight\r\n"),
         ("bar $9", "bar nine\r\n"),
-        ("bar $3 $1 $4 $1 $5 $9", "bar three one four one five nine\r\n"),
+        (
+            "bar $3 $1 $4 $1 $5 $9",
+            "bar three one four one five nine\r\n",
+        ),
         (
             "bar $*",
             "bar one two three four five six    seven eight nine ten eleven twelve\r\n",
@@ -25,8 +28,14 @@ fn microsoft_alias_test_match_and_copy_contract() {
         ("REDIRECT $1$GOUTPUT $2", "REDIRECT one>OUTPUT two\r\n"),
         ("append $1$g$goutput $2", "append one>>output two\r\n"),
         ("APPEND $1$G$GOUTPUT $2", "APPEND one>>OUTPUT two\r\n"),
-        ("redirect $1$linputfile.$2", "redirect one<inputfile.two\r\n"),
-        ("REDIRECT $1$LINPUTFILE.$2", "REDIRECT one<INPUTFILE.two\r\n"),
+        (
+            "redirect $1$linputfile.$2",
+            "redirect one<inputfile.two\r\n",
+        ),
+        (
+            "REDIRECT $1$LINPUTFILE.$2",
+            "REDIRECT one<INPUTFILE.two\r\n",
+        ),
         ("pipe $1$boutput $2", "pipe one|output two\r\n"),
         ("PIPE $1$BOUTPUT $2", "PIPE one|OUTPUT two\r\n"),
         ("run$tmultiple$tcommands", "run\r\nmultiple\r\ncommands\r\n"),

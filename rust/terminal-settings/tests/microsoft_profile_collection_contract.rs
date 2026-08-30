@@ -72,8 +72,7 @@ fn microsoft_correct_old_default_shell_paths_only_for_canonical_guids() {
         }
     }"#;
 
-    let collection =
-        ProfileCollection::from_user_json_with_legacy_shell_path_fixups(user).unwrap();
+    let collection = ProfileCollection::from_user_json_with_legacy_shell_path_fixups(user).unwrap();
     let profiles = collection.profiles();
 
     assert_eq!(profiles.len(), 4);

@@ -61,19 +61,9 @@ impl ResizeIntegrityState {
         let preserved_cursor = self.cursor;
 
         if use_reflow {
-            resize_with_reflow(
-                &mut self.buffer,
-                new_width,
-                new_height,
-                self.fill_attribute,
-            )?;
+            resize_with_reflow(&mut self.buffer, new_width, new_height, self.fill_attribute)?;
         } else {
-            resize_traditional(
-                &mut self.buffer,
-                new_width,
-                new_height,
-                self.fill_attribute,
-            )?;
+            resize_traditional(&mut self.buffer, new_width, new_height, self.fill_attribute)?;
         }
 
         self.cursor = preserved_cursor;
@@ -136,11 +126,7 @@ fn copy_row_traditionally(source: &Row, target: &mut Row) -> Result<(), TextBuff
                 column = column.saturating_add(1);
             }
             DbcsAttribute::Single => {
-                target.replace_glyph(
-                    i32::from(column),
-                    1,
-                    source.glyph_at(i32::from(column)),
-                )?;
+                target.replace_glyph(i32::from(column), 1, source.glyph_at(i32::from(column)))?;
                 target.replace_attributes(
                     i32::from(column),
                     i32::from(column + 1),
@@ -152,11 +138,7 @@ fn copy_row_traditionally(source: &Row, target: &mut Row) -> Result<(), TextBuff
                 if column.saturating_add(1) >= copy_width {
                     break;
                 }
-                target.replace_glyph(
-                    i32::from(column),
-                    2,
-                    source.glyph_at(i32::from(column)),
-                )?;
+                target.replace_glyph(i32::from(column), 2, source.glyph_at(i32::from(column)))?;
                 target.replace_attributes(
                     i32::from(column),
                     i32::from(column + 1),
@@ -174,7 +156,11 @@ fn copy_row_traditionally(source: &Row, target: &mut Row) -> Result<(), TextBuff
 
     if target.size() > source.size() {
         let extension = source.attribute_at(i32::from(source.size().saturating_sub(1)));
-        target.replace_attributes(i32::from(source.size()), i32::from(target.size()), extension);
+        target.replace_attributes(
+            i32::from(source.size()),
+            i32::from(target.size()),
+            extension,
+        );
     }
 
     Ok(())

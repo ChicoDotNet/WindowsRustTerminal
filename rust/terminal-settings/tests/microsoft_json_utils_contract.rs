@@ -118,12 +118,19 @@ where
     assert_eq!(get_value::<T>(&json).unwrap(), expected);
     let mut object = object([] as [(&str, JsonValue); 0]);
     set_value_for_key(&mut object, "myKey", &expected);
-    assert_eq!(object.get("myKey"), Some(serialized.as_ref().unwrap_or(&json)));
+    assert_eq!(
+        object.get("myKey"),
+        Some(serialized.as_ref().unwrap_or(&json))
+    );
 }
 
 #[test]
 fn microsoft_json_utils_basic_type_conversion_contract() {
-    roundtrip("hello".to_owned(), JsonValue::String("hello".to_owned()), None);
+    roundtrip(
+        "hello".to_owned(),
+        JsonValue::String("hello".to_owned()),
+        None,
+    );
     roundtrip(-1024_i32, JsonValue::Number(-1024.0), None);
     roundtrip(u32::MAX, JsonValue::Number(f64::from(u32::MAX)), None);
     roundtrip(false, JsonValue::Bool(false), None);
@@ -133,7 +140,11 @@ fn microsoft_json_utils_basic_type_conversion_contract() {
         JsonValue::String("hello".to_owned()),
         None,
     );
-    roundtrip(f64::from(1.1_f32), JsonValue::Number(f64::from(1.1_f32)), None);
+    roundtrip(
+        f64::from(1.1_f32),
+        JsonValue::Number(f64::from(1.1_f32)),
+        None,
+    );
     roundtrip(1.1_f32, JsonValue::Number(1.1_f32 as f64), None);
     roundtrip(
         RgbColor {
@@ -200,8 +211,14 @@ fn microsoft_json_utils_basic_type_with_custom_converter_contract() {
         100
     );
     let converter = FactorConverter(2);
-    assert_eq!(get_value_with(object.get("key").unwrap(), &converter).unwrap(), 200);
-    assert_eq!(get_value_for_key_with(&object, "key", &converter).unwrap(), 200);
+    assert_eq!(
+        get_value_with(object.get("key").unwrap(), &converter).unwrap(),
+        200
+    );
+    assert_eq!(
+        get_value_for_key_with(&object, "key", &converter).unwrap(),
+        200
+    );
 }
 
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -327,7 +344,10 @@ fn microsoft_json_utils_flag_mapper_contract() {
         JsonValue::String("first".to_owned()),
         JsonValue::String("second".to_owned()),
     ]);
-    assert_eq!(FLAG_MAPPER.from_json(&first_second).unwrap(), FIRST | SECOND);
+    assert_eq!(
+        FLAG_MAPPER.from_json(&first_second).unwrap(),
+        FIRST | SECOND
+    );
     assert_eq!(FLAG_MAPPER.to_json(FIRST | SECOND).unwrap(), first_second);
     assert_eq!(FLAG_MAPPER.from_json(&JsonValue::Array(vec![])).unwrap(), 0);
     assert_eq!(

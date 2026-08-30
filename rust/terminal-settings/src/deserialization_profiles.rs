@@ -136,9 +136,9 @@ impl DeserializedProfiles {
             }
 
             let matching_index = inbox_slots.iter().position(|candidate| {
-                candidate
-                    .as_ref()
-                    .is_some_and(|object| profile_identity(object).ok().as_ref() == Some(&user_identity))
+                candidate.as_ref().is_some_and(|object| {
+                    profile_identity(object).ok().as_ref() == Some(&user_identity)
+                })
             });
 
             let merged = if let Some(index) = matching_index {
@@ -212,7 +212,10 @@ impl DeserializedProfiles {
 
     #[must_use]
     pub fn active_profile_count(&self) -> usize {
-        self.profiles.iter().filter(|profile| !profile.hidden()).count()
+        self.profiles
+            .iter()
+            .filter(|profile| !profile.hidden())
+            .count()
     }
 
     #[must_use]
@@ -255,7 +258,8 @@ impl DeserializedProfiles {
 }
 
 fn parse_root(input: &str) -> Result<JsonObject, DeserializationProfileError> {
-    let value = settings_json::parse(input).map_err(|_| DeserializationProfileError::InvalidJson)?;
+    let value =
+        settings_json::parse(input).map_err(|_| DeserializationProfileError::InvalidJson)?;
     value
         .as_object()
         .cloned()
@@ -277,7 +281,9 @@ fn parse_profiles(root: &JsonObject) -> Result<Vec<JsonObject>, DeserializationP
     }
 }
 
-fn clone_profile_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, DeserializationProfileError> {
+fn clone_profile_objects(
+    values: &[JsonValue],
+) -> Result<Vec<JsonObject>, DeserializationProfileError> {
     values
         .iter()
         .map(|value| {
@@ -292,7 +298,9 @@ fn clone_profile_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, Deseri
 fn profile_identity(object: &JsonObject) -> Result<ProfileIdentity, DeserializationProfileError> {
     match JsonMember::from_object(object, "guid") {
         JsonMember::Missing | JsonMember::Null => Ok(ProfileIdentity::Generated {
-            name: optional_string(object, "name")?.unwrap_or_default().to_owned(),
+            name: optional_string(object, "name")?
+                .unwrap_or_default()
+                .to_owned(),
             source: optional_string(object, "source")?.map(ToOwned::to_owned),
         }),
         JsonMember::Value(JsonValue::String(value)) => ProfileGuid::parse(value)

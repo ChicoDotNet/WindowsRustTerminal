@@ -1,8 +1,8 @@
 use terminal_buffer::line_edit::{
     back_index, delete_cells, delete_columns, forward_index, insert_cells, insert_columns,
 };
-use terminal_buffer::rect_ops::{erase_rect, fill_rect, ScreenRect};
-use terminal_buffer::screen_erase::{erase_display, erase_line, EraseType};
+use terminal_buffer::rect_ops::{ScreenRect, erase_rect, fill_rect};
+use terminal_buffer::screen_erase::{EraseType, erase_display, erase_line};
 use terminal_buffer::terminal_modes::TerminalModeState;
 use terminal_buffer::text_attribute::{TextAttribute, UnderlineStyle};
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
@@ -128,26 +128,12 @@ fn run_operation(operation: usize, erase_source: TextAttribute) -> (TextBuffer, 
         }
         // ICH.
         10 => {
-            insert_cells(
-                buffer.row_mut(0),
-                0,
-                1,
-                0..WIDTH,
-                erase_source,
-            )
-            .unwrap();
+            insert_cells(buffer.row_mut(0), 0, 1, 0..WIDTH, erase_source).unwrap();
             (buffer, 0, 0)
         }
         // DCH.
         11 => {
-            delete_cells(
-                buffer.row_mut(0),
-                0,
-                1,
-                0..WIDTH,
-                erase_source,
-            )
-            .unwrap();
+            delete_cells(buffer.row_mut(0), 0, 1, 0..WIDTH, erase_source).unwrap();
             (buffer, WIDTH - 1, 0)
         }
         // IL.
@@ -166,12 +152,7 @@ fn run_operation(operation: usize, erase_source: TextAttribute) -> (TextBuffer, 
         }
         // ECH uses the same safe rectangular erase primitive for its one-row span.
         14 => {
-            erase_rect(
-                &mut buffer,
-                ScreenRect::new(0, 0, 1, 1),
-                erase_source,
-            )
-            .unwrap();
+            erase_rect(&mut buffer, ScreenRect::new(0, 0, 1, 1), erase_source).unwrap();
             (buffer, 0, 0)
         }
         // EL.
@@ -201,12 +182,7 @@ fn run_operation(operation: usize, erase_source: TextAttribute) -> (TextBuffer, 
         }
         // DECERA.
         17 => {
-            erase_rect(
-                &mut buffer,
-                ScreenRect::new(0, 0, 1, 1),
-                erase_source,
-            )
-            .unwrap();
+            erase_rect(&mut buffer, ScreenRect::new(0, 0, 1, 1), erase_source).unwrap();
             (buffer, 0, 0)
         }
         // SU.

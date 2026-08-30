@@ -17,7 +17,10 @@ fn microsoft_profile_generates_guid_accepts_only_braced_guid_format() {
         r#"{"name":"profile4","guid":"6239a42c-1de4-49a3-80bd-e8fdd045185c"}"#,
         r#"{"name":"profile4","guid":"(6239a42c-1de4-49a3-80bd-e8fdd045185c)\\"}"#,
     ] {
-        assert_eq!(Profile::from_json(invalid), Err(ProfileParseError::InvalidGuid));
+        assert_eq!(
+            Profile::from_json(invalid),
+            Err(ProfileParseError::InvalidGuid)
+        );
     }
 
     let zero = Profile::from_json(
@@ -38,7 +41,10 @@ fn microsoft_profile_generates_guid_accepts_only_braced_guid_format() {
     let expected = ProfileGuid::parse("{6239a42c-1de4-49a3-80bd-e8fdd045185c}").unwrap();
     assert_eq!(lower.guid(), Some(expected));
     assert_eq!(upper.guid(), Some(expected));
-    assert_eq!(expected.to_string(), "{6239a42c-1de4-49a3-80bd-e8fdd045185c}");
+    assert_eq!(
+        expected.to_string(),
+        "{6239a42c-1de4-49a3-80bd-e8fdd045185c}"
+    );
 }
 
 #[test]

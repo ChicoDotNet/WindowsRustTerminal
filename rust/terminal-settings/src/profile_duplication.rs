@@ -77,9 +77,7 @@ impl ProfileDuplicationSettings {
     /// Returns [`ProfileParseError`] when the settings shape is invalid.
     pub fn from_json(input: &str) -> Result<Self, ProfileParseError> {
         let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-        let root = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
         let profiles_object = match JsonMember::from_object(root, "profiles") {
             JsonMember::Missing | JsonMember::Null => return Ok(Self::default()),
             JsonMember::Value(JsonValue::Object(value)) => value,
@@ -93,7 +91,12 @@ impl ProfileDuplicationSettings {
         };
 
         let values = match JsonMember::from_object(profiles_object, "list") {
-            JsonMember::Missing | JsonMember::Null => return Ok(Self { defaults, profiles: Vec::new() }),
+            JsonMember::Missing | JsonMember::Null => {
+                return Ok(Self {
+                    defaults,
+                    profiles: Vec::new(),
+                });
+            }
             JsonMember::Value(JsonValue::Array(values)) => values,
             JsonMember::Value(_) => return Err(ProfileParseError::ExpectedArray),
         };

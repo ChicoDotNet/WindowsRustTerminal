@@ -4,7 +4,7 @@
 //! cursor/margin rules needed by SU, SD, IL, DL and RI. VT parsing and renderer
 //! notification remain outside this module.
 
-use crate::rect_ops::{fill_rect, scroll_rect, ScreenRect};
+use crate::rect_ops::{ScreenRect, fill_rect, scroll_rect};
 use crate::row::RowError;
 use crate::text_attribute::TextAttribute;
 use crate::text_buffer::{TextBuffer, TextBufferPoint};
@@ -168,7 +168,12 @@ fn scroll_up_rect(
     )?;
     fill_rect(
         buffer,
-        ScreenRect::new(region.left, region.bottom - count, region.right, region.bottom),
+        ScreenRect::new(
+            region.left,
+            region.bottom - count,
+            region.right,
+            region.bottom,
+        ),
         u16::from(b' '),
         erase,
     )
@@ -256,7 +261,14 @@ mod tests {
     fn microsoft_screen_buffer_scroll_up_in_margins_contract() {
         let (mut buffer, state, attr) = common_fixture();
         state.scroll_up(&mut buffer, 1, attr).unwrap();
-        for (y, ch) in [(0, b'A'), (1, b'6'), (2, b'7'), (3, b' '), (4, b' '), (5, b'B')] {
+        for (y, ch) in [
+            (0, b'A'),
+            (1, b'6'),
+            (2, b'7'),
+            (3, b' '),
+            (4, b' '),
+            (5, b'B'),
+        ] {
             assert_cell(&buffer, 0, y, ch, attr);
         }
 
@@ -272,7 +284,14 @@ mod tests {
     fn microsoft_screen_buffer_scroll_down_in_margins_contract() {
         let (mut buffer, state, attr) = common_fixture();
         state.scroll_down(&mut buffer, 1, attr).unwrap();
-        for (y, ch) in [(0, b'A'), (1, b' '), (2, b'5'), (3, b'6'), (4, b'7'), (5, b'B')] {
+        for (y, ch) in [
+            (0, b'A'),
+            (1, b' '),
+            (2, b'5'),
+            (3, b'6'),
+            (4, b'7'),
+            (5, b'B'),
+        ] {
             assert_cell(&buffer, 0, y, ch, attr);
         }
 

@@ -165,9 +165,11 @@ impl TerminalModeState {
                 self.pending_wrap = false;
             }
 
-            buffer
-                .row_mut(i32::from(self.cursor.y))
-                .replace_glyph(i32::from(self.cursor.x), columns, glyph)?;
+            buffer.row_mut(i32::from(self.cursor.y)).replace_glyph(
+                i32::from(self.cursor.x),
+                columns,
+                glyph,
+            )?;
 
             let next = self.cursor.x.saturating_add(columns);
             if next >= width {
@@ -182,9 +184,11 @@ impl TerminalModeState {
                 return Ok(());
             }
 
-            buffer
-                .row_mut(i32::from(self.cursor.y))
-                .replace_glyph(i32::from(self.cursor.x), columns, glyph)?;
+            buffer.row_mut(i32::from(self.cursor.y)).replace_glyph(
+                i32::from(self.cursor.x),
+                columns,
+                glyph,
+            )?;
             self.cursor.x = self.cursor.x.saturating_add(columns).min(last);
         }
 

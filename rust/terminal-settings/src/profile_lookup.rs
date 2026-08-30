@@ -5,7 +5,9 @@
 //! exposed by CascadiaSettings without duplicating identity generation.
 
 use crate::profile::{ProfileGuid, ProfileParseError};
-use crate::profile_identity::{ProfileIdentityGuid, ProfileIdentityRecord, ProfileIdentitySettings};
+use crate::profile_identity::{
+    ProfileIdentityGuid, ProfileIdentityRecord, ProfileIdentitySettings,
+};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct ProfileLookup {
@@ -20,10 +22,8 @@ impl ProfileLookup {
     ///
     /// Returns [`ProfileParseError`] when a profile identity is malformed.
     pub fn from_legacy_user_json(user_json: &str) -> Result<Self, ProfileParseError> {
-        let settings = ProfileIdentitySettings::from_layered_legacy_arrays(
-            user_json,
-            r#"{"profiles": []}"#,
-        )?;
+        let settings =
+            ProfileIdentitySettings::from_layered_legacy_arrays(user_json, r#"{"profiles": []}"#)?;
         Ok(Self { settings })
     }
 

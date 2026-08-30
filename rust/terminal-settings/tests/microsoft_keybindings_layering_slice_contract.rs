@@ -64,10 +64,8 @@ fn microsoft_keybindings_hash_deduplication_contract() {
 #[test]
 fn microsoft_keybindings_hash_content_args_contract() {
     let mut map = LayeredActionMap::new();
-    map.layer_json(
-        r#"[ { "command": { "action": "newTab" }, "keys": ["ctrl+c"] } ]"#,
-    )
-    .expect("newTab default-args vector parses");
+    map.layer_json(r#"[ { "command": { "action": "newTab" }, "keys": ["ctrl+c"] } ]"#)
+        .expect("newTab default-args vector parses");
     map.layer_json(
         r#"[ { "command": { "action": "newTab", "index": 0 }, "keys": ["ctrl+shift+c"] } ]"#,
     )

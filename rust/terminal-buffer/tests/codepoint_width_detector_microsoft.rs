@@ -130,7 +130,8 @@ fn fixed_hex_escape(chars: &[char], start: usize, width: usize, body: &str) -> u
 }
 
 fn push_scalar(output: &mut Vec<u16>, value: u32) {
-    let scalar = char::from_u32(value).unwrap_or_else(|| panic!("invalid Unicode scalar U+{value:04X}"));
+    let scalar =
+        char::from_u32(value).unwrap_or_else(|| panic!("invalid Unicode scalar U+{value:04X}"));
     let mut storage = [0_u16; 2];
     output.extend_from_slice(scalar.encode_utf16(&mut storage));
 }
@@ -148,7 +149,10 @@ fn measured_lengths(text: &[u16], reverse: bool) -> Vec<usize> {
 #[test]
 fn microsoft_grapheme_break_test_replays_every_active_source_row() {
     let rows = parse_active_grapheme_rows(MICROSOFT_SOURCE);
-    assert!(rows.len() > 500, "expected the full generated Microsoft corpus");
+    assert!(
+        rows.len() > 500,
+        "expected the full generated Microsoft corpus"
+    );
 
     for (row_index, expected_graphemes) in rows.iter().enumerate() {
         let text = expected_graphemes

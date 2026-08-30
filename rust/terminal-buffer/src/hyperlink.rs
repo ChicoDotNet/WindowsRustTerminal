@@ -67,13 +67,15 @@ impl HyperlinkStore {
             .collect();
 
         self.uri_by_id.retain(|id, _| live_ids.contains(id));
-        self.custom_pair_to_id
-            .retain(|_, id| live_ids.contains(id));
+        self.custom_pair_to_id.retain(|_, id| live_ids.contains(id));
     }
 
     fn allocate_id(&mut self) -> u16 {
         let id = self.next_id;
-        self.next_id = self.next_id.checked_add(1).expect("hyperlink id space exhausted");
+        self.next_id = self
+            .next_id
+            .checked_add(1)
+            .expect("hyperlink id space exhausted");
         id
     }
 }

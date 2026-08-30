@@ -56,7 +56,13 @@ pub fn replace_values<T: Clone + Eq>(source: &Rle<T>, old_value: &T, new_value: 
     let values = source
         .expanded()
         .into_iter()
-        .map(|value| if &value == old_value { new_value.clone() } else { value })
+        .map(|value| {
+            if &value == old_value {
+                new_value.clone()
+            } else {
+                value
+            }
+        })
         .collect::<Vec<_>>();
     from_values(&values)
 }
@@ -186,10 +192,34 @@ mod tests {
             ("1|3 3|2|1 1 1|5 5", 6, 9, "", "1|3 3|2|1 1"),
             ("1|3 3|2|1 1 1|5 5", 3, 7, "", "1|3 3|5 5"),
             ("1|3 3|2|1 1 1|5 5", 2, 6, "", "1|3|1|5 5"),
-            ("1|3 3|2|1 1 1|5 5", 0, 0, "6|7 7|8", "6|7 7|8|1|3 3|2|1 1 1|5 5"),
-            ("1|3 3|2|1 1 1|5 5", 9, 9, "6|7 7|8", "1|3 3|2|1 1 1|5 5|6|7 7|8"),
-            ("1|3 3|2|1 1 1|5 5", 4, 4, "6|7 7|8", "1|3 3|2|6|7 7|8|1 1 1|5 5"),
-            ("1|3 3|2|1 1 1|5 5", 5, 5, "6|7 7|8", "1|3 3|2|1|6|7 7|8|1 1|5 5"),
+            (
+                "1|3 3|2|1 1 1|5 5",
+                0,
+                0,
+                "6|7 7|8",
+                "6|7 7|8|1|3 3|2|1 1 1|5 5",
+            ),
+            (
+                "1|3 3|2|1 1 1|5 5",
+                9,
+                9,
+                "6|7 7|8",
+                "1|3 3|2|1 1 1|5 5|6|7 7|8",
+            ),
+            (
+                "1|3 3|2|1 1 1|5 5",
+                4,
+                4,
+                "6|7 7|8",
+                "1|3 3|2|6|7 7|8|1 1 1|5 5",
+            ),
+            (
+                "1|3 3|2|1 1 1|5 5",
+                5,
+                5,
+                "6|7 7|8",
+                "1|3 3|2|1|6|7 7|8|1 1|5 5",
+            ),
             ("1|3 3|2|1 1 1|5 5", 6, 6, "6", "1|3 3|2|1 1|6|1|5 5"),
             ("1|3 3|2|1 1 1|5 5", 0, 9, "6|7 7|8", "6|7 7|8"),
             ("1|3 3|2|1 1 1|5 5", 0, 6, "6|7 7|8", "6|7 7|8|1|5 5"),
@@ -242,7 +272,10 @@ mod tests {
 
         let mut grown = expected.clone();
         grown.extend(std::iter::repeat_n(5, 5));
-        assert_eq!(resize_trailing_extent(&source, grown.len()).expanded(), grown);
+        assert_eq!(
+            resize_trailing_extent(&source, grown.len()).expanded(),
+            grown
+        );
     }
 
     #[test]
@@ -252,7 +285,10 @@ mod tests {
         let values = rle.expanded();
 
         assert_eq!(values.iter().copied().collect::<Vec<_>>(), expected);
-        assert_eq!(values.iter().rev().copied().collect::<Vec<_>>(), expected.iter().rev().copied().collect::<Vec<_>>());
+        assert_eq!(
+            values.iter().rev().copied().collect::<Vec<_>>(),
+            expected.iter().rev().copied().collect::<Vec<_>>()
+        );
         assert_eq!(values[2], 3);
         assert_eq!(values[3], 2);
         assert_eq!(values[4], 1);

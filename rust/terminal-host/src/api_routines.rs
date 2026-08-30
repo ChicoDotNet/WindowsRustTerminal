@@ -21,10 +21,8 @@ pub const ENABLE_EXTENDED_FLAGS: u32 = 0x0080;
 pub const ENABLE_AUTO_POSITION: u32 = 0x0100;
 pub const ENABLE_VIRTUAL_TERMINAL_INPUT: u32 = 0x0200;
 
-const EXTENDED_STATE_MASK: u32 = ENABLE_INSERT_MODE
-    | ENABLE_QUICK_EDIT_MODE
-    | ENABLE_EXTENDED_FLAGS
-    | ENABLE_AUTO_POSITION;
+const EXTENDED_STATE_MASK: u32 =
+    ENABLE_INSERT_MODE | ENABLE_QUICK_EDIT_MODE | ENABLE_EXTENDED_FLAGS | ENABLE_AUTO_POSITION;
 const VALID_INPUT_MODE_MASK: u32 = ENABLE_PROCESSED_INPUT
     | ENABLE_LINE_INPUT
     | ENABLE_ECHO_INPUT
@@ -133,8 +131,7 @@ impl ConsoleInputModeState {
             .set_input_mode(requested_mode & !EXTENDED_STATE_MASK);
 
         if requested_mode & !VALID_INPUT_MODE_MASK != 0
-            || requested_mode & ENABLE_ECHO_INPUT != 0
-                && requested_mode & ENABLE_LINE_INPUT == 0
+            || requested_mode & ENABLE_ECHO_INPUT != 0 && requested_mode & ENABLE_LINE_INPUT == 0
         {
             InputModeStatus::InvalidArgument
         } else {
@@ -212,11 +209,7 @@ impl ConsoleTitleState {
     /// the actual Windows codepage transform, matching conhost's separation of
     /// responsibilities.
     #[must_use]
-    pub fn get_console_original_title_a<F>(
-        &self,
-        capacity: usize,
-        encode: F,
-    ) -> TitleRead<u8>
+    pub fn get_console_original_title_a<F>(&self, capacity: usize, encode: F) -> TitleRead<u8>
     where
         F: FnOnce(&[u16]) -> Vec<u8>,
     {
@@ -362,7 +355,8 @@ impl ConsoleWriter {
 
     fn decode_cp437(&mut self, bytes: &[u8]) {
         self.pending.clear();
-        self.output.extend(bytes.iter().map(|byte| u16::from(*byte)));
+        self.output
+            .extend(bytes.iter().map(|byte| u16::from(*byte)));
     }
 
     fn decode_cp932(&mut self, bytes: &[u8]) {
@@ -530,11 +524,7 @@ impl ConsoleScreenBuffer {
         Ok(LegacyCell::new(character, attributes))
     }
 
-    pub fn set_cell(
-        &mut self,
-        point: Point,
-        cell: LegacyCell,
-    ) -> Result<(), ScreenBufferError> {
+    pub fn set_cell(&mut self, point: Point, cell: LegacyCell) -> Result<(), ScreenBufferError> {
         if !self.in_bounds(point) {
             return Err(ScreenBufferError::OutOfBounds);
         }
@@ -656,8 +646,5 @@ impl ConsoleScreenBuffer {
 }
 
 const fn point_in_rect(rect: InclusiveRect, point: Point) -> bool {
-    point.x >= rect.left
-        && point.x <= rect.right
-        && point.y >= rect.top
-        && point.y <= rect.bottom
+    point.x >= rect.left && point.x <= rect.right && point.y >= rect.top && point.y <= rect.bottom
 }

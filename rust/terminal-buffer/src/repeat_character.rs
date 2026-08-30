@@ -109,9 +109,14 @@ mod tests {
         repeat
             .write_graphic(&mut buffer, &mut cursor, &[u16::from(b'X')], attribute)
             .unwrap();
-        repeat.repeat(&mut buffer, &mut cursor, 1, attribute).unwrap();
+        repeat
+            .repeat(&mut buffer, &mut cursor, 1, attribute)
+            .unwrap();
         assert_eq!(cursor, TextBufferPoint::new(2, 0));
-        assert_eq!(buffer.row(0).text_range(0, 3), &['X' as u16, 'X' as u16, ' ' as u16]);
+        assert_eq!(
+            buffer.row(0).text_range(0, 3),
+            &['X' as u16, 'X' as u16, ' ' as u16]
+        );
 
         // A non-graphic action between the write and REP invalidates the repeat.
         cursor = TextBufferPoint::new(0, 1);
@@ -122,16 +127,28 @@ mod tests {
             .write_graphic(&mut buffer, &mut cursor, &[u16::from(b'B')], attribute)
             .unwrap();
         repeat.invalidate();
-        repeat.repeat(&mut buffer, &mut cursor, 1, attribute).unwrap();
-        assert_eq!(buffer.row(1).text_range(0, 3), &['A' as u16, 'B' as u16, ' ' as u16]);
+        repeat
+            .repeat(&mut buffer, &mut cursor, 1, attribute)
+            .unwrap();
+        assert_eq!(
+            buffer.row(1).text_range(0, 3),
+            &['A' as u16, 'B' as u16, ' ' as u16]
+        );
 
         cursor = TextBufferPoint::new(0, 2);
         repeat
             .write_graphic(&mut buffer, &mut cursor, &[u16::from(b'C')], attribute)
             .unwrap();
-        repeat.repeat(&mut buffer, &mut cursor, 5, attribute).unwrap();
+        repeat
+            .repeat(&mut buffer, &mut cursor, 5, attribute)
+            .unwrap();
         assert_eq!(cursor, TextBufferPoint::new(6, 2));
-        assert_eq!(buffer.row(2).text_range(0, 7), &['C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, ' ' as u16]);
+        assert_eq!(
+            buffer.row(2).text_range(0, 7),
+            &[
+                'C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, 'C' as u16, ' ' as u16
+            ]
+        );
 
         // A line/control action invalidates the previous graphic.
         cursor = TextBufferPoint::new(0, 4);
@@ -139,7 +156,9 @@ mod tests {
             .write_graphic(&mut buffer, &mut cursor, &[u16::from(b'D')], attribute)
             .unwrap();
         repeat.invalidate();
-        repeat.repeat(&mut buffer, &mut cursor, 1, attribute).unwrap();
+        repeat
+            .repeat(&mut buffer, &mut cursor, 1, attribute)
+            .unwrap();
         assert_eq!(cursor, TextBufferPoint::new(1, 4));
 
         // REP is single-use until another graphic character arrives.
@@ -147,10 +166,17 @@ mod tests {
         repeat
             .write_graphic(&mut buffer, &mut cursor, &[u16::from(b'E')], attribute)
             .unwrap();
-        repeat.repeat(&mut buffer, &mut cursor, 1, attribute).unwrap();
+        repeat
+            .repeat(&mut buffer, &mut cursor, 1, attribute)
+            .unwrap();
         assert_eq!(cursor, TextBufferPoint::new(2, 5));
-        repeat.repeat(&mut buffer, &mut cursor, 1, attribute).unwrap();
+        repeat
+            .repeat(&mut buffer, &mut cursor, 1, attribute)
+            .unwrap();
         assert_eq!(cursor, TextBufferPoint::new(2, 5));
-        assert_eq!(buffer.row(5).text_range(0, 3), &['E' as u16, 'E' as u16, ' ' as u16]);
+        assert_eq!(
+            buffer.row(5).text_range(0, 3),
+            &['E' as u16, 'E' as u16, ' ' as u16]
+        );
     }
 }

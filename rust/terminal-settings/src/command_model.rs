@@ -119,14 +119,8 @@ impl LayeredCommands {
         if let Some(profile) = command.get("profile").and_then(JsonValue::as_str) {
             parts.push(format!("--profile {}", quote_argument(profile)));
         }
-        if let Some(directory) = command
-            .get("startingDirectory")
-            .and_then(JsonValue::as_str)
-        {
-            parts.push(format!(
-                "--startingDirectory {}",
-                quote_argument(directory)
-            ));
+        if let Some(directory) = command.get("startingDirectory").and_then(JsonValue::as_str) {
+            parts.push(format!("--startingDirectory {}", quote_argument(directory)));
         }
         if let Some(title) = command.get("tabTitle").and_then(JsonValue::as_str) {
             parts.push(format!("--title {}", quote_argument(title)));
@@ -173,10 +167,12 @@ fn action_name(command: &JsonValue) -> Option<&str> {
 fn command_name(entry: &JsonObject, command: &JsonValue) -> Result<String, CommandError> {
     match entry.get("name") {
         Some(JsonValue::String(name)) => Ok(name.clone()),
-        Some(JsonValue::Object(resource)) => match resource.get("key").and_then(JsonValue::as_str) {
-            Some("DuplicateTabCommandKey") => Ok("Duplicate tab".to_owned()),
-            _ => Err(CommandError::ExpectedName),
-        },
+        Some(JsonValue::Object(resource)) => {
+            match resource.get("key").and_then(JsonValue::as_str) {
+                Some("DuplicateTabCommandKey") => Ok("Duplicate tab".to_owned()),
+                _ => Err(CommandError::ExpectedName),
+            }
+        }
         Some(_) => Err(CommandError::ExpectedName),
         None => generated_name(command).ok_or(CommandError::ExpectedName),
     }
@@ -192,11 +188,15 @@ fn generated_name(command: &JsonValue) -> Option<String> {
 
     let suffix = match effective_split_direction(command) {
         SplitDirection::Left => Some("left"),
-        SplitDirection::Right if command.get("split").and_then(JsonValue::as_str) == Some("right") => {
+        SplitDirection::Right
+            if command.get("split").and_then(JsonValue::as_str) == Some("right") =>
+        {
             Some("right")
         }
         SplitDirection::Up => Some("up"),
-        SplitDirection::Down if command.get("split").and_then(JsonValue::as_str) == Some("down") => {
+        SplitDirection::Down
+            if command.get("split").and_then(JsonValue::as_str) == Some("down") =>
+        {
             Some("down")
         }
         _ => None,

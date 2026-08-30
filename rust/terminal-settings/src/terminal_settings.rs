@@ -279,7 +279,12 @@ impl TerminalSettingsModel {
             .and_then(|name| self.schemes.get(name))
             .copied()
             .flatten();
-        Some(profile.cursor_color.or(scheme_cursor).unwrap_or(DEFAULT_CURSOR_COLOR))
+        Some(
+            profile
+                .cursor_color
+                .or(scheme_cursor)
+                .unwrap_or(DEFAULT_CURSOR_COLOR),
+        )
     }
 
     fn select_profile<P: CommandLinePlatform>(
@@ -304,9 +309,9 @@ impl TerminalSettingsModel {
     }
 
     fn find_profile(&self, value: &str) -> Option<usize> {
-        self.profiles.iter().position(|profile| {
-            profile.name == value || profile.guid.eq_ignore_ascii_case(value)
-        })
+        self.profiles
+            .iter()
+            .position(|profile| profile.name == value || profile.guid.eq_ignore_ascii_case(value))
     }
 
     fn profile_for_commandline<P: CommandLinePlatform>(
@@ -399,7 +404,9 @@ fn parse_profiles(
             let object = value
                 .as_object()
                 .ok_or(TerminalSettingsError::ExpectedProfileObject)?;
-            let name = optional_string(object, "name")?.unwrap_or_default().to_owned();
+            let name = optional_string(object, "name")?
+                .unwrap_or_default()
+                .to_owned();
             let guid = optional_string(object, "guid")?
                 .map(str::to_owned)
                 .unwrap_or_else(|| generated_profile_guid(&name, index));
@@ -417,8 +424,12 @@ fn parse_profiles(
             let tab_title = optional_string(object, "tabTitle")?
                 .unwrap_or_default()
                 .to_owned();
-            let connection_type = optional_string(object, "connectionType")?
-                .is_some_and(|value| !value.trim_matches(['{', '}']).chars().all(|ch| ch == '0' || ch == '-'));
+            let connection_type = optional_string(object, "connectionType")?.is_some_and(|value| {
+                !value
+                    .trim_matches(['{', '}'])
+                    .chars()
+                    .all(|ch| ch == '0' || ch == '-')
+            });
             let color_scheme = optional_string(object, "colorScheme")?.map(str::to_owned);
             let cursor_color = optional_string(object, "cursorColor")?
                 .map(parse_color)
@@ -460,7 +471,9 @@ fn resolve_default_profile(
     }
 }
 
-fn parse_bindings(root: &JsonObject) -> Result<BTreeMap<String, BindingRecord>, TerminalSettingsError> {
+fn parse_bindings(
+    root: &JsonObject,
+) -> Result<BTreeMap<String, BindingRecord>, TerminalSettingsError> {
     let Some(keybindings) = root.get("keybindings") else {
         return Ok(BTreeMap::new());
     };
@@ -494,12 +507,18 @@ fn parse_bindings(root: &JsonObject) -> Result<BTreeMap<String, BindingRecord>, 
             _ => continue,
         };
         let terminal_args = NewTerminalArgs {
-            commandline: optional_string(command, "commandline")?.unwrap_or_default().to_owned(),
+            commandline: optional_string(command, "commandline")?
+                .unwrap_or_default()
+                .to_owned(),
             starting_directory: optional_string(command, "startingDirectory")?
                 .unwrap_or_default()
                 .to_owned(),
-            tab_title: optional_string(command, "tabTitle")?.unwrap_or_default().to_owned(),
-            profile: optional_string(command, "profile")?.unwrap_or_default().to_owned(),
+            tab_title: optional_string(command, "tabTitle")?
+                .unwrap_or_default()
+                .to_owned(),
+            profile: optional_string(command, "profile")?
+                .unwrap_or_default()
+                .to_owned(),
         };
         for key in parse_keys(entry.get("keys"))? {
             result.insert(
@@ -527,7 +546,9 @@ fn parse_keys(value: Option<&JsonValue>) -> Result<Vec<String>, TerminalSettings
     }
 }
 
-fn parse_schemes(root: &JsonObject) -> Result<BTreeMap<String, Option<Color>>, TerminalSettingsError> {
+fn parse_schemes(
+    root: &JsonObject,
+) -> Result<BTreeMap<String, Option<Color>>, TerminalSettingsError> {
     let Some(schemes) = root.get("schemes") else {
         return Ok(BTreeMap::new());
     };
@@ -568,7 +589,9 @@ fn json_string(value: &JsonValue) -> Result<&str, TerminalSettingsError> {
 }
 
 fn json_i32(value: &JsonValue) -> Result<i32, TerminalSettingsError> {
-    let value = value.as_f64().ok_or(TerminalSettingsError::InvalidInteger)?;
+    let value = value
+        .as_f64()
+        .ok_or(TerminalSettingsError::InvalidInteger)?;
     if value.fract() != 0.0 || value < f64::from(i32::MIN) || value > f64::from(i32::MAX) {
         return Err(TerminalSettingsError::InvalidInteger);
     }
@@ -592,7 +615,10 @@ fn generated_profile_guid(name: &str, index: usize) -> String {
         hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
     }
-    format!("{{00000000-0000-0000-0000-{:012x}}}", hash & 0xffff_ffff_ffff)
+    format!(
+        "{{00000000-0000-0000-0000-{:012x}}}",
+        hash & 0xffff_ffff_ffff
+    )
 }
 
 fn normalize_key(key: &str) -> String {
@@ -655,10 +681,7 @@ pub fn command_line_to_argv(command_line: &str) -> Vec<String> {
 
 /// Normalizes a profile command line around an injected Windows platform seam.
 #[must_use]
-pub fn normalize_command_line<P: CommandLinePlatform>(
-    command_line: &str,
-    platform: &P,
-) -> String {
+pub fn normalize_command_line<P: CommandLinePlatform>(command_line: &str, platform: &P) -> String {
     let expanded = platform.expand_environment(command_line);
     let argv = command_line_to_argv(&expanded);
     if argv.is_empty() {

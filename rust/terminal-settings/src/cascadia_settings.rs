@@ -37,8 +37,8 @@ impl CascadiaSettingsDocument {
     /// Returns an error for malformed JSON/root shape or for aggregate members
     /// whose JSON shape cannot represent Cascadia settings.
     pub fn from_json(input: &str) -> Result<Self, CascadiaSettingsError> {
-        let mut document = SettingsDocument::from_json(input)
-            .map_err(CascadiaSettingsError::Serialization)?;
+        let mut document =
+            SettingsDocument::from_json(input).map_err(CascadiaSettingsError::Serialization)?;
         let fixups_applied_during_load = document
             .to_json_value()
             .as_object()

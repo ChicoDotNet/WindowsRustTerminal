@@ -1,5 +1,5 @@
 use terminal_host::input_buffer::{
-    InputBuffer, InputEvent, KeyEvent, MouseEvent, ReadOptions, DEFAULT_INPUT_MODE, VK_CONTROL,
+    DEFAULT_INPUT_MODE, InputBuffer, InputEvent, KeyEvent, MouseEvent, ReadOptions, VK_CONTROL,
     VK_PAUSE,
 };
 
@@ -26,7 +26,9 @@ fn microsoft_input_buffer_emptying_read_resets_wait_event_contract() {
 
     buffer.set_wait_signaled(true);
     assert_eq!(
-        buffer.read(RECORD_INSERT_COUNT - 1, ReadOptions::NORMAL).len(),
+        buffer
+            .read(RECORD_INSERT_COUNT - 1, ReadOptions::NORMAL)
+            .len(),
         RECORD_INSERT_COUNT - 1
     );
     assert!(!buffer.wait_signaled());
@@ -50,15 +52,34 @@ fn microsoft_input_buffer_dbcs_padding_portable_contract() {
         }),
     ];
     assert_eq!(buffer.write_bulk(input), 4);
-    let output = buffer.read_with_codepage(5, |value| {
-        (value == 0x3042).then_some(vec![0x82, 0xa0])
-    });
+    let output =
+        buffer.read_with_codepage(5, |value| (value == 0x3042).then_some(vec![0x82, 0xa0]));
     assert_eq!(output.len(), 5);
-    assert_eq!(output[0], InputEvent::Mouse(MouseEvent { x: 0, y: 0, event_flags: 0 }));
+    assert_eq!(
+        output[0],
+        InputEvent::Mouse(MouseEvent {
+            x: 0,
+            y: 0,
+            event_flags: 0
+        })
+    );
     assert_eq!(output[1], key(u16::from(b'A')));
-    assert_eq!(output[2], InputEvent::Key(KeyEvent::new(true, 1, 0x3042, 0, 0x82, 0)));
-    assert_eq!(output[3], InputEvent::Key(KeyEvent::new(true, 1, 0x3042, 0, 0xa0, 0)));
-    assert_eq!(output[4], InputEvent::Mouse(MouseEvent { x: 0, y: 0, event_flags: 0 }));
+    assert_eq!(
+        output[2],
+        InputEvent::Key(KeyEvent::new(true, 1, 0x3042, 0, 0x82, 0))
+    );
+    assert_eq!(
+        output[3],
+        InputEvent::Key(KeyEvent::new(true, 1, 0x3042, 0, 0xa0, 0))
+    );
+    assert_eq!(
+        output[4],
+        InputEvent::Mouse(MouseEvent {
+            x: 0,
+            y: 0,
+            event_flags: 0
+        })
+    );
 }
 
 #[test]
@@ -72,9 +93,15 @@ fn microsoft_input_buffer_can_prepend_events_contract() {
         .collect::<Vec<_>>();
     assert_eq!(buffer.write_bulk(original.clone()), RECORD_INSERT_COUNT);
     assert_eq!(buffer.prepend(prepended.clone()), RECORD_INSERT_COUNT);
-    assert_eq!(buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL), prepended);
+    assert_eq!(
+        buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL),
+        prepended
+    );
     assert_eq!(buffer.ready_event_count(), RECORD_INSERT_COUNT);
-    assert_eq!(buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL), original);
+    assert_eq!(
+        buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL),
+        original
+    );
     assert_eq!(buffer.ready_event_count(), 0);
 }
 

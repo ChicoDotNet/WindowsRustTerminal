@@ -39,13 +39,7 @@ pub fn insert_cells(
 
     fill_range(row, cursor..region.end, erase)?;
     let source_end = region.end - count;
-    copy_shifted(
-        &source,
-        row,
-        cursor..source_end,
-        cursor + count,
-        region.end,
-    )?;
+    copy_shifted(&source, row, cursor..source_end, cursor + count, region.end)?;
     Ok(())
 }
 
@@ -257,11 +251,7 @@ fn clamp_rows(buffer: &TextBuffer, rows: Range<u16>) -> Range<u16> {
     rows.start.min(buffer.height())..rows.end.min(buffer.height())
 }
 
-fn fill_range(
-    row: &mut Row,
-    range: Range<u16>,
-    attribute: TextAttribute,
-) -> Result<(), RowError> {
+fn fill_range(row: &mut Row, range: Range<u16>, attribute: TextAttribute) -> Result<(), RowError> {
     for column in range {
         row.replace_glyph(i32::from(column), 1, &[u16::from(b' ')])?;
         row.replace_attributes(
@@ -363,11 +353,7 @@ mod tests {
         for column in 0..row.size() {
             row.replace_glyph(i32::from(column), 1, &[u16::from(glyph)])
                 .expect("fixture glyph fits");
-            row.replace_attributes(
-                i32::from(column),
-                i32::from(column + 1),
-                attribute,
-            );
+            row.replace_attributes(i32::from(column), i32::from(column + 1), attribute);
         }
     }
 
@@ -376,11 +362,7 @@ mod tests {
             let column = start + u16::try_from(offset).expect("fixture fits");
             row.replace_glyph(i32::from(column), 1, &[u16::from(glyph)])
                 .expect("fixture glyph fits");
-            row.replace_attributes(
-                i32::from(column),
-                i32::from(column + 1),
-                attribute,
-            );
+            row.replace_attributes(i32::from(column), i32::from(column + 1), attribute);
         }
     }
 
@@ -425,20 +407,8 @@ mod tests {
                     .expect("DCH matrix vector succeeds");
 
                 let spaces = dx.min(count);
-                assert_repeated(
-                    &row,
-                    0,
-                    80 - spaces,
-                    b'X',
-                    TextAttribute::default(),
-                );
-                assert_repeated(
-                    &row,
-                    80 - spaces,
-                    80,
-                    b' ',
-                    TextAttribute::default(),
-                );
+                assert_repeated(&row, 0, 80 - spaces, b'X', TextAttribute::default());
+                assert_repeated(&row, 80 - spaces, 80, b' ', TextAttribute::default());
             }
         }
     }
@@ -471,7 +441,11 @@ mod tests {
         let erase = expected_erase();
 
         for horizontal_margins_active in [true, false] {
-            let region = if horizontal_margins_active { 10..30 } else { 0..40 };
+            let region = if horizontal_margins_active {
+                10..30
+            } else {
+                0..40
+            };
 
             let mut row = ich_dch_fixture();
             insert_cells(&mut row, 20, 5, region.clone(), active_erase_source()).unwrap();
@@ -518,7 +492,11 @@ mod tests {
         let erase = expected_erase();
 
         for horizontal_margins_active in [true, false] {
-            let region = if horizontal_margins_active { 10..30 } else { 0..40 };
+            let region = if horizontal_margins_active {
+                10..30
+            } else {
+                0..40
+            };
 
             let mut row = ich_dch_fixture();
             delete_cells(&mut row, 20, 5, region.clone(), active_erase_source()).unwrap();
@@ -614,8 +592,16 @@ mod tests {
             assert_repeated(insert.row(y), 20, 24, b' ', erase);
             assert_ascii(insert.row(y), 24, b"UVWXYZ");
         }
-        assert_ascii(insert.row(13), 0, b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn");
-        assert_ascii(insert.row(20), 0, b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn");
+        assert_ascii(
+            insert.row(13),
+            0,
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn",
+        );
+        assert_ascii(
+            insert.row(20),
+            0,
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmn",
+        );
 
         let mut delete = horizontal_fixture();
         delete_columns(&mut delete, 14..20, 20, 4, 10..30, active_erase_source()).unwrap();
@@ -625,15 +611,8 @@ mod tests {
         }
 
         let mut forward = horizontal_fixture();
-        let cursor = forward_index(
-            &mut forward,
-            14..20,
-            10..30,
-            27,
-            4,
-            active_erase_source(),
-        )
-        .unwrap();
+        let cursor =
+            forward_index(&mut forward, 14..20, 10..30, 27, 4, active_erase_source()).unwrap();
         assert_eq!(cursor, 29);
         for y in 14..20 {
             assert_ascii(forward.row(y), 10, b"MNOPQRSTUVWXYZabcd");
@@ -641,15 +620,7 @@ mod tests {
         }
 
         let mut back = horizontal_fixture();
-        let cursor = back_index(
-            &mut back,
-            14..20,
-            10..30,
-            12,
-            4,
-            active_erase_source(),
-        )
-        .unwrap();
+        let cursor = back_index(&mut back, 14..20, 10..30, 12, 4, active_erase_source()).unwrap();
         assert_eq!(cursor, 10);
         for y in 14..20 {
             assert_repeated(back.row(y), 10, 12, b' ', erase);

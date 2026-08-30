@@ -219,10 +219,7 @@ impl JsonConversion for i32 {
 impl JsonConversion for u32 {
     fn from_json(value: &JsonValue) -> Result<Self, DeserializationError> {
         let value = number(value)?;
-        if value.is_finite()
-            && value.fract() == 0.0
-            && value >= 0.0
-            && value <= f64::from(u32::MAX)
+        if value.is_finite() && value.fract() == 0.0 && value >= 0.0 && value <= f64::from(u32::MAX)
         {
             Ok(value as Self)
         } else {
@@ -288,10 +285,7 @@ impl JsonConversion for RgbColor {
         };
         let expanded;
         let hex = if hex.len() == 3 {
-            expanded = hex
-                .chars()
-                .flat_map(|ch| [ch, ch])
-                .collect::<String>();
+            expanded = hex.chars().flat_map(|ch| [ch, ch]).collect::<String>();
             expanded.as_str()
         } else if hex.len() == 6 {
             hex
@@ -301,9 +295,8 @@ impl JsonConversion for RgbColor {
             ));
         };
         let parse = |range: std::ops::Range<usize>| {
-            u8::from_str_radix(&hex[range], 16).map_err(|_| {
-                DeserializationError::new(DeserializationErrorKind::InvalidValue)
-            })
+            u8::from_str_radix(&hex[range], 16)
+                .map_err(|_| DeserializationError::new(DeserializationErrorKind::InvalidValue))
         };
         Ok(Self {
             r: parse(0..2)?,

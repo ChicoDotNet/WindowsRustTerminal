@@ -56,14 +56,18 @@ impl CloneableProfileGraph {
                 let defaults = match JsonMember::from_object(profiles, "defaults") {
                     JsonMember::Missing | JsonMember::Null => JsonObject::new(),
                     JsonMember::Value(JsonValue::Object(defaults)) => defaults.clone(),
-                    JsonMember::Value(_) => return Err(DeserializationCopyError::ExpectedDefaultsObject),
+                    JsonMember::Value(_) => {
+                        return Err(DeserializationCopyError::ExpectedDefaultsObject);
+                    }
                 };
                 validate_profile_layer(&defaults)?;
                 let defaults_contributes_parent = !defaults.is_empty();
                 let profile_values = match JsonMember::from_object(profiles, "list") {
                     JsonMember::Missing | JsonMember::Null => Vec::new(),
                     JsonMember::Value(JsonValue::Array(values)) => parse_profile_objects(values)?,
-                    JsonMember::Value(_) => return Err(DeserializationCopyError::ExpectedProfilesArray),
+                    JsonMember::Value(_) => {
+                        return Err(DeserializationCopyError::ExpectedProfilesArray);
+                    }
                 };
                 Ok(Self {
                     defaults,
@@ -119,7 +123,8 @@ impl CloneableCascadiaSettings {
     /// Returns [`DeserializationCopyError`] for malformed settings containers or
     /// migrated values with the wrong shape.
     pub fn from_json(input: &str) -> Result<Self, DeserializationCopyError> {
-        let value = settings_json::parse(input).map_err(|_| DeserializationCopyError::InvalidJson)?;
+        let value =
+            settings_json::parse(input).map_err(|_| DeserializationCopyError::InvalidJson)?;
         let root = value
             .as_object()
             .cloned()
@@ -151,7 +156,9 @@ impl CloneableCascadiaSettings {
 
     #[must_use]
     pub fn default_profile(&self) -> Option<&str> {
-        self.globals.get("defaultProfile").and_then(JsonValue::as_str)
+        self.globals
+            .get("defaultProfile")
+            .and_then(JsonValue::as_str)
     }
 
     #[must_use]
@@ -235,10 +242,9 @@ impl CloneableCascadiaSettings {
     }
 
     pub fn set_profile_defaults_tab_title(&mut self, value: &str) {
-        self.profiles.defaults.insert(
-            "tabTitle".to_owned(),
-            JsonValue::String(value.to_owned()),
-        );
+        self.profiles
+            .defaults
+            .insert("tabTitle".to_owned(), JsonValue::String(value.to_owned()));
         self.profiles.defaults_contributes_parent = true;
     }
 
@@ -277,7 +283,9 @@ impl CloneableCascadiaSettings {
     }
 }
 
-fn parse_profile_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, DeserializationCopyError> {
+fn parse_profile_objects(
+    values: &[JsonValue],
+) -> Result<Vec<JsonObject>, DeserializationCopyError> {
     values
         .iter()
         .map(|value| {
@@ -299,7 +307,10 @@ fn validate_profile_layer(profile: &JsonObject) -> Result<(), DeserializationCop
     Ok(())
 }
 
-fn validate_optional_string(object: &JsonObject, key: &str) -> Result<(), DeserializationCopyError> {
+fn validate_optional_string(
+    object: &JsonObject,
+    key: &str,
+) -> Result<(), DeserializationCopyError> {
     match JsonMember::from_object(object, key) {
         JsonMember::Missing | JsonMember::Null | JsonMember::Value(JsonValue::String(_)) => Ok(()),
         JsonMember::Value(_) => Err(DeserializationCopyError::InvalidString),
@@ -313,7 +324,9 @@ fn validate_optional_bool(object: &JsonObject, key: &str) -> Result<(), Deserial
     }
 }
 
-fn parse_color_scheme_names(root: &JsonObject) -> Result<BTreeSet<String>, DeserializationCopyError> {
+fn parse_color_scheme_names(
+    root: &JsonObject,
+) -> Result<BTreeSet<String>, DeserializationCopyError> {
     let Some(value) = root.get("schemes") else {
         return Ok(BTreeSet::new());
     };

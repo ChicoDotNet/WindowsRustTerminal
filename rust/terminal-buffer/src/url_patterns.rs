@@ -66,7 +66,9 @@ pub fn detect_url_patterns(buffer: &TextBuffer) -> Vec<UrlPattern> {
         }
 
         if end > begin + prefix_len {
-            let start = logical[begin].point.expect("URL prefix comes from a buffer cell");
+            let start = logical[begin]
+                .point
+                .expect("URL prefix comes from a buffer cell");
             let finish = logical[end - 1]
                 .point
                 .expect("URL suffix comes from a buffer cell");
@@ -103,7 +105,9 @@ pub fn url_interval_from_viewport_position(
         viewport_point.x,
         viewport_point.y.checked_add(visible_start)?,
     );
-    let pattern = patterns.iter().find(|pattern| pattern.contains(buffer_point))?;
+    let pattern = patterns
+        .iter()
+        .find(|pattern| pattern.contains(buffer_point))?;
     Some(ViewportUrlPattern {
         uri: pattern.uri.clone(),
         start: TextBufferPoint::new(pattern.start.x, pattern.start.y.checked_sub(visible_start)?),
@@ -189,10 +193,22 @@ mod tests {
         let patterns = detect_url_patterns(&single);
         let start_x = u16::try_from(before.len()).expect("fixture column");
         let end_x = u16::try_from(before.len() + url.len() - 1).expect("fixture column");
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(start_x - 1, 0)), None);
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(start_x, 0)), Some(url));
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(end_x, 0)), Some(url));
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(end_x + 1, 0)), None);
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(start_x - 1, 0)),
+            None
+        );
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(start_x, 0)),
+            Some(url)
+        );
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(end_x, 0)),
+            Some(url)
+        );
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(end_x + 1, 0)),
+            None
+        );
 
         let long_url = "https://www.contoso.com/this-is-a-very-long-path/that-will-wrap-across-multiple-rows-in-the-terminal-buffer";
         let prefix = "WRAP>";
@@ -204,25 +220,34 @@ mod tests {
         write(&mut wrapped, 3, 0, &combined[80..]);
         let patterns = detect_url_patterns(&wrapped);
         let wrapped_start = u16::try_from(prefix.len()).expect("fixture column");
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(wrapped_start, 2)), Some(long_url));
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(0, 3)), Some(long_url));
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(wrapped_start - 1, 2)), None);
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(wrapped_start, 2)),
+            Some(long_url)
+        );
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(0, 3)),
+            Some(long_url)
+        );
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(wrapped_start - 1, 2)),
+            None
+        );
 
         let mut history = TextBuffer::new(80, 80, TextAttribute::default()).expect("valid buffer");
         let scroll_url = "https://www.example.com/scrolled";
         write(&mut history, 40, 0, scroll_url);
         let patterns = detect_url_patterns(&history);
-        assert_eq!(url_at_buffer_position(&patterns, TextBufferPoint::new(0, 40)), Some(scroll_url));
+        assert_eq!(
+            url_at_buffer_position(&patterns, TextBufferPoint::new(0, 40)),
+            Some(scroll_url)
+        );
 
         let viewport_url = "https://www.example.com/viewport";
         write(&mut history, 50, 0, viewport_url);
         let patterns = detect_url_patterns(&history);
-        let interval = url_interval_from_viewport_position(
-            &patterns,
-            TextBufferPoint::new(0, 5),
-            45,
-        )
-        .expect("viewport-relative URL interval");
+        let interval =
+            url_interval_from_viewport_position(&patterns, TextBufferPoint::new(0, 5), 45)
+                .expect("viewport-relative URL interval");
         assert_eq!(interval.uri, viewport_url);
         assert_eq!(interval.start, TextBufferPoint::new(0, 5));
     }

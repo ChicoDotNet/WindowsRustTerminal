@@ -79,7 +79,8 @@ impl ColorScheme {
         let name = required_string(object, "name")?.to_owned();
         let foreground = optional_color(object, "foreground", DEFAULT_FOREGROUND)?;
         let background = optional_color(object, "background", DEFAULT_BACKGROUND)?;
-        let selection_background = optional_color(object, "selectionBackground", DEFAULT_FOREGROUND)?;
+        let selection_background =
+            optional_color(object, "selectionBackground", DEFAULT_FOREGROUND)?;
         let cursor_color = optional_color(object, "cursorColor", DEFAULT_CURSOR)?;
 
         let mut table = [Color::rgb(0, 0, 0); 16];
@@ -408,8 +409,10 @@ impl ColorSchemeSettings {
         result.refresh_inherited();
 
         let user_schemes = parse_schemes(user)?;
-        let reserved_user_names: BTreeSet<String> =
-            user_schemes.iter().map(|scheme| scheme.name.clone()).collect();
+        let reserved_user_names: BTreeSet<String> = user_schemes
+            .iter()
+            .map(|scheme| scheme.name.clone())
+            .collect();
 
         for mut user_scheme in user_schemes {
             let original_name = user_scheme.name.clone();
@@ -419,11 +422,7 @@ impl ColorSchemeSettings {
                 }
                 let existing_origin = existing.origin;
                 let modified_name = result.next_modified_name(&original_name, &reserved_user_names);
-                result.retarget_for_user_collision(
-                    &original_name,
-                    &modified_name,
-                    existing_origin,
-                );
+                result.retarget_for_user_collision(&original_name, &modified_name, existing_origin);
                 user_scheme.rename(modified_name.clone());
                 result.schemes.insert(
                     modified_name,
@@ -604,7 +603,12 @@ fn parse_user_profiles(
         let object = value
             .as_object()
             .ok_or(ColorSchemeParseError::ExpectedObject)?;
-        profiles.push(parse_profile(object, &defaults, ReferenceSource::Explicit, true)?);
+        profiles.push(parse_profile(
+            object,
+            &defaults,
+            ReferenceSource::Explicit,
+            true,
+        )?);
     }
     Ok((defaults, profiles))
 }
@@ -650,7 +654,12 @@ fn parse_profile(
     let name = required_string(object, "name")?.to_owned();
     let mut default_appearance =
         AppearanceReferences::inherited_from(defaults, ReferenceSource::Defaults);
-    apply_reference_member(object, &mut default_appearance, local_source, local_is_explicit)?;
+    apply_reference_member(
+        object,
+        &mut default_appearance,
+        local_source,
+        local_is_explicit,
+    )?;
 
     let mut unfocused_appearance = AppearanceReferences::inherited_from(
         &default_appearance,
