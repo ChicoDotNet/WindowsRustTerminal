@@ -15,6 +15,7 @@ pub mod deferred_resize;
 pub mod delayed_wrap;
 pub mod extended_attributes;
 pub mod geometry;
+pub mod host_textbuffer;
 pub mod host_write;
 pub mod hyperlink;
 pub mod image_slice;
