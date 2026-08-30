@@ -43,12 +43,8 @@ jobs:
       - uses: actions/checkout@v5
       - name: Toolchain
         run: rustup show
-      - name: Apply rustfmt for incremental CI
-        if: github.event_name != 'pull_request' || github.event.pull_request.draft == true
+      - name: Apply rustfmt before checks
         run: cargo fmt --all
-      - name: Verify rustfmt for integration-ready PR
-        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
-        run: cargo fmt --all --check
       - name: Apply Clippy fixes for incremental CI
         if: github.event_name != 'pull_request' || github.event.pull_request.draft == true
         run: cargo clippy --fix --workspace --all-targets --locked --allow-dirty --allow-staged -- -D warnings
