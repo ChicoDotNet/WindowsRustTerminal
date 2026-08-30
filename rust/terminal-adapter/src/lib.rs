@@ -8,6 +8,7 @@
 
 pub mod adapt_dispatch;
 pub mod checksum_reports;
+pub mod color_product_dispatch;
 pub mod dcs_dispatch;
 pub mod decrqss;
 pub mod decrqss_color_alias;
