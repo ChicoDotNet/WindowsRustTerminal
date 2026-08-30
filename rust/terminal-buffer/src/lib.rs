@@ -55,6 +55,7 @@ pub mod til_replace;
 pub mod til_string;
 pub mod til_utf_convert;
 pub mod uia_text_range;
+pub mod url_patterns;
 pub mod vertical_scroll;
 pub mod viewport;
 pub mod viewport_index;
