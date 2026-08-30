@@ -1,0 +1,38 @@
+name: R08 clippy fix once
+
+on:
+  push:
+    branches:
+      - "ci/r08-clippy-fix-once"
+
+permissions:
+  contents: write
+
+jobs:
+  clippy-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ci/r08-clippy-fix-once
+      - name: Toolchain
+        run: rustup show
+      - name: Apply rustfmt
+        run: cargo fmt --all
+      - name: Apply Clippy fixes
+        shell: bash
+        run: cargo clippy --fix --workspace --all-targets --locked --allow-dirty --allow-staged -- -D warnings || true
+      - name: Reformat fixed sources
+        run: cargo fmt --all
+      - name: Commit mechanical fixes
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Clippy produced no changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- '*.rs'
+          git commit -m "style: apply clippy fixes once [skip ci]"
+          git push origin HEAD:ci/r08-clippy-fix-once
