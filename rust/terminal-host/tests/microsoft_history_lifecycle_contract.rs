@@ -27,7 +27,11 @@ fn microsoft_history_allocate_and_free_one_app_contract() {
 
     assert!(store.allocate("testapp1.exe", process));
     assert_eq!(store.history_count(), 1);
-    assert!(store.find_by_handle(process).is_some_and(|history| history.is_allocated()));
+    assert!(
+        store
+            .find_by_handle(process)
+            .is_some_and(|history| history.is_allocated())
+    );
 
     store.free(process);
     assert_eq!(store.history_count(), 1);
@@ -93,7 +97,9 @@ fn microsoft_history_too_many_apps_does_not_take_list_contract() {
     for (index, app) in APPS[..4].iter().enumerate() {
         let process = handle(index);
         assert!(store.allocate(app, process));
-        let history = store.find_by_handle_mut(process).expect("allocated history");
+        let history = store
+            .find_by_handle_mut(process)
+            .expect("allocated history");
         for command in &ITEMS[..10] {
             assert!(history.add(command, false));
         }
@@ -120,7 +126,9 @@ fn microsoft_history_realloc_up_contract() {
     assert!(store.allocate(APPS[0], process));
 
     let before = {
-        let history = store.find_by_handle_mut(process).expect("allocated history");
+        let history = store
+            .find_by_handle_mut(process)
+            .expect("allocated history");
         for command in ITEMS {
             assert!(history.add(command, false));
         }
@@ -129,7 +137,9 @@ fn microsoft_history_realloc_up_contract() {
     };
 
     {
-        let history = store.find_by_handle_mut(process).expect("allocated history");
+        let history = store
+            .find_by_handle_mut(process)
+            .expect("allocated history");
         history.realloc(ITEMS.len());
         assert_eq!(history.command_count(), 10);
         assert_eq!(history.commands(), before);
@@ -148,7 +158,9 @@ fn microsoft_history_realloc_down_contract() {
     assert!(store.allocate(APPS[0], process));
 
     let before = {
-        let history = store.find_by_handle_mut(process).expect("allocated history");
+        let history = store
+            .find_by_handle_mut(process)
+            .expect("allocated history");
         for command in &ITEMS[..10] {
             assert!(history.add(command, false));
         }
@@ -156,7 +168,9 @@ fn microsoft_history_realloc_down_contract() {
         history.commands().to_vec()
     };
 
-    let history = store.find_by_handle_mut(process).expect("allocated history");
+    let history = store
+        .find_by_handle_mut(process)
+        .expect("allocated history");
     history.realloc(5);
     assert_eq!(history.command_count(), 5);
     assert_eq!(history.commands(), &before[..5]);

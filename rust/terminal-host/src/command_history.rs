@@ -162,9 +162,11 @@ impl CommandHistoryStore {
     /// reuse only a detached history; if every configured history is currently
     /// allocated, allocation fails exactly as in conhost.
     pub fn allocate(&mut self, app_name: &str, process_handle: u64) -> bool {
-        if let Some(index) = self.histories.iter().position(|history| {
-            !history.is_allocated() && history.is_app_name_match(app_name)
-        }) {
+        if let Some(index) = self
+            .histories
+            .iter()
+            .position(|history| !history.is_allocated() && history.is_app_name_match(app_name))
+        {
             let mut history = self
                 .histories
                 .remove(index)
@@ -190,9 +192,8 @@ impl CommandHistoryStore {
             }
             let replace = history.commands.is_empty()
                 || best_candidate.is_none()
-                || best_candidate.is_some_and(|best: usize| {
-                    !self.histories[best].commands.is_empty()
-                });
+                || best_candidate
+                    .is_some_and(|best: usize| !self.histories[best].commands.is_empty());
             if replace {
                 best_candidate = Some(index);
             }

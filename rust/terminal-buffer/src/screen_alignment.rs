@@ -58,7 +58,13 @@ impl ScreenAlignmentState {
             height,
             viewport_top,
             viewport_height,
-            cells: vec![AlignmentCell { ch: ' ', attributes: AlignmentAttributes::default() }; width * height],
+            cells: vec![
+                AlignmentCell {
+                    ch: ' ',
+                    attributes: AlignmentAttributes::default()
+                };
+                width * height
+            ],
             cursor: (0, viewport_top),
             vertical_margins: None,
             horizontal_margins: None,
@@ -75,7 +81,11 @@ impl ScreenAlignmentState {
         self.cursor = (x, y);
     }
 
-    pub fn set_margins(&mut self, vertical: Option<(usize, usize)>, horizontal: Option<(usize, usize)>) {
+    pub fn set_margins(
+        &mut self,
+        vertical: Option<(usize, usize)>,
+        horizontal: Option<(usize, usize)>,
+    ) {
         self.vertical_margins = vertical;
         self.horizontal_margins = horizontal;
     }
@@ -89,7 +99,10 @@ impl ScreenAlignmentState {
         let default = AlignmentAttributes::default();
         let start = self.viewport_top * self.width;
         let end = (self.viewport_top + self.viewport_height) * self.width;
-        self.cells[start..end].fill(AlignmentCell { ch: 'E', attributes: default });
+        self.cells[start..end].fill(AlignmentCell {
+            ch: 'E',
+            attributes: default,
+        });
         self.cursor = (0, self.viewport_top);
         self.vertical_margins = None;
         self.horizontal_margins = None;
@@ -102,16 +115,24 @@ impl ScreenAlignmentState {
     }
 
     #[must_use]
-    pub const fn cursor(&self) -> (usize, usize) { self.cursor }
+    pub const fn cursor(&self) -> (usize, usize) {
+        self.cursor
+    }
 
     #[must_use]
-    pub const fn vertical_margins(&self) -> Option<(usize, usize)> { self.vertical_margins }
+    pub const fn vertical_margins(&self) -> Option<(usize, usize)> {
+        self.vertical_margins
+    }
 
     #[must_use]
-    pub const fn horizontal_margins(&self) -> Option<(usize, usize)> { self.horizontal_margins }
+    pub const fn horizontal_margins(&self) -> Option<(usize, usize)> {
+        self.horizontal_margins
+    }
 
     #[must_use]
-    pub const fn active_attributes(&self) -> AlignmentAttributes { self.active_attributes }
+    pub const fn active_attributes(&self) -> AlignmentAttributes {
+        self.active_attributes
+    }
 }
 
 #[cfg(test)]
@@ -147,12 +168,24 @@ mod tests {
 
         for y in 2..6 {
             for x in 0..10 {
-                assert_eq!(state.cell(x, y), AlignmentCell { ch: 'E', attributes: AlignmentAttributes::default() });
+                assert_eq!(
+                    state.cell(x, y),
+                    AlignmentCell {
+                        ch: 'E',
+                        attributes: AlignmentAttributes::default()
+                    }
+                );
             }
         }
         for y in [0, 1, 6, 7] {
             for x in 0..10 {
-                assert_eq!(state.cell(x, y), AlignmentCell { ch: 'Z', attributes: buffer_attr });
+                assert_eq!(
+                    state.cell(x, y),
+                    AlignmentCell {
+                        ch: 'Z',
+                        attributes: buffer_attr
+                    }
+                );
             }
         }
         assert_eq!(state.cursor(), (0, 2));

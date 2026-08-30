@@ -37,22 +37,24 @@ impl ProfileIdentityGuid {
     pub const fn is_zero(self) -> bool {
         match self {
             Self::Explicit(guid) => guid.is_zero(),
-            Self::Generated(bytes) => bytes[0] == 0
-                && bytes[1] == 0
-                && bytes[2] == 0
-                && bytes[3] == 0
-                && bytes[4] == 0
-                && bytes[5] == 0
-                && bytes[6] == 0
-                && bytes[7] == 0
-                && bytes[8] == 0
-                && bytes[9] == 0
-                && bytes[10] == 0
-                && bytes[11] == 0
-                && bytes[12] == 0
-                && bytes[13] == 0
-                && bytes[14] == 0
-                && bytes[15] == 0,
+            Self::Generated(bytes) => {
+                bytes[0] == 0
+                    && bytes[1] == 0
+                    && bytes[2] == 0
+                    && bytes[3] == 0
+                    && bytes[4] == 0
+                    && bytes[5] == 0
+                    && bytes[6] == 0
+                    && bytes[7] == 0
+                    && bytes[8] == 0
+                    && bytes[9] == 0
+                    && bytes[10] == 0
+                    && bytes[11] == 0
+                    && bytes[12] == 0
+                    && bytes[13] == 0
+                    && bytes[14] == 0
+                    && bytes[15] == 0
+            }
         }
     }
 }
@@ -87,10 +89,16 @@ impl ProfileIdentityRecord {
         if !matches!(JsonMember::from_object(object, "name"), JsonMember::Missing) {
             self.name = optional_string(object, "name")?;
         }
-        if !matches!(JsonMember::from_object(object, "source"), JsonMember::Missing) {
+        if !matches!(
+            JsonMember::from_object(object, "source"),
+            JsonMember::Missing
+        ) {
             self.source = optional_string(object, "source")?;
         }
-        if !matches!(JsonMember::from_object(object, "commandline"), JsonMember::Missing) {
+        if !matches!(
+            JsonMember::from_object(object, "commandline"),
+            JsonMember::Missing
+        ) {
             self.commandline = optional_string(object, "commandline")?;
         }
         self.guid = identity_guid(object, self.name.as_deref(), self.source.as_deref())?;
@@ -185,9 +193,7 @@ impl ProfileIdentitySettings {
         input: &str,
     ) -> Result<Self, ProfileParseError> {
         let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-        let root = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
         let profiles_object = match JsonMember::from_object(root, "profiles") {
             JsonMember::Missing | JsonMember::Null => return Ok(Self::default()),
             JsonMember::Value(JsonValue::Object(value)) => value,
@@ -255,9 +261,9 @@ fn identity_guid(
         JsonMember::Missing | JsonMember::Null => Ok(ProfileIdentityGuid::Generated(
             generate_profile_guid(name.unwrap_or_default(), source),
         )),
-        JsonMember::Value(JsonValue::String(value)) => Ok(ProfileIdentityGuid::Explicit(
-            ProfileGuid::parse(value)?,
-        )),
+        JsonMember::Value(JsonValue::String(value)) => {
+            Ok(ProfileIdentityGuid::Explicit(ProfileGuid::parse(value)?))
+        }
         JsonMember::Value(_) => Err(ProfileParseError::InvalidGuid),
     }
 }
@@ -283,9 +289,7 @@ fn validate_optional_identity_field(
 
 fn parse_legacy_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
     let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-    let root = value
-        .as_object()
-        .ok_or(ProfileParseError::ExpectedObject)?;
+    let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
     let values = match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => values,

@@ -6,7 +6,7 @@
 //! bottom margin it cannot pan the viewport. NEL additionally returns to the
 //! effective left margin.
 
-use crate::rect_ops::{erase_rect, scroll_rect, ScreenRect};
+use crate::rect_ops::{ScreenRect, erase_rect, scroll_rect};
 use crate::row::RowError;
 use crate::text_attribute::TextAttribute;
 use crate::text_buffer::{TextBuffer, TextBufferPoint};

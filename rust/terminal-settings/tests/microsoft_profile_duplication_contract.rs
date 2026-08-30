@@ -40,9 +40,12 @@ fn microsoft_duplicate_profile_preserves_local_json_and_inherits_profile_default
         duplicate.to_json().get("backgroundImage"),
         source.to_json().get("backgroundImage")
     );
-    assert_eq!(duplicate.to_json().get("hidden"), source.to_json().get("hidden"));
-    assert!(duplicate
-        .to_json()
-        .get("font")
-        .is_none(), "profiles.defaults font settings must remain inherited");
+    assert_eq!(
+        duplicate.to_json().get("hidden"),
+        source.to_json().get("hidden")
+    );
+    assert!(
+        duplicate.to_json().get("font").is_none(),
+        "profiles.defaults font settings must remain inherited"
+    );
 }

@@ -41,7 +41,12 @@ pub struct VirtualBottomState {
 impl VirtualBottomState {
     #[must_use]
     pub fn new(width: u16, height: u16) -> Self {
-        let viewport = ViewportState { left: 0, top: 0, width, height };
+        let viewport = ViewportState {
+            left: 0,
+            top: 0,
+            width,
+            height,
+        };
         Self {
             viewport,
             virtual_bottom: viewport.bottom(),
@@ -68,7 +73,9 @@ impl VirtualBottomState {
     pub fn virtual_viewport(&self) -> ViewportState {
         ViewportState {
             left: self.viewport.left,
-            top: self.virtual_bottom.saturating_sub(self.viewport.height.saturating_sub(1)),
+            top: self
+                .virtual_bottom
+                .saturating_sub(self.viewport.height.saturating_sub(1)),
             width: self.viewport.width,
             height: self.viewport.height,
         }
@@ -159,14 +166,14 @@ impl VirtualBottomState {
             .logical_rows()
             .enumerate()
             .filter_map(|(row, content)| {
-                (content.measure_right() != 0).then(|| {
-                    u16::try_from(row).expect("TextBuffer row index always fits u16")
-                })
+                (content.measure_right() != 0)
+                    .then(|| u16::try_from(row).expect("TextBuffer row index always fits u16"))
             })
             .last();
 
-        let minimum_bottom = last_non_space_row
-            .map_or(self.viewport.bottom(), |row| row.max(self.viewport.bottom()));
+        let minimum_bottom = last_non_space_row.map_or(self.viewport.bottom(), |row| {
+            row.max(self.viewport.bottom())
+        });
         self.virtual_bottom = self.virtual_bottom.max(minimum_bottom);
 
         if self.cursor.y <= self.virtual_bottom {
@@ -192,7 +199,10 @@ impl VirtualBottomState {
         if self.cursor.y < self.viewport.top {
             self.viewport.top = self.cursor.y;
         } else if self.cursor.y > self.viewport.bottom() {
-            self.viewport.top = self.cursor.y.saturating_sub(self.viewport.height.saturating_sub(1));
+            self.viewport.top = self
+                .cursor
+                .y
+                .saturating_sub(self.viewport.height.saturating_sub(1));
         }
     }
 

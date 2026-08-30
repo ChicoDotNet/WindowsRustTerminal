@@ -22,7 +22,10 @@ fn microsoft_deserialization_invalid_color_scheme_name_contract() {
     }"#;
 
     let validation = DeserializationValidation::from_user_and_inbox(user, CAMPBELL_INBOX).unwrap();
-    assert_eq!(validation.settings_warnings(), &[Warning::UnknownColorScheme]);
+    assert_eq!(
+        validation.settings_warnings(),
+        &[Warning::UnknownColorScheme]
+    );
     assert_eq!(validation.profile_scheme(0), Some(("Campbell", "Campbell")));
     assert_eq!(validation.profile_scheme(1), Some(("Campbell", "Campbell")));
     assert_eq!(validation.profile_scheme(2), Some(("Campbell", "Campbell")));
@@ -113,14 +116,23 @@ fn microsoft_deserialization_helper_functions_contract() {
             .unwrap()
             .guid(),
         ProfileIdentityGuid::Generated([
-            0xbc, 0x44, 0x83, 0x9a, 0x2c, 0x70, 0x52, 0x13, 0x84, 0x1d, 0x37, 0xb7, 0x14,
-            0xda, 0xbb, 0x4a,
+            0xbc, 0x44, 0x83, 0x9a, 0x2c, 0x70, 0x52, 0x13, 0x84, 0x1d, 0x37, 0xb7, 0x14, 0xda,
+            0xbb, 0x4a,
         ])
     );
     assert!(lookup.get_profile_by_name("DoesNotExist").is_none());
-    assert_eq!(lookup.find_explicit_profile(guid0).unwrap().name(), Some("profile0"));
-    assert_eq!(lookup.find_explicit_profile(guid1).unwrap().name(), Some("profile1"));
-    assert_eq!(lookup.find_explicit_profile(guid2).unwrap().name(), Some("Ubuntu"));
+    assert_eq!(
+        lookup.find_explicit_profile(guid0).unwrap().name(),
+        Some("profile0")
+    );
+    assert_eq!(
+        lookup.find_explicit_profile(guid1).unwrap().name(),
+        Some("profile1")
+    );
+    assert_eq!(
+        lookup.find_explicit_profile(guid2).unwrap().name(),
+        Some("Ubuntu")
+    );
     assert!(lookup.find_explicit_profile(fake).is_none());
 }
 

@@ -7,7 +7,7 @@
 
 use crate::text_attribute::TextAttribute;
 use crate::text_color::{
-    Rgb, DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, FRAME_BACKGROUND, FRAME_FOREGROUND, TABLE_SIZE,
+    DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, FRAME_BACKGROUND, FRAME_FOREGROUND, Rgb, TABLE_SIZE,
 };
 
 const PALETTE_SIZE: usize = 256;
@@ -155,7 +155,12 @@ impl ColorTableState {
 
     /// Applies DEC item color assignment. Item 1 owns normal-text aliases and
     /// item 2 owns frame aliases; unsupported items are ignored.
-    pub fn assign_color_aliases(&mut self, item: u16, foreground: usize, background: usize) -> bool {
+    pub fn assign_color_aliases(
+        &mut self,
+        item: u16,
+        foreground: usize,
+        background: usize,
+    ) -> bool {
         if foreground >= TABLE_SIZE || background >= TABLE_SIZE {
             return false;
         }
@@ -367,8 +372,14 @@ mod tests {
 
     #[test]
     fn xterm_rgb_components_scale_by_declared_hex_precision() {
-        assert_eq!(parse_xterm_rgb("rgb:1/23/12"), Some(Rgb::new(0x11, 0x23, 0x12)));
-        assert_eq!(parse_xterm_rgb("rgb:ff/a1/1b"), Some(Rgb::new(0xff, 0xa1, 0x1b)));
+        assert_eq!(
+            parse_xterm_rgb("rgb:1/23/12"),
+            Some(Rgb::new(0x11, 0x23, 0x12))
+        );
+        assert_eq!(
+            parse_xterm_rgb("rgb:ff/a1/1b"),
+            Some(Rgb::new(0xff, 0xa1, 0x1b))
+        );
         assert_eq!(parse_xterm_rgb("rgb:/1/1"), None);
         assert_eq!(parse_xterm_rgb("rgb:1/1/1/1"), None);
     }

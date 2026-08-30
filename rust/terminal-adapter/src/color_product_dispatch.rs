@@ -7,8 +7,7 @@
 use terminal_buffer::{
     color_table::ColorTableState,
     text_color::{
-        CURSOR_COLOR, DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, Rgb, SELECTION_BACKGROUND,
-        TABLE_SIZE,
+        CURSOR_COLOR, DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, Rgb, SELECTION_BACKGROUND, TABLE_SIZE,
     },
 };
 use terminal_parser::{
@@ -172,11 +171,8 @@ impl ColorProductDispatch {
         let Some(color) = self.color(index) else {
             return true;
         };
-        self.outbound.push_str(&format!(
-            "{ESC}]4;{index};{}{}",
-            xterm_rgb(color),
-            ST
-        ));
+        self.outbound
+            .push_str(&format!("{ESC}]4;{index};{}{}", xterm_rgb(color), ST));
         true
     }
 
@@ -216,9 +212,7 @@ impl ColorProductDispatch {
             }
             if model == 1 {
                 let (hue, lightness, saturation) = rgb_to_dec_hls(color);
-                response.push_str(&format!(
-                    "{index};1;{hue};{lightness};{saturation}"
-                ));
+                response.push_str(&format!("{index};1;{hue};{lightness};{saturation}"));
             } else {
                 response.push_str(&format!(
                     "{index};2;{};{};{}",
@@ -505,9 +499,7 @@ mod tests {
         state.dispatch(OutputAction::RequestXtermColorResource(11));
         assert_eq!(
             state.response(),
-            format!(
-                "{ESC}]10;rgb:cccc/2424/2424{ST}{ESC}]11;rgb:0000/ffff/0000{ST}"
-            )
+            format!("{ESC}]10;rgb:cccc/2424/2424{ST}{ESC}]11;rgb:0000/ffff/0000{ST}")
         );
         state.clear_response();
 

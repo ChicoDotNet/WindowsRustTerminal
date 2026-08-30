@@ -219,11 +219,7 @@ impl SettingsDocument {
     /// # Errors
     ///
     /// Returns [`SerializationError`] when the settings root is not an object.
-    pub fn set_global_i32(
-        &mut self,
-        member: &str,
-        value: i32,
-    ) -> Result<(), SerializationError> {
+    pub fn set_global_i32(&mut self, member: &str, value: i32) -> Result<(), SerializationError> {
         self.root_object_mut()?
             .insert(member.to_owned(), JsonValue::Number(f64::from(value)));
         Ok(())
@@ -235,11 +231,7 @@ impl SettingsDocument {
     /// # Errors
     ///
     /// Returns [`SerializationError`] when the settings root is not an object.
-    pub fn set_global_bool(
-        &mut self,
-        member: &str,
-        value: bool,
-    ) -> Result<(), SerializationError> {
+    pub fn set_global_bool(&mut self, member: &str, value: bool) -> Result<(), SerializationError> {
         self.root_object_mut()?
             .insert(member.to_owned(), JsonValue::Bool(value));
         Ok(())
@@ -276,10 +268,8 @@ impl SettingsDocument {
         member: &str,
         value: &str,
     ) -> Result<(), SerializationError> {
-        self.profile_object_mut(index)?.insert(
-            member.to_owned(),
-            JsonValue::String(value.to_owned()),
-        );
+        self.profile_object_mut(index)?
+            .insert(member.to_owned(), JsonValue::String(value.to_owned()));
         Ok(())
     }
 
@@ -566,10 +556,7 @@ fn next_modified_name(
     unreachable!("u32 candidate space cannot be exhausted by a settings document")
 }
 
-fn color_scheme_name_is_effectively_referenced(
-    layered: &ColorSchemeSettings,
-    name: &str,
-) -> bool {
+fn color_scheme_name_is_effectively_referenced(layered: &ColorSchemeSettings, name: &str) -> bool {
     let defaults = layered.profile_defaults();
     if defaults.light_name() == name || defaults.dark_name() == name {
         return true;
@@ -597,8 +584,7 @@ fn equivalent_for_settings_merge(
     left: &JsonObject,
     right: &JsonObject,
 ) -> Result<bool, SerializationError> {
-    if color_member(left, "background", "#000000")?
-        != color_member(right, "background", "#000000")?
+    if color_member(left, "background", "#000000")? != color_member(right, "background", "#000000")?
         || color_member(left, "foreground", "#C0C0C0")?
             != color_member(right, "foreground", "#C0C0C0")?
     {
@@ -613,11 +599,7 @@ fn equivalent_for_settings_merge(
     Ok(true)
 }
 
-fn color_member(
-    object: &JsonObject,
-    key: &str,
-    default: &str,
-) -> Result<u32, SerializationError> {
+fn color_member(object: &JsonObject, key: &str, default: &str) -> Result<u32, SerializationError> {
     match object.get(key) {
         None => parse_rgb(default).ok_or(SerializationError::InvalidColorSchemeFixup),
         Some(JsonValue::String(value)) => {

@@ -47,12 +47,25 @@ fn microsoft_serialization_global_settings_contract() {
         .to_json_value()
         .as_object()
         .expect("GlobalSettings remains an object");
-    assert_eq!(root.get("initialRows").and_then(JsonValue::as_f64), Some(30.0));
-    assert_eq!(root.get("initialCols").and_then(JsonValue::as_f64), Some(120.0));
-    assert_eq!(root.get("alwaysOnTop").and_then(JsonValue::as_bool), Some(false));
-    assert_eq!(root.get("theme").and_then(JsonValue::as_str), Some("system"));
     assert_eq!(
-        root.get("warning.confirmOnClose").and_then(JsonValue::as_str),
+        root.get("initialRows").and_then(JsonValue::as_f64),
+        Some(30.0)
+    );
+    assert_eq!(
+        root.get("initialCols").and_then(JsonValue::as_f64),
+        Some(120.0)
+    );
+    assert_eq!(
+        root.get("alwaysOnTop").and_then(JsonValue::as_bool),
+        Some(false)
+    );
+    assert_eq!(
+        root.get("theme").and_then(JsonValue::as_str),
+        Some("system")
+    );
+    assert_eq!(
+        root.get("warning.confirmOnClose")
+            .and_then(JsonValue::as_str),
         Some("automatic")
     );
     assert!(matches!(root.get("actions"), Some(JsonValue::Array(values)) if values.is_empty()));

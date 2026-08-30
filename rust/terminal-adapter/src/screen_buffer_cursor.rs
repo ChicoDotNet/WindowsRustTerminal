@@ -8,10 +8,7 @@
 
 use terminal_parser::output_engine::{OutputAction, TermDispatch};
 
-use crate::{
-    adapt_dispatch::PageGeometry,
-    presentation_state::AdaptDispatchPresentationState,
-};
+use crate::{adapt_dispatch::PageGeometry, presentation_state::AdaptDispatchPresentationState};
 
 const ATT610_START_BLINKING_CURSOR_MODE: i32 = 12;
 

@@ -97,15 +97,24 @@ mod tests {
     use super::*;
 
     fn microsoft_deferred_main_buffer_resize_case(reenter_alternate: bool) {
-        let old_size = ViewportSize { width: 80, height: 100 };
-        let old_view = ViewportSize { width: 80, height: 25 };
+        let old_size = ViewportSize {
+            width: 80,
+            height: 100,
+        };
+        let old_view = ViewportSize {
+            width: 80,
+            height: 25,
+        };
         assert_ne!(old_size, old_view);
 
         let mut state = DeferredMainResizeState::new(old_size, old_view);
         state.enter_alternate();
         assert_eq!(state.alternate_size(), Some(old_view));
 
-        let expected_size = ViewportSize { width: 60, height: 24 };
+        let expected_size = ViewportSize {
+            width: 60,
+            height: 24,
+        };
         state.resize_terminal(expected_size);
 
         // The alternate buffer is always viewport-sized and updates now.

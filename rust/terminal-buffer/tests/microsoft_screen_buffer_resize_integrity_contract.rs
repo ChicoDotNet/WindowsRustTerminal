@@ -13,7 +13,9 @@ fn fixture() -> ResizeIntegrityState {
     tagged.set_background(TextColor::index16(TextColor::DARK_BLUE));
 
     let mut buffer = TextBuffer::new(WIDTH, HEIGHT, fill).expect("valid Microsoft resize fixture");
-    buffer.row_mut(0).replace_attributes(0, i32::from(WIDTH), tagged);
+    buffer
+        .row_mut(0)
+        .replace_attributes(0, i32::from(WIDTH), tagged);
 
     let cursor = CursorState {
         x: 7,

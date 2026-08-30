@@ -48,10 +48,22 @@ fn microsoft_keybindings_split_pane_args_contract() {
     .expect("Microsoft split-pane vectors layer");
 
     assert_eq!(map.keybinding_count(), 4);
-    assert_eq!(map.split_direction_for_key("ctrl+d"), Some(SplitDirection::Right));
-    assert_eq!(map.split_direction_for_key("ctrl+e"), Some(SplitDirection::Down));
-    assert_eq!(map.split_direction_for_key("ctrl+g"), Some(SplitDirection::Automatic));
-    assert_eq!(map.split_direction_for_key("ctrl+h"), Some(SplitDirection::Automatic));
+    assert_eq!(
+        map.split_direction_for_key("ctrl+d"),
+        Some(SplitDirection::Right)
+    );
+    assert_eq!(
+        map.split_direction_for_key("ctrl+e"),
+        Some(SplitDirection::Down)
+    );
+    assert_eq!(
+        map.split_direction_for_key("ctrl+g"),
+        Some(SplitDirection::Automatic)
+    );
+    assert_eq!(
+        map.split_direction_for_key("ctrl+h"),
+        Some(SplitDirection::Automatic)
+    );
 }
 
 #[test]
@@ -93,10 +105,15 @@ fn microsoft_keybindings_scroll_args_contract() {
     assert_eq!(map.rows_to_scroll_for_key("ctrl+up"), Some(None));
     assert_eq!(map.rows_to_scroll_for_key("ctrl+down"), Some(None));
     assert_eq!(map.rows_to_scroll_for_key("ctrl+shift+up"), Some(Some(10)));
-    assert_eq!(map.rows_to_scroll_for_key("ctrl+shift+down"), Some(Some(10)));
+    assert_eq!(
+        map.rows_to_scroll_for_key("ctrl+shift+down"),
+        Some(Some(10))
+    );
 
     let err = map
-        .layer_json(r#"[{ "keys": ["up"], "command": { "action": "scrollDown", "rowsToScroll": -1 } }]"#)
+        .layer_json(
+            r#"[{ "keys": ["up"], "command": { "action": "scrollDown", "rowsToScroll": -1 } }]"#,
+        )
         .expect_err("negative rowsToScroll must fail like Microsoft");
     assert_eq!(err, KeyBindingError::InvalidActionArguments);
 }
@@ -113,9 +130,18 @@ fn microsoft_keybindings_toggle_command_palette_args_contract() {
     )
     .expect("Microsoft command-palette vectors layer");
 
-    assert_eq!(map.command_palette_launch_mode_for_key("up"), Some(CommandPaletteLaunchMode::Action));
-    assert_eq!(map.command_palette_launch_mode_for_key("ctrl+up"), Some(CommandPaletteLaunchMode::Action));
-    assert_eq!(map.command_palette_launch_mode_for_key("ctrl+shift+up"), Some(CommandPaletteLaunchMode::CommandLine));
+    assert_eq!(
+        map.command_palette_launch_mode_for_key("up"),
+        Some(CommandPaletteLaunchMode::Action)
+    );
+    assert_eq!(
+        map.command_palette_launch_mode_for_key("ctrl+up"),
+        Some(CommandPaletteLaunchMode::Action)
+    );
+    assert_eq!(
+        map.command_palette_launch_mode_for_key("ctrl+shift+up"),
+        Some(CommandPaletteLaunchMode::CommandLine)
+    );
 
     let err = map
         .layer_json(r#"[{ "keys": ["up"], "command": { "action": "commandPalette", "launchMode": "bad" } }]"#)
@@ -135,8 +161,14 @@ fn microsoft_keybindings_move_tab_args_contract() {
     .expect("Microsoft move-tab vectors layer");
 
     assert_eq!(map.keybinding_count(), 2);
-    assert_eq!(map.move_tab_direction_for_key("up"), Some(MoveTabDirection::Forward));
-    assert_eq!(map.move_tab_direction_for_key("down"), Some(MoveTabDirection::Backward));
+    assert_eq!(
+        map.move_tab_direction_for_key("up"),
+        Some(MoveTabDirection::Forward)
+    );
+    assert_eq!(
+        map.move_tab_direction_for_key("down"),
+        Some(MoveTabDirection::Backward)
+    );
 
     let mut no_args = LayeredActionMap::new();
     no_args
@@ -145,7 +177,9 @@ fn microsoft_keybindings_move_tab_args_contract() {
     assert_eq!(no_args.action_id_for_key("up"), None);
 
     let err = map
-        .layer_json(r#"[{ "keys": ["up"], "command": { "action": "moveTab", "direction": "bad" } }]"#)
+        .layer_json(
+            r#"[{ "keys": ["up"], "command": { "action": "moveTab", "direction": "bad" } }]"#,
+        )
         .expect_err("invalid moveTab direction must fail like Microsoft");
     assert_eq!(err, KeyBindingError::InvalidActionArguments);
 }

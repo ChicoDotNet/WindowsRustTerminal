@@ -45,9 +45,7 @@ pub fn string_to_uint(input: &str) -> Option<u32> {
         if !byte.is_ascii_digit() {
             return None;
         }
-        value = value
-            .wrapping_mul(10)
-            .wrapping_add(u32::from(byte - b'0'));
+        value = value.wrapping_mul(10).wrapping_add(u32::from(byte - b'0'));
     }
     Some(value)
 }
@@ -105,9 +103,7 @@ pub fn trim_paste(input: &str) -> &str {
 #[must_use]
 pub fn evaluate_starting_directory(current_directory: &str, starting_directory: &str) -> String {
     let bytes = starting_directory.as_bytes();
-    let absolute_windows = bytes.len() >= 3
-        && bytes[1] == b':'
-        && matches!(bytes[2], b'\\' | b'/');
+    let absolute_windows = bytes.len() >= 3 && bytes[1] == b':' && matches!(bytes[2], b'\\' | b'/');
     if absolute_windows
         || starting_directory.starts_with('~')
         || starting_directory.starts_with('/')
@@ -159,7 +155,10 @@ fn parse_x_color_spec(input: &str) -> Option<XTermColor> {
 }
 
 fn scale_x_component(component: &str, sharp: bool) -> Option<u8> {
-    if component.is_empty() || component.len() > 4 || !component.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+    if component.is_empty()
+        || component.len() > 4
+        || !component.bytes().all(|byte| byte.is_ascii_hexdigit())
+    {
         return None;
     }
     let value = u32::from_str_radix(component, 16).ok()?;
@@ -277,7 +276,8 @@ pub fn mangle_starting_directory_for_wsl(
         .find_map(|(index, byte)| matches!(*byte, b'"' | b' ').then_some(index));
     let start = usize::from(command_line.starts_with('"'));
     let end = terminator.unwrap_or(command_line.len());
-    if start >= end || !command_line.is_char_boundary(start) || !command_line.is_char_boundary(end) {
+    if start >= end || !command_line.is_char_boundary(start) || !command_line.is_char_boundary(end)
+    {
         return fallback();
     }
 
@@ -359,12 +359,20 @@ mod tests {
             assert_eq!(filter_string_for_paste(input, true, false), expected);
         }
 
-        let c0 = format!("Hello{}{}{} 123", char::from(1), char::from(2), char::from(3));
+        let c0 = format!(
+            "Hello{}{}{} 123",
+            char::from(1),
+            char::from(2),
+            char::from(3)
+        );
         assert_eq!(filter_string_for_paste(&c0, false, true), "Hello 123");
         let c1 = format!("echo{}", char::from_u32(0x9c).expect("valid C1 scalar"));
         assert_eq!(filter_string_for_paste(&c1, true, true), "echo");
         let unicode = format!("你好\r\n{}世界{}\r\n123", char::from(1), char::from(2));
-        assert_eq!(filter_string_for_paste(&unicode, true, true), "你好\r世界\r123");
+        assert_eq!(
+            filter_string_for_paste(&unicode, true, true),
+            "你好\r世界\r123"
+        );
     }
 
     #[test]
@@ -430,17 +438,66 @@ mod tests {
         }
 
         for invalid in [
-            "", "r:", "rg:", "rgb:", "rgb:/", "rgb://", "rgb:///", "rgb:1",
-            "rgb:1/", "rgb:/1", "rgb:1/1", "rgb:1/1/", "rgb:1/11/", "rgb:/1/1",
-            "rgb:1/1/1/", "rgb:1/1/1/1", "rgb:111111111", "rgb:this/is/invalid",
-            "rgba:1/1/1", "rgbi:1/1/1", "cmyk:1/1/1/1", "rgb#111", "rgb:#111",
-            "rgb:rgb:1/1/1", "rgb:rgb:#111", "#", "#1", "#1111", "#11111",
-            "#1/1/1", "#11/1/", "#1111111", "#/1/1/1", "#rgb:1/1/1",
-            "#111invalid", "#invalid111", "#1111111111111111", "12/34/56", "123456",
-            "rgb：1/1/1", "中文rgb:1/1/1", "rgb中文:1/1/1", "这是一句中文", "RGBİ1/1/1",
-            "rgbİ1/1/1", "rgbİ:1/1/1", "rgß:1/1/1", "rgẞ:1/1/1", "yellow8",
-            "yellow10", "yellow3a", "3yellow", "royal3blue", "5gray", "5gray8", "58grey",
-            "gray-1", "gray101", "gray-", "gray;",
+            "",
+            "r:",
+            "rg:",
+            "rgb:",
+            "rgb:/",
+            "rgb://",
+            "rgb:///",
+            "rgb:1",
+            "rgb:1/",
+            "rgb:/1",
+            "rgb:1/1",
+            "rgb:1/1/",
+            "rgb:1/11/",
+            "rgb:/1/1",
+            "rgb:1/1/1/",
+            "rgb:1/1/1/1",
+            "rgb:111111111",
+            "rgb:this/is/invalid",
+            "rgba:1/1/1",
+            "rgbi:1/1/1",
+            "cmyk:1/1/1/1",
+            "rgb#111",
+            "rgb:#111",
+            "rgb:rgb:1/1/1",
+            "rgb:rgb:#111",
+            "#",
+            "#1",
+            "#1111",
+            "#11111",
+            "#1/1/1",
+            "#11/1/",
+            "#1111111",
+            "#/1/1/1",
+            "#rgb:1/1/1",
+            "#111invalid",
+            "#invalid111",
+            "#1111111111111111",
+            "12/34/56",
+            "123456",
+            "rgb：1/1/1",
+            "中文rgb:1/1/1",
+            "rgb中文:1/1/1",
+            "这是一句中文",
+            "RGBİ1/1/1",
+            "rgbİ1/1/1",
+            "rgbİ:1/1/1",
+            "rgß:1/1/1",
+            "rgẞ:1/1/1",
+            "yellow8",
+            "yellow10",
+            "yellow3a",
+            "3yellow",
+            "royal3blue",
+            "5gray",
+            "5gray8",
+            "58grey",
+            "gray-1",
+            "gray101",
+            "gray-",
+            "gray;",
         ] {
             assert_eq!(color_from_xterm_color(invalid), None, "input={invalid}");
         }
@@ -450,22 +507,57 @@ mod tests {
     fn microsoft_types_mangle_wsl_paths_contract() {
         let system32 = "C:\\Windows\\system32";
         let user_profile = "C:\\Users\\terminal";
-        let check = |command: &str, directory: &str, expected_command: &str, expected_directory: &str| {
-            let result = mangle_starting_directory_for_wsl(command, directory, system32, user_profile);
-            assert_eq!(result.command_line, expected_command, "command={command}");
-            assert_eq!(result.starting_directory, expected_directory, "command={command}");
-        };
+        let check =
+            |command: &str, directory: &str, expected_command: &str, expected_directory: &str| {
+                let result =
+                    mangle_starting_directory_for_wsl(command, directory, system32, user_profile);
+                assert_eq!(result.command_line, expected_command, "command={command}");
+                assert_eq!(
+                    result.starting_directory, expected_directory,
+                    "command={command}"
+                );
+            };
 
         check("wsl", "SENTINEL", "\"wsl\" --cd \"SENTINEL\" ", "");
         check("wsl -d X", "SENTINEL", "\"wsl\" --cd \"SENTINEL\" -d X", "");
-        check("wsl -d X ~/bin/sh", "SENTINEL", "\"wsl\" --cd \"SENTINEL\" -d X ~/bin/sh", "");
+        check(
+            "wsl -d X ~/bin/sh",
+            "SENTINEL",
+            "\"wsl\" --cd \"SENTINEL\" -d X ~/bin/sh",
+            "",
+        );
         check("wsl.exe", "SENTINEL", "\"wsl.exe\" --cd \"SENTINEL\" ", "");
-        check("wsl.exe -d X", "SENTINEL", "\"wsl.exe\" --cd \"SENTINEL\" -d X", "");
-        check("wsl.exe -d X ~/bin/sh", "SENTINEL", "\"wsl.exe\" --cd \"SENTINEL\" -d X ~/bin/sh", "");
+        check(
+            "wsl.exe -d X",
+            "SENTINEL",
+            "\"wsl.exe\" --cd \"SENTINEL\" -d X",
+            "",
+        );
+        check(
+            "wsl.exe -d X ~/bin/sh",
+            "SENTINEL",
+            "\"wsl.exe\" --cd \"SENTINEL\" -d X ~/bin/sh",
+            "",
+        );
         check("\"wsl\"", "SENTINEL", "\"wsl\" --cd \"SENTINEL\" ", "");
-        check("\"wsl.exe\"", "SENTINEL", "\"wsl.exe\" --cd \"SENTINEL\" ", "");
-        check("\"wsl\" -d X", "SENTINEL", "\"wsl\" --cd \"SENTINEL\"  -d X", "");
-        check("\"wsl.exe\" -d X", "SENTINEL", "\"wsl.exe\" --cd \"SENTINEL\"  -d X", "");
+        check(
+            "\"wsl.exe\"",
+            "SENTINEL",
+            "\"wsl.exe\" --cd \"SENTINEL\" ",
+            "",
+        );
+        check(
+            "\"wsl\" -d X",
+            "SENTINEL",
+            "\"wsl\" --cd \"SENTINEL\"  -d X",
+            "",
+        );
+        check(
+            "\"wsl.exe\" -d X",
+            "SENTINEL",
+            "\"wsl.exe\" --cd \"SENTINEL\"  -d X",
+            "",
+        );
         check(
             "\"C:\\Windows\\system32\\wsl.exe\" -d X",
             "SENTINEL",
@@ -478,9 +570,19 @@ mod tests {
             "\"C:\\windows\\system32\\wsl\" --cd \"SENTINEL\"  -d X",
             "",
         );
-        check("wsl ~/bin", "SENTINEL", "\"wsl\" --cd \"SENTINEL\" ~/bin", "");
+        check(
+            "wsl ~/bin",
+            "SENTINEL",
+            "\"wsl\" --cd \"SENTINEL\" ~/bin",
+            "",
+        );
 
-        check("\"C:\\wsl.exe\" -d X", "SENTINEL", "\"C:\\wsl.exe\" -d X", "SENTINEL");
+        check(
+            "\"C:\\wsl.exe\" -d X",
+            "SENTINEL",
+            "\"C:\\wsl.exe\" -d X",
+            "SENTINEL",
+        );
         check("C:\\wsl.exe", "SENTINEL", "C:\\wsl.exe", "SENTINEL");
         check("wsl --cd C:\\", "SENTINEL", "wsl --cd C:\\", "SENTINEL");
         check("wsl ~", "SENTINEL", "wsl ~", "SENTINEL");
@@ -512,7 +614,12 @@ mod tests {
         );
         check("wsl -d Ubuntu", "~", "\"wsl\" --cd \"~\" -d Ubuntu", "");
         check("wsl ~ -d Ubuntu", "~", "wsl ~ -d Ubuntu", user_profile);
-        check("ubuntu ~ -d Ubuntu", "~", "ubuntu ~ -d Ubuntu", user_profile);
+        check(
+            "ubuntu ~ -d Ubuntu",
+            "~",
+            "ubuntu ~ -d Ubuntu",
+            user_profile,
+        );
         check("powershell.exe", "~", "powershell.exe", user_profile);
     }
 
@@ -551,14 +658,23 @@ mod tests {
     fn microsoft_types_evaluate_starting_directory_contract() {
         for cwd in ["C:\\Windows\\System32", "C:/Users/migrie"] {
             assert_eq!(evaluate_starting_directory(cwd, ""), format!("{cwd}\\"));
-            assert_eq!(evaluate_starting_directory(cwd, "C:\\Windows"), "C:\\Windows");
-            assert_eq!(evaluate_starting_directory(cwd, "C:/Users/migrie"), "C:/Users/migrie");
+            assert_eq!(
+                evaluate_starting_directory(cwd, "C:\\Windows"),
+                "C:\\Windows"
+            );
+            assert_eq!(
+                evaluate_starting_directory(cwd, "C:/Users/migrie"),
+                "C:/Users/migrie"
+            );
             assert_eq!(evaluate_starting_directory(cwd, "."), format!("{cwd}\\."));
             assert_eq!(
                 evaluate_starting_directory(cwd, ".\\System32"),
                 format!("{cwd}\\.\\System32")
             );
-            assert_eq!(evaluate_starting_directory(cwd, "./dev"), format!("{cwd}\\./dev"));
+            assert_eq!(
+                evaluate_starting_directory(cwd, "./dev"),
+                format!("{cwd}\\./dev")
+            );
             assert_eq!(evaluate_starting_directory(cwd, "~"), "~");
             assert_eq!(evaluate_starting_directory(cwd, "~/dev"), "~/dev");
             assert_eq!(evaluate_starting_directory(cwd, "/"), "/");

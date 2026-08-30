@@ -1,8 +1,8 @@
 use terminal_settings::{serialization::SettingsDocument, settings_json::JsonValue};
 
 fn assert_profile_roundtrip(input: &str) {
-    let expected = terminal_settings::settings_json::parse(input)
-        .expect("Microsoft Profile JSON parses");
+    let expected =
+        terminal_settings::settings_json::parse(input).expect("Microsoft Profile JSON parses");
     let document = SettingsDocument::from_profile_json(input)
         .expect("safe Rust Profile owner accepts the Microsoft vector");
     assert_eq!(document.to_json_value(), &expected);
@@ -74,7 +74,9 @@ fn microsoft_serialization_profile_contract() {
         root.get("foreground").and_then(JsonValue::as_str),
         Some("#AABBCC")
     );
-    assert!(matches!(root.get("environment"), Some(JsonValue::Object(values)) if values.len() == 3));
+    assert!(
+        matches!(root.get("environment"), Some(JsonValue::Object(values)) if values.len() == 3)
+    );
 
     assert_profile_roundtrip(r#"{ "name": "Custom Profile" }"#);
 
@@ -157,7 +159,13 @@ fn microsoft_serialization_legacy_font_settings_contract() {
         .get("font")
         .and_then(JsonValue::as_object)
         .expect("modern font object is emitted");
-    assert_eq!(font.get("face").and_then(JsonValue::as_str), Some("Cascadia Mono"));
+    assert_eq!(
+        font.get("face").and_then(JsonValue::as_str),
+        Some("Cascadia Mono")
+    );
     assert_eq!(font.get("size").and_then(JsonValue::as_f64), Some(12.0));
-    assert_eq!(font.get("weight").and_then(JsonValue::as_str), Some("normal"));
+    assert_eq!(
+        font.get("weight").and_then(JsonValue::as_str),
+        Some("normal")
+    );
 }

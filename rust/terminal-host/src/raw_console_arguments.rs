@@ -5,7 +5,9 @@
 //! `ConsoleArguments` state machine. Keeping that boundary in safe Rust lets the
 //! Microsoft `ConsoleArgumentsTests` raw-command-line contracts run without Win32.
 
-use crate::console_argument_parser::{parse_console_arguments, ConsoleArgumentError, ConsoleArgumentState};
+use crate::console_argument_parser::{
+    ConsoleArgumentError, ConsoleArgumentState, parse_console_arguments,
+};
 
 /// Parses a complete conhost command line, including the executable token.
 ///

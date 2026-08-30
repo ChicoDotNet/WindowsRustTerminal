@@ -79,7 +79,11 @@ fn microsoft_api_write_console_a_contract() {
     let vectors: &[(ConsoleCodePage, &[u8], &str)] = &[
         (ConsoleCodePage::Usa437, b"Test Text", "Test Text"),
         (ConsoleCodePage::Japanese932, b"J\x82\xa0\x82\xa2", "Jあい"),
-        (ConsoleCodePage::Utf8, b"Test \xe3\x82\xab Text", "Test カ Text"),
+        (
+            ConsoleCodePage::Utf8,
+            b"Test \xe3\x82\xab Text",
+            "Test カ Text",
+        ),
     ];
 
     for wait in [false, true] {
@@ -87,7 +91,11 @@ fn microsoft_api_write_console_a_contract() {
             for increment in [0_usize, 1, 2] {
                 let mut writer = ConsoleWriter::new(code_page);
                 writer.set_wait(wait);
-                let step = if increment == 0 { bytes.len() } else { increment };
+                let step = if increment == 0 {
+                    bytes.len()
+                } else {
+                    increment
+                };
                 let mut offset = 0;
                 while offset < bytes.len() {
                     let end = (offset + step).min(bytes.len());
@@ -318,12 +326,7 @@ fn microsoft_api_scroll_console_screen_buffer_w_contract() {
                 .fill_rect(scroll_rect, cell('B', FOREGROUND_BLUE))
                 .unwrap();
             buffer
-                .scroll_console_screen_buffer(
-                    scroll_rect,
-                    Point::new(2, 2),
-                    small_clip,
-                    fill,
-                )
+                .scroll_console_screen_buffer(scroll_rect, Point::new(2, 2), small_clip, fill)
                 .unwrap();
             if check_clipped {
                 assert_pattern(&buffer, &["ZZZZZ", "ZBAZZ", "ZBBBZ", "ZZBBZ", "ZZZZZ"]);
@@ -336,12 +339,7 @@ fn microsoft_api_scroll_console_screen_buffer_w_contract() {
                 .fill_rect(scroll_rect, cell('B', FOREGROUND_BLUE))
                 .unwrap();
             buffer
-                .scroll_console_screen_buffer(
-                    scroll_rect,
-                    Point::new(3, 3),
-                    small_clip,
-                    fill,
-                )
+                .scroll_console_screen_buffer(scroll_rect, Point::new(3, 3), small_clip, fill)
                 .unwrap();
             if check_clipped {
                 assert_pattern(&buffer, &["ZZZZZ", "ZBAZZ", "ZBAZZ", "ZZZBZ", "ZZZBZ"]);

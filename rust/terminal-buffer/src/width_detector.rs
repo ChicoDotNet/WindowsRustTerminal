@@ -171,7 +171,8 @@ impl TextMeasurementEngine {
             let pending_units = pending.encode_utf16().count();
             let mut combined = pending.clone();
             combined.push_str(&chunk);
-            let graphemes = UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
+            let graphemes =
+                UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
             let joined = !pending.is_empty()
                 && graphemes
                     .first()
@@ -233,7 +234,8 @@ impl TextMeasurementEngine {
             let pending_units = pending.encode_utf16().count();
             let mut combined = chunk.clone();
             combined.push_str(&pending);
-            let graphemes = UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
+            let graphemes =
+                UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
             let joined = !pending.is_empty()
                 && graphemes
                     .last()
@@ -302,7 +304,12 @@ impl TextMeasurementEngine {
             let text = String::from_utf16_lossy(chunk);
             let scalars = text
                 .chars()
-                .map(|value| (value.encode_utf16(&mut [0; 2]).len(), self.scalar_width(value)))
+                .map(|value| {
+                    (
+                        value.encode_utf16(&mut [0; 2]).len(),
+                        self.scalar_width(value),
+                    )
+                })
                 .collect::<Vec<_>>();
             let mut index = 0;
 
@@ -340,7 +347,11 @@ impl TextMeasurementEngine {
                     width: pending_width,
                 });
                 pending = false;
-            } else if !scalars.is_empty() && pending && scalars[0].1 != 0 && output.last().is_some_and(|m| m.utf16_len != 0) {
+            } else if !scalars.is_empty()
+                && pending
+                && scalars[0].1 != 0
+                && output.last().is_some_and(|m| m.utf16_len != 0)
+            {
                 // The loop above can only leave a pending cluster at the end of
                 // this chunk. Completion against a non-zero lead in the next
                 // chunk is handled at that next iteration.
@@ -372,7 +383,12 @@ impl TextMeasurementEngine {
             let text = String::from_utf16_lossy(chunk);
             let scalars = text
                 .chars()
-                .map(|value| (value.encode_utf16(&mut [0; 2]).len(), self.scalar_width(value)))
+                .map(|value| {
+                    (
+                        value.encode_utf16(&mut [0; 2]).len(),
+                        self.scalar_width(value),
+                    )
+                })
                 .collect::<Vec<_>>();
             let mut index = scalars.len();
 
@@ -604,7 +620,10 @@ mod tests {
     #[test]
     fn microsoft_ambiguous_width_policy_switches_arrow_width() {
         let mut detector = TextMeasurementEngine::default();
-        for mode in [TextMeasurementMode::Graphemes, TextMeasurementMode::Wcswidth] {
+        for mode in [
+            TextMeasurementMode::Graphemes,
+            TextMeasurementMode::Wcswidth,
+        ] {
             detector.reset(mode);
             detector.set_ambiguous_width(1);
             assert_eq!(detector.grapheme_width("→"), 1);
@@ -683,7 +702,11 @@ mod tests {
             assert_eq!(lengths(&forward), next_lengths, "forward lengths {mode:?}");
             assert_eq!(widths(&forward), next_widths, "forward widths {mode:?}");
             let backward = detector.chunks_backward(&chunks);
-            assert_eq!(lengths(&backward), prev_lengths, "backward lengths {mode:?}");
+            assert_eq!(
+                lengths(&backward),
+                prev_lengths,
+                "backward lengths {mode:?}"
+            );
             assert_eq!(widths(&backward), prev_widths, "backward widths {mode:?}");
         }
     }

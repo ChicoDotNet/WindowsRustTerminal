@@ -280,10 +280,7 @@ fn parse_key(input: &str) -> Result<(KeyChord, KeyIdentity), KeyBindingsModelErr
     Ok((chord, chord.identity()))
 }
 
-fn parse_numeric_code(
-    part: &str,
-    prefix: &str,
-) -> Option<Result<i32, KeyBindingsModelError>> {
+fn parse_numeric_code(part: &str, prefix: &str) -> Option<Result<i32, KeyBindingsModelError>> {
     if !part.starts_with(prefix) || !part.ends_with(')') {
         return None;
     }

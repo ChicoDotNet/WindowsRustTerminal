@@ -36,8 +36,14 @@ fn microsoft_deserialization_close_on_exit_compatibility_shim_contract() {
     }"#;
     let settings = DeserializedProfilePropertySet::from_user_and_inbox(user, EMPTY_INBOX)
         .expect("legacy boolean closeOnExit values remain compatible");
-    assert_eq!(settings.profiles()[0].close_on_exit(), CloseOnExitMode::Graceful);
-    assert_eq!(settings.profiles()[1].close_on_exit(), CloseOnExitMode::Never);
+    assert_eq!(
+        settings.profiles()[0].close_on_exit(),
+        CloseOnExitMode::Graceful
+    );
+    assert_eq!(
+        settings.profiles()[1].close_on_exit(),
+        CloseOnExitMode::Never
+    );
 }
 
 #[test]
@@ -169,13 +175,23 @@ fn microsoft_deserialization_find_missing_profile_contract() {
     }"#;
     let settings = DeserializedProfilePropertySet::from_user_and_inbox(user, EMPTY_INBOX)
         .expect("profile lookup vectors deserialize");
-    let guid1 = ProfileGuid::parse("{6239a42c-1111-49a3-80bd-e8fdd045185c}")
-        .expect("GUID 1 is valid");
-    let guid2 = ProfileGuid::parse("{6239a42c-2222-49a3-80bd-e8fdd045185c}")
-        .expect("GUID 2 is valid");
+    let guid1 =
+        ProfileGuid::parse("{6239a42c-1111-49a3-80bd-e8fdd045185c}").expect("GUID 1 is valid");
+    let guid2 =
+        ProfileGuid::parse("{6239a42c-2222-49a3-80bd-e8fdd045185c}").expect("GUID 2 is valid");
     let missing = ProfileGuid::parse("{6239a42c-3333-49a3-80bd-e8fdd045185c}")
         .expect("missing GUID vector is valid");
-    assert_eq!(settings.profile_by_guid(guid1).and_then(|profile| profile.name()), Some("profile0"));
-    assert_eq!(settings.profile_by_guid(guid2).and_then(|profile| profile.name()), Some("profile1"));
+    assert_eq!(
+        settings
+            .profile_by_guid(guid1)
+            .and_then(|profile| profile.name()),
+        Some("profile0")
+    );
+    assert_eq!(
+        settings
+            .profile_by_guid(guid2)
+            .and_then(|profile| profile.name()),
+        Some("profile1")
+    );
     assert!(settings.profile_by_guid(missing).is_none());
 }

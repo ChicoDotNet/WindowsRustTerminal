@@ -220,7 +220,10 @@ mod tests {
         // Microsoft's SGR 31 between these writes is presentation-only.
         state.write_text(" & more of a command");
 
-        assert_eq!(state.current_command(), "some of a command & more of a command");
+        assert_eq!(
+            state.current_command(),
+            "some of a command & more of a command"
+        );
         assert_eq!(
             state.commands(),
             vec![

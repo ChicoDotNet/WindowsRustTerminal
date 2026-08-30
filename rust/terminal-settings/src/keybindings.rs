@@ -149,7 +149,12 @@ impl LayeredActionMap {
             return None;
         };
         (command.get("action").and_then(JsonValue::as_str) == Some("adjustFontSize"))
-            .then(|| command.get("delta").and_then(JsonValue::as_f64).map(|v| v as i32))
+            .then(|| {
+                command
+                    .get("delta")
+                    .and_then(JsonValue::as_f64)
+                    .map(|v| v as i32)
+            })
             .flatten()
     }
 
@@ -196,23 +201,35 @@ impl LayeredActionMap {
     pub fn rows_to_scroll_for_key(&self, key: &str) -> Option<Option<u32>> {
         let action = self.action_for_key(key)?;
         match action {
-            JsonValue::String(name) if matches!(name.as_str(), "scrollUp" | "scrollDown") => Some(None),
+            JsonValue::String(name) if matches!(name.as_str(), "scrollUp" | "scrollDown") => {
+                Some(None)
+            }
             JsonValue::Object(command)
                 if command
                     .get("action")
                     .and_then(JsonValue::as_str)
                     .is_some_and(|name| matches!(name, "scrollUp" | "scrollDown")) =>
             {
-                Some(command.get("rowsToScroll").and_then(JsonValue::as_f64).map(|v| v as u32))
+                Some(
+                    command
+                        .get("rowsToScroll")
+                        .and_then(JsonValue::as_f64)
+                        .map(|v| v as u32),
+                )
             }
             _ => None,
         }
     }
 
     #[must_use]
-    pub fn command_palette_launch_mode_for_key(&self, key: &str) -> Option<CommandPaletteLaunchMode> {
+    pub fn command_palette_launch_mode_for_key(
+        &self,
+        key: &str,
+    ) -> Option<CommandPaletteLaunchMode> {
         match self.action_for_key(key)? {
-            JsonValue::String(name) if name == "commandPalette" => Some(CommandPaletteLaunchMode::Action),
+            JsonValue::String(name) if name == "commandPalette" => {
+                Some(CommandPaletteLaunchMode::Action)
+            }
             JsonValue::Object(command)
                 if command.get("action").and_then(JsonValue::as_str) == Some("commandPalette") =>
             {
@@ -362,7 +379,9 @@ fn validate_action_arguments(command: &JsonValue) -> Result<bool, KeyBindingErro
                     if command
                         .get("split")
                         .and_then(JsonValue::as_str)
-                        .is_some_and(|direction| !matches!(direction, "vertical" | "horizontal" | "auto"))
+                        .is_some_and(|direction| {
+                            !matches!(direction, "vertical" | "horizontal" | "auto")
+                        })
                     {
                         return Err(KeyBindingError::InvalidActionArguments);
                     }

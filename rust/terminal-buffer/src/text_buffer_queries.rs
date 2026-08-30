@@ -58,9 +58,13 @@ mod tests {
     #[test]
     fn microsoft_text_buffer_get_last_non_space_character_contract() {
         let mut buffer = TextBuffer::new(80, 15, TextAttribute::default()).unwrap();
-        for (y, text) in [(0_i32, "first"), (1, "second"), (2, "third"), (3, "fourth")]
-        {
-            replace_text(buffer.row_mut(y), 0, &text.encode_utf16().collect::<Vec<_>>()).unwrap();
+        for (y, text) in [(0_i32, "first"), (1, "second"), (2, "third"), (3, "fourth")] {
+            replace_text(
+                buffer.row_mut(y),
+                0,
+                &text.encode_utf16().collect::<Vec<_>>(),
+            )
+            .unwrap();
         }
 
         assert_eq!(
@@ -80,12 +84,36 @@ mod tests {
     #[test]
     fn microsoft_text_buffer_get_glyph_boundaries_contract() {
         let vectors = [
-            (TextBufferPoint::new(0, 0), TextBufferPoint::new(1, 0), TextBufferPoint::new(2, 0)),
-            (TextBufferPoint::new(0, 1), TextBufferPoint::new(1, 1), TextBufferPoint::new(2, 1)),
-            (TextBufferPoint::new(1, 1), TextBufferPoint::new(2, 1), TextBufferPoint::new(3, 1)),
-            (TextBufferPoint::new(8, 1), TextBufferPoint::new(9, 1), TextBufferPoint::new(0, 2)),
-            (TextBufferPoint::new(7, 1), TextBufferPoint::new(8, 1), TextBufferPoint::new(9, 1)),
-            (TextBufferPoint::new(9, 9), TextBufferPoint::new(0, 10), TextBufferPoint::new(0, 10)),
+            (
+                TextBufferPoint::new(0, 0),
+                TextBufferPoint::new(1, 0),
+                TextBufferPoint::new(2, 0),
+            ),
+            (
+                TextBufferPoint::new(0, 1),
+                TextBufferPoint::new(1, 1),
+                TextBufferPoint::new(2, 1),
+            ),
+            (
+                TextBufferPoint::new(1, 1),
+                TextBufferPoint::new(2, 1),
+                TextBufferPoint::new(3, 1),
+            ),
+            (
+                TextBufferPoint::new(8, 1),
+                TextBufferPoint::new(9, 1),
+                TextBufferPoint::new(0, 2),
+            ),
+            (
+                TextBufferPoint::new(7, 1),
+                TextBufferPoint::new(8, 1),
+                TextBufferPoint::new(9, 1),
+            ),
+            (
+                TextBufferPoint::new(9, 9),
+                TextBufferPoint::new(0, 10),
+                TextBufferPoint::new(0, 10),
+            ),
         ];
 
         for (start, normal_end, wide_end) in vectors {

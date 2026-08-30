@@ -1,10 +1,8 @@
-use terminal_settings::{
-    serialization::SettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{serialization::SettingsDocument, settings_json::JsonValue};
 
 #[test]
-fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_unused_by_profiles_contract() {
+fn microsoft_serialization_roundtrip_user_modified_color_scheme_collision_unused_by_profiles_contract()
+ {
     let old_settings = r##"
     {
         "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",

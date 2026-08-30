@@ -41,9 +41,7 @@ pub fn process_input_utf16_chunk<D: InputDispatch>(
 mod tests {
     use super::*;
     use crate::input_engine::{LEFT_CTRL_PRESSED, SHIFT_PRESSED};
-    use crate::input_layout::{
-        KeyLayoutMapping, KeyboardLayoutMapper, LayoutMappedInputDispatch,
-    };
+    use crate::input_layout::{KeyLayoutMapping, KeyboardLayoutMapper, LayoutMappedInputDispatch};
 
     const VK_BACK: u16 = 0x08;
     const VK_TAB: u16 = 0x09;
@@ -148,10 +146,8 @@ mod tests {
     #[test]
     fn microsoft_input_engine_c0_test_matches_all_32_source_vectors() {
         for code_unit in 0_u16..0x20 {
-            let dispatch = LayoutMappedInputDispatch::new(
-                RecordingDispatch::default(),
-                MicrosoftUsC0Mapper,
-            );
+            let dispatch =
+                LayoutMappedInputDispatch::new(RecordingDispatch::default(), MicrosoftUsC0Mapper);
             let mut machine = StateMachine::new_input(InputStateMachineEngine::new(dispatch));
             process_input_utf16_chunk(&mut machine, &[code_unit]);
 
@@ -163,10 +159,16 @@ mod tests {
                 })
             } else {
                 actions.iter().find_map(|action| match action {
-                    InputAction::WriteInput(records) => records.iter().find_map(|record| match record {
-                        InputRecord::Key(key) if key.key_down && !matches!(key.virtual_key, 0x10..=0x12) => Some(*key),
-                        _ => None,
-                    }),
+                    InputAction::WriteInput(records) => {
+                        records.iter().find_map(|record| match record {
+                            InputRecord::Key(key)
+                                if key.key_down && !matches!(key.virtual_key, 0x10..=0x12) =>
+                            {
+                                Some(*key)
+                            }
+                            _ => None,
+                        })
+                    }
                     _ => None,
                 })
             }

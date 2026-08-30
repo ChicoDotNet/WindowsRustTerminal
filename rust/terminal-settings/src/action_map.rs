@@ -468,7 +468,10 @@ fn til_hash64(data: &[u8], mut seed: u64) -> u64 {
             let mut seed1 = seed;
             let mut seed2 = seed;
             while remaining > 48 {
-                seed = mix64(read_u64(data, offset) ^ S1, read_u64(data, offset + 8) ^ seed);
+                seed = mix64(
+                    read_u64(data, offset) ^ S1,
+                    read_u64(data, offset + 8) ^ seed,
+                );
                 seed1 = mix64(
                     read_u64(data, offset + 16) ^ S2,
                     read_u64(data, offset + 24) ^ seed1,
@@ -484,7 +487,10 @@ fn til_hash64(data: &[u8], mut seed: u64) -> u64 {
         }
 
         while remaining > 16 {
-            seed = mix64(read_u64(data, offset) ^ S1, read_u64(data, offset + 8) ^ seed);
+            seed = mix64(
+                read_u64(data, offset) ^ S1,
+                read_u64(data, offset + 8) ^ seed,
+            );
             offset += 16;
             remaining -= 16;
         }

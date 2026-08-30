@@ -1,7 +1,4 @@
-use terminal_settings::{
-    serialization::SettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{serialization::SettingsDocument, settings_json::JsonValue};
 
 #[test]
 fn microsoft_modify_color_scheme_and_roundtrip_contract() {
@@ -58,7 +55,10 @@ fn microsoft_modify_color_scheme_and_roundtrip_contract() {
         .expect("schemes remains an array");
     let scheme = schemes[0].as_object().expect("scheme remains an object");
 
-    assert_eq!(scheme.get("name").and_then(JsonValue::as_str), Some("MyScheme"));
+    assert_eq!(
+        scheme.get("name").and_then(JsonValue::as_str),
+        Some("MyScheme")
+    );
     assert_eq!(
         scheme.get("foreground").and_then(JsonValue::as_str),
         Some("#AABBCC")
@@ -69,7 +69,10 @@ fn microsoft_modify_color_scheme_and_roundtrip_contract() {
     );
 
     let before_root = before.as_object().expect("original root object");
-    assert_eq!(root.get("defaultProfile"), before_root.get("defaultProfile"));
+    assert_eq!(
+        root.get("defaultProfile"),
+        before_root.get("defaultProfile")
+    );
     assert_eq!(root.get("profiles"), before_root.get("profiles"));
 }
 
@@ -162,6 +165,9 @@ fn microsoft_modify_global_setting_and_roundtrip_contract() {
     );
 
     let before_root = before.as_object().expect("original root object");
-    assert_eq!(root.get("defaultProfile"), before_root.get("defaultProfile"));
+    assert_eq!(
+        root.get("defaultProfile"),
+        before_root.get("defaultProfile")
+    );
     assert_eq!(root.get("profiles"), before_root.get("profiles"));
 }

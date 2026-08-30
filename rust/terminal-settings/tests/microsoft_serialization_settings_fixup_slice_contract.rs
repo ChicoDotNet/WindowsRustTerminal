@@ -55,7 +55,9 @@ fn microsoft_serialization_fixup_commandline_patching_contract() {
     let mut cmd = SettingsDocument::from_json(cmd_settings).expect("CMD vector is valid");
     assert!(fixup_user_settings(&mut cmd).expect("CMD patch succeeds"));
     assert_eq!(
-        effective_profile_commandline(&cmd, 0).expect("CMD profile is valid").as_deref(),
+        effective_profile_commandline(&cmd, 0)
+            .expect("CMD profile is valid")
+            .as_deref(),
         Some("%SystemRoot%\\System32\\cmd.exe")
     );
 

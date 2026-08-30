@@ -184,10 +184,7 @@ fn parse_keys(value: Option<&JsonValue>) -> Result<Vec<String>, ElevateSettingsE
     }
 }
 
-fn required_string<'a>(
-    object: &'a JsonObject,
-    key: &str,
-) -> Result<&'a str, ElevateSettingsError> {
+fn required_string<'a>(object: &'a JsonObject, key: &str) -> Result<&'a str, ElevateSettingsError> {
     object
         .get(key)
         .and_then(JsonValue::as_str)
@@ -205,10 +202,7 @@ fn optional_string<'a>(
     }
 }
 
-fn optional_bool(
-    object: &JsonObject,
-    key: &str,
-) -> Result<Option<bool>, ElevateSettingsError> {
+fn optional_bool(object: &JsonObject, key: &str) -> Result<Option<bool>, ElevateSettingsError> {
     match object.get(key) {
         None | Some(JsonValue::Null) => Ok(None),
         Some(JsonValue::Bool(value)) => Ok(Some(*value)),

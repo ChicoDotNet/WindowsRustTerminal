@@ -122,12 +122,18 @@ impl TilPoint {
 
     #[must_use]
     pub const fn to_win32_point(self) -> Win32Point {
-        Win32Point { x: self.x, y: self.y }
+        Win32Point {
+            x: self.x,
+            y: self.y,
+        }
     }
 
     #[must_use]
     pub fn to_d2d_point(self) -> D2dPointF {
-        D2dPointF { x: self.x as f32, y: self.y as f32 }
+        D2dPointF {
+            x: self.x as f32,
+            y: self.y as f32,
+        }
     }
 
     pub fn from_float(math: PointMath, x: f64, y: f64) -> Result<Self, PointError> {
@@ -157,8 +163,14 @@ mod tests {
         assert_eq!(TilPoint::new(5, 10), TilPoint { x: 5, y: 10 });
         assert_eq!(TilPoint::new(-5, -10), TilPoint { x: -5, y: -10 });
         assert_eq!(TilPoint::from_rounded(3.2, 7.6), Ok(TilPoint::new(3, 8)));
-        assert_eq!(TilPoint::from_coord(Coord { x: -5, y: 10 }), TilPoint::new(-5, 10));
-        assert_eq!(TilPoint::from_win32_point(Win32Point { x: 5, y: -10 }), TilPoint::new(5, -10));
+        assert_eq!(
+            TilPoint::from_coord(Coord { x: -5, y: 10 }),
+            TilPoint::new(-5, 10)
+        );
+        assert_eq!(
+            TilPoint::from_win32_point(Win32Point { x: 5, y: -10 }),
+            TilPoint::new(5, -10)
+        );
         assert_eq!(TilPoint::new(5, 10), TilPoint::new(5, 10));
         assert_ne!(TilPoint::new(4, 10), TilPoint::new(5, 10));
     }
@@ -185,8 +197,14 @@ mod tests {
         let two = TilPoint::new(23, 47);
         assert_eq!(one.checked_add(two), Ok(TilPoint::new(28, 57)));
         assert_eq!(one.checked_sub(two), Ok(TilPoint::new(-18, -37)));
-        assert_eq!(TilPoint::new(i32::MAX, 0).checked_add(TilPoint::new(1, 1)), Err(PointError::Overflow));
-        assert_eq!(TilPoint::new(-2, -2).checked_sub(TilPoint::new(i32::MAX, 0)), Err(PointError::Overflow));
+        assert_eq!(
+            TilPoint::new(i32::MAX, 0).checked_add(TilPoint::new(1, 1)),
+            Err(PointError::Overflow)
+        );
+        assert_eq!(
+            TilPoint::new(-2, -2).checked_sub(TilPoint::new(i32::MAX, 0)),
+            Err(PointError::Overflow)
+        );
     }
 
     #[test]
@@ -194,12 +212,27 @@ mod tests {
         let one = TilPoint::new(5, 10);
         let two = TilPoint::new(23, 47);
         assert_eq!(one.checked_mul(two), Ok(TilPoint::new(115, 470)));
-        assert_eq!(TilPoint::new(555, 510).checked_div(two), Ok(TilPoint::new(24, 10)));
+        assert_eq!(
+            TilPoint::new(555, 510).checked_div(two),
+            Ok(TilPoint::new(24, 10))
+        );
         assert_eq!(one.checked_scale_mul(23), Ok(TilPoint::new(115, 230)));
-        assert_eq!(TilPoint::new(555, 510).checked_scale_div(23), Ok(TilPoint::new(24, 22)));
-        assert_eq!(TilPoint::new(i32::MAX, 0).checked_mul(TilPoint::new(10, 10)), Err(PointError::Overflow));
-        assert_eq!(TilPoint::new(1, 1).checked_div(TilPoint::new(i32::MAX, 0)), Err(PointError::DivisionByZero));
-        assert_eq!(TilPoint::new(1, 1).checked_scale_div(0), Err(PointError::DivisionByZero));
+        assert_eq!(
+            TilPoint::new(555, 510).checked_scale_div(23),
+            Ok(TilPoint::new(24, 22))
+        );
+        assert_eq!(
+            TilPoint::new(i32::MAX, 0).checked_mul(TilPoint::new(10, 10)),
+            Err(PointError::Overflow)
+        );
+        assert_eq!(
+            TilPoint::new(1, 1).checked_div(TilPoint::new(i32::MAX, 0)),
+            Err(PointError::DivisionByZero)
+        );
+        assert_eq!(
+            TilPoint::new(1, 1).checked_scale_div(0),
+            Err(PointError::DivisionByZero)
+        );
     }
 
     #[test]
@@ -213,9 +246,21 @@ mod tests {
 
     #[test]
     fn microsoft_point_float_math_contract() {
-        assert_eq!(TilPoint::from_float(PointMath::Ceiling, 1.6, 2.4), Ok(TilPoint::new(2, 3)));
-        assert_eq!(TilPoint::from_float(PointMath::Flooring, 1.6, 2.4), Ok(TilPoint::new(1, 2)));
-        assert_eq!(TilPoint::from_float(PointMath::Rounding, 1.6, 2.4), Ok(TilPoint::new(2, 2)));
-        assert_eq!(TilPoint::from_float(PointMath::Rounding, 3.6, 4.4), Ok(TilPoint::new(4, 4)));
+        assert_eq!(
+            TilPoint::from_float(PointMath::Ceiling, 1.6, 2.4),
+            Ok(TilPoint::new(2, 3))
+        );
+        assert_eq!(
+            TilPoint::from_float(PointMath::Flooring, 1.6, 2.4),
+            Ok(TilPoint::new(1, 2))
+        );
+        assert_eq!(
+            TilPoint::from_float(PointMath::Rounding, 1.6, 2.4),
+            Ok(TilPoint::new(2, 2))
+        );
+        assert_eq!(
+            TilPoint::from_float(PointMath::Rounding, 3.6, 4.4),
+            Ok(TilPoint::new(4, 4))
+        );
     }
 }

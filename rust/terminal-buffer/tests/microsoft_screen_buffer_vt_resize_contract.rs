@@ -20,8 +20,7 @@ fn state() -> VtResizeState {
 }
 
 fn microsoft_extended_attribute() -> TextAttribute {
-    let mut attribute =
-        TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
+    let mut attribute = TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
     attribute.set_underline_color(TextColor::rgb(188, 20, 24));
     attribute.set_crossed_out(true);
     attribute.set_underline_style(UnderlineStyle::Curly);
@@ -60,8 +59,8 @@ fn microsoft_screen_buffer_vt_resize_comprehensive_contract() {
         for dy in [-10_i32, -1, 0, 1, 10] {
             let mut state = state();
             let initial = state.viewport();
-            let expected_width =
-                u16::try_from(i32::from(initial.width) + dx).expect("Microsoft width stays positive");
+            let expected_width = u16::try_from(i32::from(initial.width) + dx)
+                .expect("Microsoft width stays positive");
             let expected_height = u16::try_from(i32::from(initial.height) + dy)
                 .expect("Microsoft height stays positive");
 
@@ -145,10 +144,7 @@ fn microsoft_screen_buffer_vt_resize_deccolm_contract() {
     );
     assert_eq!(state.buffer().height(), BUFFER_HEIGHT);
     assert_eq!(state.buffer().width(), 80);
-    assert_eq!(
-        state.viewport(),
-        ViewportSize::new(80, INITIAL_VIEW_HEIGHT)
-    );
+    assert_eq!(state.viewport(), ViewportSize::new(80, INITIAL_VIEW_HEIGHT));
     assert_eq!(state.margins(), None);
     assert_eq!(state.cursor(), TextBufferPoint::new(0, 0));
 }

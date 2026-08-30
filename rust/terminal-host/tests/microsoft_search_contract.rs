@@ -14,10 +14,7 @@ fn fixture() -> TextBuffer {
 }
 
 fn expected_span(x: u16, y: u16) -> TextSearchSpan {
-    TextSearchSpan::new(
-        TextBufferPoint::new(x, y),
-        TextBufferPoint::new(x + 2, y),
-    )
+    TextSearchSpan::new(TextBufferPoint::new(x, y), TextBufferPoint::new(x + 2, y))
 }
 
 fn assert_source_sequence(needle: &str, flags: SearchFlags, reverse: bool, x: u16) {

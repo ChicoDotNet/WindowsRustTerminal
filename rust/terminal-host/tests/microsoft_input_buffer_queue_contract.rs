@@ -1,5 +1,5 @@
 use terminal_host::input_buffer::{
-    InputBuffer, InputEvent, KeyEvent, MouseEvent, ReadOptions, MOUSE_MOVED,
+    InputBuffer, InputEvent, KeyEvent, MOUSE_MOVED, MouseEvent, ReadOptions,
 };
 
 const RECORD_INSERT_COUNT: usize = 12;
@@ -34,7 +34,10 @@ fn microsoft_input_buffer_can_insert_individually_contract() {
 #[test]
 fn microsoft_input_buffer_can_bulk_insert_contract() {
     let mut buffer = InputBuffer::new();
-    assert_eq!(buffer.write_bulk(vec![menu(); RECORD_INSERT_COUNT]), RECORD_INSERT_COUNT);
+    assert_eq!(
+        buffer.write_bulk(vec![menu(); RECORD_INSERT_COUNT]),
+        RECORD_INSERT_COUNT
+    );
     assert_eq!(buffer.ready_event_count(), RECORD_INSERT_COUNT);
     assert!(buffer.events().iter().all(|event| event == &menu()));
 }
@@ -83,7 +86,10 @@ fn microsoft_input_buffer_does_not_coalesce_bulk_mouse_events_contract() {
         event_flags: MOUSE_MOVED,
     });
     assert_eq!(buffer.write(mouse.clone()), 1);
-    assert_eq!(buffer.write_bulk(vec![mouse.clone(); RECORD_INSERT_COUNT]), RECORD_INSERT_COUNT);
+    assert_eq!(
+        buffer.write_bulk(vec![mouse.clone(); RECORD_INSERT_COUNT]),
+        RECORD_INSERT_COUNT
+    );
     assert_eq!(buffer.ready_event_count(), RECORD_INSERT_COUNT + 1);
     assert!(buffer.events().iter().all(|event| event == &mouse));
 }
@@ -109,7 +115,10 @@ fn microsoft_input_buffer_does_not_coalesce_bulk_key_events_contract() {
     let mut buffer = InputBuffer::new();
     let event = key(u16::from(b'a'));
     assert_eq!(buffer.write(event.clone()), 1);
-    assert_eq!(buffer.write_bulk(vec![event.clone(); RECORD_INSERT_COUNT]), RECORD_INSERT_COUNT);
+    assert_eq!(
+        buffer.write_bulk(vec![event.clone(); RECORD_INSERT_COUNT]),
+        RECORD_INSERT_COUNT
+    );
     assert_eq!(buffer.ready_event_count(), RECORD_INSERT_COUNT + 1);
     assert!(buffer.events().iter().all(|stored| stored == &event));
 }
@@ -126,7 +135,10 @@ fn microsoft_input_buffer_does_not_coalesce_surrogate_pairs_contract() {
 #[test]
 fn microsoft_input_buffer_can_flush_all_output_contract() {
     let mut buffer = InputBuffer::new();
-    assert_eq!(buffer.write_bulk(vec![menu(); RECORD_INSERT_COUNT]), RECORD_INSERT_COUNT);
+    assert_eq!(
+        buffer.write_bulk(vec![menu(); RECORD_INSERT_COUNT]),
+        RECORD_INSERT_COUNT
+    );
     buffer.flush();
     assert_eq!(buffer.ready_event_count(), 0);
 }
@@ -141,7 +153,11 @@ fn microsoft_input_buffer_can_flush_all_but_keys_contract() {
     buffer.flush_all_but_keys();
     assert_eq!(buffer.ready_event_count(), RECORD_INSERT_COUNT / 2);
     let output = buffer.read(RECORD_INSERT_COUNT / 2, ReadOptions::NORMAL);
-    assert!(output.iter().all(|event| matches!(event, InputEvent::Key(_))));
+    assert!(
+        output
+            .iter()
+            .all(|event| matches!(event, InputEvent::Key(_)))
+    );
 }
 
 #[test]
@@ -151,7 +167,10 @@ fn microsoft_input_buffer_can_read_input_contract() {
         .map(|index| key(u16::from(b'A') + index as u16))
         .collect::<Vec<_>>();
     assert_eq!(buffer.write_bulk(events.clone()), RECORD_INSERT_COUNT);
-    assert_eq!(buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL), events);
+    assert_eq!(
+        buffer.read(RECORD_INSERT_COUNT, ReadOptions::NORMAL),
+        events
+    );
     assert_eq!(buffer.ready_event_count(), 0);
 }
 

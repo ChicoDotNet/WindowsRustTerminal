@@ -1,8 +1,6 @@
 use terminal_buffer::color_table::{ColorAlias, ColorTableState};
 use terminal_buffer::text_attribute::TextAttribute;
-use terminal_buffer::text_color::{
-    Rgb, TextColor, DEFAULT_BACKGROUND, DEFAULT_FOREGROUND,
-};
+use terminal_buffer::text_color::{DEFAULT_BACKGROUND, DEFAULT_FOREGROUND, Rgb, TextColor};
 
 #[test]
 fn microsoft_screen_buffer_vt_set_color_table_contract() {
@@ -51,7 +49,10 @@ fn microsoft_screen_buffer_set_global_color_table_contract() {
     let main_written_before_change = indexed_red_background;
     let alternate_written_before_change = indexed_red_background;
 
-    assert_eq!(state.attribute_colors(main_written_before_change).1, original_red);
+    assert_eq!(
+        state.attribute_colors(main_written_before_change).1,
+        original_red
+    );
     assert_eq!(
         state.attribute_colors(alternate_written_before_change).1,
         original_red
@@ -61,7 +62,10 @@ fn microsoft_screen_buffer_set_global_color_table_contract() {
 
     // Palette state is global: existing indexed cells in both logical buffers
     // resolve through the replacement without rewriting their TextAttribute.
-    assert_eq!(state.attribute_colors(main_written_before_change).1, replacement);
+    assert_eq!(
+        state.attribute_colors(main_written_before_change).1,
+        replacement
+    );
     assert_eq!(
         state.attribute_colors(alternate_written_before_change).1,
         replacement
@@ -130,8 +134,14 @@ fn microsoft_screen_buffer_assign_color_aliases_contract() {
     ];
 
     assert!(!state.assign_color_aliases(0, 12, 34));
-    assert_eq!(state.alias_index(ColorAlias::DefaultForeground), original[0]);
-    assert_eq!(state.alias_index(ColorAlias::DefaultBackground), original[1]);
+    assert_eq!(
+        state.alias_index(ColorAlias::DefaultForeground),
+        original[0]
+    );
+    assert_eq!(
+        state.alias_index(ColorAlias::DefaultBackground),
+        original[1]
+    );
     assert_eq!(state.alias_index(ColorAlias::FrameForeground), original[2]);
     assert_eq!(state.alias_index(ColorAlias::FrameBackground), original[3]);
 
@@ -144,8 +154,14 @@ fn microsoft_screen_buffer_assign_color_aliases_contract() {
     assert_eq!(state.alias_index(ColorAlias::FrameBackground), 56);
 
     state.reset_to_initial();
-    assert_eq!(state.alias_index(ColorAlias::DefaultForeground), original[0]);
-    assert_eq!(state.alias_index(ColorAlias::DefaultBackground), original[1]);
+    assert_eq!(
+        state.alias_index(ColorAlias::DefaultForeground),
+        original[0]
+    );
+    assert_eq!(
+        state.alias_index(ColorAlias::DefaultBackground),
+        original[1]
+    );
     assert_eq!(state.alias_index(ColorAlias::FrameForeground), original[2]);
     assert_eq!(state.alias_index(ColorAlias::FrameBackground), original[3]);
 }

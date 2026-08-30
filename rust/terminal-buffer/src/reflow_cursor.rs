@@ -135,11 +135,12 @@ fn collect_logical_lines(buffer: &TextBuffer, cursor: TextBufferPoint) -> Vec<Lo
                     column = column.saturating_add(1);
                 }
                 DbcsAttribute::Single | DbcsAttribute::Leading => {
-                    let width = if row.dbcs_attribute_at(i32::from(column)) == DbcsAttribute::Leading {
-                        2
-                    } else {
-                        1
-                    };
+                    let width =
+                        if row.dbcs_attribute_at(i32::from(column)) == DbcsAttribute::Leading {
+                            2
+                        } else {
+                            1
+                        };
                     line.glyphs.push(SourceGlyph {
                         text: row.glyph_at(i32::from(column)).to_vec(),
                         width,
@@ -177,7 +178,10 @@ fn wrap_logical_lines(
 
         if line.glyphs.is_empty() {
             if line.cursor_column == Some(0) {
-                cursor = Some(TextBufferPoint::new(0, u16::try_from(rows.len()).unwrap_or(u16::MAX)));
+                cursor = Some(TextBufferPoint::new(
+                    0,
+                    u16::try_from(rows.len()).unwrap_or(u16::MAX),
+                ));
             }
             rows.push(row);
             continue;

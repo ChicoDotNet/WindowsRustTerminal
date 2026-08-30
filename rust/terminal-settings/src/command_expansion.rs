@@ -157,7 +157,10 @@ fn action_entries(root: &JsonObject) -> Result<&[JsonValue], CommandExpansionErr
     }
 }
 
-fn collection_names(root: &JsonObject, collection: &str) -> Result<Vec<String>, CommandExpansionError> {
+fn collection_names(
+    root: &JsonObject,
+    collection: &str,
+) -> Result<Vec<String>, CommandExpansionError> {
     let Some(value) = root.get(collection) else {
         return Ok(Vec::new());
     };
@@ -299,13 +302,12 @@ fn command_leaf(
     };
     let profile = optional_substituted_string(command, "profile", context)?;
     let commandline = optional_substituted_string(command, "commandline", context)?;
-    let split_direction = (action == PaletteAction::SplitPane).then(|| match command
-        .get("split")
-        .and_then(JsonValue::as_str)
-    {
-        Some("right" | "vertical") => PaletteSplitDirection::Right,
-        Some("down" | "horizontal") => PaletteSplitDirection::Down,
-        _ => PaletteSplitDirection::Automatic,
+    let split_direction = (action == PaletteAction::SplitPane).then(|| {
+        match command.get("split").and_then(JsonValue::as_str) {
+            Some("right" | "vertical") => PaletteSplitDirection::Right,
+            Some("down" | "horizontal") => PaletteSplitDirection::Down,
+            _ => PaletteSplitDirection::Automatic,
+        }
     });
 
     Ok(PaletteCommand {
@@ -374,7 +376,9 @@ fn optional_substituted_string(
 }
 
 fn substitute(value: &str, context: &BTreeMap<String, String>) -> String {
-    context.iter().fold(value.to_owned(), |current, (key, value)| {
-        current.replace(&format!("${{{key}}}"), value)
-    })
+    context
+        .iter()
+        .fold(value.to_owned(), |current, (key, value)| {
+            current.replace(&format!("${{{key}}}"), value)
+        })
 }

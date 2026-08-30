@@ -1,7 +1,5 @@
-use terminal_buffer::rect_ops::{fill_rect, ScreenRect};
-use terminal_buffer::screen_erase::{
-    erase_display, erase_line, erase_scrollback, EraseType,
-};
+use terminal_buffer::rect_ops::{ScreenRect, fill_rect};
+use terminal_buffer::screen_erase::{EraseType, erase_display, erase_line, erase_scrollback};
 use terminal_buffer::text_attribute::{TextAttribute, UnderlineStyle};
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
 use terminal_buffer::text_color::Rgb;
@@ -26,13 +24,7 @@ fn fill_row(buffer: &mut TextBuffer, y: u16, ch: u8, attribute: TextAttribute) {
     .unwrap();
 }
 
-fn assert_cell(
-    buffer: &TextBuffer,
-    x: u16,
-    y: u16,
-    ch: u8,
-    attribute: TextAttribute,
-) {
+fn assert_cell(buffer: &TextBuffer, x: u16, y: u16, ch: u8, attribute: TextAttribute) {
     let row = buffer.row(i32::from(y));
     assert_eq!(row.glyph_at(i32::from(x)), &[u16::from(ch)]);
     assert_eq!(row.attribute_at(i32::from(x)), attribute);
@@ -68,8 +60,7 @@ fn microsoft_screen_buffer_erase_tests_contract() {
     let viewport = ScreenRect::new(5, 10, 35, 20);
     let cursor = TextBufferPoint::new(width / 2, 15);
     let buffer_attr = TextAttribute::from_rgb(Rgb::new(1, 2, 3), Rgb::new(4, 5, 6));
-    let mut active_attr =
-        TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
+    let mut active_attr = TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
     active_attr.set_crossed_out(true);
     active_attr.set_reverse_video(true);
     active_attr.set_underline_style(UnderlineStyle::Curly);
@@ -79,8 +70,7 @@ fn microsoft_screen_buffer_erase_tests_contract() {
     for erase_type in [EraseType::ToEnd, EraseType::FromBeginning, EraseType::All] {
         for erase_screen in [false, true] {
             for selective in [false, true] {
-                let mut buffer =
-                    TextBuffer::new(width, height, TextAttribute::default()).unwrap();
+                let mut buffer = TextBuffer::new(width, height, TextAttribute::default()).unwrap();
                 fill_buffer(&mut buffer, b'Z', buffer_attr);
                 let mut protected_attr = buffer_attr;
                 protected_attr.set_protected(true);
@@ -107,14 +97,7 @@ fn microsoft_screen_buffer_erase_tests_contract() {
                     )
                     .unwrap();
                 } else {
-                    erase_line(
-                        &mut buffer,
-                        cursor,
-                        erase_type,
-                        selective,
-                        active_attr,
-                    )
-                    .unwrap();
+                    erase_line(&mut buffer, cursor, erase_type, selective, active_attr).unwrap();
                 }
 
                 for y in 0..height {
@@ -128,11 +111,7 @@ fn microsoft_screen_buffer_erase_tests_contract() {
                         let expected_attr = if protected {
                             protected_attr
                         } else if erased {
-                            if selective {
-                                buffer_attr
-                            } else {
-                                erase_attr
-                            }
+                            if selective { buffer_attr } else { erase_attr }
                         } else {
                             buffer_attr
                         };
@@ -149,8 +128,7 @@ fn microsoft_screen_buffer_erase_scrollback_tests_contract() {
     let width = 40;
     let height = 40;
     let initial = TextAttribute::default();
-    let viewport_attr =
-        TextAttribute::from_rgb(Rgb::new(7, 8, 9), Rgb::new(10, 11, 12));
+    let viewport_attr = TextAttribute::from_rgb(Rgb::new(7, 8, 9), Rgb::new(10, 11, 12));
     let buffer_attr = TextAttribute::from_rgb(Rgb::new(1, 2, 3), Rgb::new(4, 5, 6));
     let mut buffer = TextBuffer::new(width, height, initial).unwrap();
     fill_buffer(&mut buffer, b'Z', buffer_attr);

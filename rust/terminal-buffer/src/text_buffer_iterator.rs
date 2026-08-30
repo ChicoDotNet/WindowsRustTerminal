@@ -147,11 +147,7 @@ impl<'a> TextBufferCellIterator<'a> {
     ///
     /// Returns [`TextBufferIteratorError::InvalidPoint`] when the starting
     /// coordinate is outside the buffer.
-    pub fn new(
-        buffer: &'a TextBuffer,
-        x: i32,
-        y: i32,
-    ) -> Result<Self, TextBufferIteratorError> {
+    pub fn new(buffer: &'a TextBuffer, x: i32, y: i32) -> Result<Self, TextBufferIteratorError> {
         Self::with_bounds(buffer, x, y, TextBufferIteratorBounds::full(buffer))
     }
 
@@ -346,11 +342,7 @@ pub struct TextBufferTextIterator<'a> {
 }
 
 impl<'a> TextBufferTextIterator<'a> {
-    pub fn new(
-        buffer: &'a TextBuffer,
-        x: i32,
-        y: i32,
-    ) -> Result<Self, TextBufferIteratorError> {
+    pub fn new(buffer: &'a TextBuffer, x: i32, y: i32) -> Result<Self, TextBufferIteratorError> {
         Ok(Self {
             cell: TextBufferCellIterator::new(buffer, x, y)?,
         })

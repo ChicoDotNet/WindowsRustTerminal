@@ -1,6 +1,5 @@
 use terminal_settings::{
-    cascadia_settings::CascadiaSettingsDocument,
-    deserialization_profiles::DeserializedProfiles,
+    cascadia_settings::CascadiaSettingsDocument, deserialization_profiles::DeserializedProfiles,
 };
 
 #[test]
@@ -86,10 +85,12 @@ fn microsoft_deserialization_migrates_reload_environment_variables_contract() {
         settings.profile_default_bool("compatibility.reloadEnvironmentVariables"),
         Some(false)
     );
-    assert!(settings
-        .to_json_value()
-        .as_object()
-        .unwrap()
-        .get("compatibility.reloadEnvironmentVariables")
-        .is_none());
+    assert!(
+        settings
+            .to_json_value()
+            .as_object()
+            .unwrap()
+            .get("compatibility.reloadEnvironmentVariables")
+            .is_none()
+    );
 }

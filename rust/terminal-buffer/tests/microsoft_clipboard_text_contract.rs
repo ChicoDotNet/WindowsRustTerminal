@@ -1,5 +1,5 @@
 use terminal_buffer::clipboard_text::{
-    get_plain_text, ClipboardCopyRequest, ClipboardSelectionMode,
+    ClipboardCopyRequest, ClipboardSelectionMode, get_plain_text,
 };
 use terminal_buffer::text_attribute::TextAttribute;
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
