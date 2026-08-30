@@ -44,6 +44,12 @@ impl Guid {
         self.to_braced_string()[1..37].to_owned()
     }
 
+    /// Parses a braced or plain GUID string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GuidParseError`] when the input is not a 36-character GUID,
+    /// optionally enclosed in braces, with valid hexadecimal fields.
     pub fn parse(input: &str) -> Result<Self, GuidParseError> {
         let body = match (input.strip_prefix('{'), input.strip_suffix('}')) {
             (Some(without_open), Some(_)) if input.len() == 38 => &without_open[..36],
@@ -123,7 +129,7 @@ fn sha1(input: &[u8]) -> [u8; 20] {
     let mut h3 = 0x1032_5476u32;
     let mut h4 = 0xc3d2_e1f0u32;
 
-    for chunk in message.chunks_exact(64) {
+    for chunk in message.as_chunks::<64>().0 {
         let mut words = [0u32; 80];
         for (index, word) in words[..16].iter_mut().enumerate() {
             let start = index * 4;
@@ -135,40 +141,51 @@ fn sha1(input: &[u8]) -> [u8; 20] {
                     .rotate_left(1);
         }
 
-        let mut a = h0;
-        let mut b = h1;
-        let mut c = h2;
-        let mut d = h3;
-        let mut e = h4;
+        let mut work_a = h0;
+        let mut work_b = h1;
+        let mut work_c = h2;
+        let mut work_d = h3;
+        let mut work_e = h4;
         for (index, word) in words.into_iter().enumerate() {
-            let (f, k) = match index {
-                0..=19 => ((b & c) | ((!b) & d), 0x5a82_7999),
-                20..=39 => (b ^ c ^ d, 0x6ed9_eba1),
-                40..=59 => ((b & c) | (b & d) | (c & d), 0x8f1b_bcdc),
-                _ => (b ^ c ^ d, 0xca62_c1d6),
+            let (round_fn, round_constant) = match index {
+                0..=19 => (
+                    (work_b & work_c) | ((!work_b) & work_d),
+                    0x5a82_7999,
+                ),
+                20..=39 => (work_b ^ work_c ^ work_d, 0x6ed9_eba1),
+                40..=59 => (
+                    (work_b & work_c) | (work_b & work_d) | (work_c & work_d),
+                    0x8f1b_bcdc,
+                ),
+                _ => (work_b ^ work_c ^ work_d, 0xca62_c1d6),
             };
-            let temp = a
+            let temp = work_a
                 .rotate_left(5)
-                .wrapping_add(f)
-                .wrapping_add(e)
-                .wrapping_add(k)
+                .wrapping_add(round_fn)
+                .wrapping_add(work_e)
+                .wrapping_add(round_constant)
                 .wrapping_add(word);
-            e = d;
-            d = c;
-            c = b.rotate_left(30);
-            b = a;
-            a = temp;
+            work_e = work_d;
+            work_d = work_c;
+            work_c = work_b.rotate_left(30);
+            work_b = work_a;
+            work_a = temp;
         }
 
-        h0 = h0.wrapping_add(a);
-        h1 = h1.wrapping_add(b);
-        h2 = h2.wrapping_add(c);
-        h3 = h3.wrapping_add(d);
-        h4 = h4.wrapping_add(e);
+        h0 = h0.wrapping_add(work_a);
+        h1 = h1.wrapping_add(work_b);
+        h2 = h2.wrapping_add(work_c);
+        h3 = h3.wrapping_add(work_d);
+        h4 = h4.wrapping_add(work_e);
     }
 
     let mut digest = [0u8; 20];
-    for (chunk, word) in digest.chunks_exact_mut(4).zip([h0, h1, h2, h3, h4]) {
+    for (chunk, word) in digest
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip([h0, h1, h2, h3, h4])
+    {
         chunk.copy_from_slice(&word.to_be_bytes());
     }
     digest
