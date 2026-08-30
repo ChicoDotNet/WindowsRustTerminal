@@ -109,7 +109,7 @@ fn collect_logical_lines(buffer: &TextBuffer, cursor: TextBufferPoint) -> Vec<Lo
     for y in 0..buffer.height() {
         let row = buffer.row(i32::from(y));
         if row.measure_right() != 0 || row.was_wrap_forced() {
-            last_relevant_y = y;
+            last_relevant_y = last_relevant_y.max(y);
         }
     }
 
