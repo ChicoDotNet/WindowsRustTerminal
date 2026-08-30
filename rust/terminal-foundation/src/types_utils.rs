@@ -22,7 +22,8 @@ pub struct WslStartingDirectoryResult {
 
 #[must_use]
 pub fn clamp_to_short_max(value: i32, minimum: i16) -> i16 {
-    value.clamp(i32::from(minimum), i32::from(i16::MAX)) as i16
+    i16::try_from(value.clamp(i32::from(minimum), i32::from(i16::MAX)))
+        .expect("value was clamped to the i16 range")
 }
 
 #[must_use]
