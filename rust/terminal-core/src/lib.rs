@@ -11,6 +11,7 @@
 
 pub mod control_key_states;
 pub mod keyboard_selection;
+pub mod legacy_host_selection;
 pub mod selection;
 pub mod selection_boundary;
 pub mod selection_rendering;
