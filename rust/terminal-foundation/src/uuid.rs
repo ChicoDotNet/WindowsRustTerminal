@@ -148,10 +148,7 @@ fn sha1(input: &[u8]) -> [u8; 20] {
         let mut work_e = h4;
         for (index, word) in words.into_iter().enumerate() {
             let (round_fn, round_constant) = match index {
-                0..=19 => (
-                    (work_b & work_c) | ((!work_b) & work_d),
-                    0x5a82_7999,
-                ),
+                0..=19 => ((work_b & work_c) | ((!work_b) & work_d), 0x5a82_7999),
                 20..=39 => (work_b ^ work_c ^ work_d, 0x6ed9_eba1),
                 40..=59 => (
                     (work_b & work_c) | (work_b & work_d) | (work_c & work_d),

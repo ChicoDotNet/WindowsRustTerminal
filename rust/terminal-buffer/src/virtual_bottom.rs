@@ -165,8 +165,10 @@ impl VirtualBottomState {
         let last_non_space_row = buffer
             .logical_rows()
             .enumerate()
-            .filter(|&(row, content)| (content.measure_right() != 0))
-            .map(|(row, content)| u16::try_from(row).expect("TextBuffer row index always fits u16"))
+            .filter(|&(_row, content)| content.measure_right() != 0)
+            .map(|(row, _content)| {
+                u16::try_from(row).expect("TextBuffer row index always fits u16")
+            })
             .last();
 
         let minimum_bottom = last_non_space_row.map_or(self.viewport.bottom(), |row| {

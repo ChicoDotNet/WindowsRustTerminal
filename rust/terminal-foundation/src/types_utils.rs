@@ -294,16 +294,14 @@ pub fn mangle_starting_directory_for_wsl(
         }
     }
 
-    let arguments = terminator
-        .map(|index| &command_line[index.saturating_add(1)..])
-        .unwrap_or("");
+    let arguments = terminator.map_or("", |index| &command_line[index.saturating_add(1)..]);
     if arguments.contains("--cd") {
         return fallback();
     }
-    if let Some(tilde) = arguments.find('~') {
-        if tilde + 1 == arguments.len() || arguments.as_bytes().get(tilde + 1) == Some(&b' ') {
-            return fallback();
-        }
+    if let Some(tilde) = arguments.find('~')
+        && (tilde + 1 == arguments.len() || arguments.as_bytes().get(tilde + 1) == Some(&b' '))
+    {
+        return fallback();
     }
 
     let mangled_directory = if starting_directory.starts_with("//wsl$")
