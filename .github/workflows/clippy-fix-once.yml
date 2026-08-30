@@ -30,11 +30,11 @@ jobs:
 
           path = Path("rust/terminal-foundation/src/types_utils.rs")
           text = path.read_text(encoding="utf-8")
-          old = "    value.clamp(i32::from(minimum), i32::from(i16::MAX)) as i16\n"
-          new = (
+          old = (
               "    i16::try_from(value.clamp(i32::from(minimum), i32::from(i16::MAX)))\n"
               "        .expect(\"value was clamped to the i16 range\")\n"
           )
+          new = "    value.clamp(i32::from(minimum), i32::from(i16::MAX)) as i16\n"
           if old in text:
               path.write_text(text.replace(old, new, 1), encoding="utf-8")
       - name: Reformat fixed sources
