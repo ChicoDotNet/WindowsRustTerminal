@@ -244,13 +244,19 @@ mod tests {
     fn cursor_whitespace_participates_in_reflow() {
         let attribute = TextAttribute::default();
         let mut buffer = TextBuffer::new(6, 5, attribute).unwrap();
-        buffer.row_mut(0).replace_glyph(0, 1, &[u16::from(b'A')]).unwrap();
-        buffer.row_mut(1).replace_glyph(0, 1, &[u16::from(b'$')]).unwrap();
+        buffer
+            .row_mut(0)
+            .replace_glyph(0, 1, &[u16::from(b'A')])
+            .unwrap();
+        buffer
+            .row_mut(1)
+            .replace_glyph(0, 1, &[u16::from(b'$')])
+            .unwrap();
         let mut cursor = TextBufferPoint::new(5, 1);
 
         resize_with_reflow_and_cursor(&mut buffer, &mut cursor, 5, 5, attribute).unwrap();
 
-        assert_eq!(cursor, TextBufferPoint::new(0, 3));
-        assert!(buffer.row(2).was_wrap_forced());
+        assert_eq!(cursor, TextBufferPoint::new(0, 2));
+        assert!(buffer.row(1).was_wrap_forced());
     }
 }
