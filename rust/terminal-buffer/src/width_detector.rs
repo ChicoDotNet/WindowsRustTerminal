@@ -296,7 +296,7 @@ impl TextMeasurementEngine {
 
             while index < scalars.len() {
                 let mut units = 0;
-                let mut width = if pending { pending_width } else { 0 };
+                let mut width: u8 = if pending { pending_width } else { 0 };
                 let mut have_lead = pending;
                 pending = false;
 
