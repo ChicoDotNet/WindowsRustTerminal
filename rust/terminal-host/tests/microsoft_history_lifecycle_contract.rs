@@ -30,7 +30,7 @@ fn microsoft_history_allocate_and_free_one_app_contract() {
     assert!(
         store
             .find_by_handle(process)
-            .is_some_and(|history| history.is_allocated())
+            .is_some_and(terminal_host::command_history::CommandHistory::is_allocated)
     );
 
     store.free(process);

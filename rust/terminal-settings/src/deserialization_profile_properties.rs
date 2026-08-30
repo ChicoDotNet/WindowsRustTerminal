@@ -1,9 +1,9 @@
-//! Portable profile-property projection for CascadiaSettings deserialization.
+//! Portable profile-property projection for `CascadiaSettings` deserialization.
 //!
 //! This seam composes the existing profile collection/order owner with
 //! `profiles.defaults` and per-profile property precedence. It intentionally
 //! owns only deterministic profile properties needed by Microsoft's
-//! deserialization contracts; fragments, color-scheme validation and WinRT
+//! deserialization contracts; fragments, color-scheme validation and `WinRT`
 //! projection remain separate seams.
 
 use crate::{

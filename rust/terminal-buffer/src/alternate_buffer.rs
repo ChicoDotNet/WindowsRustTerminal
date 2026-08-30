@@ -161,7 +161,7 @@ impl AlternateBufferState {
     }
 
     /// Console screen-buffer information is projected from the active buffer,
-    /// even when the persistent main SCREEN_INFORMATION owns the API call.
+    /// even when the persistent main `SCREEN_INFORMATION` owns the API call.
     #[must_use]
     pub fn api_viewport(&self) -> ViewportSize {
         self.active_viewport()
@@ -179,7 +179,7 @@ impl AlternateBufferState {
         }
     }
 
-    /// Models ProcessResizeWindow for the alternate-buffer terminal-scrolling
+    /// Models `ProcessResizeWindow` for the alternate-buffer terminal-scrolling
     /// path: maximize/restore keeps the alternate anchored at the top and keeps
     /// virtual bottom aligned with the active viewport bottom.
     pub fn process_alternate_window_resize(&mut self, width: u16, height: u16) {
@@ -198,7 +198,7 @@ impl AlternateBufferState {
     }
 
     /// API cursor positioning is routed through the active screen buffer even
-    /// when the caller holds the main SCREEN_INFORMATION. Under terminal
+    /// when the caller holds the main `SCREEN_INFORMATION`. Under terminal
     /// scrolling it also snaps the viewport back to the cursor's output origin.
     pub fn set_console_cursor_position(&mut self, x: u16, y: u16) {
         let terminal_scrolling = self.terminal_scrolling;
@@ -224,7 +224,7 @@ impl AlternateBufferState {
         }
     }
 
-    /// ScrollConsoleScreenBufferWImpl with the CMD clear parameters targets the
+    /// `ScrollConsoleScreenBufferWImpl` with the CMD clear parameters targets the
     /// active buffer and leaves persistent main contents untouched.
     pub fn clear_active_text(&mut self) {
         self.active_mut().text.clear();
@@ -269,7 +269,7 @@ impl AlternateBufferState {
     }
 
     /// Minimal VT-dispatch observable used by the Microsoft alternate-buffer
-    /// contract: writes issued through the main SCREEN_INFORMATION while the
+    /// contract: writes issued through the main `SCREEN_INFORMATION` while the
     /// alternate is active are dispatched to the active alternate.
     pub fn dispatch_vt(&mut self, sequence: &str) {
         let target = self.active_mut();

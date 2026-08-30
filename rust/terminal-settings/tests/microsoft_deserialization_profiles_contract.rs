@@ -2,7 +2,7 @@ use terminal_settings::deserialization_profiles::{
     DeserializationProfileError, DeserializationProfileWarning, DeserializedProfiles,
 };
 
-const EMPTY_INBOX: &str = r#"{}"#;
+const EMPTY_INBOX: &str = r"{}";
 const DEFAULT_PROFILES: &str = r#"{
     "profiles": [
         {

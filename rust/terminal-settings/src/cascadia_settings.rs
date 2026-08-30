@@ -29,7 +29,7 @@ impl CascadiaSettingsDocument {
     /// Parses a complete settings document through the shared serialization
     /// owner and validates portable aggregate members when they are present.
     /// Legacy root profile arrays are canonicalized to `profiles.list`, matching
-    /// the modern shape emitted by CascadiaSettings serialization. The portable
+    /// the modern shape emitted by `CascadiaSettings` serialization. The portable
     /// load-fixup flag records migration of legacy root reload-environment state.
     ///
     /// # Errors

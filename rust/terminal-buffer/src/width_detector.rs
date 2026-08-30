@@ -84,17 +84,17 @@ impl TextMeasurementEngine {
     pub fn scalar_width(self, value: char) -> u8 {
         let narrow = UnicodeWidthChar::width(value).unwrap_or(0) as u8;
         let cjk = UnicodeWidthChar::width_cjk(value).unwrap_or(0) as u8;
-        if narrow != cjk {
-            self.ambiguous_width
-        } else {
+        if narrow == cjk {
             narrow
+        } else {
+            self.ambiguous_width
         }
     }
 
     fn console_scalar_width(value: char) -> u8 {
         let narrow = UnicodeWidthChar::width(value).unwrap_or(0) as u8;
         let cjk = UnicodeWidthChar::width_cjk(value).unwrap_or(0) as u8;
-        if narrow != cjk { 1 } else { narrow }
+        if narrow == cjk { narrow } else { 1 }
     }
 
     #[must_use]

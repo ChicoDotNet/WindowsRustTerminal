@@ -230,16 +230,15 @@ impl FragmentSettings {
     }
 
     fn append_fragment_profile(&mut self, profile: &JsonObject) -> Result<(), FragmentError> {
-        if let Some(guid) = object_guid(profile)? {
-            if self
+        if let Some(guid) = object_guid(profile)?
+            && self
                 .profiles
                 .iter()
                 .filter_map(|existing| object_guid(existing).ok().flatten())
                 .any(|existing| existing == guid)
-            {
-                self.duplicate_profile = true;
-                return Ok(());
-            }
+        {
+            self.duplicate_profile = true;
+            return Ok(());
         }
         self.profiles.push(profile.clone());
         Ok(())
@@ -319,7 +318,7 @@ impl FragmentSettings {
         self.base_action_map.action_id_for_key(key).is_some()
     }
 
-    /// Warning count projected through CascadiaSettings' aggregate warning shape.
+    /// Warning count projected through `CascadiaSettings`' aggregate warning shape.
     #[must_use]
     pub fn warning_count(&self) -> usize {
         let fragment = if self.fragment_actions.warnings == 0 {

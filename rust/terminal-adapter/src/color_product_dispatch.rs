@@ -306,7 +306,7 @@ fn rgb_to_dec_hls(color: Rgb) -> (u32, u32, u32) {
     let maximum = red.max(green).max(blue);
     let minimum = red.min(green).min(blue);
     let delta = maximum - minimum;
-    let lightness = (maximum + minimum) / 2.0;
+    let lightness = f64::midpoint(maximum, minimum);
 
     if delta == 0.0 {
         return (0, (lightness * 100.0).round() as u32, 0);

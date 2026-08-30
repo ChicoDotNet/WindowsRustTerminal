@@ -130,12 +130,11 @@ impl CommandRegionState {
     /// OSC 133;D — output complete. The output extent ends at the last written
     /// cell, not at the cursor position after a trailing CR/LF.
     pub fn command_finished(&mut self) {
-        if self.phase == RegionPhase::Output {
-            if let (Some(index), Some(end)) = (self.active_mark, self.last_written_end) {
-                if let Some(mark) = self.marks.get_mut(index) {
-                    mark.output_end = Some(end);
-                }
-            }
+        if self.phase == RegionPhase::Output
+            && let (Some(index), Some(end)) = (self.active_mark, self.last_written_end)
+            && let Some(mark) = self.marks.get_mut(index)
+        {
+            mark.output_end = Some(end);
         }
         self.phase = RegionPhase::Idle;
         self.last_written_end = None;

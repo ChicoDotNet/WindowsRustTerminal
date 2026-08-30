@@ -67,7 +67,7 @@ fn microsoft_clipboard_line_selection_contract() {
 
     let mut expected = "ABかCきDE\r\n".encode_utf16().collect::<Vec<_>>();
     expected.extend("ABかCきDE".encode_utf16());
-    expected.extend(std::iter::repeat(u16::from(b' ')).take(71));
+    expected.extend(std::iter::repeat_n(u16::from(b' '), 71));
     expected.extend("ABかCきDE\r\nABかCきDE      ".encode_utf16());
     assert_eq!(actual, expected);
 }

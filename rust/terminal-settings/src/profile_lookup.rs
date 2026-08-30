@@ -1,8 +1,8 @@
-//! Portable CascadiaSettings profile lookup projection.
+//! Portable `CascadiaSettings` profile lookup projection.
 //!
-//! Profile identity already reproduces Microsoft's explicit and generated UUIDv5
+//! Profile identity already reproduces Microsoft's explicit and generated `UUIDv5`
 //! semantics. This thin product projection adds the name/GUID lookup operations
-//! exposed by CascadiaSettings without duplicating identity generation.
+//! exposed by `CascadiaSettings` without duplicating identity generation.
 
 use crate::profile::{ProfileGuid, ProfileParseError};
 use crate::profile_identity::{

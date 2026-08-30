@@ -1,7 +1,7 @@
-//! Aggregate wrapping state for TerminalCore write paths.
+//! Aggregate wrapping state for `TerminalCore` write paths.
 //!
 //! The buffer layer already owns Microsoft's delayed end-of-line wrap semantics.
-//! This wrapper adds the TerminalCore observable that records which logical row
+//! This wrapper adds the `TerminalCore` observable that records which logical row
 //! consumed a pending wrap, matching `Row::WasWrapForced` without duplicating
 //! the underlying Last Column Flag state machine.
 

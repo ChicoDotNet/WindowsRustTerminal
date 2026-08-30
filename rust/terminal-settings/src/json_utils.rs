@@ -1,4 +1,4 @@
-//! Portable conversion helpers matching Windows Terminal's SettingsModel `JsonUtils` contract.
+//! Portable conversion helpers matching Windows Terminal's `SettingsModel` `JsonUtils` contract.
 //!
 //! The native helper distinguishes a missing object member from an explicit JSON
 //! `null`, supports caller-defined conversion traits, and preserves destination

@@ -1,10 +1,10 @@
-//! Portable layered ActionMap/keybinding semantics used by SettingsModel tests.
+//! Portable layered ActionMap/keybinding semantics used by `SettingsModel` tests.
 //!
 //! `ActionMapDocument` owns serialized action-map projection. This module owns
 //! the mutable layering state that Microsoft's `ActionMap::LayerJson` exposes:
 //! key-chord override, explicit unbind, action deduplication and bidirectional
 //! key/action lookup. The representation intentionally stays independent of
-//! WinRT `KeyChord`/`ShortcutAction` projection.
+//! `WinRT` `KeyChord`/`ShortcutAction` projection.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -53,7 +53,7 @@ impl LayeredActionMap {
         Self::default()
     }
 
-    /// Layers one Microsoft ActionMap JSON array onto the current state.
+    /// Layers one Microsoft `ActionMap` JSON array onto the current state.
     ///
     /// Later keybindings replace earlier bindings for the same chord. Invalid,
     /// unknown and explicit `unbound` commands retain the chord in the key map
@@ -106,7 +106,7 @@ impl LayeredActionMap {
         action_name(self.action_for_key(key)?)
     }
 
-    /// Returns Microsoft's effective CopyText `singleLine` argument for a key.
+    /// Returns Microsoft's effective `CopyText` `singleLine` argument for a key.
     /// A string `copy` command and an object without the member both use false.
     #[must_use]
     pub fn copy_single_line_for_key(&self, key: &str) -> Option<bool> {
@@ -128,7 +128,7 @@ impl LayeredActionMap {
 
     /// Returns the effective `newTab` profile index. The outer Option indicates
     /// that the bound action is `newTab`; the inner Option models Microsoft's
-    /// nullable ProfileIndex argument.
+    /// nullable `ProfileIndex` argument.
     #[must_use]
     pub fn new_tab_index_for_key(&self, key: &str) -> Option<Option<i32>> {
         match self.action_for_key(key)? {
@@ -176,7 +176,7 @@ impl LayeredActionMap {
         }
     }
 
-    /// Returns a Windows COLORREF value (0x00BBGGRR) when SetTabColor carries
+    /// Returns a Windows COLORREF value (0x00BBGGRR) when `SetTabColor` carries
     /// a color. The inner None represents Microsoft's nullable/default color.
     #[must_use]
     pub fn tab_color_for_key(&self, key: &str) -> Option<Option<u32>> {

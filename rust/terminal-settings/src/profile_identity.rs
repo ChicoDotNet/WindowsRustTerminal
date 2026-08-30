@@ -2,7 +2,7 @@
 //!
 //! Microsoft treats `guid`, `name`, `source`, and `commandline` as profile
 //! identity/launch fields rather than inheritable defaults. This owner keeps
-//! those fields local to each profile, synthesizes the same UUIDv5 identity as
+//! those fields local to each profile, synthesizes the same `UUIDv5` identity as
 //! the native product when a GUID is omitted, reconciles legacy inbox/user
 //! arrays by that identity, and applies the canonical legacy shell fixups.
 

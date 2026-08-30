@@ -3,7 +3,7 @@
 //! Native `Search` delegates matching to `TextBuffer::SearchText` and owns only
 //! result navigation plus the focused span. This safe Rust owner keeps the same
 //! split: `terminal-buffer` performs matching and this module controls Reset /
-//! FindNext semantics without taking a dependency on Win32 selection globals.
+//! `FindNext` semantics without taking a dependency on Win32 selection globals.
 
 use std::ops::BitOr;
 

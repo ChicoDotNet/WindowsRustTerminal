@@ -38,7 +38,7 @@ fn microsoft_serialization_roundtrip_user_deleted_color_scheme_collision_contrac
     }
     "##;
 
-    let new_settings = r##"
+    let new_settings = r#"
     {
         "defaultProfile": "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
         "profiles": {
@@ -52,7 +52,7 @@ fn microsoft_serialization_roundtrip_user_deleted_color_scheme_collision_contrac
         "actions": [],
         "schemes": []
     }
-    "##;
+    "#;
 
     // This is the inbox Tango Dark definition used by the collision policy.
     // The user vector omits selectionBackground, but Microsoft still treats it
@@ -113,7 +113,7 @@ fn microsoft_serialization_roundtrip_user_deleted_color_scheme_collision_contrac
         profiles
             .get("list")
             .and_then(JsonValue::as_array)
-            .map(|values| values.len()),
+            .map(<[terminal_settings::settings_json::JsonValue]>::len),
         Some(1)
     );
 

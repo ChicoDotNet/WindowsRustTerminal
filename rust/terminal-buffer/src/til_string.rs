@@ -97,7 +97,7 @@ pub fn parse_signed_i32(input: &str) -> Option<i32> {
 
 #[must_use]
 pub fn tolower_ascii(ch: char) -> char {
-    if ch >= 'A' && ch <= 'Z' {
+    if ('A'..='Z').contains(&ch) {
         char::from_u32(ch as u32 | 0x20).expect("ASCII lowercase is valid")
     } else {
         ch
@@ -106,7 +106,7 @@ pub fn tolower_ascii(ch: char) -> char {
 
 #[must_use]
 pub fn toupper_ascii(ch: char) -> char {
-    if ch >= 'a' && ch <= 'z' {
+    if ('a'..='z').contains(&ch) {
         char::from_u32(ch as u32 & !0x20).expect("ASCII uppercase is valid")
     } else {
         ch

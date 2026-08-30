@@ -1,7 +1,7 @@
 //! Delayed end-of-line wrap and multiline autowrap coordination.
 //!
 //! This module owns the portable Last Column Flag behavior exercised by the
-//! Microsoft ScreenBuffer contracts. Cursor/control dispatch stays elsewhere;
+//! Microsoft `ScreenBuffer` contracts. Cursor/control dispatch stays elsewhere;
 //! this state records the shared rule that qualifying controls cancel a pending
 //! wrap before applying their cursor effect.
 

@@ -210,7 +210,7 @@ impl ColorTableState {
         }
 
         let mut updates = Vec::with_capacity(fields.len() / 2);
-        for pair in fields.chunks_exact(2) {
+        for pair in fields.as_chunks::<2>().0 {
             let Ok(index) = pair[0].parse::<usize>() else {
                 return false;
             };

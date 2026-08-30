@@ -35,15 +35,12 @@ impl Utf8ToUtf16State {
                         offset += valid;
                     }
 
-                    match error.error_len() {
-                        Some(invalid_len) => {
-                            output.push(0xfffd);
-                            offset += invalid_len;
-                        }
-                        None => {
-                            self.pending.extend_from_slice(&input[offset..]);
-                            break;
-                        }
+                    if let Some(invalid_len) = error.error_len() {
+                        output.push(0xfffd);
+                        offset += invalid_len;
+                    } else {
+                        self.pending.extend_from_slice(&input[offset..]);
+                        break;
                     }
                 }
             }

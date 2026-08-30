@@ -1,4 +1,4 @@
-//! Safe VT saved-cursor state derived from Host ScreenBuffer tests.
+//! Safe VT saved-cursor state derived from Host `ScreenBuffer` tests.
 //!
 //! This owner models DECSC/DECRC state that belongs to the text buffer rather
 //! than the parser: cursor position, delayed-wrap state, rendition attributes,

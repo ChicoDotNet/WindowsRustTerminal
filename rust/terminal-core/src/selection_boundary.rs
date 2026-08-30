@@ -1,4 +1,4 @@
-//! Viewport/buffer boundary normalization for TerminalCore selection input.
+//! Viewport/buffer boundary normalization for `TerminalCore` selection input.
 
 use terminal_buffer::row::DbcsAttribute;
 use terminal_buffer::text_buffer::TextBuffer;

@@ -208,16 +208,15 @@ fn wrap_logical_lines(
                 x = 0;
             }
 
-            if let Some(cursor_column) = line.cursor_column {
-                if cursor.is_none()
-                    && cursor_column >= source_column
-                    && cursor_column < source_column.saturating_add(u32::from(glyph.width))
-                {
-                    cursor = Some(TextBufferPoint::new(
-                        x,
-                        u16::try_from(rows.len()).unwrap_or(u16::MAX),
-                    ));
-                }
+            if let Some(cursor_column) = line.cursor_column
+                && cursor.is_none()
+                && cursor_column >= source_column
+                && cursor_column < source_column.saturating_add(u32::from(glyph.width))
+            {
+                cursor = Some(TextBufferPoint::new(
+                    x,
+                    u16::try_from(rows.len()).unwrap_or(u16::MAX),
+                ));
             }
 
             row.glyphs.push((x, glyph.clone()));
@@ -225,19 +224,20 @@ fn wrap_logical_lines(
             source_column = source_column.saturating_add(u32::from(glyph.width));
         }
 
-        if let Some(cursor_column) = line.cursor_column {
-            if cursor.is_none() && cursor_column == source_column {
-                let y = rows.len();
-                let (cursor_x, cursor_y) = if x < new_width {
-                    (x, y)
-                } else {
-                    (0, y.saturating_add(1))
-                };
-                cursor = Some(TextBufferPoint::new(
-                    cursor_x,
-                    u16::try_from(cursor_y).unwrap_or(u16::MAX),
-                ));
-            }
+        if let Some(cursor_column) = line.cursor_column
+            && cursor.is_none()
+            && cursor_column == source_column
+        {
+            let y = rows.len();
+            let (cursor_x, cursor_y) = if x < new_width {
+                (x, y)
+            } else {
+                (0, y.saturating_add(1))
+            };
+            cursor = Some(TextBufferPoint::new(
+                cursor_x,
+                u16::try_from(cursor_y).unwrap_or(u16::MAX),
+            ));
         }
 
         rows.push(row);

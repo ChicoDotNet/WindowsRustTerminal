@@ -3,7 +3,7 @@
 //! This owner deliberately keeps the parsed JSON tree as the serialization
 //! source of truth so unrelated settings survive a targeted mutation. That
 //! mirrors `CascadiaSettings::ToJson` for the portable portion of the model
-//! without reimplementing WinRT projection.
+//! without reimplementing `WinRT` projection.
 
 use std::collections::{BTreeMap, BTreeSet};
 
@@ -105,7 +105,7 @@ impl SettingsDocument {
     /// inheritance-backed values, nullable colors/icon, directory and
     /// environment), while the shared JSON tree preserves settings that have
     /// not yet moved into that owner. Legacy top-level font aliases are
-    /// canonicalized into the modern `font` object, matching Profile::ToJson.
+    /// canonicalized into the modern `font` object, matching `Profile::ToJson`.
     ///
     /// # Errors
     ///
@@ -120,10 +120,10 @@ impl SettingsDocument {
     }
 
     /// Canonicalizes the legacy root `profiles: []` shape to the modern
-    /// `profiles: { "list": [] }` shape used by CascadiaSettings serialization.
+    /// `profiles: { "list": [] }` shape used by `CascadiaSettings` serialization.
     /// Existing modern profile objects are preserved unchanged. When legacy
     /// `compatibility.reloadEnvironmentVariables` is present at the root, it is
-    /// moved into `profiles.defaults`, matching the SettingsLoader fixup.
+    /// moved into `profiles.defaults`, matching the `SettingsLoader` fixup.
     ///
     /// # Errors
     ///
@@ -335,8 +335,7 @@ impl SettingsDocument {
                     .as_object()
                     .and_then(|scheme| scheme.get("name"))
                     .and_then(JsonValue::as_str)
-                    .map(|name| redundant.contains(name))
-                    .unwrap_or(false);
+                    .is_some_and(|name| redundant.contains(name));
                 !remove
             });
         }

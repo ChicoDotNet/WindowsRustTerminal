@@ -2,7 +2,7 @@
 //!
 //! Windows Terminal keeps the source command map intact and builds a second
 //! expanded command tree for command-palette projection. This owner performs
-//! that deterministic expansion without WinRT or XAML dependencies.
+//! that deterministic expansion without `WinRT` or XAML dependencies.
 
 use std::collections::BTreeMap;
 

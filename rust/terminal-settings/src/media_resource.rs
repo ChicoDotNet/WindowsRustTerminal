@@ -1,4 +1,4 @@
-//! Portable media-resource ownership for SettingsModel.
+//! Portable media-resource ownership for `SettingsModel`.
 //!
 //! Windows Terminal stores media values as unresolved paths, resolves them after
 //! settings layering, and keeps the origin/base path that supplied each value.
@@ -118,17 +118,17 @@ impl MediaSlot {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 enum IconSetting {
+    #[default]
     Missing,
-    Null { fallback: String },
-    Resource { slot: MediaSlot, fallback: String },
-}
-
-impl Default for IconSetting {
-    fn default() -> Self {
-        Self::Missing
-    }
+    Null {
+        fallback: String,
+    },
+    Resource {
+        slot: MediaSlot,
+        fallback: String,
+    },
 }
 
 #[derive(Debug, Clone, Default)]
@@ -254,7 +254,7 @@ impl MediaResourceSettings {
 
     /// Visits unresolved media resources with their effective origin and base
     /// path. Symbol/emoji icons resolve to themselves without invoking the
-    /// external resolver, matching SettingsModel's icon shortcut.
+    /// external resolver, matching `SettingsModel`'s icon shortcut.
     pub fn resolve_media_resources<F>(&mut self, mut resolver: F)
     where
         F: FnMut(MediaOrigin, &str, &mut MediaResource),
@@ -413,8 +413,7 @@ impl MediaResourceSettings {
                 object
                     .get("updates")
                     .and_then(JsonValue::as_str)
-                    .map(str::to_owned)
-                    .unwrap_or_else(|| self.profile_key(object))
+                    .map_or_else(|| self.profile_key(object), str::to_owned)
             } else {
                 self.profile_key(object)
             };

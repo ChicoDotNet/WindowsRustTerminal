@@ -594,7 +594,7 @@ impl<D: TermDispatch> OutputStateMachineEngine<D> {
     fn osc_color_table(&mut self, text: &[u16]) {
         let source = utf16_lossy(text);
         let parts = source.split(';').collect::<Vec<_>>();
-        for pair in parts.chunks_exact(2) {
+        for pair in parts.as_chunks::<2>().0 {
             let Ok(index) = pair[0].parse::<usize>() else {
                 continue;
             };

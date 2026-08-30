@@ -1,8 +1,8 @@
-//! Portable SettingsModel action/command deserialization aggregate.
+//! Portable `SettingsModel` action/command deserialization aggregate.
 //!
 //! Microsoft `CascadiaSettings` layers `actions` and `keybindings` through one
-//! ActionMap. This owner keeps the portable identity/name/key semantics together
-//! while leaving WinRT projection and active keyboard-layout translation at the
+//! `ActionMap`. This owner keeps the portable identity/name/key semantics together
+//! while leaving `WinRT` projection and active keyboard-layout translation at the
 //! platform boundary.
 
 use std::collections::BTreeMap;
@@ -54,7 +54,7 @@ impl DeserializedActionMap {
         Self::default()
     }
 
-    /// Layers one complete SettingsModel JSON document onto the current action map.
+    /// Layers one complete `SettingsModel` JSON document onto the current action map.
     ///
     /// `actions` are processed before `keybindings`, matching the product's
     /// ability to bind a key to an action ID declared in the same or an earlier
@@ -113,8 +113,8 @@ impl DeserializedActionMap {
         &self.warnings
     }
 
-    /// CascadiaSettings adds one aggregate `AtLeastOneKeybindingWarning` entry
-    /// ahead of the concrete ActionMap warnings.
+    /// `CascadiaSettings` adds one aggregate `AtLeastOneKeybindingWarning` entry
+    /// ahead of the concrete `ActionMap` warnings.
     #[must_use]
     pub fn settings_warning_count(&self) -> usize {
         if self.warnings.is_empty() {
@@ -207,10 +207,10 @@ impl DeserializedActionMap {
             for key in keys {
                 self.unbind_key(key);
             }
-            if let Some(name) = name {
-                if let Some(id) = self.names.remove(name) {
-                    self.actions.remove(&id);
-                }
+            if let Some(name) = name
+                && let Some(id) = self.names.remove(name)
+            {
+                self.actions.remove(&id);
             }
             return Ok(());
         }

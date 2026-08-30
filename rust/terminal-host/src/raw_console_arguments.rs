@@ -57,7 +57,7 @@ pub fn tokenize_windows_command_line(command_line: &str) -> Vec<String> {
                     for _ in 0..(slashes / 2) {
                         token.push('\\');
                     }
-                    if slashes % 2 == 0 {
+                    if slashes.is_multiple_of(2) {
                         quoted = !quoted;
                     } else {
                         token.push('"');
