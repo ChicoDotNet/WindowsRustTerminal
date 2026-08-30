@@ -129,7 +129,7 @@ fn sha1(input: &[u8]) -> [u8; 20] {
     let mut h3 = 0x1032_5476u32;
     let mut h4 = 0xc3d2_e1f0u32;
 
-    for chunk in message.chunks_exact(64) {
+    for chunk in message.as_chunks::<64>().0 {
         let mut words = [0u32; 80];
         for (index, word) in words[..16].iter_mut().enumerate() {
             let start = index * 4;
@@ -177,7 +177,12 @@ fn sha1(input: &[u8]) -> [u8; 20] {
     }
 
     let mut digest = [0u8; 20];
-    for (chunk, word) in digest.chunks_exact_mut(4).zip([h0, h1, h2, h3, h4]) {
+    for (chunk, word) in digest
+        .as_chunks_mut::<4>()
+        .0
+        .iter_mut()
+        .zip([h0, h1, h2, h3, h4])
+    {
         chunk.copy_from_slice(&word.to_be_bytes());
     }
     digest
