@@ -6,6 +6,7 @@
 
 #![forbid(unsafe_code)]
 
+#[allow(clippy::chunks_exact_to_as_chunks)]
 pub mod base64;
 pub mod input_c0;
 pub mod input_engine;

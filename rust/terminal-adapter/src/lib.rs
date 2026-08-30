@@ -8,6 +8,12 @@
 
 pub mod adapt_dispatch;
 pub mod checksum_reports;
+#[allow(
+    clippy::format_push_string,
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::float_cmp
+)]
 pub mod color_product_dispatch;
 pub mod dcs_dispatch;
 pub mod decrqss;
