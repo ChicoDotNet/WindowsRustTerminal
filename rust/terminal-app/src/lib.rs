@@ -1,5 +1,6 @@
 #![forbid(unsafe_code)]
 
+#[allow(clippy::assigning_clones, clippy::missing_errors_doc)]
 mod commandline;
 mod filtered_command;
 mod fzf;
