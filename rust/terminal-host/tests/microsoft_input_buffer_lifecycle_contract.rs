@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation)]
+
 use terminal_host::input_buffer::{
     DEFAULT_INPUT_MODE, InputBuffer, InputEvent, KeyEvent, MouseEvent, ReadOptions, VK_CONTROL,
     VK_PAUSE,
