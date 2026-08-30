@@ -75,13 +75,17 @@ impl Utf16ToUtf8State {
     /// call so a pair split across chunk boundaries remains lossless.
     #[must_use]
     pub fn push(&mut self, chunk: &[u16]) -> Vec<u8> {
-        let mut input = Vec::with_capacity(chunk.len() + usize::from(self.pending_high_surrogate.is_some()));
+        let mut input =
+            Vec::with_capacity(chunk.len() + usize::from(self.pending_high_surrogate.is_some()));
         if let Some(high) = self.pending_high_surrogate.take() {
             input.push(high);
         }
         input.extend_from_slice(chunk);
 
-        if input.last().is_some_and(|unit| (0xd800..=0xdbff).contains(unit)) {
+        if input
+            .last()
+            .is_some_and(|unit| (0xd800..=0xdbff).contains(unit))
+        {
             self.pending_high_surrogate = input.pop();
         }
 
@@ -130,7 +134,10 @@ mod tests {
     #[test]
     fn microsoft_til_u8u16_test_u8_to_u16() {
         let input = [0x7e, 0xc3, 0xb6, 0xe2, 0x82, 0xac, 0xf0, 0xa4, 0xbd, 0x9c];
-        assert_eq!(utf8_to_utf16(&input), [0x007e, 0x00f6, 0x20ac, 0xd853, 0xdf5c]);
+        assert_eq!(
+            utf8_to_utf16(&input),
+            [0x007e, 0x00f6, 0x20ac, 0xd853, 0xdf5c]
+        );
     }
 
     #[test]

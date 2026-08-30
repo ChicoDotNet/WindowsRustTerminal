@@ -211,11 +211,15 @@ mod tests {
         state.dispatch(OutputAction::SendC1Controls(true));
         assert!(state.send_c1_controls());
 
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Secondary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Secondary,
+        ));
         assert_eq!(state.response(), "\u{009b}>0;10;1c");
         state.clear_response();
 
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Tertiary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Tertiary,
+        ));
         assert_eq!(state.response(), "\u{0090}!|00000000\u{009c}");
         state.clear_response();
 
@@ -226,19 +230,20 @@ mod tests {
         state.dispatch(OutputAction::SendC1Controls(false));
         assert!(!state.send_c1_controls());
 
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Secondary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Secondary,
+        ));
         assert_eq!(state.response(), "\u{1b}[>0;10;1c");
         state.clear_response();
 
-        state.dispatch(OutputAction::DeviceAttributes(DeviceAttributesKind::Tertiary));
+        state.dispatch(OutputAction::DeviceAttributes(
+            DeviceAttributesKind::Tertiary,
+        ));
         assert_eq!(state.response(), "\u{1b}P!|00000000\u{1b}\\");
         state.clear_response();
 
         state.dispatch(OutputAction::RequestColorTableEntry(0));
-        assert_eq!(
-            state.response(),
-            "\u{1b}]4;0;rgb:0c0c/0c0c/0c0c\u{1b}\\"
-        );
+        assert_eq!(state.response(), "\u{1b}]4;0;rgb:0c0c/0c0c/0c0c\u{1b}\\");
     }
 
     #[test]

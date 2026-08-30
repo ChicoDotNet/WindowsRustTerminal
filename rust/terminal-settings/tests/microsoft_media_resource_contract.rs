@@ -1,8 +1,8 @@
 use std::collections::BTreeMap;
 
 use terminal_settings::media_resource::{
-    resolve_media_path, MediaFragment, MediaOrigin, MediaPathResolution, MediaPlatform,
-    MediaResourceSettings, MediaResourceState,
+    MediaFragment, MediaOrigin, MediaPathResolution, MediaPlatform, MediaResourceSettings,
+    MediaResourceState, resolve_media_path,
 };
 
 const USER_BASE: &str = r"C:\Windows";
@@ -42,7 +42,10 @@ fn microsoft_media_resource_validate_resolver_called_for_inbox_contract() {
     });
     assert_eq!(calls, 11);
     assert_eq!(settings.profile_icon("Base").unwrap().resolved, "resolved");
-    assert_eq!(settings.profile_background("Base", false).unwrap().resolved, "resolved");
+    assert_eq!(
+        settings.profile_background("Base", false).unwrap().resolved,
+        "resolved"
+    );
 }
 
 #[test]
@@ -87,7 +90,10 @@ fn microsoft_media_resource_validate_resolver_called_for_fragments_contract() {
         resource.resolve("resolved");
     });
     assert_eq!(origins.get(&MediaOrigin::Fragment), Some(&2));
-    assert_eq!(settings.profile_icon("FragmentProfile").unwrap().resolved, "resolved");
+    assert_eq!(
+        settings.profile_icon("FragmentProfile").unwrap().resolved,
+        "resolved"
+    );
 }
 
 #[test]
@@ -170,7 +176,13 @@ fn microsoft_media_resource_profile_specifies_invalid_icon_and_commandline_contr
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileSpecifiesInvalidIconAndCommandline").unwrap().resolved, CSCRIPT);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileSpecifiesInvalidIconAndCommandline")
+            .unwrap()
+            .resolved,
+        CSCRIPT
+    );
 }
 
 #[test]
@@ -180,7 +192,13 @@ fn microsoft_media_resource_profile_specifies_invalid_icon_and_no_commandline_co
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileSpecifiesInvalidIconAndNoCommandline").unwrap().resolved, CMD);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileSpecifiesInvalidIconAndNoCommandline")
+            .unwrap()
+            .resolved,
+        CMD
+    );
 }
 
 #[test]
@@ -190,7 +208,13 @@ fn microsoft_media_resource_profile_inherits_invalid_icon_and_has_commandline_co
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileInheritsInvalidIconAndHasCommandline").unwrap().resolved, CMD);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileInheritsInvalidIconAndHasCommandline")
+            .unwrap()
+            .resolved,
+        CMD
+    );
 }
 
 #[test]
@@ -200,7 +224,13 @@ fn microsoft_media_resource_profile_inherits_invalid_icon_and_has_no_commandline
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileInheritsInvalidIconAndHasNoCommandline").unwrap().resolved, CMD);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileInheritsInvalidIconAndHasNoCommandline")
+            .unwrap()
+            .resolved,
+        CMD
+    );
 }
 
 #[test]
@@ -210,7 +240,13 @@ fn microsoft_media_resource_profile_specifies_null_icon_contract() {
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileSpecifiesNullIcon").unwrap().resolved, CSCRIPT);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileSpecifiesNullIcon")
+            .unwrap()
+            .resolved,
+        CSCRIPT
+    );
 }
 
 #[test]
@@ -220,13 +256,21 @@ fn microsoft_media_resource_profile_specifies_null_icon_and_has_no_commandline_c
         &[],
     );
     reject_all(&mut settings);
-    assert_eq!(settings.profile_icon("ProfileSpecifiesNullIconAndHasNoCommandline").unwrap().resolved, CMD);
+    assert_eq!(
+        settings
+            .profile_icon("ProfileSpecifiesNullIconAndHasNoCommandline")
+            .unwrap()
+            .resolved,
+        CMD
+    );
 }
 
 #[test]
 fn microsoft_media_resource_profile_overwrites_bell_sound_contract() {
     let mut settings = settings(
-        &format!(r#"{{"profiles":{{"list":[{{"guid":"{BASE_GUID}","bellSound":["does not matter; resolved rejected"]}}]}}}}"#),
+        &format!(
+            r#"{{"profiles":{{"list":[{{"guid":"{BASE_GUID}","bellSound":["does not matter; resolved rejected"]}}]}}}}"#
+        ),
         &[],
     );
     reject_all(&mut settings);
@@ -237,8 +281,13 @@ fn microsoft_media_resource_profile_overwrites_bell_sound_contract() {
 
 #[test]
 fn microsoft_media_resource_fragment_updates_base_profile_contract() {
-    let content = format!(r#"{{"profiles":[{{"updates":"{BASE_GUID}","icon":"IconFromFragment"}}]}}"#);
-    let fragment = MediaFragment { source: "fragment", base_path: FRAGMENT_BASE, content: &content };
+    let content =
+        format!(r#"{{"profiles":[{{"updates":"{BASE_GUID}","icon":"IconFromFragment"}}]}}"#);
+    let fragment = MediaFragment {
+        source: "fragment",
+        base_path: FRAGMENT_BASE,
+        content: &content,
+    };
     let mut settings = settings("{}", &[fragment]);
     settings.resolve_media_resources(|_, base_path, resource| resource.resolve(base_path));
     let icon = settings.profile_icon("Base").unwrap();
@@ -248,8 +297,14 @@ fn microsoft_media_resource_fragment_updates_base_profile_contract() {
 
 #[test]
 fn microsoft_media_resource_fragment_action_resources_get_resolved_contract() {
-    let content = format!(r#"{{"profiles":[{{"updates":"{BASE_GUID}","icon":"IconFromFragment"}}],"actions":[{{"command":{{"action":"sendInput","input":"FROM WAY OUT BEYOND THE STARS"}},"icon":"foo.ico","id":"Dustin.SendInput"}}]}}"#);
-    let fragment = MediaFragment { source: "fragment", base_path: FRAGMENT_BASE, content: &content };
+    let content = format!(
+        r#"{{"profiles":[{{"updates":"{BASE_GUID}","icon":"IconFromFragment"}}],"actions":[{{"command":{{"action":"sendInput","input":"FROM WAY OUT BEYOND THE STARS"}},"icon":"foo.ico","id":"Dustin.SendInput"}}]}}"#
+    );
+    let fragment = MediaFragment {
+        source: "fragment",
+        base_path: FRAGMENT_BASE,
+        content: &content,
+    };
     let mut settings = settings("{}", &[fragment]);
     settings.resolve_media_resources(|_, base_path, resource| resource.resolve(base_path));
     let icon = settings.action_icon("Dustin.SendInput").unwrap();
@@ -291,17 +346,30 @@ fn microsoft_media_resource_fragment_appearance_and_user_appearance_interaction_
     settings.resolve_media_resources(|_, base_path, resource| {
         resource.resolve(&format!("{}-{}", base_path, resource.path()));
     });
-    let focused = settings.profile_background("FragmentProfileWithUnfocusedBackgroundImage", false).unwrap();
-    let unfocused = settings.profile_background("FragmentProfileWithUnfocusedBackgroundImage", true).unwrap();
-    let shader = settings.profile_pixel_shader("FragmentProfileWithUnfocusedBackgroundImage", true).unwrap();
+    let focused = settings
+        .profile_background("FragmentProfileWithUnfocusedBackgroundImage", false)
+        .unwrap();
+    let unfocused = settings
+        .profile_background("FragmentProfileWithUnfocusedBackgroundImage", true)
+        .unwrap();
+    let shader = settings
+        .profile_pixel_shader("FragmentProfileWithUnfocusedBackgroundImage", true)
+        .unwrap();
     assert_eq!(focused.resolved, "FRAGMENT-focusedBackgroundImage1");
     assert_eq!(unfocused.resolved, focused.resolved);
     assert_eq!(unfocused.identity, focused.identity);
     assert_eq!(shader.resolved, r"C:\Windows-unfocusedPixelShaderPath1");
-    let focused = settings.profile_background("FragmentProfileWithNoUnfocusedBackgroundImage", false).unwrap();
-    let unfocused = settings.profile_background("FragmentProfileWithNoUnfocusedBackgroundImage", true).unwrap();
+    let focused = settings
+        .profile_background("FragmentProfileWithNoUnfocusedBackgroundImage", false)
+        .unwrap();
+    let unfocused = settings
+        .profile_background("FragmentProfileWithNoUnfocusedBackgroundImage", true)
+        .unwrap();
     assert_eq!(focused.resolved, "FRAGMENT-focusedBackgroundImage2");
-    assert_eq!(unfocused.resolved, r"C:\Windows-userSpecifiedUnfocusedBackgroundImage");
+    assert_eq!(
+        unfocused.resolved,
+        r"C:\Windows-userSpecifiedUnfocusedBackgroundImage"
+    );
     assert_ne!(unfocused.identity, focused.identity);
 }
 
@@ -310,7 +378,12 @@ struct TestPlatform;
 
 impl MediaPlatform for TestPlatform {
     fn file_exists(&self, path: &str) -> bool {
-        matches!(path.to_ascii_lowercase().as_str(), r"c:\windows\system32\cmd.exe" | r"c:\windows\explorer.exe" | r"\\?\c:\windows\system32\cmd.exe")
+        matches!(
+            path.to_ascii_lowercase().as_str(),
+            r"c:\windows\system32\cmd.exe"
+                | r"c:\windows\explorer.exe"
+                | r"\\?\c:\windows\system32\cmd.exe"
+        )
     }
 
     fn environment(&self, name: &str) -> Option<String> {
@@ -330,34 +403,85 @@ fn assert_resolution(actual: MediaPathResolution, ok: bool, resolved: &str) {
 #[test]
 fn microsoft_media_resource_real_resolver_file_paths_contract() {
     let platform = TestPlatform;
-    for input in [r"C:\Windows\System32\cmd.exe", "C:/Windows/System32/cmd.exe"] {
+    for input in [
+        r"C:\Windows\System32\cmd.exe",
+        "C:/Windows/System32/cmd.exe",
+    ] {
         assert_resolution(resolve_media_path(input, USER_BASE, &platform), true, CMD);
     }
     for input in ["explorer.exe", r"..\Windows\explorer.exe"] {
-        assert_resolution(resolve_media_path(input, USER_BASE, &platform), true, r"C:\Windows\explorer.exe");
+        assert_resolution(
+            resolve_media_path(input, USER_BASE, &platform),
+            true,
+            r"C:\Windows\explorer.exe",
+        );
     }
-    assert_resolution(resolve_media_path("%ComSpec%", USER_BASE, &platform), true, CMD);
-    assert_resolution(resolve_media_path(r"X:\foobar.ico", USER_BASE, &platform), false, "");
+    assert_resolution(
+        resolve_media_path("%ComSpec%", USER_BASE, &platform),
+        true,
+        CMD,
+    );
+    assert_resolution(
+        resolve_media_path(r"X:\foobar.ico", USER_BASE, &platform),
+        false,
+        "",
+    );
 }
 
 #[test]
 fn microsoft_media_resource_real_resolver_special_keywords_contract() {
     let platform = TestPlatform;
     assert_resolution(resolve_media_path("none", USER_BASE, &platform), true, "");
-    assert_resolution(resolve_media_path("desktopWallpaper", USER_BASE, &platform), true, r"C:\Users\Test\wallpaper.jpg");
+    assert_resolution(
+        resolve_media_path("desktopWallpaper", USER_BASE, &platform),
+        true,
+        r"C:\Users\Test\wallpaper.jpg",
+    );
 }
 
 #[test]
 fn microsoft_media_resource_real_resolver_url_cases_contract() {
     let platform = TestPlatform;
-    assert_resolution(resolve_media_path("https://contoso.com/explorer.exe", USER_BASE, &platform), true, r"C:\Windows\explorer.exe");
-    assert_resolution(resolve_media_path("https://contoso.com/it_would_be_a_real_surprise_if_windows_added_a_file_named_this.ico", USER_BASE, &platform), false, "");
-    assert_resolution(resolve_media_path("file:///C:/Windows/System32/cmd.exe", USER_BASE, &platform), true, CMD);
-    for uri in ["ms-resource:///ProfileIcons/foo.png", "ms-appx:///ProfileIcons/foo.png"] {
+    assert_resolution(
+        resolve_media_path("https://contoso.com/explorer.exe", USER_BASE, &platform),
+        true,
+        r"C:\Windows\explorer.exe",
+    );
+    assert_resolution(
+        resolve_media_path(
+            "https://contoso.com/it_would_be_a_real_surprise_if_windows_added_a_file_named_this.ico",
+            USER_BASE,
+            &platform,
+        ),
+        false,
+        "",
+    );
+    assert_resolution(
+        resolve_media_path("file:///C:/Windows/System32/cmd.exe", USER_BASE, &platform),
+        true,
+        CMD,
+    );
+    for uri in [
+        "ms-resource:///ProfileIcons/foo.png",
+        "ms-appx:///ProfileIcons/foo.png",
+    ] {
         assert_resolution(resolve_media_path(uri, USER_BASE, &platform), true, uri);
     }
-    assert_resolution(resolve_media_path("ms-appx://Microsoft.Burrito/Resources/explorer.exe", USER_BASE, &platform), true, r"C:\Windows\explorer.exe");
-    for uri in ["ftp://0.0.0.0/share/file.png", "x://is_this_a_file_or_a_path", "fake-scheme://foo", "http:/e/x"] {
+    assert_resolution(
+        resolve_media_path(
+            "ms-appx://Microsoft.Burrito/Resources/explorer.exe",
+            USER_BASE,
+            &platform,
+        ),
+        true,
+        r"C:\Windows\explorer.exe",
+    );
+    for uri in [
+        "ftp://0.0.0.0/share/file.png",
+        "x://is_this_a_file_or_a_path",
+        "fake-scheme://foo",
+        "http:/e/x",
+    ] {
         assert_resolution(resolve_media_path(uri, USER_BASE, &platform), false, "");
     }
 }
@@ -365,7 +489,14 @@ fn microsoft_media_resource_real_resolver_url_cases_contract() {
 #[test]
 fn microsoft_media_resource_real_resolver_unc_cases_contract() {
     let platform = TestPlatform;
-    for path in [r"\\server", r"\\server\share", r"\\server\share\file", r"\\?\UNC\server", r"\\?\UNC\server\share", r"\\?\UNC\server\share\file"] {
+    for path in [
+        r"\\server",
+        r"\\server\share",
+        r"\\server\share\file",
+        r"\\?\UNC\server",
+        r"\\?\UNC\server\share",
+        r"\\?\UNC\server\share\file",
+    ] {
         assert!(!resolve_media_path(path, FRAGMENT_BASE, &platform).ok);
     }
     assert!(resolve_media_path(r"\\?\C:\Windows\System32\cmd.exe", FRAGMENT_BASE, &platform).ok);

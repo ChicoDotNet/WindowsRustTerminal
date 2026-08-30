@@ -2,14 +2,7 @@ use terminal_host::codepage::{CP_JAPANESE, encode_code_unit};
 use terminal_host::input_buffer::{InputBuffer, InputEvent, KeyEvent, MouseEvent};
 
 fn key(virtual_key: u16, unicode_char: u16) -> InputEvent {
-    InputEvent::Key(KeyEvent::new(
-        true,
-        1,
-        virtual_key,
-        0,
-        unicode_char,
-        0,
-    ))
+    InputEvent::Key(KeyEvent::new(true, 1, virtual_key, 0, unicode_char, 0))
 }
 
 fn mouse() -> InputEvent {
@@ -35,9 +28,8 @@ fn microsoft_input_buffer_reading_dbcs_chars_pads_output_array_contract() {
         mouse(),
     ]);
 
-    let actual = input_buffer.read_with_codepage(5, |code_unit| {
-        encode_code_unit(CP_JAPANESE, code_unit)
-    });
+    let actual =
+        input_buffer.read_with_codepage(5, |code_unit| encode_code_unit(CP_JAPANESE, code_unit));
 
     let expected = vec![
         mouse(),

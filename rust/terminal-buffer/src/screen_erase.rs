@@ -4,7 +4,7 @@
 //! viewport/cursor rules exercised by Host `ScreenBufferTests`. VT parsing and
 //! renderer notification remain outside this module.
 
-use crate::rect_ops::{erase_rect, fill_rect, scroll_rect, selective_erase_rect, ScreenRect};
+use crate::rect_ops::{ScreenRect, erase_rect, fill_rect, scroll_rect, selective_erase_rect};
 use crate::row::RowError;
 use crate::text_attribute::TextAttribute;
 use crate::text_buffer::{TextBuffer, TextBufferPoint};
@@ -49,9 +49,7 @@ pub fn erase_line(
     let x = cursor.x.min(width.saturating_sub(1));
     let rect = match erase_type {
         EraseType::ToEnd => ScreenRect::new(x, cursor.y, width, cursor.y + 1),
-        EraseType::FromBeginning => {
-            ScreenRect::new(0, cursor.y, x.saturating_add(1), cursor.y + 1)
-        }
+        EraseType::FromBeginning => ScreenRect::new(0, cursor.y, x.saturating_add(1), cursor.y + 1),
         EraseType::All => ScreenRect::new(0, cursor.y, width, cursor.y + 1),
     };
     erase_region(buffer, rect, selective, active_attribute)

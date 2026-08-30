@@ -123,8 +123,18 @@ impl DeserializationValidation {
                 );
             }
             self.profile_schemes.push((
-                if dark_valid { dark } else { DEFAULT_COLOR_SCHEME }.to_owned(),
-                if light_valid { light } else { DEFAULT_COLOR_SCHEME }.to_owned(),
+                if dark_valid {
+                    dark
+                } else {
+                    DEFAULT_COLOR_SCHEME
+                }
+                .to_owned(),
+                if light_valid {
+                    light
+                } else {
+                    DEFAULT_COLOR_SCHEME
+                }
+                .to_owned(),
             ));
         }
         Ok(())
@@ -220,8 +230,8 @@ impl DeserializationValidation {
 }
 
 fn parse_root(input: &str) -> Result<JsonObject, DeserializationValidationError> {
-    let value = settings_json::parse(input)
-        .map_err(|_| DeserializationValidationError::InvalidJson)?;
+    let value =
+        settings_json::parse(input).map_err(|_| DeserializationValidationError::InvalidJson)?;
     value
         .as_object()
         .cloned()
@@ -337,9 +347,7 @@ fn command_has_invalid_scheme(
     Ok(!known_schemes.iter().any(|known| known == scheme))
 }
 
-fn nested_commands_are_valid(
-    commands: &JsonValue,
-) -> Result<bool, DeserializationValidationError> {
+fn nested_commands_are_valid(commands: &JsonValue) -> Result<bool, DeserializationValidationError> {
     let JsonValue::Array(commands) = commands else {
         return Ok(false);
     };

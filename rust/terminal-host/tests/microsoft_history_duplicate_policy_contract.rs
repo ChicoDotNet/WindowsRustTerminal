@@ -40,7 +40,11 @@ fn microsoft_history_add_nonsequential_duplicates_contract() {
     assert!(history.add("dir", false));
 
     assert_eq!(history.command_count(), 3);
-    let commands = history.commands().iter().map(String::as_str).collect::<Vec<_>>();
+    let commands = history
+        .commands()
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
     assert_eq!(commands, ["dir", "cd", "dir"]);
 }
 
@@ -54,6 +58,10 @@ fn microsoft_history_add_nonsequential_no_duplicates_contract() {
     assert!(history.add("dir", true));
 
     assert_eq!(history.command_count(), 2);
-    let commands = history.commands().iter().map(String::as_str).collect::<Vec<_>>();
+    let commands = history
+        .commands()
+        .iter()
+        .map(String::as_str)
+        .collect::<Vec<_>>();
     assert_eq!(commands, ["cd", "dir"]);
 }

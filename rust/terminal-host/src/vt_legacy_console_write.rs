@@ -158,16 +158,10 @@ mod tests {
         let mut state = LegacyConsoleWriteState::new(8);
 
         assert_eq!(state.write_processed_ascii(b""), b"");
-        assert_eq!(
-            state.write_processed_ascii(b"aaaaaaaa"),
-            b"aaaaaaaa\r\n"
-        );
+        assert_eq!(state.write_processed_ascii(b"aaaaaaaa"), b"aaaaaaaa\r\n");
         assert_eq!(state.column(), 0);
 
-        assert_eq!(
-            state.write_processed_ascii(b"a\t\r\nb"),
-            b"a\t\r\n\r\nb"
-        );
+        assert_eq!(state.write_processed_ascii(b"a\t\r\nb"), b"a\t\r\n\r\nb");
         assert_eq!(state.column(), 1);
     }
 

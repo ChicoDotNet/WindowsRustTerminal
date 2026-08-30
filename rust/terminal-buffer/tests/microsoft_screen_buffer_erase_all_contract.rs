@@ -1,4 +1,4 @@
-use terminal_buffer::rect_ops::{fill_rect, ScreenRect};
+use terminal_buffer::rect_ops::{ScreenRect, fill_rect};
 use terminal_buffer::screen_erase::erase_all_with_scrollback;
 use terminal_buffer::text_attribute::TextAttribute;
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
@@ -26,11 +26,7 @@ fn assert_row(buffer: &TextBuffer, y: u16, ch: u8, attribute: TextAttribute) {
     }
 }
 
-fn assert_blank_viewport(
-    buffer: &TextBuffer,
-    viewport: ScreenRect,
-    attribute: TextAttribute,
-) {
+fn assert_blank_viewport(buffer: &TextBuffer, viewport: ScreenRect, attribute: TextAttribute) {
     for y in viewport.top..viewport.bottom {
         assert_row(buffer, y, b' ', attribute);
     }
@@ -99,13 +95,7 @@ fn microsoft_screen_buffer_vt_erase_all_persist_cursor_contract() {
     let mut viewport = ScreenRect::new(0, 0, WIDTH, VIEWPORT_HEIGHT);
     let mut cursor = TextBufferPoint::new(1, 1);
 
-    erase_all_with_scrollback(
-        &mut buffer,
-        &mut viewport,
-        &mut cursor,
-        attribute,
-    )
-    .unwrap();
+    erase_all_with_scrollback(&mut buffer, &mut viewport, &mut cursor, attribute).unwrap();
 
     assert_eq!(viewport, ScreenRect::new(0, 2, WIDTH, 12));
     assert_eq!(cursor, TextBufferPoint::new(1, 3));

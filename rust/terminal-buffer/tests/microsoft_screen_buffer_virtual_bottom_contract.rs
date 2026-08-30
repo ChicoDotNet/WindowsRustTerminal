@@ -112,7 +112,12 @@ fn microsoft_screen_buffer_retain_horizontal_offset_when_moving_to_bottom_contra
     state.set_viewport_origin(10, 20, true);
     assert_eq!(
         state.virtual_viewport(),
-        ViewportState { left: 10, top: 20, width: 40, height: 25 }
+        ViewportState {
+            left: 10,
+            top: 20,
+            width: 40,
+            height: 25
+        }
     );
     state.set_cursor_direct(10, 20);
 

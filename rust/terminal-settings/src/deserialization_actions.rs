@@ -65,7 +65,8 @@ impl DeserializedActionMap {
     /// Returns [`DeserializationActionError`] for malformed JSON or malformed
     /// action/keybinding container shapes.
     pub fn layer_settings(&mut self, input: &str) -> Result<(), DeserializationActionError> {
-        let root = settings_json::parse(input).map_err(|_| DeserializationActionError::InvalidJson)?;
+        let root =
+            settings_json::parse(input).map_err(|_| DeserializationActionError::InvalidJson)?;
         let JsonValue::Object(root) = root else {
             return Err(DeserializationActionError::ExpectedRootObject);
         };
@@ -178,9 +179,9 @@ impl DeserializedActionMap {
 
     #[must_use]
     pub fn key_binding_for_action(&self, id: &str) -> Option<&str> {
-        self.keys.iter().find_map(|(key, binding)| {
-            (binding.as_deref() == Some(id)).then_some(key.as_str())
-        })
+        self.keys
+            .iter()
+            .find_map(|(key, binding)| (binding.as_deref() == Some(id)).then_some(key.as_str()))
     }
 
     fn action_name_for_id(&self, id: &str) -> Option<&str> {
@@ -286,7 +287,12 @@ impl DeserializedActionMap {
             .names
             .get(name)
             .cloned()
-            .or_else(|| entry.get("id").and_then(JsonValue::as_str).map(str::to_owned))
+            .or_else(|| {
+                entry
+                    .get("id")
+                    .and_then(JsonValue::as_str)
+                    .map(str::to_owned)
+            })
             .unwrap_or_else(|| self.next_generated_id());
         self.names.insert(name.to_owned(), id.clone());
         self.actions.insert(
@@ -325,7 +331,10 @@ impl DeserializedActionMap {
             .keys
             .values()
             .any(|binding| binding.as_deref() == Some(id.as_str()));
-        let generated = self.actions.get(&id).is_some_and(|record| !record.persistent);
+        let generated = self
+            .actions
+            .get(&id)
+            .is_some_and(|record| !record.persistent);
         if !still_bound && generated {
             self.actions.remove(&id);
             self.names.retain(|_, value| value != &id);

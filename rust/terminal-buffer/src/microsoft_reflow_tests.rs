@@ -58,11 +58,12 @@ impl Parser {
     }
 
     fn next(&mut self) -> Token {
-        let token = self
-            .tokens
-            .get(self.offset)
-            .cloned()
-            .unwrap_or_else(|| panic!("unexpected end of Microsoft reflow fixture at token {}", self.offset));
+        let token = self.tokens.get(self.offset).cloned().unwrap_or_else(|| {
+            panic!(
+                "unexpected end of Microsoft reflow fixture at token {}",
+                self.offset
+            )
+        });
         self.offset += 1;
         token
     }
@@ -183,9 +184,13 @@ impl Parser {
 
 fn parse_microsoft_cases(source: &str) -> Vec<FixtureCase> {
     const MARKER: &str = "static const TestCase testCases[] =";
-    let marker = source.find(MARKER).expect("Microsoft testCases[] marker exists");
+    let marker = source
+        .find(MARKER)
+        .expect("Microsoft testCases[] marker exists");
     let after_marker = &source[marker + MARKER.len()..];
-    let opening = after_marker.find('{').expect("Microsoft testCases[] opening brace exists");
+    let opening = after_marker
+        .find('{')
+        .expect("Microsoft testCases[] opening brace exists");
     let body = &after_marker[opening + 1..];
 
     let mut parser = Parser::new(tokenize(body));
@@ -214,8 +219,7 @@ fn tokenize(source: &str) -> Vec<Token> {
             }
             b'/' if bytes.get(index + 1) == Some(&b'*') => {
                 index += 2;
-                while index + 1 < bytes.len()
-                    && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
+                while index + 1 < bytes.len() && !(bytes[index] == b'*' && bytes[index + 1] == b'/')
                 {
                     index += 1;
                 }
@@ -396,11 +400,19 @@ fn assert_matches_fixture(
 #[test]
 fn microsoft_reflow_test_cases_contract() {
     let cases = parse_microsoft_cases(MICROSOFT_REFLOW_SOURCE);
-    assert_eq!(cases.len(), 15, "all 15 Microsoft ReflowTests.cpp scenarios are replayed");
+    assert_eq!(
+        cases.len(),
+        15,
+        "all 15 Microsoft ReflowTests.cpp scenarios are replayed"
+    );
 
     let attr = TextAttribute::default();
     for case in cases {
-        assert!(case.buffers.len() >= 2, "{} has a reflow transition", case.name);
+        assert!(
+            case.buffers.len() >= 2,
+            "{} has a reflow transition",
+            case.name
+        );
         let mut buffer = buffer_from_fixture(&case.buffers[0]);
         let mut cursor = case.buffers[0].cursor;
         assert_matches_fixture(&case.name, 0, &buffer, cursor, &case.buffers[0]);

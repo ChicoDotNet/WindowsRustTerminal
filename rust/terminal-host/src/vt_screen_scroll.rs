@@ -136,12 +136,17 @@ fn fallback_mutation(
     if read.is_valid() {
         for y in read.top()..=read.bottom_inclusive() {
             for x in read.left()..=read.right_inclusive() {
-                let src_index = usize::try_from(y).unwrap_or(usize::MAX)
+                let src_index = usize::try_from(y)
+                    .unwrap_or(usize::MAX)
                     .saturating_mul(width)
                     .saturating_add(usize::try_from(x).unwrap_or(usize::MAX));
-                let backup_y = usize::try_from(y.saturating_sub(source.top())).unwrap_or(usize::MAX);
-                let backup_x = usize::try_from(x.saturating_sub(source.left())).unwrap_or(usize::MAX);
-                let backup_index = backup_y.saturating_mul(source_width).saturating_add(backup_x);
+                let backup_y =
+                    usize::try_from(y.saturating_sub(source.top())).unwrap_or(usize::MAX);
+                let backup_x =
+                    usize::try_from(x.saturating_sub(source.left())).unwrap_or(usize::MAX);
+                let backup_index = backup_y
+                    .saturating_mul(source_width)
+                    .saturating_add(backup_x);
                 if let (Some(source_cell), Some(target_cell)) =
                     (cells.get(src_index).copied(), backup.get_mut(backup_index))
                 {
@@ -211,14 +216,17 @@ fn write_buffer(
         return Vec::new();
     }
 
-    let offset_y = usize::try_from(clipped.top().saturating_sub(request.top())).unwrap_or(usize::MAX);
-    let offset_x = usize::try_from(clipped.left().saturating_sub(request.left())).unwrap_or(usize::MAX);
+    let offset_y =
+        usize::try_from(clipped.top().saturating_sub(request.top())).unwrap_or(usize::MAX);
+    let offset_x =
+        usize::try_from(clipped.left().saturating_sub(request.left())).unwrap_or(usize::MAX);
     let mut buffer_offset = offset_y.saturating_mul(stride).saturating_add(offset_x);
     let row_width = usize::try_from(clipped.width()).unwrap_or(0);
     let mut output = Vec::new();
 
     for y in clipped.top()..=clipped.bottom_inclusive() {
-        let screen_start = usize::try_from(y).unwrap_or(usize::MAX)
+        let screen_start = usize::try_from(y)
+            .unwrap_or(usize::MAX)
             .saturating_mul(width)
             .saturating_add(usize::try_from(clipped.left()).unwrap_or(usize::MAX));
         let screen_end = screen_start.saturating_add(row_width);
@@ -248,7 +256,10 @@ fn rectangular_protocol(
     fill_attribute: u16,
 ) -> Vec<u8> {
     let fill_viewport = Viewport::intersect(source, clip);
-    let target_source = Point::new(target.x.saturating_sub(source.left()), target.y.saturating_sub(source.top()));
+    let target_source = Point::new(
+        target.x.saturating_sub(source.left()),
+        target.y.saturating_sub(source.top()),
+    );
     let source_target = Point::new(-target_source.x, -target_source.y);
     let clip_at_source = Viewport::offset(clip, source_target);
     let copy_source = Viewport::intersect(Viewport::intersect(source, screen), clip_at_source);
@@ -318,12 +329,52 @@ mod tests {
 
     fn initial_state() -> VtScreenOutputState {
         let rows = [
-            [('A', RED), ('B', RED), ('a', BLUE), ('b', BLUE), ('C', RED), ('D', RED), ('c', BLUE), ('d', BLUE)],
-            [('E', RED), ('F', RED), ('e', BLUE), ('f', BLUE), ('G', RED), ('H', RED), ('g', BLUE), ('h', BLUE)],
-            [('i', BLUE), ('j', BLUE), ('I', RED), ('J', RED), ('k', BLUE), ('l', BLUE), ('K', RED), ('L', RED)],
-            [('m', BLUE), ('n', BLUE), ('M', RED), ('N', RED), ('o', BLUE), ('p', BLUE), ('O', RED), ('P', RED)],
+            [
+                ('A', RED),
+                ('B', RED),
+                ('a', BLUE),
+                ('b', BLUE),
+                ('C', RED),
+                ('D', RED),
+                ('c', BLUE),
+                ('d', BLUE),
+            ],
+            [
+                ('E', RED),
+                ('F', RED),
+                ('e', BLUE),
+                ('f', BLUE),
+                ('G', RED),
+                ('H', RED),
+                ('g', BLUE),
+                ('h', BLUE),
+            ],
+            [
+                ('i', BLUE),
+                ('j', BLUE),
+                ('I', RED),
+                ('J', RED),
+                ('k', BLUE),
+                ('l', BLUE),
+                ('K', RED),
+                ('L', RED),
+            ],
+            [
+                ('m', BLUE),
+                ('n', BLUE),
+                ('M', RED),
+                ('N', RED),
+                ('o', BLUE),
+                ('p', BLUE),
+                ('O', RED),
+                ('P', RED),
+            ],
         ];
-        let cells = rows.into_iter().flatten().map(|(ch, attr)| ci(ch, attr)).collect::<Vec<_>>();
+        let cells = rows
+            .into_iter()
+            .flatten()
+            .map(|(ch, attr)| ci(ch, attr))
+            .collect::<Vec<_>>();
         let mut state = VtScreenOutputState::new(8, 4, 0x0007);
         assert!(state.replace_cells(&cells));
         state
@@ -332,15 +383,48 @@ mod tests {
     fn execute_reference_scroll_sequence(rectangular: bool) -> (VtScreenOutputState, Vec<Vec<u8>>) {
         let mut state = initial_state();
         let calls = [
-            (InclusiveRect::new(1, 0, 2, 1), Point::new(5, 2), None, u16::from(b'Z'), RED),
-            (InclusiveRect::new(0, 1, 2, 2), Point::new(6, 2), Some(InclusiveRect::new(1, 1, 6, 3)), u16::from(b'z'), BLUE),
-            (InclusiveRect::new(7, 0, 8, 1), Point::new(4, 2), None, u16::from(b'Y'), RED),
-            (InclusiveRect::new(-1, 0, 4, 3), Point::new(3, 1), Some(InclusiveRect::new(3, -1, 7, 9)), u16::from(b'y'), BLUE),
+            (
+                InclusiveRect::new(1, 0, 2, 1),
+                Point::new(5, 2),
+                None,
+                u16::from(b'Z'),
+                RED,
+            ),
+            (
+                InclusiveRect::new(0, 1, 2, 2),
+                Point::new(6, 2),
+                Some(InclusiveRect::new(1, 1, 6, 3)),
+                u16::from(b'z'),
+                BLUE,
+            ),
+            (
+                InclusiveRect::new(7, 0, 8, 1),
+                Point::new(4, 2),
+                None,
+                u16::from(b'Y'),
+                RED,
+            ),
+            (
+                InclusiveRect::new(-1, 0, 4, 3),
+                Point::new(3, 1),
+                Some(InclusiveRect::new(3, -1, 7, 9)),
+                u16::from(b'y'),
+                BLUE,
+            ),
         ];
         let outputs = calls
             .into_iter()
             .map(|(source, target, clip, fill, attr)| {
-                scroll_console_screen_buffer(&mut state, source, target, clip, fill, attr, false, rectangular)
+                scroll_console_screen_buffer(
+                    &mut state,
+                    source,
+                    target,
+                    clip,
+                    fill,
+                    attr,
+                    false,
+                    rectangular,
+                )
             })
             .collect();
         (state, outputs)
@@ -348,10 +432,46 @@ mod tests {
 
     fn expected_final_cells() -> Vec<HostCharInfo> {
         [
-            [('A', RED), ('Z', RED), ('Z', RED), ('y', BLUE), ('y', BLUE), ('D', RED), ('c', BLUE), ('Y', RED)],
-            [('E', RED), ('z', BLUE), ('z', BLUE), ('y', BLUE), ('A', RED), ('Z', RED), ('Z', RED), ('b', BLUE)],
-            [('i', BLUE), ('z', BLUE), ('z', BLUE), ('y', BLUE), ('E', RED), ('z', BLUE), ('z', BLUE), ('f', BLUE)],
-            [('m', BLUE), ('n', BLUE), ('M', RED), ('y', BLUE), ('i', BLUE), ('z', BLUE), ('z', BLUE), ('J', RED)],
+            [
+                ('A', RED),
+                ('Z', RED),
+                ('Z', RED),
+                ('y', BLUE),
+                ('y', BLUE),
+                ('D', RED),
+                ('c', BLUE),
+                ('Y', RED),
+            ],
+            [
+                ('E', RED),
+                ('z', BLUE),
+                ('z', BLUE),
+                ('y', BLUE),
+                ('A', RED),
+                ('Z', RED),
+                ('Z', RED),
+                ('b', BLUE),
+            ],
+            [
+                ('i', BLUE),
+                ('z', BLUE),
+                ('z', BLUE),
+                ('y', BLUE),
+                ('E', RED),
+                ('z', BLUE),
+                ('z', BLUE),
+                ('f', BLUE),
+            ],
+            [
+                ('m', BLUE),
+                ('n', BLUE),
+                ('M', RED),
+                ('y', BLUE),
+                ('i', BLUE),
+                ('z', BLUE),
+                ('z', BLUE),
+                ('J', RED),
+            ],
         ]
         .into_iter()
         .flatten()
@@ -362,26 +482,32 @@ mod tests {
     #[test]
     fn microsoft_vt_io_scroll_console_screen_buffer_w_matches_all_source_vectors_and_final_grid() {
         let mut no_op = initial_state();
-        assert!(scroll_console_screen_buffer(
-            &mut no_op,
-            InclusiveRect::new(0, 0, -1, -1),
-            Point::new(0, 0),
-            None,
-            u16::from(b' '),
-            0,
-            false,
-            false,
-        ).is_empty());
-        assert!(scroll_console_screen_buffer(
-            &mut no_op,
-            InclusiveRect::new(-10, -10, -9, -9),
-            Point::new(0, 0),
-            None,
-            u16::from(b' '),
-            0,
-            false,
-            false,
-        ).is_empty());
+        assert!(
+            scroll_console_screen_buffer(
+                &mut no_op,
+                InclusiveRect::new(0, 0, -1, -1),
+                Point::new(0, 0),
+                None,
+                u16::from(b' '),
+                0,
+                false,
+                false,
+            )
+            .is_empty()
+        );
+        assert!(
+            scroll_console_screen_buffer(
+                &mut no_op,
+                InclusiveRect::new(-10, -10, -9, -9),
+                Point::new(0, 0),
+                None,
+                u16::from(b' '),
+                0,
+                false,
+                false,
+            )
+            .is_empty()
+        );
 
         let clear = scroll_console_screen_buffer(
             &mut no_op,
@@ -416,7 +542,8 @@ mod tests {
     }
 
     #[test]
-    fn microsoft_vt_io_scroll_console_screen_buffer_w_deccra_matches_all_source_vectors_and_final_grid() {
+    fn microsoft_vt_io_scroll_console_screen_buffer_w_deccra_matches_all_source_vectors_and_final_grid()
+     {
         let (state, outputs) = execute_reference_scroll_sequence(true);
         assert_eq!(
             outputs[0],

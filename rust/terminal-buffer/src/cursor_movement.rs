@@ -218,12 +218,20 @@ impl CursorMovementState {
 
     /// HPR is relative to the full row and intentionally ignores horizontal margins.
     pub fn horizontal_position_relative(&mut self, count: u16) {
-        self.cursor.x = self.cursor.x.saturating_add(count.max(1)).min(self.width - 1);
+        self.cursor.x = self
+            .cursor
+            .x
+            .saturating_add(count.max(1))
+            .min(self.width - 1);
     }
 
     /// VPR is relative to the full viewport and intentionally ignores vertical margins.
     pub fn vertical_position_relative(&mut self, count: u16) {
-        self.cursor.y = self.cursor.y.saturating_add(count.max(1)).min(self.height - 1);
+        self.cursor.y = self
+            .cursor
+            .y
+            .saturating_add(count.max(1))
+            .min(self.height - 1);
     }
 }
 

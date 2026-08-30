@@ -98,23 +98,56 @@ mod tests {
     use super::*;
 
     fn set_extended(state: &mut ExtendedAttributesState, mask: u8) {
-        if mask & 0x01 != 0 { state.apply_sgr(&[1]); }
-        if mask & 0x02 != 0 { state.apply_sgr(&[2]); }
-        if mask & 0x04 != 0 { state.apply_sgr(&[3]); }
-        if mask & 0x08 != 0 { state.apply_sgr(&[4]); }
-        else if mask & 0x10 != 0 { state.apply_sgr(&[21]); }
-        if mask & 0x20 != 0 { state.apply_sgr(&[5]); }
-        if mask & 0x40 != 0 { state.apply_sgr(&[8]); }
-        if mask & 0x80 != 0 { state.apply_sgr(&[9]); }
+        if mask & 0x01 != 0 {
+            state.apply_sgr(&[1]);
+        }
+        if mask & 0x02 != 0 {
+            state.apply_sgr(&[2]);
+        }
+        if mask & 0x04 != 0 {
+            state.apply_sgr(&[3]);
+        }
+        if mask & 0x08 != 0 {
+            state.apply_sgr(&[4]);
+        } else if mask & 0x10 != 0 {
+            state.apply_sgr(&[21]);
+        }
+        if mask & 0x20 != 0 {
+            state.apply_sgr(&[5]);
+        }
+        if mask & 0x40 != 0 {
+            state.apply_sgr(&[8]);
+        }
+        if mask & 0x80 != 0 {
+            state.apply_sgr(&[9]);
+        }
     }
 
     fn reset_extended_one_by_one(state: &mut ExtendedAttributesState, mask: u8) {
-        if mask & 0x03 != 0 { state.apply_sgr(&[22]); state.write_cell(); }
-        if mask & 0x04 != 0 { state.apply_sgr(&[23]); state.write_cell(); }
-        if mask & 0x18 != 0 { state.apply_sgr(&[24]); state.write_cell(); }
-        if mask & 0x20 != 0 { state.apply_sgr(&[25]); state.write_cell(); }
-        if mask & 0x40 != 0 { state.apply_sgr(&[28]); state.write_cell(); }
-        if mask & 0x80 != 0 { state.apply_sgr(&[29]); state.write_cell(); }
+        if mask & 0x03 != 0 {
+            state.apply_sgr(&[22]);
+            state.write_cell();
+        }
+        if mask & 0x04 != 0 {
+            state.apply_sgr(&[23]);
+            state.write_cell();
+        }
+        if mask & 0x18 != 0 {
+            state.apply_sgr(&[24]);
+            state.write_cell();
+        }
+        if mask & 0x20 != 0 {
+            state.apply_sgr(&[25]);
+            state.write_cell();
+        }
+        if mask & 0x40 != 0 {
+            state.apply_sgr(&[28]);
+            state.write_cell();
+        }
+        if mask & 0x80 != 0 {
+            state.apply_sgr(&[29]);
+            state.write_cell();
+        }
     }
 
     #[test]
@@ -124,7 +157,10 @@ mod tests {
             set_extended(&mut state, mask);
             let expected = state.current();
             state.write_cell();
-            assert_eq!(state.written()[0].character_attributes(), expected.character_attributes());
+            assert_eq!(
+                state.written()[0].character_attributes(),
+                expected.character_attributes()
+            );
             reset_extended_one_by_one(&mut state, mask);
             state.apply_sgr(&[0]);
             assert_eq!(state.current(), TextAttribute::default());

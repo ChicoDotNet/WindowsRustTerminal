@@ -1,16 +1,10 @@
-use terminal_buffer::rect_ops::{fill_rect, ScreenRect};
+use terminal_buffer::rect_ops::{ScreenRect, fill_rect};
 use terminal_buffer::screen_erase::{hard_reset, set_character_protection};
 use terminal_buffer::text_attribute::TextAttribute;
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
 use terminal_buffer::text_color::Rgb;
 
-fn assert_cell(
-    buffer: &TextBuffer,
-    x: u16,
-    y: u16,
-    ch: u8,
-    attribute: TextAttribute,
-) {
+fn assert_cell(buffer: &TextBuffer, x: u16, y: u16, ch: u8, attribute: TextAttribute) {
     let row = buffer.row(i32::from(y));
     assert_eq!(row.glyph_at(i32::from(x)), &[u16::from(ch)]);
     assert_eq!(row.attribute_at(i32::from(x)), attribute);
@@ -60,8 +54,7 @@ fn microsoft_screen_buffer_protected_attribute_tests_contract() {
 #[test]
 fn microsoft_screen_buffer_hard_reset_buffer_contract() {
     let defaults = TextAttribute::default();
-    let colored =
-        TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
+    let colored = TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
     let mut buffer = TextBuffer::new(40, 60, defaults).unwrap();
     let mut viewport = ScreenRect::new(0, 0, 40, 25);
     let mut cursor = TextBufferPoint::new(0, 1);

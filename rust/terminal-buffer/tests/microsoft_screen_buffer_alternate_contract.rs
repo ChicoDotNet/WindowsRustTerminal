@@ -84,7 +84,13 @@ fn microsoft_screen_buffer_alt_buffer_vt_dispatching_contract() {
     state.use_alternate();
     state.dispatch_vt("\u{1b}[5;6H");
     assert_eq!((state.main().cursor.x, state.main().cursor.y), (0, 0));
-    assert_eq!((state.alternate().unwrap().cursor.x, state.alternate().unwrap().cursor.y), (5, 4));
+    assert_eq!(
+        (
+            state.alternate().unwrap().cursor.x,
+            state.alternate().unwrap().cursor.y
+        ),
+        (5, 4)
+    );
     state.dispatch_vt("\u{1b}[48;2;255;0;255m");
     assert!(!state.main().magenta_background);
     assert!(state.alternate().unwrap().magenta_background);
@@ -111,7 +117,10 @@ fn microsoft_screen_buffer_resize_alt_buffer_contract() {
     assert_eq!(state.alternate().unwrap().viewport, original_main);
 
     state.resize_alternate_viewport(82, 27);
-    assert_eq!(state.alternate().unwrap().viewport, ViewportSize::new(82, 27));
+    assert_eq!(
+        state.alternate().unwrap().viewport,
+        ViewportSize::new(82, 27)
+    );
     assert_eq!(state.main().viewport, original_main);
 
     state.use_main();
@@ -194,7 +203,13 @@ fn microsoft_screen_buffer_clear_alternate_buffer_contract() {
     state.clear_active_text();
     assert!(state.alternate().unwrap().text.is_empty());
     state.set_console_cursor_position(0, 0);
-    assert_eq!((state.alternate().unwrap().cursor.x, state.alternate().unwrap().cursor.y), (0, 0));
+    assert_eq!(
+        (
+            state.alternate().unwrap().cursor.x,
+            state.alternate().unwrap().cursor.y
+        ),
+        (0, 0)
+    );
 
     assert_eq!(state.main().text, "foo\nfoo");
     assert_eq!((state.main().cursor.x, state.main().cursor.y), (3, 1));

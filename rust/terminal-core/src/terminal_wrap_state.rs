@@ -69,7 +69,11 @@ mod tests {
         for (index, expected) in MICROSOFT_100_CHARS.chars().enumerate() {
             let x = i32::try_from(index % 80).expect("column fits i32");
             let y = i32::try_from(index / 80).expect("row fits i32");
-            assert_eq!(state.char_at(Point::new(x, y)), Some(expected), "index={index}");
+            assert_eq!(
+                state.char_at(Point::new(x, y)),
+                Some(expected),
+                "index={index}"
+            );
         }
     }
 

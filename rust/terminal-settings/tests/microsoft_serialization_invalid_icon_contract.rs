@@ -1,7 +1,4 @@
-use terminal_settings::{
-    cascadia_settings::CascadiaSettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{cascadia_settings::CascadiaSettingsDocument, settings_json::JsonValue};
 
 #[test]
 fn microsoft_serialization_profile_with_invalid_icon_contract() {
@@ -44,5 +41,8 @@ fn microsoft_serialization_profile_with_invalid_icon_contract() {
         profile.get("commandline").and_then(JsonValue::as_str),
         Some("cmd.exe")
     );
-    assert_eq!(profile.get("historySize").and_then(JsonValue::as_f64), Some(1.0));
+    assert_eq!(
+        profile.get("historySize").and_then(JsonValue::as_f64),
+        Some(1.0)
+    );
 }

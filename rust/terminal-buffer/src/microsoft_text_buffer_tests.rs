@@ -14,7 +14,7 @@ use crate::resize_integrity::resize_traditional;
 use crate::row::Row;
 use crate::row_writer::{replace_text, replace_text_with_attribute};
 use crate::rtf_text::append_rtf_text;
-use crate::screen_erase::{erase_line, EraseType};
+use crate::screen_erase::{EraseType, erase_line};
 use crate::sgr::apply_sgr;
 use crate::text_attribute::{TextAttribute, UnderlineStyle};
 use crate::text_buffer::{TextBuffer, TextBufferPoint};
@@ -219,7 +219,10 @@ fn microsoft_text_buffer_rgb_erase_line_contract() {
     .unwrap();
     for x in 1..8 {
         assert_eq!(buffer.row(0).glyph_at(x), &[u16::from(b' ')]);
-        assert_eq!(rgb_background(buffer.row(0).attribute_at(x)), Rgb::new(128, 128, 255));
+        assert_eq!(
+            rgb_background(buffer.row(0).attribute_at(x)),
+            Rgb::new(128, 128, 255)
+        );
     }
 }
 

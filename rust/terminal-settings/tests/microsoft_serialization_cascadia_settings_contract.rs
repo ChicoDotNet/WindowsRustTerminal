@@ -48,8 +48,14 @@ fn microsoft_serialization_cascadia_settings_contract() {
         .to_json_value()
         .as_object()
         .expect("CascadiaSettings remains an object");
-    assert_eq!(root.get("initialRows").and_then(JsonValue::as_f64), Some(30.0));
-    assert_eq!(root.get("alwaysOnTop").and_then(JsonValue::as_bool), Some(false));
+    assert_eq!(
+        root.get("initialRows").and_then(JsonValue::as_f64),
+        Some(30.0)
+    );
+    assert_eq!(
+        root.get("alwaysOnTop").and_then(JsonValue::as_bool),
+        Some(false)
+    );
     assert!(matches!(root.get("schemes"), Some(JsonValue::Array(values)) if values.len() == 1));
     assert!(matches!(root.get("actions"), Some(JsonValue::Array(values)) if values.len() == 1));
     assert!(matches!(root.get("keybindings"), Some(JsonValue::Array(values)) if values.len() == 1));

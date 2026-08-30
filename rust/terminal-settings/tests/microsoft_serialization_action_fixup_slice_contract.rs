@@ -1,7 +1,8 @@
 use terminal_settings::{action_map::ActionMapDocument, settings_json};
 
 fn assert_exact_fixup(old: &str, expected: &str, inbox: Option<&str>) {
-    let inbox = inbox.map(|json| ActionMapDocument::from_json(json).expect("inbox vector is valid"));
+    let inbox =
+        inbox.map(|json| ActionMapDocument::from_json(json).expect("inbox vector is valid"));
     let mut document = ActionMapDocument::from_json(old).expect("Microsoft old vector is valid");
     assert!(
         document
@@ -150,10 +151,22 @@ fn microsoft_serialization_same_name_different_commands_are_retained_contract() 
 
     let first = actions[0].as_object().expect("first action is an object");
     let second = actions[1].as_object().expect("second action is an object");
-    assert_eq!(first.get("name").and_then(|value| value.as_str()), Some("mySendInput"));
-    assert_eq!(second.get("name").and_then(|value| value.as_str()), Some("mySendInput"));
-    assert_eq!(first.get("id").and_then(|value| value.as_str()), Some(expected_first));
-    assert_eq!(second.get("id").and_then(|value| value.as_str()), Some(expected_second));
+    assert_eq!(
+        first.get("name").and_then(|value| value.as_str()),
+        Some("mySendInput")
+    );
+    assert_eq!(
+        second.get("name").and_then(|value| value.as_str()),
+        Some("mySendInput")
+    );
+    assert_eq!(
+        first.get("id").and_then(|value| value.as_str()),
+        Some(expected_first)
+    );
+    assert_eq!(
+        second.get("id").and_then(|value| value.as_str()),
+        Some(expected_second)
+    );
     assert_ne!(expected_first, expected_second);
 
     assert!(
@@ -200,25 +213,33 @@ fn microsoft_serialization_multiple_actions_are_collapsed_contract() {
         .and_then(|value| value.as_array())
         .expect("fixed actions remain an array");
     assert_eq!(actions.len(), 1);
-    let action = actions[0].as_object().expect("collapsed action is an object");
-    assert_eq!(action.get("name").and_then(|value| value.as_str()), Some("foo"));
+    let action = actions[0]
+        .as_object()
+        .expect("collapsed action is an object");
+    assert_eq!(
+        action.get("name").and_then(|value| value.as_str()),
+        Some("foo")
+    );
     assert_eq!(
         action.get("icon").and_then(|value| value.as_str()),
         Some("myCoolIconPath.png")
     );
-    assert_eq!(action.get("id").and_then(|value| value.as_str()), Some(expected_id));
+    assert_eq!(
+        action.get("id").and_then(|value| value.as_str()),
+        Some(expected_id)
+    );
 
     let keybindings = root
         .get("keybindings")
         .and_then(|value| value.as_array())
         .expect("legacy keys are emitted as modern keybindings");
     assert_eq!(keybindings.len(), 2);
-    for (binding, expected_keys) in keybindings
-        .iter()
-        .zip(["ctrl+shift+w", "ctrl+shift+x"])
-    {
+    for (binding, expected_keys) in keybindings.iter().zip(["ctrl+shift+w", "ctrl+shift+x"]) {
         let binding = binding.as_object().expect("keybinding is an object");
-        assert_eq!(binding.get("id").and_then(|value| value.as_str()), Some(expected_id));
+        assert_eq!(
+            binding.get("id").and_then(|value| value.as_str()),
+            Some(expected_id)
+        );
         assert_eq!(
             binding.get("keys").and_then(|value| value.as_str()),
             Some(expected_keys)

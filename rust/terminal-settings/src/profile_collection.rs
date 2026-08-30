@@ -221,9 +221,7 @@ impl ProfileCollection {
         user_json: &str,
     ) -> Result<Self, ProfileParseError> {
         let value = settings_json::parse(user_json).map_err(|_| ProfileParseError::InvalidJson)?;
-        let root = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
         let profiles = parse_profile_objects_from_root(root)?
             .into_iter()
             .map(LayeredProfile::from_object)
@@ -309,7 +307,8 @@ fn known_color_scheme_names(root: &JsonObject) -> Result<Vec<&str>, ProfileParse
         let object = scheme
             .as_object()
             .ok_or(ProfileParseError::ExpectedObject)?;
-        if let JsonMember::Value(JsonValue::String(name)) = JsonMember::from_object(object, "name") {
+        if let JsonMember::Value(JsonValue::String(name)) = JsonMember::from_object(object, "name")
+        {
             names.push(name.as_str());
         }
     }
@@ -366,9 +365,7 @@ fn profile_has_environment_name_collision(
 
 fn parse_legacy_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
     let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-    let root = value
-        .as_object()
-        .ok_or(ProfileParseError::ExpectedObject)?;
+    let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
     let values = match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => values,
@@ -380,9 +377,7 @@ fn parse_legacy_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileP
 
 fn parse_modern_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileParseError> {
     let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-    let root = value
-        .as_object()
-        .ok_or(ProfileParseError::ExpectedObject)?;
+    let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
     let profiles = match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => return Ok(Vec::new()),
         JsonMember::Value(JsonValue::Object(profiles)) => profiles,
@@ -397,7 +392,9 @@ fn parse_modern_profile_objects(input: &str) -> Result<Vec<JsonObject>, ProfileP
     clone_profile_objects(values)
 }
 
-fn parse_profile_objects_from_root(root: &JsonObject) -> Result<Vec<JsonObject>, ProfileParseError> {
+fn parse_profile_objects_from_root(
+    root: &JsonObject,
+) -> Result<Vec<JsonObject>, ProfileParseError> {
     match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => clone_profile_objects(values),

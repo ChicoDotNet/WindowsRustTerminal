@@ -31,9 +31,7 @@ fn unexpand_prefix(title: &str, system_root: &str) -> String {
     }
 
     let (prefix, suffix) = title.split_at(system_root.len());
-    if prefix.eq_ignore_ascii_case(system_root)
-        && (suffix.is_empty() || suffix.starts_with('\\'))
-    {
+    if prefix.eq_ignore_ascii_case(system_root) && (suffix.is_empty() || suffix.starts_with('\\')) {
         format!("%SystemRoot%{suffix}")
     } else {
         title.to_owned()

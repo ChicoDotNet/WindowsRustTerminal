@@ -1,7 +1,4 @@
-use terminal_settings::{
-    cascadia_settings::CascadiaSettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{cascadia_settings::CascadiaSettingsDocument, settings_json::JsonValue};
 
 #[test]
 fn microsoft_serialization_dont_roundtrip_no_reload_env_vars_contract() {
@@ -34,7 +31,8 @@ fn microsoft_serialization_dont_roundtrip_no_reload_env_vars_contract() {
         .expect("Cascadia settings remains an object");
 
     assert!(
-        root.get("compatibility.reloadEnvironmentVariables").is_none(),
+        root.get("compatibility.reloadEnvironmentVariables")
+            .is_none(),
         "round-trip must not synthesize the legacy root setting"
     );
 
@@ -56,7 +54,10 @@ fn microsoft_serialization_dont_roundtrip_no_reload_env_vars_contract() {
         profile.get("commandline").and_then(JsonValue::as_str),
         Some("cmd.exe")
     );
-    assert_eq!(profile.get("historySize").and_then(JsonValue::as_f64), Some(1.0));
+    assert_eq!(
+        profile.get("historySize").and_then(JsonValue::as_f64),
+        Some(1.0)
+    );
 
     let actions = root
         .get("actions")

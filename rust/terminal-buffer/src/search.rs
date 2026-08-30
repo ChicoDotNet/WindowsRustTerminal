@@ -86,9 +86,8 @@ impl TextBuffer {
                 let start_x = row.leading_column_at_char_offset(
                     isize::try_from(char_begin).unwrap_or(isize::MAX),
                 );
-                let end_x = row.leading_column_at_char_offset(
-                    isize::try_from(char_end).unwrap_or(isize::MAX),
-                );
+                let end_x = row
+                    .leading_column_at_char_offset(isize::try_from(char_end).unwrap_or(isize::MAX));
                 matches.push(TextSearchSpan::new(
                     TextBufferPoint::new(start_x, y),
                     TextBufferPoint::new(end_x, y),
@@ -148,9 +147,8 @@ impl TextBuffer {
                 let start_x = row.leading_column_at_char_offset(
                     isize::try_from(char_begin).unwrap_or(isize::MAX),
                 );
-                let end_x = row.leading_column_at_char_offset(
-                    isize::try_from(char_end).unwrap_or(isize::MAX),
-                );
+                let end_x = row
+                    .leading_column_at_char_offset(isize::try_from(char_end).unwrap_or(isize::MAX));
                 matches.push(TextSearchSpan::new(
                     TextBufferPoint::new(start_x, y),
                     TextBufferPoint::new(end_x, y),
@@ -176,9 +174,7 @@ impl PatternAtom {
         match self {
             Self::Literal(expected) => char_equals(*expected, scalar, case_insensitive),
             Self::Class(items) => items.iter().any(|item| match item {
-                ClassItem::Single(expected) => {
-                    char_equals(*expected, scalar, case_insensitive)
-                }
+                ClassItem::Single(expected) => char_equals(*expected, scalar, case_insensitive),
                 ClassItem::Range(begin, end) => {
                     if (*begin..=*end).contains(&scalar) {
                         true
@@ -187,9 +183,7 @@ impl PatternAtom {
                         let folded_begin = simple_lower(*begin);
                         let folded_end = simple_lower(*end);
                         match (folded_scalar, folded_begin, folded_end) {
-                            (Some(value), Some(begin), Some(end)) => {
-                                (begin..=end).contains(&value)
-                            }
+                            (Some(value), Some(begin), Some(end)) => (begin..=end).contains(&value),
                             _ => false,
                         }
                     } else {

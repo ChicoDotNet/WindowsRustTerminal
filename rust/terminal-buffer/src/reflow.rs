@@ -106,11 +106,7 @@ fn collect_tail_plans(buffer: &TextBuffer) -> Vec<ReflowTailPlan> {
     plans
 }
 
-fn apply_trailing_attributes(
-    buffer: &mut TextBuffer,
-    plans: &[ReflowTailPlan],
-    new_width: u16,
-) {
+fn apply_trailing_attributes(buffer: &mut TextBuffer, plans: &[ReflowTailPlan], new_width: u16) {
     let height = i32::from(buffer.height());
     let mut destination_y = 0_i32;
 
@@ -176,11 +172,7 @@ mod tests {
             let column = start + u16::try_from(offset).expect("test fixture fits in one row");
             row.replace_glyph(i32::from(column), 1, &[u16::from(byte)])
                 .expect("test fixture glyph fits");
-            row.replace_attributes(
-                i32::from(column),
-                i32::from(column + 1),
-                attribute,
-            );
+            row.replace_attributes(i32::from(column), i32::from(column + 1), attribute);
         }
     }
 

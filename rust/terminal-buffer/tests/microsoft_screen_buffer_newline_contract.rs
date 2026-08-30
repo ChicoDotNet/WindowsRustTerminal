@@ -1,16 +1,15 @@
-use terminal_buffer::rect_ops::{fill_rect, ScreenRect};
+use terminal_buffer::rect_ops::{ScreenRect, fill_rect};
 use terminal_buffer::text_attribute::{TextAttribute, UnderlineStyle};
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
 use terminal_buffer::text_color::Rgb;
-use terminal_buffer::viewport_index::{line_feed, LineFeedMargins};
+use terminal_buffer::viewport_index::{LineFeedMargins, line_feed};
 
 const WIDTH: u16 = 80;
 const HEIGHT: u16 = 40;
 const VIEWPORT_HEIGHT: u16 = 25;
 
 fn active_fill_attribute() -> TextAttribute {
-    let mut attribute =
-        TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
+    let mut attribute = TextAttribute::from_rgb(Rgb::new(12, 34, 56), Rgb::new(78, 90, 12));
     attribute.set_crossed_out(true);
     attribute.set_reverse_video(true);
     attribute.set_underline_style(UnderlineStyle::Curly);
@@ -40,13 +39,7 @@ fn write_cell(buffer: &mut TextBuffer, cursor: &mut TextBufferPoint, glyph: u8) 
     cursor.x = cursor.x.saturating_add(1).min(buffer.width() - 1);
 }
 
-fn assert_cell(
-    buffer: &TextBuffer,
-    x: u16,
-    y: u16,
-    glyph: u8,
-    attribute: TextAttribute,
-) {
+fn assert_cell(buffer: &TextBuffer, x: u16, y: u16, glyph: u8, attribute: TextAttribute) {
     let row = buffer.row(i32::from(y));
     assert_eq!(row.glyph_at(i32::from(x)), &[u16::from(glyph)]);
     assert_eq!(row.attribute_at(i32::from(x)), attribute);

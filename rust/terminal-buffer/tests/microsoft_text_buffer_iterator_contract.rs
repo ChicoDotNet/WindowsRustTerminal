@@ -263,7 +263,9 @@ fn microsoft_text_buffer_iterator_dereference_operator_cell_contract() {
         .expect("wide glyph fits");
     buffer.row_mut(0).replace_attributes(0, 2, attribute);
 
-    let cell = cell_at(&buffer, 0, 0).cell().expect("valid cell dereferences");
+    let cell = cell_at(&buffer, 0, 0)
+        .cell()
+        .expect("valid cell dereferences");
     assert_eq!(cell.chars(), &[0x4e00]);
     assert_eq!(cell.dbcs_attribute(), DbcsAttribute::Leading);
     assert_eq!(cell.text_attribute(), attribute);
@@ -315,9 +317,8 @@ fn microsoft_text_buffer_iterator_constructed_limits_contract() {
         Err(TextBufferIteratorError::InvalidPoint)
     );
 
-    let invalid_bounds =
-        TextBufferIteratorBounds::inclusive(0, 0, buffer.width(), buffer.height())
-            .expect("ordered but outside buffer");
+    let invalid_bounds = TextBufferIteratorBounds::inclusive(0, 0, buffer.width(), buffer.height())
+        .expect("ordered but outside buffer");
     assert_eq!(
         TextBufferCellIterator::with_bounds(&buffer, 3, 1, invalid_bounds),
         Err(TextBufferIteratorError::InvalidBounds)

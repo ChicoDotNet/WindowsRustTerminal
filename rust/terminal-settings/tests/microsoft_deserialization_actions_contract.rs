@@ -22,11 +22,26 @@ fn microsoft_deserialization_commands_and_keybindings_contract() {
 
     assert_eq!(actions.keybinding_count(), 5);
     assert_eq!(actions.name_count(), 1);
-    assert_eq!(actions.split_direction_for_key("ctrl+a"), Some(SplitDirection::Right));
-    assert_eq!(actions.split_direction_for_key("ctrl+c"), Some(SplitDirection::Right));
-    assert_eq!(actions.split_direction_for_key("ctrl+d"), Some(SplitDirection::Right));
-    assert_eq!(actions.split_direction_for_key("ctrl+e"), Some(SplitDirection::Down));
-    assert_eq!(actions.split_direction_for_key("ctrl+f"), Some(SplitDirection::Down));
+    assert_eq!(
+        actions.split_direction_for_key("ctrl+a"),
+        Some(SplitDirection::Right)
+    );
+    assert_eq!(
+        actions.split_direction_for_key("ctrl+c"),
+        Some(SplitDirection::Right)
+    );
+    assert_eq!(
+        actions.split_direction_for_key("ctrl+d"),
+        Some(SplitDirection::Right)
+    );
+    assert_eq!(
+        actions.split_direction_for_key("ctrl+e"),
+        Some(SplitDirection::Down)
+    );
+    assert_eq!(
+        actions.split_direction_for_key("ctrl+f"),
+        Some(SplitDirection::Down)
+    );
     assert_eq!(actions.name_action("ctrl+c"), Some("splitPane"));
     assert_eq!(actions.name_action("ctrl+b"), None);
 }
@@ -182,10 +197,25 @@ fn microsoft_deserialization_overwrite_parent_action_and_keybinding_contract() {
         )
         .expect("child action/keybinding layer parses");
 
-    assert_eq!(actions.action_id_for_key("ctrl+shift+w"), Some("Parent.ClosePane"));
+    assert_eq!(
+        actions.action_id_for_key("ctrl+shift+w"),
+        Some("Parent.ClosePane")
+    );
     assert_eq!(actions.action_name_for_key("ctrl+shift+w"), Some("newTab"));
-    assert_eq!(actions.action_id_for_key("ctrl+shift+x"), Some("Child.ClosePane"));
-    assert_eq!(actions.action_name_for_key("ctrl+shift+x"), Some("closePane"));
-    assert_eq!(actions.action_id_for_key("ctrl+shift+y"), Some("Parent.ClosePane2"));
-    assert_eq!(actions.action_name_for_key("ctrl+shift+y"), Some("closePane"));
+    assert_eq!(
+        actions.action_id_for_key("ctrl+shift+x"),
+        Some("Child.ClosePane")
+    );
+    assert_eq!(
+        actions.action_name_for_key("ctrl+shift+x"),
+        Some("closePane")
+    );
+    assert_eq!(
+        actions.action_id_for_key("ctrl+shift+y"),
+        Some("Parent.ClosePane2")
+    );
+    assert_eq!(
+        actions.action_name_for_key("ctrl+shift+y"),
+        Some("closePane")
+    );
 }

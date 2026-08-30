@@ -244,7 +244,10 @@ mod tests {
     fn assert_character_cell(cell: &OwnedOutputCell, character: u16, dbcs: DbcsAttribute) {
         assert_eq!(cell.chars(), &[character]);
         assert_eq!(cell.dbcs_attribute(), dbcs);
-        assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Current);
+        assert_eq!(
+            cell.text_attribute_behavior(),
+            TextAttributeBehavior::Current
+        );
     }
 
     #[test]
@@ -275,8 +278,7 @@ mod tests {
     #[test]
     fn microsoft_output_cell_character_fill_unlimited_contract() {
         let detector = MicrosoftWidthDetector;
-        let mut iterator =
-            OutputCellRunIterator::character_fill(u16::from(b'Q'), &detector, None);
+        let mut iterator = OutputCellRunIterator::character_fill(u16::from(b'Q'), &detector, None);
         for _ in 0..SHORT_MAX {
             assert_character_cell(
                 &iterator.next().expect("unlimited character fill"),
@@ -321,17 +323,17 @@ mod tests {
     #[test]
     fn microsoft_output_cell_text_and_attribute_fill_limited_contract() {
         let attribute = legacy_attribute(FOREGROUND_RED | BACKGROUND_BLUE);
-        let cells = OutputCellRunIterator::text_and_attribute_fill(
-            u16::from(b'Q'),
-            attribute,
-            Some(5),
-        )
-        .collect::<Vec<_>>();
+        let cells =
+            OutputCellRunIterator::text_and_attribute_fill(u16::from(b'Q'), attribute, Some(5))
+                .collect::<Vec<_>>();
         assert_eq!(cells.len(), 5);
         for cell in &cells {
             assert_eq!(cell.chars(), &[u16::from(b'Q')]);
             assert_eq!(cell.text_attribute(), attribute);
-            assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+            assert_eq!(
+                cell.text_attribute_behavior(),
+                TextAttributeBehavior::Stored
+            );
         }
     }
 
@@ -344,7 +346,10 @@ mod tests {
             let cell = iterator.next().expect("unlimited text/attribute fill");
             assert_eq!(cell.chars(), &[u16::from(b'Q')]);
             assert_eq!(cell.text_attribute(), attribute);
-            assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+            assert_eq!(
+                cell.text_attribute_behavior(),
+                TextAttributeBehavior::Stored
+            );
         }
         assert!(iterator.next().is_some());
     }
@@ -356,13 +361,19 @@ mod tests {
             unicode_char: u16::from(b'Q'),
             attributes: FOREGROUND_RED | BACKGROUND_BLUE,
         };
-        let cells = OutputCellRunIterator::char_info_fill(char_info, defaults, Some(5))
-            .collect::<Vec<_>>();
+        let cells =
+            OutputCellRunIterator::char_info_fill(char_info, defaults, Some(5)).collect::<Vec<_>>();
         assert_eq!(cells.len(), 5);
         for cell in &cells {
             assert_eq!(cell.chars(), &[u16::from(b'Q')]);
-            assert_eq!(cell.text_attribute(), legacy_attribute(char_info.attributes));
-            assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+            assert_eq!(
+                cell.text_attribute(),
+                legacy_attribute(char_info.attributes)
+            );
+            assert_eq!(
+                cell.text_attribute_behavior(),
+                TextAttributeBehavior::Stored
+            );
         }
     }
 
@@ -377,8 +388,14 @@ mod tests {
         for _ in 0..SHORT_MAX {
             let cell = iterator.next().expect("unlimited CHAR_INFO fill");
             assert_eq!(cell.chars(), &[u16::from(b'Q')]);
-            assert_eq!(cell.text_attribute(), legacy_attribute(char_info.attributes));
-            assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+            assert_eq!(
+                cell.text_attribute(),
+                legacy_attribute(char_info.attributes)
+            );
+            assert_eq!(
+                cell.text_attribute_behavior(),
+                TextAttributeBehavior::Stored
+            );
         }
         assert!(iterator.next().is_some());
     }
@@ -391,8 +408,9 @@ mod tests {
             FOREGROUND_BLUE | FOREGROUND_INTENSITY,
             BACKGROUND_GREEN,
         ];
-        let cells = OutputCellRunIterator::legacy_color_run(&colors, LegacyColorDefaults::default())
-            .collect::<Vec<_>>();
+        let cells =
+            OutputCellRunIterator::legacy_color_run(&colors, LegacyColorDefaults::default())
+                .collect::<Vec<_>>();
         assert_eq!(cells.len(), colors.len());
         for (cell, color) in cells.iter().zip(colors) {
             assert!(cell.chars().is_empty());
@@ -419,7 +437,10 @@ mod tests {
         for (cell, info) in cells.iter().zip(&infos) {
             assert_eq!(cell.chars(), &[info.unicode_char]);
             assert_eq!(cell.text_attribute(), legacy_attribute(info.attributes));
-            assert_eq!(cell.text_attribute_behavior(), TextAttributeBehavior::Stored);
+            assert_eq!(
+                cell.text_attribute_behavior(),
+                TextAttributeBehavior::Stored
+            );
         }
     }
 

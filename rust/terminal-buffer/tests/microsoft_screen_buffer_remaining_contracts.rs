@@ -5,8 +5,7 @@ use terminal_buffer::text_color::TextColor;
 use terminal_buffer::virtual_bottom::VirtualBottomState;
 
 const INACTIVE_CONTROLS: [u16; 24] = [
-    0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30,
-    31,
+    0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31,
 ];
 
 fn assert_ascii(buffer: &TextBuffer, row: u16, text: &[u8]) {
@@ -91,7 +90,13 @@ fn microsoft_screen_buffer_dont_reset_colors_above_virtual_bottom_contract() {
     viewport.set_cursor_direct(0, output_row);
     assert_eq!(viewport.virtual_bottom(), output_row);
 
-    let mut writer = HostWriteState::new(TextBufferPoint { x: 0, y: output_row }, colored);
+    let mut writer = HostWriteState::new(
+        TextBufferPoint {
+            x: 0,
+            y: output_row,
+        },
+        colored,
+    );
     writer
         .write_vt(&mut buffer, &[u16::from(b'X')])
         .expect("colored write succeeds");
@@ -123,6 +128,12 @@ fn microsoft_screen_buffer_dont_reset_colors_above_virtual_bottom_contract() {
     assert_eq!(row.attribute_at(0), colored);
     assert_eq!(row.attribute_at(1), default);
     assert_eq!(row.attribute_at(2), default);
-    assert_eq!(writer.cursor(), TextBufferPoint { x: 3, y: output_row });
+    assert_eq!(
+        writer.cursor(),
+        TextBufferPoint {
+            x: 3,
+            y: output_row
+        }
+    );
     assert_eq!(viewport.virtual_bottom(), output_row);
 }

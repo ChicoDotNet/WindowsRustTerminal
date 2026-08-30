@@ -1,10 +1,11 @@
 use terminal_buffer::text_attribute::TextAttribute;
 use terminal_buffer::text_buffer::{TextBuffer, TextBufferPoint};
-use terminal_buffer::word_boundary::{screen_word_boundary, WordBoundary};
+use terminal_buffer::word_boundary::{WordBoundary, screen_word_boundary};
 
 fn buffer_with_ascii(text: &str) -> TextBuffer {
     let width = u16::try_from(text.len()).expect("Microsoft test text fits in a terminal row");
-    let mut buffer = TextBuffer::new(width, 10, TextAttribute::default()).expect("valid test buffer");
+    let mut buffer =
+        TextBuffer::new(width, 10, TextAttribute::default()).expect("valid test buffer");
 
     for (x, byte) in text.bytes().enumerate() {
         buffer

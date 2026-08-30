@@ -64,9 +64,7 @@ pub fn screen_word_boundary(
     }
 
     let mut end = row.navigate_to_next(i32::from(x));
-    while end < readable
-        && row.delimiter_class_at(i32::from(end), word_delimiters) == class
-    {
+    while end < readable && row.delimiter_class_at(i32::from(end), word_delimiters) == class {
         let next = row.navigate_to_next(i32::from(end));
         if next <= end {
             break;
@@ -96,7 +94,8 @@ fn trimmed_numeric_start(row: &crate::row::Row, start: u16, end: u16) -> u16 {
             .first()
             .copied()
             .unwrap_or_default();
-        if matches!(prefix, unit if unit == u16::from(b'x') || unit == u16::from(b'X') || unit == u16::from(b'n')) {
+        if matches!(prefix, unit if unit == u16::from(b'x') || unit == u16::from(b'X') || unit == u16::from(b'n'))
+        {
             return start;
         }
     }

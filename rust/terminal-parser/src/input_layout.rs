@@ -84,18 +84,16 @@ fn enrich_c0_key<M: KeyboardLayoutMapper>(key: &mut KeyEvent, mapper: &M) {
         return;
     }
 
-    let source_character = if key.unicode_char == 0x7f
-        && key.virtual_key == VK_BACK
-        && key.control_key_state != 0
-    {
-        // Microsoft's C0 test sends DEL for Ctrl+Backspace but performs the
-        // layout lookup with the original backspace character.
-        0x08
-    } else if key.unicode_char < 0x20 {
-        key.unicode_char
-    } else {
-        return;
-    };
+    let source_character =
+        if key.unicode_char == 0x7f && key.virtual_key == VK_BACK && key.control_key_state != 0 {
+            // Microsoft's C0 test sends DEL for Ctrl+Backspace but performs the
+            // layout lookup with the original backspace character.
+            0x08
+        } else if key.unicode_char < 0x20 {
+            key.unicode_char
+        } else {
+            return;
+        };
 
     let Some(mapping) = mapper.map_character(source_character) else {
         return;
@@ -218,10 +216,8 @@ mod tests {
     #[test]
     fn microsoft_input_engine_c0_full_layout_seam_contract() {
         for code_unit in 0_u16..0x20 {
-            let dispatch = LayoutMappedInputDispatch::new(
-                RecordingDispatch::default(),
-                MicrosoftUsC0Mapper,
-            );
+            let dispatch =
+                LayoutMappedInputDispatch::new(RecordingDispatch::default(), MicrosoftUsC0Mapper);
             let mut machine = StateMachine::new_input(InputStateMachineEngine::new(dispatch));
             machine.process_utf16(&[code_unit]);
 
@@ -265,15 +261,20 @@ mod tests {
                 .actions
                 .iter()
                 .find_map(|action| match action {
-                    InputAction::WriteInput(records) => records.iter().find_map(|record| match record {
-                        InputRecord::Key(key)
-                            if key.key_down
-                                && !matches!(key.virtual_key, VK_SHIFT | VK_CONTROL | VK_MENU) =>
-                        {
-                            Some(*key)
-                        }
-                        _ => None,
-                    }),
+                    InputAction::WriteInput(records) => {
+                        records.iter().find_map(|record| match record {
+                            InputRecord::Key(key)
+                                if key.key_down
+                                    && !matches!(
+                                        key.virtual_key,
+                                        VK_SHIFT | VK_CONTROL | VK_MENU
+                                    ) =>
+                            {
+                                Some(*key)
+                            }
+                            _ => None,
+                        })
+                    }
                     _ => None,
                 })
                 .expect("portable Microsoft C0 vector emits a main key record");

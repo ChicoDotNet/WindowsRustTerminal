@@ -344,12 +344,7 @@ mod tests {
         assert_eq!(row.attribute_at(i32::from(column)), attribute);
     }
 
-    fn assert_rect(
-        buffer: &TextBuffer,
-        rect: ScreenRect,
-        character: u8,
-        attribute: TextAttribute,
-    ) {
+    fn assert_rect(buffer: &TextBuffer, rect: ScreenRect, character: u8, attribute: TextAttribute) {
         for y in rect.top..rect.bottom {
             let row = buffer.row(i32::from(y));
             for x in rect.left..rect.right {
@@ -461,7 +456,9 @@ mod tests {
             copy_attr,
         )
         .unwrap();
-        buffer.row_mut(1).set_line_rendition(LineRendition::DoubleWidth);
+        buffer
+            .row_mut(1)
+            .set_line_rendition(LineRendition::DoubleWidth);
 
         copy_rect(
             &mut buffer,
@@ -502,9 +499,7 @@ mod tests {
 
         insert_cells(buffer.row_mut(0), 0, 1, 0..40, attr).unwrap();
         assert_eq!(
-            buffer
-                .row(0)
-                .text_range(1, i32::from(1 + cell_width)),
+            buffer.row(0).text_range(1, i32::from(1 + cell_width)),
             text.as_slice()
         );
 
@@ -521,9 +516,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            buffer
-                .row(0)
-                .text_range(1, i32::from(1 + cell_width)),
+            buffer.row(0).text_range(1, i32::from(1 + cell_width)),
             text.as_slice()
         );
 
@@ -546,9 +539,7 @@ mod tests {
         )
         .unwrap();
         assert_eq!(
-            buffer
-                .row(0)
-                .text_range(1, i32::from(1 + cell_width)),
+            buffer.row(0).text_range(1, i32::from(1 + cell_width)),
             text.as_slice()
         );
 

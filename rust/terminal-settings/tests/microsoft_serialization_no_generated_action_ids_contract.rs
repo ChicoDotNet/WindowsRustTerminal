@@ -44,10 +44,9 @@ fn microsoft_serialization_no_generated_ids_for_iterable_and_nested_commands_con
     // Preserve the positive half of Microsoft's native LayerJson condition so
     // this witness cannot pass through an implementation that simply returns
     // false for every document.
-    let missing_id = ActionMapDocument::from_json(
-        r#"{ "actions": [ { "command": "closePane" } ] }"#,
-    )
-    .expect("ordinary user command is valid");
+    let missing_id =
+        ActionMapDocument::from_json(r#"{ "actions": [ { "command": "closePane" } ] }"#)
+            .expect("ordinary user command is valid");
     assert!(missing_id.fixups_applied_during_load().unwrap());
 
     let legacy_keys = ActionMapDocument::from_json(

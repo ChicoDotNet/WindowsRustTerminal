@@ -133,7 +133,8 @@ mod tests {
             (7, 1, vec![u16::from(b'D')]),
             (8, 1, vec![u16::from(b'E')]),
         ] {
-            row.replace_glyph(x, width, &glyph).expect("fixture glyph fits");
+            row.replace_glyph(x, width, &glyph)
+                .expect("fixture glyph fits");
         }
     }
 

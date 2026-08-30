@@ -210,9 +210,18 @@ mod tests {
             (WrapResetControl::SetTopBottomMargins, Point::new(0, 0)),
             (WrapResetControl::SetLeftRightMargins, Point::new(0, 0)),
             (WrapResetControl::SingleWidthLine, start),
-            (WrapResetControl::DoubleWidthLine, Point::new(half_width - 1, 5)),
-            (WrapResetControl::DoubleHeightTop, Point::new(half_width - 1, 5)),
-            (WrapResetControl::DoubleHeightBottom, Point::new(half_width - 1, 5)),
+            (
+                WrapResetControl::DoubleWidthLine,
+                Point::new(half_width - 1, 5),
+            ),
+            (
+                WrapResetControl::DoubleHeightTop,
+                Point::new(half_width - 1, 5),
+            ),
+            (
+                WrapResetControl::DoubleHeightBottom,
+                Point::new(half_width - 1, 5),
+            ),
             (WrapResetControl::SetColumnMode, Point::new(0, 0)),
             (WrapResetControl::SetOriginMode, Point::new(0, 0)),
             (WrapResetControl::ResetColumnMode, Point::new(0, 0)),
@@ -223,7 +232,10 @@ mod tests {
             (WrapResetControl::CursorForward, start),
             (WrapResetControl::CursorBackward, Point::new(width - 2, 5)),
             (WrapResetControl::CursorPosition, Point::new(6, 2)),
-            (WrapResetControl::HorizontalVerticalPosition, Point::new(6, 2)),
+            (
+                WrapResetControl::HorizontalVerticalPosition,
+                Point::new(6, 2),
+            ),
             (WrapResetControl::Backspace, Point::new(width - 2, 5)),
             (WrapResetControl::LineFeed, Point::new(width - 1, 6)),
             (WrapResetControl::VerticalTab, Point::new(width - 1, 6)),
@@ -249,12 +261,19 @@ mod tests {
         for (control, expected) in cases {
             let mut state = AutowrapState::new(width, start);
             state.write_char('X');
-            assert!(state.delayed_wrap(), "{control:?} must start with pending wrap");
+            assert!(
+                state.delayed_wrap(),
+                "{control:?} must start with pending wrap"
+            );
             assert_eq!(state.cursor(), start);
 
             state.apply_reset_control(control);
             assert!(!state.delayed_wrap(), "{control:?} must clear pending wrap");
-            assert_eq!(state.cursor(), expected, "unexpected cursor after {control:?}");
+            assert_eq!(
+                state.cursor(),
+                expected,
+                "unexpected cursor after {control:?}"
+            );
         }
     }
 
@@ -267,7 +286,10 @@ mod tests {
         for marker in ['1', '2', '3', '4'] {
             four_lines.push(marker);
             if marker != '4' {
-                four_lines.extend(std::iter::repeat_n(' ', usize::try_from(width - 1).unwrap()));
+                four_lines.extend(std::iter::repeat_n(
+                    ' ',
+                    usize::try_from(width - 1).unwrap(),
+                ));
             }
         }
 

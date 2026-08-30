@@ -7,27 +7,9 @@ fn microsoft_keybindings_key_chords_contract() {
     let all_modifiers = MOD_CONTROL | MOD_ALT | MOD_SHIFT | MOD_WIN;
     let portable_cases = [
         (0, i32::from(b'A'), 0, "a", i32::from(b'A')),
-        (
-            MOD_CONTROL,
-            i32::from(b'A'),
-            0,
-            "ctrl+a",
-            i32::from(b'A'),
-        ),
-        (
-            MOD_CONTROL | MOD_SHIFT,
-            0xBB,
-            0,
-            "ctrl+shift+plus",
-            0xBB,
-        ),
-        (
-            all_modifiers,
-            255,
-            0,
-            "win+ctrl+alt+shift+vk(255)",
-            255,
-        ),
+        (MOD_CONTROL, i32::from(b'A'), 0, "ctrl+a", i32::from(b'A')),
+        (MOD_CONTROL | MOD_SHIFT, 0xBB, 0, "ctrl+shift+plus", 0xBB),
+        (all_modifiers, 255, 0, "win+ctrl+alt+shift+vk(255)", 255),
     ];
 
     for (modifiers, vkey, scan_code, expected_text, expected_vkey) in portable_cases {
@@ -68,10 +50,8 @@ fn microsoft_keybindings_layer_scancode_keybindings_contract() {
     assert_eq!(map.action_name_for_key("win+sc(41)"), Some("globalSummon"));
     assert_eq!(map.action_name_for_key("win+`"), Some("globalSummon"));
 
-    map.layer_json(
-        r#"[ { "keys": "ctrl+shift+`", "command": { "action": "quakeMode" } } ]"#,
-    )
-    .expect("different modifiers produce a distinct effective chord");
+    map.layer_json(r#"[ { "keys": "ctrl+shift+`", "command": { "action": "quakeMode" } } ]"#)
+        .expect("different modifiers produce a distinct effective chord");
     assert_eq!(map.keybinding_count(), 2);
     assert_eq!(map.action_name_for_key("ctrl+shift+`"), Some("quakeMode"));
 }
@@ -79,10 +59,8 @@ fn microsoft_keybindings_layer_scancode_keybindings_contract() {
 #[test]
 fn microsoft_keybindings_without_vkey_contract() {
     let mut map = KeyBindingsModel::new();
-    map.layer_json(
-        r#"[{"command": "quakeMode", "id": "Test.NoVKey", "keys":"shift+sc(255)"}]"#,
-    )
-    .expect("Microsoft no-VKey scancode vector layers");
+    map.layer_json(r#"[{"command": "quakeMode", "id": "Test.NoVKey", "keys":"shift+sc(255)"}]"#)
+        .expect("Microsoft no-VKey scancode vector layers");
 
     let chord = KeyChord::new(MOD_SHIFT, 0, 255);
     assert_eq!(chord.vkey(), 0);

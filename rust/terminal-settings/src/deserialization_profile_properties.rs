@@ -128,7 +128,9 @@ impl DeserializedProfilePropertySet {
 
     #[must_use]
     pub fn profile_by_name(&self, name: &str) -> Option<&DeserializedProfileProperties> {
-        self.profiles.iter().find(|profile| profile.name() == Some(name))
+        self.profiles
+            .iter()
+            .find(|profile| profile.name() == Some(name))
     }
 
     #[must_use]
@@ -153,28 +155,35 @@ fn identity_key(object: &JsonObject) -> Result<IdentityKey, DeserializationProfi
         return Ok(IdentityKey::Guid(guid));
     }
     Ok(IdentityKey::Generated {
-        name: optional_string(object, "name")?.unwrap_or_default().to_owned(),
+        name: optional_string(object, "name")?
+            .unwrap_or_default()
+            .to_owned(),
         source: optional_string(object, "source")?.map(ToOwned::to_owned),
     })
 }
 
 fn parse_root(input: &str) -> Result<JsonObject, DeserializationProfileError> {
-    let value = settings_json::parse(input).map_err(|_| DeserializationProfileError::InvalidJson)?;
+    let value =
+        settings_json::parse(input).map_err(|_| DeserializationProfileError::InvalidJson)?;
     value
         .as_object()
         .cloned()
         .ok_or(DeserializationProfileError::ExpectedRootObject)
 }
 
-fn parse_profile_objects(root: &JsonObject) -> Result<Vec<JsonObject>, DeserializationProfileError> {
+fn parse_profile_objects(
+    root: &JsonObject,
+) -> Result<Vec<JsonObject>, DeserializationProfileError> {
     match JsonMember::from_object(root, "profiles") {
         JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
         JsonMember::Value(JsonValue::Array(values)) => clone_objects(values),
-        JsonMember::Value(JsonValue::Object(profiles)) => match JsonMember::from_object(profiles, "list") {
-            JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
-            JsonMember::Value(JsonValue::Array(values)) => clone_objects(values),
-            JsonMember::Value(_) => Err(DeserializationProfileError::ExpectedProfilesArray),
-        },
+        JsonMember::Value(JsonValue::Object(profiles)) => {
+            match JsonMember::from_object(profiles, "list") {
+                JsonMember::Missing | JsonMember::Null => Ok(Vec::new()),
+                JsonMember::Value(JsonValue::Array(values)) => clone_objects(values),
+                JsonMember::Value(_) => Err(DeserializationProfileError::ExpectedProfilesArray),
+            }
+        }
         JsonMember::Value(_) => Err(DeserializationProfileError::ExpectedProfilesArray),
     }
 }
@@ -192,7 +201,8 @@ fn clone_objects(values: &[JsonValue]) -> Result<Vec<JsonObject>, Deserializatio
 }
 
 fn profile_defaults(root: &JsonObject) -> Result<Option<JsonObject>, DeserializationProfileError> {
-    let JsonMember::Value(JsonValue::Object(profiles)) = JsonMember::from_object(root, "profiles") else {
+    let JsonMember::Value(JsonValue::Object(profiles)) = JsonMember::from_object(root, "profiles")
+    else {
         return Ok(None);
     };
     match JsonMember::from_object(profiles, "defaults") {
@@ -223,13 +233,14 @@ fn optional_guid(object: &JsonObject) -> Result<Option<ProfileGuid>, Deserializa
     }
 }
 
-fn optional_i32(object: &JsonObject, key: &str) -> Result<Option<i32>, DeserializationProfileError> {
+fn optional_i32(
+    object: &JsonObject,
+    key: &str,
+) -> Result<Option<i32>, DeserializationProfileError> {
     match JsonMember::from_object(object, key) {
         JsonMember::Missing | JsonMember::Null => Ok(None),
         JsonMember::Value(JsonValue::Number(value)) => {
-            if value.fract() != 0.0
-                || *value < f64::from(i32::MIN)
-                || *value > f64::from(i32::MAX)
+            if value.fract() != 0.0 || *value < f64::from(i32::MIN) || *value > f64::from(i32::MAX)
             {
                 return Err(DeserializationProfileError::InvalidInteger);
             }
@@ -239,7 +250,9 @@ fn optional_i32(object: &JsonObject, key: &str) -> Result<Option<i32>, Deseriali
     }
 }
 
-fn parse_close_on_exit(object: &JsonObject) -> Result<CloseOnExitMode, DeserializationProfileError> {
+fn parse_close_on_exit(
+    object: &JsonObject,
+) -> Result<CloseOnExitMode, DeserializationProfileError> {
     match JsonMember::from_object(object, "closeOnExit") {
         JsonMember::Missing | JsonMember::Null => Ok(CloseOnExitMode::Automatic),
         JsonMember::Value(JsonValue::Bool(true)) => Ok(CloseOnExitMode::Graceful),

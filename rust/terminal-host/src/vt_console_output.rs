@@ -68,7 +68,10 @@ impl VtScreenOutputState {
     #[must_use]
     pub fn write_attributes(&mut self, x: i32, y: i32, attributes: &[u16]) -> VtWriteResult {
         let Some(start) = self.linear_index(x, y) else {
-            return VtWriteResult { written: 0, bytes: Vec::new() };
+            return VtWriteResult {
+                written: 0,
+                bytes: Vec::new(),
+            };
         };
         let written = attributes.len().min(self.cells.len().saturating_sub(start));
         for (cell, attributes) in self.cells[start..start + written]
@@ -91,7 +94,10 @@ impl VtScreenOutputState {
     #[must_use]
     pub fn write_characters(&mut self, x: i32, y: i32, text: &[u16]) -> VtWriteResult {
         let Some(start) = self.linear_index(x, y) else {
-            return VtWriteResult { written: 0, bytes: Vec::new() };
+            return VtWriteResult {
+                written: 0,
+                bytes: Vec::new(),
+            };
         };
         let (written, end) = self.write_glyphs(start, text.iter().copied());
         VtWriteResult {
@@ -113,7 +119,10 @@ impl VtScreenOutputState {
         suppress_for_clear_shim: bool,
     ) -> VtWriteResult {
         let Some(start) = self.linear_index(x, y) else {
-            return VtWriteResult { written: 0, bytes: Vec::new() };
+            return VtWriteResult {
+                written: 0,
+                bytes: Vec::new(),
+            };
         };
         let written = count.min(self.cells.len().saturating_sub(start));
         for cell in &mut self.cells[start..start + written] {
@@ -140,7 +149,10 @@ impl VtScreenOutputState {
         enable_clear_shim: bool,
     ) -> VtWriteResult {
         let Some(start) = self.linear_index(x, y) else {
-            return VtWriteResult { written: 0, bytes: Vec::new() };
+            return VtWriteResult {
+                written: 0,
+                bytes: Vec::new(),
+            };
         };
 
         if enable_clear_shim
@@ -200,20 +212,18 @@ impl VtScreenOutputState {
                         break;
                     }
                 }
-                if index + 1 >= self.cells.len() || index % self.width == self.width.saturating_sub(1) {
+                if index + 1 >= self.cells.len()
+                    || index % self.width == self.width.saturating_sub(1)
+                {
                     break;
                 }
 
                 let leading_attributes = self.cells[index].attributes & !WIDE_FLAGS;
                 let trailing_attributes = self.cells[index + 1].attributes & !WIDE_FLAGS;
-                self.cells[index] = HostCharInfo::new(
-                    code_unit,
-                    leading_attributes | COMMON_LVB_LEADING_BYTE,
-                );
-                self.cells[index + 1] = HostCharInfo::new(
-                    code_unit,
-                    trailing_attributes | COMMON_LVB_TRAILING_BYTE,
-                );
+                self.cells[index] =
+                    HostCharInfo::new(code_unit, leading_attributes | COMMON_LVB_LEADING_BYTE);
+                self.cells[index + 1] =
+                    HostCharInfo::new(code_unit, trailing_attributes | COMMON_LVB_TRAILING_BYTE);
                 index += 2;
             } else {
                 self.cells[index].code_unit = code_unit;
@@ -260,8 +270,7 @@ pub fn write_infos_preserving_cursor(
     infos: &[HostCharInfo],
 ) -> Vec<u8> {
     let body = write_infos(target_x, target_y, infos);
-    let mut output =
-        Vec::with_capacity(save_cursor().len() + body.len() + restore_cursor().len());
+    let mut output = Vec::with_capacity(save_cursor().len() + body.len() + restore_cursor().len());
     output.extend_from_slice(save_cursor());
     output.extend_from_slice(&body);
     output.extend_from_slice(restore_cursor());
@@ -285,10 +294,46 @@ mod tests {
 
     fn ascii_screen() -> VtScreenOutputState {
         let rows = [
-            [('A', RED), ('B', RED), ('a', BLUE), ('b', BLUE), ('C', RED), ('D', RED), ('c', BLUE), ('d', BLUE)],
-            [('E', RED), ('F', RED), ('e', BLUE), ('f', BLUE), ('G', RED), ('H', RED), ('g', BLUE), ('h', BLUE)],
-            [('i', BLUE), ('j', BLUE), ('I', RED), ('J', RED), ('k', BLUE), ('l', BLUE), ('K', RED), ('L', RED)],
-            [('m', BLUE), ('n', BLUE), ('M', RED), ('N', RED), ('o', BLUE), ('p', BLUE), ('O', RED), ('P', RED)],
+            [
+                ('A', RED),
+                ('B', RED),
+                ('a', BLUE),
+                ('b', BLUE),
+                ('C', RED),
+                ('D', RED),
+                ('c', BLUE),
+                ('d', BLUE),
+            ],
+            [
+                ('E', RED),
+                ('F', RED),
+                ('e', BLUE),
+                ('f', BLUE),
+                ('G', RED),
+                ('H', RED),
+                ('g', BLUE),
+                ('h', BLUE),
+            ],
+            [
+                ('i', BLUE),
+                ('j', BLUE),
+                ('I', RED),
+                ('J', RED),
+                ('k', BLUE),
+                ('l', BLUE),
+                ('K', RED),
+                ('L', RED),
+            ],
+            [
+                ('m', BLUE),
+                ('n', BLUE),
+                ('M', RED),
+                ('N', RED),
+                ('o', BLUE),
+                ('p', BLUE),
+                ('O', RED),
+                ('P', RED),
+            ],
         ];
         let mut state = VtScreenOutputState::new(8, 4, DEFAULT_ATTRS);
         let cells = rows
@@ -310,8 +355,14 @@ mod tests {
         let mut cells = Vec::new();
         for (ch, attributes) in rows.into_iter().flatten() {
             let unit = u16::try_from(u32::from(ch)).unwrap();
-            cells.push(HostCharInfo::new(unit, attributes | COMMON_LVB_LEADING_BYTE));
-            cells.push(HostCharInfo::new(unit, attributes | COMMON_LVB_TRAILING_BYTE));
+            cells.push(HostCharInfo::new(
+                unit,
+                attributes | COMMON_LVB_LEADING_BYTE,
+            ));
+            cells.push(HostCharInfo::new(
+                unit,
+                attributes | COMMON_LVB_TRAILING_BYTE,
+            ));
         }
         let mut state = VtScreenOutputState::new(8, 4, DEFAULT_ATTRS);
         assert!(state.replace_cells(&cells));
@@ -405,7 +456,12 @@ mod tests {
     #[test]
     fn microsoft_vt_io_fill_console_output_character_w_matches_all_source_vectors() {
         let mut blank = VtScreenOutputState::new(8, 4, DEFAULT_ATTRS);
-        assert!(blank.fill_character(0, 0, u16::from(b'a'), 0, false).bytes.is_empty());
+        assert!(
+            blank
+                .fill_character(0, 0, u16::from(b'a'), 0, false)
+                .bytes
+                .is_empty()
+        );
         assert_eq!(
             blank.fill_character(0, 0, u16::from(b' '), 32, true).bytes,
             CLEAR_SCREEN

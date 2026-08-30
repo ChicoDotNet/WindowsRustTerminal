@@ -1,7 +1,4 @@
-use terminal_settings::{
-    cascadia_settings::CascadiaSettingsDocument,
-    settings_json::JsonValue,
-};
+use terminal_settings::{cascadia_settings::CascadiaSettingsDocument, settings_json::JsonValue};
 
 #[test]
 fn microsoft_serialization_roundtrip_reload_env_vars_contract() {
@@ -64,7 +61,10 @@ fn microsoft_serialization_roundtrip_reload_env_vars_contract() {
         .to_json_value()
         .as_object()
         .expect("Cascadia settings remains an object");
-    assert!(root.get("compatibility.reloadEnvironmentVariables").is_none());
+    assert!(
+        root.get("compatibility.reloadEnvironmentVariables")
+            .is_none()
+    );
 
     let profiles = root
         .get("profiles")
@@ -90,7 +90,10 @@ fn microsoft_serialization_roundtrip_reload_env_vars_contract() {
         profile.get("commandline").and_then(JsonValue::as_str),
         Some("cmd.exe")
     );
-    assert_eq!(profile.get("historySize").and_then(JsonValue::as_f64), Some(1.0));
+    assert_eq!(
+        profile.get("historySize").and_then(JsonValue::as_f64),
+        Some(1.0)
+    );
 
     let actions = root
         .get("actions")

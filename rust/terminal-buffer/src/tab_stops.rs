@@ -80,11 +80,7 @@ impl TabStops {
 
     #[must_use]
     pub fn reverse_from(&self, column: u16) -> u16 {
-        self.stops
-            .range(..column)
-            .next_back()
-            .copied()
-            .unwrap_or(0)
+        self.stops.range(..column).next_back().copied().unwrap_or(0)
     }
 }
 

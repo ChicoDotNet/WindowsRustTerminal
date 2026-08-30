@@ -131,8 +131,22 @@ impl fmt::Display for ProfileGuid {
         write!(
             formatter,
             "{{{:02x}{:02x}{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}-{:02x}{:02x}{:02x}{:02x}{:02x}{:02x}}}",
-            b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7], b[8], b[9], b[10], b[11], b[12],
-            b[13], b[14], b[15]
+            b[0],
+            b[1],
+            b[2],
+            b[3],
+            b[4],
+            b[5],
+            b[6],
+            b[7],
+            b[8],
+            b[9],
+            b[10],
+            b[11],
+            b[12],
+            b[13],
+            b[14],
+            b[15]
         )
     }
 }
@@ -180,9 +194,7 @@ impl Profile {
     /// migrated profile settings has the wrong shape or type.
     pub fn from_json(input: &str) -> Result<Self, ProfileParseError> {
         let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-        let object = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let object = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
         let mut profile = Self::default();
         profile.layer_object(object)?;
         Ok(profile)
@@ -215,9 +227,7 @@ impl Profile {
     /// setting has the wrong shape or type.
     pub fn layer_json(&mut self, input: &str) -> Result<(), ProfileParseError> {
         let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-        let object = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let object = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
         self.layer_object(object)
     }
 
@@ -400,9 +410,7 @@ impl ProfileSettings {
     /// settings have an invalid shape or type.
     pub fn from_json(input: &str) -> Result<Self, ProfileParseError> {
         let value = settings_json::parse(input).map_err(|_| ProfileParseError::InvalidJson)?;
-        let root = value
-            .as_object()
-            .ok_or(ProfileParseError::ExpectedObject)?;
+        let root = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
 
         let profiles_object = match JsonMember::from_object(root, "profiles") {
             JsonMember::Value(JsonValue::Object(value)) => value,
@@ -428,9 +436,7 @@ impl ProfileSettings {
             JsonMember::Value(JsonValue::Array(values)) => {
                 profiles.reserve(values.len());
                 for value in values {
-                    let object = value
-                        .as_object()
-                        .ok_or(ProfileParseError::ExpectedObject)?;
+                    let object = value.as_object().ok_or(ProfileParseError::ExpectedObject)?;
                     let mut profile = defaults.create_child();
                     profile.layer_object(object)?;
                     profiles.push(profile);

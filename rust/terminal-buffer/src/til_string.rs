@@ -129,12 +129,18 @@ pub fn split_preserve_empty(input: &str, delimiter: char) -> Vec<&str> {
 
 #[must_use]
 pub fn clean_filename(input: &str) -> String {
-    input.chars().filter(|ch| !is_invalid_filename_ascii(*ch)).collect()
+    input
+        .chars()
+        .filter(|ch| !is_invalid_filename_ascii(*ch))
+        .collect()
 }
 
 #[must_use]
 pub fn clean_path(input: &str) -> String {
-    input.chars().filter(|ch| !is_invalid_path_ascii(*ch)).collect()
+    input
+        .chars()
+        .filter(|ch| !is_invalid_path_ascii(*ch))
+        .collect()
 }
 
 #[must_use]
@@ -211,26 +217,47 @@ mod tests {
 
     #[test]
     fn microsoft_til_string_visualize_control_codes() {
-        assert_eq!(visualize_control_codes("\u{1b}[A \u{1b}[B\u{7f}"), "\u{241b}[A\u{2423}\u{241b}[B\u{2421}");
+        assert_eq!(
+            visualize_control_codes("\u{1b}[A \u{1b}[B\u{7f}"),
+            "\u{241b}[A\u{2423}\u{241b}[B\u{2421}"
+        );
     }
 
     #[test]
     fn microsoft_til_string_starts_with() {
         for (value, prefix, expected) in [
-            ("", "", true), ("abc", "", true), ("abc", "a", true), ("abc", "ab", true),
-            ("abc", "abc", true), ("abc", "abcd", false), ("", "abc", false),
-            ("a", "abc", false), ("ab", "abc", false), ("abcd", "abc", true),
+            ("", "", true),
+            ("abc", "", true),
+            ("abc", "a", true),
+            ("abc", "ab", true),
+            ("abc", "abc", true),
+            ("abc", "abcd", false),
+            ("", "abc", false),
+            ("a", "abc", false),
+            ("ab", "abc", false),
+            ("abcd", "abc", true),
         ] {
-            assert_eq!(starts_with(value, prefix), expected, "{value:?}, {prefix:?}");
+            assert_eq!(
+                starts_with(value, prefix),
+                expected,
+                "{value:?}, {prefix:?}"
+            );
         }
     }
 
     #[test]
     fn microsoft_til_string_ends_with() {
         for (value, suffix, expected) in [
-            ("", "", true), ("abc", "", true), ("abc", "c", true), ("abc", "bc", true),
-            ("abc", "abc", true), ("abc", "0abc", false), ("", "abc", false),
-            ("c", "abc", false), ("bc", "abc", false), ("0abc", "abc", true),
+            ("", "", true),
+            ("abc", "", true),
+            ("abc", "c", true),
+            ("abc", "bc", true),
+            ("abc", "abc", true),
+            ("abc", "0abc", false),
+            ("", "abc", false),
+            ("c", "abc", false),
+            ("bc", "abc", false),
+            ("0abc", "abc", true),
         ] {
             assert_eq!(ends_with(value, suffix), expected, "{value:?}, {suffix:?}");
         }
@@ -257,7 +284,16 @@ mod tests {
 
     #[test]
     fn microsoft_til_string_parse_unsigned() {
-        for invalid in ["", "0x", "Z", "0xZ", "0Z", "123abc", "0123abc", "0x100000000"] {
+        for invalid in [
+            "",
+            "0x",
+            "Z",
+            "0xZ",
+            "0Z",
+            "123abc",
+            "0123abc",
+            "0x100000000",
+        ] {
             assert_eq!(parse_unsigned_u32(invalid), None, "{invalid:?}");
         }
         assert_eq!(parse_unsigned_u32("0"), Some(0));
@@ -271,7 +307,17 @@ mod tests {
 
     #[test]
     fn microsoft_til_string_parse_signed() {
-        for invalid in ["", "-", "--", "--0", "-0Z", "-123abc", "-0123abc", "0x80000000", "-0x80000001"] {
+        for invalid in [
+            "",
+            "-",
+            "--",
+            "--0",
+            "-0Z",
+            "-123abc",
+            "-0123abc",
+            "0x80000000",
+            "-0x80000001",
+        ] {
             assert_eq!(parse_signed_i32(invalid), None, "{invalid:?}");
         }
         assert_eq!(parse_signed_i32("0"), Some(0));
@@ -316,8 +362,14 @@ mod tests {
         assert_eq!(split_preserve_empty("foo", ' '), ["foo"]);
         assert_eq!(split_preserve_empty(" foo", ' '), ["", "foo"]);
         assert_eq!(split_preserve_empty("foo ", ' '), ["foo", ""]);
-        assert_eq!(split_preserve_empty("foo bar baz", ' '), ["foo", "bar", "baz"]);
-        assert_eq!(split_preserve_empty(";;foo;;bar;;", ';'), ["", "", "foo", "", "bar", "", ""]);
+        assert_eq!(
+            split_preserve_empty("foo bar baz", ' '),
+            ["foo", "bar", "baz"]
+        );
+        assert_eq!(
+            split_preserve_empty(";;foo;;bar;;", ';'),
+            ["", "", "foo", "", "bar", "", ""]
+        );
     }
 
     #[test]
@@ -329,16 +381,29 @@ mod tests {
 
     #[test]
     fn microsoft_til_string_legal_path() {
-        assert!(is_legal_path(r"C:\Users\Documents and Settings\Users\;\Why not"));
-        assert!(!is_legal_path(r#"C:\Users\Documents and Settings\"Quote-un-quote users""#));
+        assert!(is_legal_path(
+            r"C:\Users\Documents and Settings\Users\;\Why not"
+        ));
+        assert!(!is_legal_path(
+            r#"C:\Users\Documents and Settings\"Quote-un-quote users""#
+        ));
     }
 
     #[test]
     fn microsoft_til_string_iterate_font_families() {
-        assert_eq!(iterate_font_families(r#"  foo  ," b  a  r ",b\"az"#), ["foo", " b  a  r ", "b\"az"]);
+        assert_eq!(
+            iterate_font_families(r#"  foo  ," b  a  r ",b\"az"#),
+            ["foo", " b  a  r ", "b\"az"]
+        );
         assert_eq!(iterate_font_families(r#""foo, bar""#), ["foo, bar"]);
-        assert_eq!(iterate_font_families(r#"'"foo"', "'bar'""#), ["\"foo\"", "'bar'"]);
-        assert_eq!(iterate_font_families(r#""\"foo\"", '\'bar\''"#), ["\"foo\"", "'bar'"]);
+        assert_eq!(
+            iterate_font_families(r#"'"foo"', "'bar'""#),
+            ["\"foo\"", "'bar'"]
+        );
+        assert_eq!(
+            iterate_font_families(r#""\"foo\"", '\'bar\''"#),
+            ["\"foo\"", "'bar'"]
+        );
         assert_eq!(iterate_font_families(",,,,foo,,,,"), ["foo"]);
     }
 }

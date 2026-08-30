@@ -44,7 +44,10 @@ impl TerminalApiState {
         if index > u8::MAX as usize {
             return false;
         }
-        let payload = format!("{index};rgb:{:02x}/{:02x}/{:02x}", color.r, color.g, color.b);
+        let payload = format!(
+            "{index};rgb:{:02x}/{:02x}/{:02x}",
+            color.r, color.g, color.b
+        );
         self.colors.apply_osc(4, &payload)
     }
 
@@ -260,34 +263,64 @@ mod tests {
     #[test]
     fn microsoft_terminal_api_taskbar_progress_contract() {
         let mut terminal = TerminalApiState::default();
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (0, 0));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (0, 0)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(1), Some(50)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (1, 50));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (1, 50)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(0), Some(0)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (0, 0));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (0, 0)
+        );
 
         assert!(!terminal.set_taskbar_progress(Some(5), Some(50)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (0, 0));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (0, 0)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(1), Some(999)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (1, 100));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (1, 100)
+        );
 
         assert!(terminal.set_taskbar_progress(None, None));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (0, 0));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (0, 0)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(1), Some(80)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (1, 80));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (1, 80)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(2), None));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (2, 80));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (2, 80)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(3), Some(75)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (3, 80));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (3, 80)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(0), Some(50)));
-        assert_eq!((terminal.taskbar_state(), terminal.taskbar_progress()), (0, 0));
+        assert_eq!(
+            (terminal.taskbar_state(), terminal.taskbar_progress()),
+            (0, 0)
+        );
 
         assert!(terminal.set_taskbar_progress(Some(2), None));
         assert_eq!(terminal.taskbar_state(), 2);

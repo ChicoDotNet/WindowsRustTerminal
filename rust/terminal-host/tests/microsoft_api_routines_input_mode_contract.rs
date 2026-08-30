@@ -1,7 +1,7 @@
 use terminal_host::api_routines::{
-    ConsoleInputModeState, InputModeStatus, ENABLE_AUTO_POSITION, ENABLE_ECHO_INPUT,
-    ENABLE_EXTENDED_FLAGS, ENABLE_INSERT_MODE, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT,
-    ENABLE_QUICK_EDIT_MODE,
+    ConsoleInputModeState, ENABLE_AUTO_POSITION, ENABLE_ECHO_INPUT, ENABLE_EXTENDED_FLAGS,
+    ENABLE_INSERT_MODE, ENABLE_LINE_INPUT, ENABLE_PROCESSED_INPUT, ENABLE_QUICK_EDIT_MODE,
+    InputModeStatus,
 };
 
 #[test]
@@ -129,10 +129,7 @@ fn microsoft_api_set_console_input_mode_extended_flag_behaviors_contract() {
         ENABLE_AUTO_POSITION,
     ] {
         let mut state = ConsoleInputModeState::from_mode(0);
-        assert_eq!(
-            state.set_console_input_mode(flag),
-            InputModeStatus::Success
-        );
+        assert_eq!(state.set_console_input_mode(flag), InputModeStatus::Success);
         assert_eq!(state.input_mode(), 0);
         assert_eq!(state.insert_mode(), flag == ENABLE_INSERT_MODE);
         assert_eq!(state.quick_edit_mode(), flag == ENABLE_QUICK_EDIT_MODE);

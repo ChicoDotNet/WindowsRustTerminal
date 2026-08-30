@@ -5,7 +5,11 @@
 //! This owner mirrors the deterministic layering and fallback rules while keeping
 //! filesystem, environment, wallpaper and package lookup behind a platform trait.
 
-use std::{cell::RefCell, collections::{BTreeMap, BTreeSet}, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::{BTreeMap, BTreeSet},
+    rc::Rc,
+};
 
 use crate::settings_json::{self, JsonObject, JsonValue};
 
@@ -277,7 +281,12 @@ impl MediaResourceSettings {
         };
         let mut profile = self.profiles.remove(&key).expect("profile key must exist");
         let old = icon_identity(&profile.icon);
-        let slot = self.new_slot(MediaOrigin::User, &self.user_base_path.clone(), MediaKind::Icon, path);
+        let slot = self.new_slot(
+            MediaOrigin::User,
+            &self.user_base_path.clone(),
+            MediaKind::Icon,
+            path,
+        );
         let fallback = profile.commandline.clone();
         profile.icon = IconSetting::Resource { slot, fallback };
         self.profiles.insert(key, profile);
@@ -294,11 +303,7 @@ impl MediaResourceSettings {
     }
 
     #[must_use]
-    pub fn profile_background(
-        &self,
-        name: &str,
-        unfocused: bool,
-    ) -> Option<MediaResourceSnapshot> {
+    pub fn profile_background(&self, name: &str, unfocused: bool) -> Option<MediaResourceSnapshot> {
         let profile = self.profile_by_name(name)?;
         let appearance = if unfocused {
             profile.unfocused_appearance.as_ref()?
@@ -353,7 +358,9 @@ impl MediaResourceSettings {
         };
 
         if let Some(commandline) = defaults.get("commandline") {
-            let commandline = commandline.as_str().ok_or(MediaResourceError::ExpectedString)?;
+            let commandline = commandline
+                .as_str()
+                .ok_or(MediaResourceError::ExpectedString)?;
             self.defaults_commandline.clear();
             self.defaults_commandline.push_str(commandline);
             for profile in self.profiles.values_mut() {
@@ -368,13 +375,18 @@ impl MediaResourceSettings {
             return Ok(());
         };
 
-        let old: Vec<u64> = self.profiles.values().filter_map(|profile| icon_identity(&profile.icon)).collect();
+        let old: Vec<u64> = self
+            .profiles
+            .values()
+            .filter_map(|profile| icon_identity(&profile.icon))
+            .collect();
         let fallback = self.defaults_commandline.clone();
         let setting = match icon {
             JsonValue::Null => IconSetting::Null { fallback },
             JsonValue::String(path) => {
                 let base = self.user_base_path.clone();
-                let slot = self.new_slot(MediaOrigin::ProfilesDefaults, &base, MediaKind::Icon, path);
+                let slot =
+                    self.new_slot(MediaOrigin::ProfilesDefaults, &base, MediaKind::Icon, path);
                 IconSetting::Resource { slot, fallback }
             }
             _ => return Err(MediaResourceError::ExpectedString),
@@ -437,10 +449,16 @@ impl MediaResourceSettings {
     ) -> Result<Vec<u64>, MediaResourceError> {
         let mut old = Vec::new();
         if let Some(name) = object.get("name") {
-            profile.name = name.as_str().ok_or(MediaResourceError::ExpectedString)?.to_owned();
+            profile.name = name
+                .as_str()
+                .ok_or(MediaResourceError::ExpectedString)?
+                .to_owned();
         }
         if let Some(commandline) = object.get("commandline") {
-            profile.commandline = commandline.as_str().ok_or(MediaResourceError::ExpectedString)?.to_owned();
+            profile.commandline = commandline
+                .as_str()
+                .ok_or(MediaResourceError::ExpectedString)?
+                .to_owned();
             profile.commandline_explicit = true;
         }
 
@@ -474,7 +492,12 @@ impl MediaResourceSettings {
                 JsonValue::Null => profile.unfocused_appearance = None,
                 JsonValue::Object(unfocused) => {
                     let mut appearance = profile.default_appearance.clone();
-                    old.extend(self.apply_appearance_fields(&mut appearance, unfocused, origin, base_path)?);
+                    old.extend(self.apply_appearance_fields(
+                        &mut appearance,
+                        unfocused,
+                        origin,
+                        base_path,
+                    )?);
                     profile.unfocused_appearance = Some(appearance);
                 }
                 _ => return Err(MediaResourceError::ExpectedProfileObject),
@@ -507,7 +530,10 @@ impl MediaResourceSettings {
         for (key, target) in [
             ("backgroundImage", &mut appearance.background_image),
             ("experimental.pixelShaderPath", &mut appearance.pixel_shader),
-            ("experimental.pixelShaderImagePath", &mut appearance.pixel_shader_image),
+            (
+                "experimental.pixelShaderImagePath",
+                &mut appearance.pixel_shader_image,
+            ),
         ] {
             let Some(value) = object.get(key) else {
                 continue;
@@ -550,7 +576,9 @@ impl MediaResourceSettings {
             };
             let next = match icon {
                 JsonValue::Null => None,
-                JsonValue::String(path) => Some(self.new_slot(origin, base_path, MediaKind::Icon, path)),
+                JsonValue::String(path) => {
+                    Some(self.new_slot(origin, base_path, MediaKind::Icon, path))
+                }
                 _ => return Err(MediaResourceError::ExpectedString),
             };
             // SettingsModel currently may still visit an inbox action icon that
@@ -633,7 +661,8 @@ impl MediaResourceSettings {
         if self.resource_is_referenced(identity) {
             return;
         }
-        self.resolution_slots.retain(|slot| slot.identity() != identity);
+        self.resolution_slots
+            .retain(|slot| slot.identity() != identity);
     }
 
     fn resource_is_referenced(&self, identity: u64) -> bool {
@@ -645,17 +674,32 @@ impl MediaResourceSettings {
         {
             return true;
         }
-        if self.actions.values().flatten().any(|slot| slot.identity() == identity) {
+        if self
+            .actions
+            .values()
+            .flatten()
+            .any(|slot| slot.identity() == identity)
+        {
             return true;
         }
         self.profiles.values().any(|profile| {
             icon_identity(&profile.icon).is_some_and(|candidate| candidate == identity)
-                || profile.default_appearance.identities().any(|candidate| candidate == identity)
+                || profile
+                    .default_appearance
+                    .identities()
+                    .any(|candidate| candidate == identity)
                 || profile
                     .unfocused_appearance
                     .as_ref()
-                    .is_some_and(|appearance| appearance.identities().any(|candidate| candidate == identity))
-                || profile.bell_sounds.iter().any(|slot| slot.identity() == identity)
+                    .is_some_and(|appearance| {
+                        appearance
+                            .identities()
+                            .any(|candidate| candidate == identity)
+                    })
+                || profile
+                    .bell_sounds
+                    .iter()
+                    .any(|slot| slot.identity() == identity)
         })
     }
 }
@@ -700,7 +744,11 @@ fn profile_objects(root: &JsonObject) -> Result<Vec<&JsonObject>, MediaResourceE
     };
     values
         .iter()
-        .map(|value| value.as_object().ok_or(MediaResourceError::ExpectedProfileObject))
+        .map(|value| {
+            value
+                .as_object()
+                .ok_or(MediaResourceError::ExpectedProfileObject)
+        })
         .collect()
 }
 
@@ -812,14 +860,22 @@ pub fn resolve_media_path<P: MediaPlatform>(
     resolve_file_candidate(path, base_path, platform)
 }
 
-fn resolve_leaf_candidate<P: MediaPlatform>(rest: &str, base_path: &str, platform: &P) -> MediaPathResolution {
+fn resolve_leaf_candidate<P: MediaPlatform>(
+    rest: &str,
+    base_path: &str,
+    platform: &P,
+) -> MediaPathResolution {
     let Some(leaf) = rest.rsplit('/').next().filter(|leaf| !leaf.is_empty()) else {
         return rejected();
     };
     resolve_file_candidate(leaf, base_path, platform)
 }
 
-fn resolve_file_candidate<P: MediaPlatform>(path: &str, base_path: &str, platform: &P) -> MediaPathResolution {
+fn resolve_file_candidate<P: MediaPlatform>(
+    path: &str,
+    base_path: &str,
+    platform: &P,
+) -> MediaPathResolution {
     let candidate = if is_absolute_windows_path(path) {
         normalize_windows_path(path)
     } else {
@@ -833,7 +889,9 @@ fn resolve_file_candidate<P: MediaPlatform>(path: &str, base_path: &str, platfor
 }
 
 fn environment_reference(path: &str) -> Option<&str> {
-    path.strip_prefix('%')?.strip_suffix('%').filter(|name| !name.is_empty())
+    path.strip_prefix('%')?
+        .strip_suffix('%')
+        .filter(|name| !name.is_empty())
 }
 
 fn is_absolute_windows_path(path: &str) -> bool {

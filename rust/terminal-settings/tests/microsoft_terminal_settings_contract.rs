@@ -1,9 +1,9 @@
 use terminal_settings::{
     color_scheme::Color,
     terminal_settings::{
-        command_line_to_argv, launch_position_from_string, normalize_command_line,
         BindingSnapshot, CommandLinePlatform, NewTerminalArgs, ShortcutKind, SplitDirection,
-        TerminalSettingsModel,
+        TerminalSettingsModel, command_line_to_argv, launch_position_from_string,
+        normalize_command_line,
     },
 };
 
@@ -144,7 +144,10 @@ fn microsoft_terminal_settings_test_terminal_args_for_binding_contract() {
     let settings = model
         .create_with_new_terminal_args(Some(&d.terminal_args), &platform)
         .unwrap();
-    assert_eq!(selected.profile_guid.as_deref(), Some(profile2_guid.as_str()));
+    assert_eq!(
+        selected.profile_guid.as_deref(),
+        Some(profile2_guid.as_str())
+    );
     assert_eq!(settings.commandline, "wsl.exe");
     assert_eq!(settings.history_size, 3);
 
@@ -198,7 +201,10 @@ fn microsoft_terminal_settings_test_terminal_args_for_binding_contract() {
     let settings = model
         .create_with_new_terminal_args(Some(&i.terminal_args), &platform)
         .unwrap();
-    assert_eq!(settings.profile_guid.as_deref(), Some(profile2_guid.as_str()));
+    assert_eq!(
+        settings.profile_guid.as_deref(),
+        Some(profile2_guid.as_str())
+    );
     assert_eq!(settings.commandline, "wsl.exe");
     assert_eq!(settings.starting_directory, r"c:\foo");
     assert_eq!(settings.history_size, 3);
@@ -218,7 +224,10 @@ fn microsoft_terminal_settings_test_terminal_args_for_binding_contract() {
     let settings = model
         .create_with_new_terminal_args(Some(&k.terminal_args), &platform)
         .unwrap();
-    assert_eq!(settings.profile_guid.as_deref(), Some(profile2_guid.as_str()));
+    assert_eq!(
+        settings.profile_guid.as_deref(),
+        Some(profile2_guid.as_str())
+    );
     assert_eq!(settings.commandline, "wsl.exe");
     assert_eq!(settings.starting_title, "bar");
     assert_eq!(settings.history_size, 3);
@@ -313,10 +322,11 @@ fn microsoft_terminal_settings_get_profile_for_args_with_commandline_contract() 
         let selected = model.profile_for_args(&args, &platform);
         if let Some(index) = expected {
             let discriminator = 0x1111usize * index;
-            let expected_guid = format!(
-                "{{6239a42c-{discriminator:04x}-49a3-80bd-e8fdd045185c}}"
+            let expected_guid = format!("{{6239a42c-{discriminator:04x}-49a3-80bd-e8fdd045185c}}");
+            assert_eq!(
+                selected.profile_guid.as_deref(),
+                Some(expected_guid.as_str())
             );
-            assert_eq!(selected.profile_guid.as_deref(), Some(expected_guid.as_str()));
         } else {
             assert_eq!(selected.profile_guid, None);
             assert_eq!(selected.history_size, 123);
@@ -406,12 +416,30 @@ fn microsoft_terminal_settings_test_layer_profile_on_color_scheme_contract() {
     }"##;
     let model = TerminalSettingsModel::from_json(json).unwrap();
     assert_eq!(model.active_profile_count(), 6);
-    assert_eq!(model.cursor_color_for_profile(0), Some(Color::rgb(0x12, 0x34, 0x56)));
-    assert_eq!(model.cursor_color_for_profile(1), Some(Color::rgb(0xff, 0xff, 0xff)));
-    assert_eq!(model.cursor_color_for_profile(2), Some(Color::rgb(0x23, 0x45, 0x67)));
-    assert_eq!(model.cursor_color_for_profile(3), Some(Color::rgb(0x34, 0x56, 0x78)));
-    assert_eq!(model.cursor_color_for_profile(4), Some(Color::rgb(0x45, 0x67, 0x89)));
-    assert_eq!(model.cursor_color_for_profile(5), Some(Color::rgb(0xff, 0xff, 0xff)));
+    assert_eq!(
+        model.cursor_color_for_profile(0),
+        Some(Color::rgb(0x12, 0x34, 0x56))
+    );
+    assert_eq!(
+        model.cursor_color_for_profile(1),
+        Some(Color::rgb(0xff, 0xff, 0xff))
+    );
+    assert_eq!(
+        model.cursor_color_for_profile(2),
+        Some(Color::rgb(0x23, 0x45, 0x67))
+    );
+    assert_eq!(
+        model.cursor_color_for_profile(3),
+        Some(Color::rgb(0x34, 0x56, 0x78))
+    );
+    assert_eq!(
+        model.cursor_color_for_profile(4),
+        Some(Color::rgb(0x45, 0x67, 0x89))
+    );
+    assert_eq!(
+        model.cursor_color_for_profile(5),
+        Some(Color::rgb(0xff, 0xff, 0xff))
+    );
 }
 
 #[test]
