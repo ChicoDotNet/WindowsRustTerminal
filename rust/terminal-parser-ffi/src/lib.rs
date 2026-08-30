@@ -6,7 +6,10 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
-use std::{panic::{AssertUnwindSafe, catch_unwind}, ptr, slice};
+use std::{
+    panic::{AssertUnwindSafe, catch_unwind},
+    ptr, slice,
+};
 
 use terminal_parser::base64::{DecodeError, decode_utf16};
 
