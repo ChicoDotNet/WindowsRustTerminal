@@ -26,6 +26,10 @@ terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(
     size_t output_capacity,
     size_t* out_len);
 
+uint16_t terminal_parser_ffi_input_cursor_vkey(uint16_t final_character);
+uint16_t terminal_parser_ffi_input_generic_vkey(int32_t identifier);
+uint16_t terminal_parser_ffi_input_ss3_vkey(uint16_t final_character);
+
 #ifdef __cplusplus
 }
 #endif
