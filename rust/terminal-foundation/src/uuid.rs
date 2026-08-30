@@ -135,36 +135,39 @@ fn sha1(input: &[u8]) -> [u8; 20] {
                     .rotate_left(1);
         }
 
-        let mut a = h0;
-        let mut b = h1;
-        let mut c = h2;
-        let mut d = h3;
-        let mut e = h4;
+        let mut work_a = h0;
+        let mut work_b = h1;
+        let mut work_c = h2;
+        let mut work_d = h3;
+        let mut work_e = h4;
         for (index, word) in words.into_iter().enumerate() {
-            let (f, k) = match index {
-                0..=19 => ((b & c) | ((!b) & d), 0x5a82_7999),
-                20..=39 => (b ^ c ^ d, 0x6ed9_eba1),
-                40..=59 => ((b & c) | (b & d) | (c & d), 0x8f1b_bcdc),
-                _ => (b ^ c ^ d, 0xca62_c1d6),
+            let (round_fn, round_constant) = match index {
+                0..=19 => ((work_b & work_c) | ((!work_b) & work_d), 0x5a82_7999),
+                20..=39 => (work_b ^ work_c ^ work_d, 0x6ed9_eba1),
+                40..=59 => (
+                    (work_b & work_c) | (work_b & work_d) | (work_c & work_d),
+                    0x8f1b_bcdc,
+                ),
+                _ => (work_b ^ work_c ^ work_d, 0xca62_c1d6),
             };
-            let temp = a
+            let temp = work_a
                 .rotate_left(5)
-                .wrapping_add(f)
-                .wrapping_add(e)
-                .wrapping_add(k)
+                .wrapping_add(round_fn)
+                .wrapping_add(work_e)
+                .wrapping_add(round_constant)
                 .wrapping_add(word);
-            e = d;
-            d = c;
-            c = b.rotate_left(30);
-            b = a;
-            a = temp;
+            work_e = work_d;
+            work_d = work_c;
+            work_c = work_b.rotate_left(30);
+            work_b = work_a;
+            work_a = temp;
         }
 
-        h0 = h0.wrapping_add(a);
-        h1 = h1.wrapping_add(b);
-        h2 = h2.wrapping_add(c);
-        h3 = h3.wrapping_add(d);
-        h4 = h4.wrapping_add(e);
+        h0 = h0.wrapping_add(work_a);
+        h1 = h1.wrapping_add(work_b);
+        h2 = h2.wrapping_add(work_c);
+        h3 = h3.wrapping_add(work_d);
+        h4 = h4.wrapping_add(work_e);
     }
 
     let mut digest = [0u8; 20];
