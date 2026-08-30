@@ -91,6 +91,12 @@ impl TextMeasurementEngine {
         }
     }
 
+    fn console_scalar_width(value: char) -> u8 {
+        let narrow = UnicodeWidthChar::width(value).unwrap_or(0) as u8;
+        let cjk = UnicodeWidthChar::width_cjk(value).unwrap_or(0) as u8;
+        if narrow != cjk { 1 } else { narrow }
+    }
+
     #[must_use]
     pub fn grapheme_width(self, grapheme: &str) -> u8 {
         grapheme
@@ -126,6 +132,325 @@ impl TextMeasurementEngine {
         let mut measured = self.graphemes_forward(text);
         measured.reverse();
         measured
+    }
+
+    /// Replays the stateful chunk contract of Microsoft's `GraphemeNext` for
+    /// each measurement policy. A zero-length measurement is the deliberate
+    /// completion marker emitted when a cluster that ended at the preceding
+    /// chunk boundary is proven complete by the next chunk.
+    #[must_use]
+    pub fn chunks_forward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        match self.mode {
+            TextMeasurementMode::Graphemes => self.grapheme_chunks_forward(chunks),
+            TextMeasurementMode::Wcswidth => self.wcswidth_chunks_forward(chunks),
+            TextMeasurementMode::Console => Self::console_chunks_forward(chunks),
+        }
+    }
+
+    /// Replays the corresponding `GraphemePrev` chunk contract.
+    #[must_use]
+    pub fn chunks_backward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        match self.mode {
+            TextMeasurementMode::Graphemes => self.grapheme_chunks_backward(chunks),
+            TextMeasurementMode::Wcswidth => self.wcswidth_chunks_backward(chunks),
+            TextMeasurementMode::Console => Self::console_chunks_backward(chunks),
+        }
+    }
+
+    fn grapheme_chunks_forward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut pending = String::new();
+        let mut pending_width = 0;
+
+        for chunk in chunks {
+            let chunk = String::from_utf16_lossy(chunk);
+            if chunk.is_empty() {
+                continue;
+            }
+
+            let pending_units = pending.encode_utf16().count();
+            let mut combined = pending.clone();
+            combined.push_str(&chunk);
+            let graphemes = UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
+            let joined = !pending.is_empty()
+                && graphemes
+                    .first()
+                    .is_some_and(|first| first.encode_utf16().count() > pending_units);
+
+            let mut current_units = 0;
+            let start_index = if pending.is_empty() {
+                0
+            } else if joined {
+                let first = graphemes[0];
+                let first_units = first.encode_utf16().count();
+                let contribution = first_units - pending_units;
+                output.push(TextMeasurement {
+                    utf16_len: contribution,
+                    width: self.grapheme_width(first),
+                });
+                current_units += contribution;
+                1
+            } else {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: pending_width,
+                });
+                0
+            };
+
+            for grapheme in &graphemes[start_index..] {
+                if current_units >= chunk.encode_utf16().count() {
+                    break;
+                }
+                let units = grapheme.encode_utf16().count();
+                output.push(TextMeasurement {
+                    utf16_len: units,
+                    width: self.grapheme_width(grapheme),
+                });
+                current_units += units;
+            }
+
+            let last = graphemes.last().copied().unwrap_or("");
+            pending.clear();
+            pending.push_str(last);
+            pending_width = self.grapheme_width(last);
+        }
+
+        output
+    }
+
+    fn grapheme_chunks_backward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut pending = String::new();
+        let mut pending_width = 0;
+
+        for chunk in chunks.iter().rev() {
+            let chunk = String::from_utf16_lossy(chunk);
+            if chunk.is_empty() {
+                continue;
+            }
+
+            let pending_units = pending.encode_utf16().count();
+            let mut combined = chunk.clone();
+            combined.push_str(&pending);
+            let graphemes = UnicodeSegmentation::graphemes(combined.as_str(), true).collect::<Vec<_>>();
+            let joined = !pending.is_empty()
+                && graphemes
+                    .last()
+                    .is_some_and(|last| last.encode_utf16().count() > pending_units);
+
+            let mut current_units = 0;
+            let end_index = if pending.is_empty() {
+                graphemes.len()
+            } else if joined {
+                let last = graphemes[graphemes.len() - 1];
+                let last_units = last.encode_utf16().count();
+                let contribution = last_units - pending_units;
+                output.push(TextMeasurement {
+                    utf16_len: contribution,
+                    width: self.grapheme_width(last),
+                });
+                current_units += contribution;
+                graphemes.len() - 1
+            } else {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: pending_width,
+                });
+                graphemes.len()
+            };
+
+            for grapheme in graphemes[..end_index].iter().rev() {
+                if current_units >= chunk.encode_utf16().count() {
+                    break;
+                }
+                let units = grapheme.encode_utf16().count();
+                output.push(TextMeasurement {
+                    utf16_len: units,
+                    width: self.grapheme_width(grapheme),
+                });
+                current_units += units;
+            }
+
+            let first = graphemes.first().copied().unwrap_or("");
+            pending.clear();
+            pending.push_str(first);
+            pending_width = self.grapheme_width(first);
+        }
+
+        output
+    }
+
+    fn wcswidth_chunks_forward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut pending = false;
+        let mut pending_width = 0;
+
+        for chunk in chunks {
+            let text = String::from_utf16_lossy(chunk);
+            let scalars = text
+                .chars()
+                .map(|value| (value.encode_utf16(&mut [0; 2]).len(), self.scalar_width(value)))
+                .collect::<Vec<_>>();
+            let mut index = 0;
+
+            while index < scalars.len() {
+                let mut units = 0;
+                let mut width = if pending { pending_width } else { 0 };
+                let mut have_lead = pending;
+                pending = false;
+
+                while index < scalars.len() {
+                    let (scalar_units, scalar_width) = scalars[index];
+                    if have_lead && scalar_width != 0 {
+                        break;
+                    }
+                    units += scalar_units;
+                    width = width.saturating_add(scalar_width);
+                    have_lead = true;
+                    index += 1;
+                }
+
+                output.push(TextMeasurement {
+                    utf16_len: units,
+                    width,
+                });
+
+                if index == scalars.len() {
+                    pending = have_lead;
+                    pending_width = width;
+                }
+            }
+
+            if scalars.is_empty() && pending {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: pending_width,
+                });
+                pending = false;
+            } else if !scalars.is_empty() && pending && scalars[0].1 != 0 && output.last().is_some_and(|m| m.utf16_len != 0) {
+                // The loop above can only leave a pending cluster at the end of
+                // this chunk. Completion against a non-zero lead in the next
+                // chunk is handled at that next iteration.
+            }
+
+            if !text.is_empty() && pending_width != 0 {
+                // Keep the last width as the Microsoft state does; no-op by
+                // design, but documents the cross-chunk ownership explicitly.
+            }
+        }
+
+        output
+    }
+
+    fn wcswidth_chunks_backward(self, chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut delayed_completion = false;
+        let mut delayed_width = 0;
+
+        for chunk in chunks.iter().rev() {
+            if delayed_completion {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: delayed_width,
+                });
+                delayed_completion = false;
+            }
+
+            let text = String::from_utf16_lossy(chunk);
+            let scalars = text
+                .chars()
+                .map(|value| (value.encode_utf16(&mut [0; 2]).len(), self.scalar_width(value)))
+                .collect::<Vec<_>>();
+            let mut index = scalars.len();
+
+            while index > 0 {
+                let mut units = 0;
+                let mut width = 0_u8;
+                while index > 0 {
+                    index -= 1;
+                    let (scalar_units, scalar_width) = scalars[index];
+                    units += scalar_units;
+                    width = width.saturating_add(scalar_width);
+                    if width != 0 || index == 0 {
+                        break;
+                    }
+                }
+
+                output.push(TextMeasurement {
+                    utf16_len: units,
+                    width,
+                });
+                delayed_completion = index == 0 && width != 0;
+                delayed_width = width;
+            }
+        }
+
+        output
+    }
+
+    fn console_chunks_forward(chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut delayed_completion = false;
+        let mut delayed_width = 0;
+
+        for chunk in chunks {
+            if delayed_completion {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: delayed_width,
+                });
+                delayed_completion = false;
+            }
+
+            let text = String::from_utf16_lossy(chunk);
+            let scalars = text.chars().collect::<Vec<_>>();
+            for (index, value) in scalars.iter().copied().enumerate() {
+                let width = Self::console_scalar_width(value);
+                output.push(TextMeasurement {
+                    utf16_len: value.encode_utf16(&mut [0; 2]).len(),
+                    width,
+                });
+                if index + 1 == scalars.len() {
+                    delayed_completion = true;
+                    delayed_width = width;
+                }
+            }
+        }
+
+        output
+    }
+
+    fn console_chunks_backward(chunks: &[&[u16]]) -> Vec<TextMeasurement> {
+        let mut output = Vec::new();
+        let mut delayed_completion = false;
+        let mut delayed_width = 0;
+
+        for chunk in chunks.iter().rev() {
+            if delayed_completion {
+                output.push(TextMeasurement {
+                    utf16_len: 0,
+                    width: delayed_width,
+                });
+                delayed_completion = false;
+            }
+
+            let text = String::from_utf16_lossy(chunk);
+            let scalars = text.chars().collect::<Vec<_>>();
+            for (index, value) in scalars.iter().copied().rev().enumerate() {
+                let width = Self::console_scalar_width(value);
+                output.push(TextMeasurement {
+                    utf16_len: value.encode_utf16(&mut [0; 2]).len(),
+                    width,
+                });
+                if index + 1 == scalars.len() {
+                    delayed_completion = true;
+                    delayed_width = width;
+                }
+            }
+        }
+
+        output
     }
 }
 
@@ -222,6 +547,14 @@ mod tests {
         input.encode_utf16(&mut storage).to_vec()
     }
 
+    fn lengths(values: &[TextMeasurement]) -> Vec<usize> {
+        values.iter().map(|value| value.utf16_len).collect()
+    }
+
+    fn widths(values: &[TextMeasurement]) -> Vec<u8> {
+        values.iter().map(|value| value.width).collect()
+    }
+
     #[test]
     fn ascii_and_ambiguous_characters_remain_narrow() {
         let detector = CodepointWidthDetector;
@@ -293,5 +626,47 @@ mod tests {
         let mut reverse_expected = expected;
         reverse_expected.reverse();
         assert_eq!(detector.graphemes_backward(&text), reverse_expected);
+    }
+
+    #[test]
+    fn microsoft_chunked_text_matches_all_three_measurement_modes() {
+        let first = "🏳\u{fe0f}".encode_utf16().collect::<Vec<_>>();
+        let second = "\u{200d}🌈".encode_utf16().collect::<Vec<_>>();
+        let third = "a".encode_utf16().collect::<Vec<_>>();
+        let chunks = [&first[..], &second[..], &third[..]];
+        let cases = [
+            (
+                TextMeasurementMode::Graphemes,
+                vec![3, 3, 0, 1],
+                vec![2, 2, 2, 1],
+                vec![1, 0, 3, 3],
+                vec![1, 1, 2, 2],
+            ),
+            (
+                TextMeasurementMode::Wcswidth,
+                vec![3, 1, 2, 0, 1],
+                vec![1, 1, 2, 2, 1],
+                vec![1, 0, 2, 1, 3],
+                vec![1, 1, 2, 0, 1],
+            ),
+            (
+                TextMeasurementMode::Console,
+                vec![2, 1, 0, 1, 2, 0, 1],
+                vec![1, 0, 0, 0, 2, 2, 1],
+                vec![1, 0, 2, 1, 0, 1, 2],
+                vec![1, 1, 2, 0, 0, 0, 1],
+            ),
+        ];
+
+        for (mode, next_lengths, next_widths, prev_lengths, prev_widths) in cases {
+            let mut detector = TextMeasurementEngine::default();
+            detector.reset(mode);
+            let forward = detector.chunks_forward(&chunks);
+            assert_eq!(lengths(&forward), next_lengths, "forward lengths {mode:?}");
+            assert_eq!(widths(&forward), next_widths, "forward widths {mode:?}");
+            let backward = detector.chunks_backward(&chunks);
+            assert_eq!(lengths(&backward), prev_lengths, "backward lengths {mode:?}");
+            assert_eq!(widths(&backward), prev_widths, "backward widths {mode:?}");
+        }
     }
 }
