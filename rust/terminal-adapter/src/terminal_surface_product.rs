@@ -6,7 +6,7 @@
 //! framing, window title state, ATT610 cursor blinking, and VS Code completion
 //! requests.
 
-use terminal_parser::output_engine::{DcsAction, DeviceAttributesKind, OutputAction, TermDispatch};
+use terminal_parser::output_engine::{DcsAction, OutputAction, TermDispatch};
 
 use crate::{adapt_dispatch::PageGeometry, color_product_dispatch::ColorProductDispatch};
 
@@ -196,7 +196,7 @@ fn to_eight_bit_c1(response: &str) -> String {
 mod tests {
     use super::*;
     use terminal_parser::{
-        output_engine::OutputStateMachineEngine,
+        output_engine::{DeviceAttributesKind, OutputStateMachineEngine},
         state_machine::StateMachine,
     };
 
@@ -322,7 +322,7 @@ mod tests {
         let dispatch = product();
         let mut machine = StateMachine::new(OutputStateMachineEngine::new(dispatch));
 
-        machine.process_str("\u{1b}G\u{1b}]2;Parser title\u{7}\u{1b}[?12l");
+        machine.process_str("\u{1b} G\u{1b}]2;Parser title\u{7}\u{1b}[?12l");
         let state = machine.engine().dispatch();
         assert!(state.send_c1_controls());
         assert_eq!(state.window_title(), "Parser title");
