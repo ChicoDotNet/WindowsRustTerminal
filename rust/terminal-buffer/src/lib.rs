@@ -66,4 +66,6 @@ pub mod width_detector;
 pub mod word_boundary;
 
 #[cfg(test)]
+mod microsoft_reflow_tests;
+#[cfg(test)]
 mod microsoft_text_buffer_tests;
