@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation)]
+
 use terminal_buffer::rect_ops::{ScreenRect, fill_rect};
 use terminal_buffer::screen_erase::{EraseType, erase_display, erase_line, erase_scrollback};
 use terminal_buffer::text_attribute::{TextAttribute, UnderlineStyle};
