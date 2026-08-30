@@ -44,7 +44,6 @@
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"RoundTripTest","coverage":"Platform-only","rustWitnesses":[],"notes":"Upstream-skipped GH#4405 contract depends on Windows virtual-key/scan-code translation."},
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"AlphanumericTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft derives modifier/Unicode observations through VkKeyScanW/CharToKeyEvents."},
     {"suite":"terminal","source":"InputEngineTest.cpp","method":"NonAsciiTest","coverage":"Platform-only","rustWitnesses":["printable_and_non_ascii_runs_use_the_string_dispatch_boundary"],"notes":"Portable parser dispatch exists, but Microsoft exercises Windows CharToKeyEvents synthesis for non-ASCII UTF-16."},
-    {"suite":"terminal","source":"InputEngineTest.cpp","method":"C0Test","coverage":"Partial","rustWitnesses":["c0_and_alt_controls_match_input_contract"],"notes":"Rust covers core C0/Alt semantics; Microsoft also observes VkKeyScanW-derived modifier equivalence across the full C0 table."},
 
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestEscapePath","coverage":"Exact","rustWitnesses":["microsoft_output_escape_path_covers_all_eighteen_source_states"]},
     {"suite":"terminal","source":"OutputEngineTest.cpp","method":"TestEscapeImmediatePath","coverage":"Exact","rustWitnesses":["microsoft_output_escape_immediate_path_matches_state_trace"]},
