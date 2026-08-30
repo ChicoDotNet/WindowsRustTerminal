@@ -53,6 +53,7 @@ pub mod til_rect;
 pub mod til_rect_index;
 pub mod til_replace;
 pub mod til_string;
+pub mod til_utf_convert;
 pub mod uia_text_range;
 pub mod vertical_scroll;
 pub mod viewport;
