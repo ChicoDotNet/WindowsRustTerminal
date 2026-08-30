@@ -1,0 +1,37 @@
+name: R09 Product Build
+
+on:
+  push:
+    branches:
+      - "rust/r09-product-integration"
+    paths:
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - "rust-toolchain.toml"
+      - "rust/terminal-parser/**"
+      - "rust/terminal-parser-ffi/**"
+      - "src/terminal/parser/**"
+      - "tools/rust/Invoke-R09ProductBuild.ps1"
+      - ".github/workflows/r09-product-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r09-product-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cascadia-package:
+    name: CascadiaPackage x64 Debug
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+      - name: Rust toolchain
+        run: rustup show
+      - name: Canonical product build
+        shell: pwsh
+        run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
