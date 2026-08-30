@@ -260,14 +260,26 @@ impl TextMeasurementEngine {
                 graphemes.len() - 1
             };
 
-            for grapheme in graphemes[..end_index].iter().rev() {
-                if current_units >= chunk.encode_utf16().count() {
-                    break;
+            let mut index = end_index;
+            while index > 0 && current_units < chunk.encode_utf16().count() {
+                let trail = graphemes[index - 1];
+                let mut units = trail.encode_utf16().count();
+                let mut width = self.grapheme_width(trail);
+                index -= 1;
+
+                if index > 0
+                    && graphemes[index - 1].ends_with('\u{200d}')
+                    && trail.chars().next().is_some_and(is_extended_pictographic)
+                {
+                    let lead = graphemes[index - 1];
+                    units += lead.encode_utf16().count();
+                    width = width.saturating_add(self.grapheme_width(lead)).min(2);
+                    index -= 1;
                 }
-                let units = grapheme.encode_utf16().count();
+
                 output.push(TextMeasurement {
                     utf16_len: units,
-                    width: self.grapheme_width(grapheme),
+                    width,
                 });
                 current_units += units;
             }
@@ -452,6 +464,12 @@ impl TextMeasurementEngine {
 
         output
     }
+}
+
+fn is_extended_pictographic(value: char) -> bool {
+    let mut probe = String::from("😀\u{200d}");
+    probe.push(value);
+    UnicodeSegmentation::graphemes(probe.as_str(), true).count() == 1
 }
 
 fn decode_first_scalar(glyph: &[u16]) -> Option<u32> {
