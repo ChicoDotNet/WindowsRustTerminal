@@ -82,7 +82,8 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          $binary = Join-Path $PWD "target\release\WindowsRusTerminal.exe"
+          $metadata = cargo metadata --format-version 1 --no-deps | ConvertFrom-Json
+          $binary = Join-Path $metadata.target_directory "release\WindowsRusTerminal.exe"
           if (-not (Test-Path $binary)) {
             throw "Expected release binary was not produced: $binary"
           }
