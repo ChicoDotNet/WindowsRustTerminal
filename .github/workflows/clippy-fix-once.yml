@@ -19,11 +19,27 @@ jobs:
         run: rustup show
       - name: Apply rustfmt
         run: cargo fmt --all
-      - name: Apply Clippy fixes
+      - name: Apply Clippy automatic fixes
         shell: bash
         run: cargo clippy --fix --workspace --all-targets --locked --allow-dirty --allow-staged -- -D warnings || true
+      - name: Apply deterministic non-machine-applicable lint fix
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("rust/terminal-foundation/src/types_utils.rs")
+          text = path.read_text(encoding="utf-8")
+          old = "    value.clamp(i32::from(minimum), i32::from(i16::MAX)) as i16\n"
+          new = (
+              "    i16::try_from(value.clamp(i32::from(minimum), i32::from(i16::MAX)))\n"
+              "        .expect(\"value was clamped to the i16 range\")\n"
+          )
+          if old in text:
+              path.write_text(text.replace(old, new, 1), encoding="utf-8")
       - name: Reformat fixed sources
         run: cargo fmt --all
+      - name: Verify Clippy strictly
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
       - name: Commit mechanical fixes
         shell: bash
         run: |
@@ -34,5 +50,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -- '*.rs'
-          git commit -m "style: apply clippy fixes once [skip ci]"
+          git commit -m "style: finish strict clippy normalization [skip ci]"
           git push origin HEAD:ci/r08-clippy-fix-once
