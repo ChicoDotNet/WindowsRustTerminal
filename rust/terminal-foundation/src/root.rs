@@ -5,6 +5,7 @@ mod env;
 mod foundation;
 mod throttled;
 mod til_math;
+#[allow(clippy::too_many_lines)]
 mod types_utils;
 mod uuid;
 
