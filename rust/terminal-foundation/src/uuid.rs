@@ -44,6 +44,12 @@ impl Guid {
         self.to_braced_string()[1..37].to_owned()
     }
 
+    /// Parses a braced or plain GUID string.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`GuidParseError`] when the input is not a 36-character GUID,
+    /// optionally enclosed in braces, with valid hexadecimal fields.
     pub fn parse(input: &str) -> Result<Self, GuidParseError> {
         let body = match (input.strip_prefix('{'), input.strip_suffix('}')) {
             (Some(without_open), Some(_)) if input.len() == 38 => &without_open[..36],
