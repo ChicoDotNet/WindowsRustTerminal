@@ -1,6 +1,17 @@
 {
   "schemaVersion": 1,
   "description": "R08 final functional closeout for the Microsoft input parser C0 contract. Rust now owns all 32 C0 vectors, including the input-only trailing ESC ProcessString boundary rule, US-layout virtual-key/scan-code enrichment, Ctrl+C dispatch, Backspace DEL translation, Tab/Enter/Escape exceptions, and Ctrl/Shift modifier semantics.",
+  "expectedCoveragePriority": 338,
+  "expectedCoverage": {
+    "terminal": {
+      "Exact": 84,
+      "Stronger": 11,
+      "Partial": 0,
+      "Platform-only": 3,
+      "UI-managed": 0,
+      "Missing": 0
+    }
+  },
   "expectedGlobalCoveragePriority": 338,
   "expectedGlobalCoverage": {
     "Exact": 957,
