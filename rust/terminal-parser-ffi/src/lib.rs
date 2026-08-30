@@ -6,6 +6,8 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+mod input_keymap;
+
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
     ptr, slice,
