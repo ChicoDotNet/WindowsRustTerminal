@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+
 use terminal_host::input_buffer::{
     InputBuffer, InputEvent, KeyEvent, MOUSE_MOVED, MouseEvent, ReadOptions,
 };
