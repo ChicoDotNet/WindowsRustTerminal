@@ -195,7 +195,7 @@ impl TextMeasurementEngine {
                     utf16_len: 0,
                     width: pending_width,
                 });
-                0
+                1
             };
 
             for grapheme in &graphemes[start_index..] {
@@ -257,7 +257,7 @@ impl TextMeasurementEngine {
                     utf16_len: 0,
                     width: pending_width,
                 });
-                graphemes.len()
+                graphemes.len() - 1
             };
 
             for grapheme in graphemes[..end_index].iter().rev() {
