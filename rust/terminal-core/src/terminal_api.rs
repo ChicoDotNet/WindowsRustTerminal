@@ -122,8 +122,7 @@ impl TerminalApiState {
             _ => {
                 self.taskbar_state = state;
                 if let Some(progress) = progress {
-                    self.taskbar_progress = u8::try_from(progress.min(100))
-                        .expect("progress is clamped to 100");
+                    self.taskbar_progress = progress.min(100) as u8;
                 } else if self.taskbar_progress == 0 {
                     self.taskbar_progress = 1;
                 }
@@ -142,16 +141,14 @@ impl TerminalApiState {
             .strip_prefix('"')
             .and_then(|value| value.strip_suffix('"'))
         {
-            if inner.is_empty() || inner.contains('"') {
-                return false;
-            }
-            inner
+            (!inner.is_empty() && !inner.contains('"')).then_some(inner)
         } else {
-            if payload.is_empty() || payload.contains('"') {
-                return false;
-            }
-            payload
+            (!payload.is_empty() && !payload.contains('"')).then_some(payload)
         };
+        let Some(value) = value else {
+            return false;
+        };
+
         self.working_directory.clear();
         self.working_directory.push_str(value);
         true

@@ -3,9 +3,7 @@
 use terminal_buffer::row::DbcsAttribute;
 use terminal_buffer::text_buffer::TextBuffer;
 
-use crate::selection::{
-    BufferPoint, SelectionExpansion, SelectionInfo, SelectionState,
-};
+use crate::selection::{BufferPoint, SelectionInfo, SelectionState};
 
 #[must_use]
 pub fn viewport_to_buffer(point: BufferPoint, viewport_top: i32) -> BufferPoint {
@@ -84,6 +82,7 @@ impl SelectionState {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::selection::SelectionExpansion;
     use terminal_buffer::text_attribute::TextAttribute;
 
     fn buffer(width: u16, height: u16) -> TextBuffer {

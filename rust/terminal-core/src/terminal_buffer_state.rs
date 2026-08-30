@@ -16,6 +16,12 @@ pub struct TerminalBufferState {
 }
 
 impl TerminalBufferState {
+    /// Creates a terminal buffer with a visible viewport and scrollback history.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`TextBufferError`] when the requested backing buffer dimensions
+    /// cannot be represented by the portable `TextBuffer` owner.
     pub fn new(
         width: u16,
         viewport_height: u16,
