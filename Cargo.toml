@@ -12,7 +12,6 @@ members = [
     "rust/terminal-parser-ffi",
     "rust/terminal-renderer",
     "rust/terminal-settings",
-    "rust/windows-rus-terminal",
 ]
 
 [workspace.package]

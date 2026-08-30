@@ -75,28 +75,6 @@ jobs:
         run: cargo check --workspace --all-targets --locked
       - name: Test
         run: cargo test --workspace --all-targets --locked
-      - name: Build WindowsRusTerminal release bootstrap
-        if: runner.os == 'Windows'
-        run: cargo build --release -p windows-rus-terminal --locked
-      - name: Smoke WindowsRusTerminal bootstrap
-        if: runner.os == 'Windows'
-        shell: pwsh
-        run: |
-          $metadata = cargo metadata --format-version 1 --no-deps | ConvertFrom-Json
-          $binary = Join-Path $metadata.target_directory "release\WindowsRusTerminal.exe"
-          if (-not (Test-Path $binary)) {
-            throw "Expected release binary was not produced: $binary"
-          }
-
-          $output = & $binary
-          if ($LASTEXITCODE -ne 0) {
-            throw "WindowsRusTerminal exited with code $LASTEXITCODE"
-          }
-
-          $text = ($output | Out-String).Trim()
-          if ($text -ne "WindowsRusTerminal R09 bootstrap") {
-            throw "Unexpected WindowsRusTerminal output: '$text'"
-          }
 
   contract-harness:
     name: TAEF harness self-test
