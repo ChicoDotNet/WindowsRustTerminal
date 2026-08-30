@@ -29,6 +29,7 @@ struct LogicalLine {
 struct OutputRow {
     glyphs: Vec<(u16, SourceGlyph)>,
     wrap_forced: bool,
+    double_byte_padded: bool,
 }
 
 /// Reflows `buffer` while preserving the Microsoft cursor contract.
@@ -89,6 +90,7 @@ pub fn resize_with_reflow_and_cursor(
             );
         }
         row.set_wrap_forced(output.wrap_forced);
+        row.set_double_byte_padded(output.double_byte_padded);
     }
 
     *cursor = TextBufferPoint::new(
@@ -183,6 +185,13 @@ fn wrap_logical_lines(
 
         for glyph in &line.glyphs {
             if x != 0 && x.saturating_add(glyph.width) > new_width {
+                // A wide glyph with exactly one destination cell remaining is
+                // represented by Microsoft's transient DBCS padding cell. It
+                // renders as a normal space, but must not become logical text
+                // during a later reflow that grows the row again.
+                if glyph.width == 2 && new_width.saturating_sub(x) == 1 {
+                    row.double_byte_padded = true;
+                }
                 row.wrap_forced = true;
                 rows.push(row);
                 row = OutputRow::default();
@@ -258,5 +267,30 @@ mod tests {
 
         assert_eq!(cursor, TextBufferPoint::new(0, 2));
         assert!(buffer.row(1).was_wrap_forced());
+    }
+
+    #[test]
+    fn dbcs_padding_is_ephemeral_across_shrink_then_grow() {
+        let attribute = TextAttribute::default();
+        let mut buffer = TextBuffer::new(6, 5, attribute).unwrap();
+        for (x, glyph) in [(0, 0x30ab), (2, 0x30bf), (4, 0x30ab)] {
+            buffer.row_mut(0).replace_glyph(x, 2, &[glyph]).unwrap();
+        }
+        buffer.row_mut(0).set_wrap_forced(true);
+        buffer.row_mut(1).replace_glyph(0, 2, &[0x30ca]).unwrap();
+        buffer
+            .row_mut(1)
+            .replace_glyph(2, 1, &[u16::from(b'$')])
+            .unwrap();
+        let mut cursor = TextBufferPoint::new(2, 1);
+
+        resize_with_reflow_and_cursor(&mut buffer, &mut cursor, 5, 5, attribute).unwrap();
+        assert!(buffer.row(0).was_double_byte_padded());
+        assert_eq!(cursor, TextBufferPoint::new(4, 1));
+
+        resize_with_reflow_and_cursor(&mut buffer, &mut cursor, 6, 5, attribute).unwrap();
+        assert_eq!(cursor, TextBufferPoint::new(2, 1));
+        assert!(!buffer.row(0).was_double_byte_padded());
+        assert_eq!(buffer.row(0).glyph_at(4), &[0x30ab]);
     }
 }
