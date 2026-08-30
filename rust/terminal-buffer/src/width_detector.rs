@@ -6,6 +6,7 @@
 //! Unicode text-measurement policies exercised by the Microsoft contract.
 
 use crate::output_cell::GlyphWidthDetector;
+use unicode_segmentation::UnicodeSegmentation;
 use unicode_width::UnicodeWidthChar;
 
 /// Stateless width detector used by the output-cell iterator.
@@ -33,6 +34,14 @@ pub enum TextMeasurementMode {
     Wcswidth,
     /// Legacy conhost-style scalar measurement.
     Console,
+}
+
+/// One measured cluster, expressed in UTF-16 units just like the Microsoft
+/// source contract.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TextMeasurement {
+    pub utf16_len: usize,
+    pub width: u8,
 }
 
 /// Stateful policy owner corresponding to the mutable portion of Microsoft's
@@ -95,6 +104,28 @@ impl TextMeasurementEngine {
             })
             .fold(0_u8, u8::saturating_add)
             .min(2)
+    }
+
+    /// Measures a complete UTF-16 string as UAX #29 grapheme clusters.
+    ///
+    /// Invalid UTF-16 is replaced by U+FFFD, matching Microsoft's explicit
+    /// malformed-scalar fallback in the detector implementation.
+    #[must_use]
+    pub fn graphemes_forward(self, text: &[u16]) -> Vec<TextMeasurement> {
+        let text = String::from_utf16_lossy(text);
+        UnicodeSegmentation::graphemes(text.as_str(), true)
+            .map(|grapheme| TextMeasurement {
+                utf16_len: grapheme.encode_utf16().count(),
+                width: self.grapheme_width(grapheme),
+            })
+            .collect()
+    }
+
+    #[must_use]
+    pub fn graphemes_backward(self, text: &[u16]) -> Vec<TextMeasurement> {
+        let mut measured = self.graphemes_forward(text);
+        measured.reverse();
+        measured
     }
 }
 
@@ -235,5 +266,32 @@ mod tests {
     fn variation_selector_sixteen_promotes_cluster_to_wide() {
         let detector = TextMeasurementEngine::default();
         assert_eq!(detector.grapheme_width("🏳\u{fe0f}"), 2);
+    }
+
+    #[test]
+    fn microsoft_basic_graphemes_match_forward_and_reverse_contract() {
+        let detector = TextMeasurementEngine::default();
+        let text = "a\u{0363}e\u{0364}\u{0364}i\u{0365}"
+            .encode_utf16()
+            .collect::<Vec<_>>();
+        let expected = vec![
+            TextMeasurement {
+                utf16_len: 2,
+                width: 1,
+            },
+            TextMeasurement {
+                utf16_len: 3,
+                width: 1,
+            },
+            TextMeasurement {
+                utf16_len: 2,
+                width: 1,
+            },
+        ];
+
+        assert_eq!(detector.graphemes_forward(&text), expected);
+        let mut reverse_expected = expected;
+        reverse_expected.reverse();
+        assert_eq!(detector.graphemes_backward(&text), reverse_expected);
     }
 }
