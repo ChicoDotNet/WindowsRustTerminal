@@ -94,7 +94,7 @@ jobs:
         shell: pwsh
         run: ./tools/rust/Test-R08FunctionalDebt.ps1
       - name: Enforce R08 functional-debt exit gate
-        if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+        if: github.event_name == 'pull_request' && (github.event.pull_request.draft == false || github.head_ref == 'rust/r08-product-integration')
         shell: pwsh
         run: ./tools/rust/Test-R08FunctionalDebt.ps1 -RequireZero
       - name: Validate global Rust witnesses
