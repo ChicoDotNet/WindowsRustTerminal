@@ -14,6 +14,7 @@ pub mod decrqss;
 pub mod decrqss_color_alias;
 pub mod decrqss_cursor;
 pub mod input_mode_dispatch;
+pub mod line_feed_product;
 pub mod macro_buffer;
 pub mod macro_execution;
 pub mod macro_reports;
