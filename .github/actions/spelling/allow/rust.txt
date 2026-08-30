@@ -27,9 +27,11 @@ microfragment
 misrouted
 nhelp
 nuls
+peekable
 psobject
 rposition
 rustup
+splitn
 subcluster
 subparams
 TEs
