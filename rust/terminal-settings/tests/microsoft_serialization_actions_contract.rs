@@ -1,3 +1,5 @@
+#![allow(clippy::too_many_lines)]
+
 use terminal_settings::{action_map::ActionMapDocument, settings_json};
 
 #[test]
