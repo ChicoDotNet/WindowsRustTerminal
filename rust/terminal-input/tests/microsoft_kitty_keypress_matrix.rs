@@ -30,34 +30,38 @@ struct FrenchStandardMapper;
 impl KeyboardMapper for FrenchStandardMapper {
     fn unmodified_key(&self, event: &KeyEvent) -> Option<u32> {
         match (event.virtual_key, event.scan_code) {
-            (vk, 0x10) if vk == b'A' as u16 => Some(b'a' as u32),
-            (vk, 0x02) if vk == b'1' as u16 => Some(0x00e0),
+            (vk, 0x10) if vk == u16::from(b'A') => Some(u32::from(b'a')),
+            (vk, 0x02) if vk == u16::from(b'1') => Some(0x00e0),
             _ => PortableKeyboardMapper.unmodified_key(event),
         }
     }
 
     fn kitty_base_key(&self, event: &KeyEvent, alt_gr: bool) -> Option<u32> {
         match (event.virtual_key, event.scan_code) {
-            (vk, 0x10) if vk == b'A' as u16 => Some(if alt_gr { 0x00e6 } else { b'a' as u32 }),
-            (vk, 0x02) if vk == b'1' as u16 => Some(0x00e0),
+            (vk, 0x10) if vk == u16::from(b'A') => {
+                Some(if alt_gr { 0x00e6 } else { u32::from(b'a') })
+            }
+            (vk, 0x02) if vk == u16::from(b'1') => Some(0x00e0),
             _ => PortableKeyboardMapper.kitty_base_key(event, alt_gr),
         }
     }
 
     fn kitty_shifted_key(&self, event: &KeyEvent, alt_gr: bool) -> Option<u32> {
         match (event.virtual_key, event.scan_code) {
-            (vk, 0x10) if vk == b'A' as u16 => {
-                Some(if alt_gr { event.codepoint } else { b'A' as u32 })
-            }
-            (vk, 0x02) if vk == b'1' as u16 => Some(b'1' as u32),
+            (vk, 0x10) if vk == u16::from(b'A') => Some(if alt_gr {
+                event.codepoint
+            } else {
+                u32::from(b'A')
+            }),
+            (vk, 0x02) if vk == u16::from(b'1') => Some(u32::from(b'1')),
             _ => PortableKeyboardMapper.kitty_shifted_key(event, alt_gr),
         }
     }
 
     fn kitty_us_base_key(&self, event: &KeyEvent) -> Option<u32> {
         match (event.virtual_key, event.scan_code) {
-            (vk, 0x10) if vk == b'A' as u16 => Some(b'q' as u32),
-            (vk, 0x02) if vk == b'1' as u16 => Some(b'1' as u32),
+            (vk, 0x10) if vk == u16::from(b'A') => Some(u32::from(b'q')),
+            (vk, 0x02) if vk == u16::from(b'1') => Some(u32::from(b'1')),
             _ => PortableKeyboardMapper.kitty_us_base_key(event),
         }
     }
@@ -105,7 +109,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;5u",
             D,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             CTRL,
@@ -115,7 +119,7 @@ fn microsoft_cases() -> Vec<Case> {
             "æ",
             D,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0x00e6,
             CTRL | ALT,
@@ -125,9 +129,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;4u",
             D,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT | ALT,
         ),
         case(
@@ -135,9 +139,9 @@ fn microsoft_cases() -> Vec<Case> {
             "A",
             D,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -145,9 +149,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -155,9 +159,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;2u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -165,9 +169,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;3u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             ALT,
         ),
         case(
@@ -175,7 +179,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;5u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             CTRL,
@@ -185,9 +189,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;4u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT | ALT,
         ),
         case(
@@ -195,7 +199,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;6u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             SHIFT | CTRL,
@@ -205,7 +209,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[230u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0x00e6,
             CTRL | ALT,
@@ -215,7 +219,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[230;2u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0x00c6,
             SHIFT | CTRL | ALT,
@@ -225,9 +229,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;65u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             CAPS,
         ),
         case(
@@ -235,9 +239,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;129u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             NUM,
         ),
         case(
@@ -245,9 +249,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;193u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             CAPS | NUM,
         ),
         case(
@@ -255,7 +259,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[230;194u",
             K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0x00c6,
             SHIFT | CTRL | ALT | CAPS | NUM,
@@ -267,7 +271,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             0,
         ),
         case(
@@ -277,7 +281,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::TAB,
             0x0f,
-            b'\t' as u32,
+            u32::from(b'\t'),
             0,
         ),
         case(
@@ -287,7 +291,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::BACK,
             0x0e,
-            b'\x08' as u32,
+            u32::from(b'\x08'),
             0,
         ),
         case(
@@ -297,7 +301,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             SHIFT,
         ),
         case(
@@ -307,7 +311,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::TAB,
             0x0f,
-            b'\t' as u32,
+            u32::from(b'\t'),
             CTRL,
         ),
         case(
@@ -317,7 +321,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::BACK,
             0x0e,
-            b'\x08' as u32,
+            u32::from(b'\x08'),
             ALT,
         ),
         case(
@@ -355,9 +359,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97u",
             E | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -365,9 +369,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;1:3u",
             E | K,
             false,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -377,7 +381,7 @@ fn microsoft_cases() -> Vec<Case> {
             false,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             0,
         ),
         case(
@@ -387,7 +391,7 @@ fn microsoft_cases() -> Vec<Case> {
             false,
             virtual_key::TAB,
             0x0f,
-            b'\t' as u32,
+            u32::from(b'\t'),
             0,
         ),
         case(
@@ -397,7 +401,7 @@ fn microsoft_cases() -> Vec<Case> {
             false,
             virtual_key::BACK,
             0x0e,
-            b'\x08' as u32,
+            u32::from(b'\x08'),
             0,
         ),
         case(
@@ -427,7 +431,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::NUMPAD0,
             0x52,
-            b'0' as u32,
+            u32::from(b'0'),
             0,
         ),
         case(
@@ -437,7 +441,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::NUMPAD0 + 5,
             0x4c,
-            b'5' as u32,
+            u32::from(b'5'),
             0,
         ),
         case(
@@ -447,7 +451,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::NUMPAD9,
             0x49,
-            b'9' as u32,
+            u32::from(b'9'),
             0,
         ),
         case(
@@ -457,7 +461,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::DECIMAL,
             0x53,
-            b'.' as u32,
+            u32::from(b'.'),
             0,
         ),
         case(
@@ -467,7 +471,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::DIVIDE,
             0x35,
-            b'/' as u32,
+            u32::from(b'/'),
             ENH,
         ),
         case(
@@ -477,7 +481,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::MULTIPLY,
             0x37,
-            b'*' as u32,
+            u32::from(b'*'),
             0,
         ),
         case(
@@ -487,7 +491,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::SUBTRACT,
             0x4a,
-            b'-' as u32,
+            u32::from(b'-'),
             0,
         ),
         case(
@@ -497,7 +501,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::ADD,
             0x4e,
-            b'+' as u32,
+            u32::from(b'+'),
             0,
         ),
         case(
@@ -507,7 +511,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::NUMPAD0 + 5,
             0x4c,
-            b'5' as u32,
+            u32::from(b'5'),
             SHIFT,
         ),
         case(
@@ -865,9 +869,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97:65:113;2u",
             A | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -875,9 +879,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[224:49:49;2u",
             A | K,
             true,
-            b'1' as u16,
+            u16::from(b'1'),
             0x02,
-            b'!' as u32,
+            u32::from(b'!'),
             SHIFT,
         ),
         case(
@@ -885,9 +889,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97::113u",
             A | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -895,9 +899,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;2;65u",
             K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -905,9 +909,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[224;2;33u",
             K | T,
             true,
-            b'1' as u16,
+            u16::from(b'1'),
             0x02,
-            b'!' as u32,
+            u32::from(b'!'),
             SHIFT,
         ),
         case(
@@ -915,7 +919,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;5u",
             K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             CTRL,
@@ -927,7 +931,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             ENH,
         ),
         case(
@@ -937,7 +941,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             0,
         ),
         case(
@@ -955,9 +959,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;65u",
             E | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             CAPS,
         ),
         case(
@@ -965,7 +969,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[230;194:3u",
             E | K,
             false,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0x00c6,
             SHIFT | CTRL | ALT | CAPS | NUM,
@@ -1126,7 +1130,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97:65:113;6u",
             A | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             SHIFT | CTRL,
@@ -1136,9 +1140,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;;97u",
             K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -1146,9 +1150,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;1:3u",
             E | K | T,
             false,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -1166,9 +1170,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97:65:113;66u",
             A | K,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             CAPS | SHIFT,
         ),
         case(
@@ -1176,9 +1180,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97:65:113;2;65u",
             A | K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -1186,9 +1190,9 @@ fn microsoft_cases() -> Vec<Case> {
             "",
             K,
             false,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'a' as u32,
+            u32::from(b'a'),
             0,
         ),
         case(
@@ -1198,7 +1202,7 @@ fn microsoft_cases() -> Vec<Case> {
             true,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             0,
         ),
         case(
@@ -1208,7 +1212,7 @@ fn microsoft_cases() -> Vec<Case> {
             false,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             0,
         ),
         case(
@@ -1218,7 +1222,7 @@ fn microsoft_cases() -> Vec<Case> {
             false,
             virtual_key::RETURN,
             0x1c,
-            b'\r' as u32,
+            u32::from(b'\r'),
             ENH,
         ),
         case(
@@ -1286,9 +1290,9 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;2;65u",
             K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
-            b'A' as u32,
+            u32::from(b'A'),
             SHIFT,
         ),
         case(
@@ -1296,7 +1300,7 @@ fn microsoft_cases() -> Vec<Case> {
             "\x1b[97;5u",
             K | T,
             true,
-            b'A' as u16,
+            u16::from(b'A'),
             0x10,
             0,
             CTRL,

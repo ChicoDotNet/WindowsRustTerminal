@@ -1,8 +1,8 @@
-//! Portable profile/action elevation resolution for TerminalApp settings.
+//! Portable profile/action elevation resolution for `TerminalApp` settings.
 //!
 //! The action argument is tri-state: omitted inherits the profile, while an
 //! explicit `false` or `true` overrides it. This owner keeps that distinction
-//! without depending on WinRT nullable wrappers.
+//! without depending on `WinRT` nullable wrappers.
 
 use std::collections::BTreeMap;
 

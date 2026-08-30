@@ -1,7 +1,7 @@
-//! Portable TerminalSettings composition and command-line matching semantics.
+//! Portable `TerminalSettings` composition and command-line matching semantics.
 //!
-//! Microsoft's `TerminalSettingsTests` spans SettingsModel and the
-//! TerminalSettingsAppAdapter. This module owns the deterministic profile,
+//! Microsoft's `TerminalSettingsTests` spans `SettingsModel` and the
+//! `TerminalSettingsAppAdapter`. This module owns the deterministic profile,
 //! binding, override, color, title and launch-position behavior while keeping
 //! Win32 environment expansion, executable search and filesystem canonicalization
 //! behind [`CommandLinePlatform`].
@@ -130,7 +130,7 @@ pub struct TerminalSettingsModel {
 }
 
 impl TerminalSettingsModel {
-    /// Parses the subset of CascadiaSettings required to compose terminal
+    /// Parses the subset of `CascadiaSettings` required to compose terminal
     /// settings and action content arguments.
     ///
     /// # Errors
@@ -222,15 +222,13 @@ impl TerminalSettingsModel {
         }
     }
 
-    /// Composes TerminalSettings from a profile index without additional args.
+    /// Composes `TerminalSettings` from a profile index without additional args.
     #[must_use]
     pub fn create_with_profile(&self, index: usize) -> Option<TerminalSettingsSnapshot> {
-        self.profiles
-            .get(index)
-            .map(|profile| snapshot_from_profile(profile))
+        self.profiles.get(index).map(snapshot_from_profile)
     }
 
-    /// Composes TerminalSettings and then layers NewTerminalArgs overrides using
+    /// Composes `TerminalSettings` and then layers `NewTerminalArgs` overrides using
     /// the same ordering as `TerminalSettings::CreateWithNewTerminalArgs`.
     #[must_use]
     pub fn create_with_new_terminal_args<P: CommandLinePlatform>(
@@ -408,8 +406,7 @@ fn parse_profiles(
                 .unwrap_or_default()
                 .to_owned();
             let guid = optional_string(object, "guid")?
-                .map(str::to_owned)
-                .unwrap_or_else(|| generated_profile_guid(&name, index));
+                .map_or_else(|| generated_profile_guid(&name, index), str::to_owned);
             let history_size = object
                 .get("historySize")
                 .map(json_i32)
@@ -627,7 +624,7 @@ fn normalize_key(key: &str) -> String {
 
 /// Portable Windows command-line tokenization.
 ///
-/// This reproduces the argument values needed by SettingsModel. Rust does not
+/// This reproduces the argument values needed by `SettingsModel`. Rust does not
 /// reproduce `CommandLineToArgvW`'s HLOCAL allocation or contiguous argv memory
 /// layout; that native API-shape remains a classified boundary.
 #[must_use]
@@ -659,7 +656,7 @@ pub fn command_line_to_argv(command_line: &str) -> Vec<String> {
 
             if index < chars.len() && chars[index] == '"' {
                 argument.extend(std::iter::repeat_n('\\', slashes / 2));
-                if slashes % 2 == 0 {
+                if slashes.is_multiple_of(2) {
                     quoted = !quoted;
                 } else {
                     argument.push('"');

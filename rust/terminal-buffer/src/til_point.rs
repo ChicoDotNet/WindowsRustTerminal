@@ -34,7 +34,6 @@ pub enum PointMath {
 }
 
 impl TilPoint {
-    #[must_use]
     pub fn from_rounded(x: f64, y: f64) -> Result<Self, PointError> {
         Self::from_float(PointMath::Rounding, x, y)
     }

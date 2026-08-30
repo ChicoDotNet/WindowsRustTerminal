@@ -78,10 +78,10 @@ impl CommandHistory {
         }
 
         let mut value = command.to_owned();
-        if suppress_duplicates {
-            if let Some(index) = self.commands.iter().rposition(|stored| stored == command) {
-                value = self.commands.remove(index);
-            }
+        if suppress_duplicates
+            && let Some(index) = self.commands.iter().rposition(|stored| stored == command)
+        {
+            value = self.commands.remove(index);
         }
 
         if self.commands.len() == self.max_commands {

@@ -1,4 +1,4 @@
-//! Stateful console-output mutation and VT projection for ConPTY hosts.
+//! Stateful console-output mutation and VT projection for `ConPTY` hosts.
 //!
 //! The native API owns handles, locking and Win32 argument marshalling. This
 //! module owns the deterministic part shared by `WriteConsoleOutput*` and
@@ -22,7 +22,7 @@ pub struct VtWriteResult {
 }
 
 /// Small platform-neutral owner for the screen cells consumed by the legacy
-/// console-output APIs while ConPTY is active.
+/// console-output APIs while `ConPTY` is active.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct VtScreenOutputState {
     width: usize,
@@ -106,7 +106,7 @@ impl VtScreenOutputState {
         }
     }
 
-    /// Replays `FillConsoleOutputAttributeImpl` for the ConPTY writer path.
+    /// Replays `FillConsoleOutputAttributeImpl` for the `ConPTY` writer path.
     /// The PowerShell clear-buffer compatibility pair deliberately suppresses
     /// the attribute write because the companion character fill emits ED.
     #[must_use]

@@ -49,7 +49,7 @@ impl LegacyConsoleWriteState {
     #[must_use]
     pub fn write_processed_ascii(&mut self, input: &[u8]) -> Vec<u8> {
         assert!(
-            input.iter().all(|value| value.is_ascii()),
+            input.iter().all(u8::is_ascii),
             "legacy ASCII projection accepts ASCII input only"
         );
 

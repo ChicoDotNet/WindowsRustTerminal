@@ -1,6 +1,6 @@
 //! URL pattern detection over logical terminal-buffer rows.
 //!
-//! TerminalCore detects plain-text URLs independently from OSC 8 hyperlinks.
+//! `TerminalCore` detects plain-text URLs independently from OSC 8 hyperlinks.
 //! Wrapped rows form one logical line, while unwrapped row boundaries terminate
 //! a candidate. Results remain in stable buffer coordinates and can be projected
 //! back into viewport-relative coordinates after scrollback movement.

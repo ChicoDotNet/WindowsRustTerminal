@@ -1,4 +1,4 @@
-//! Stateful `ScrollConsoleScreenBufferW` ownership for ConPTY output.
+//! Stateful `ScrollConsoleScreenBufferW` ownership for `ConPTY` output.
 //!
 //! This module ports the deterministic mutation and projection paths from
 //! `ApiRoutines::ScrollConsoleScreenBufferWImpl`: the ordinary `CHAR_INFO`
@@ -16,7 +16,7 @@ use terminal_buffer::viewport::{Size, Viewport};
 const CLEAR_SCREEN: &[u8] = b"\x1b[H\x1b[2J\x1b[3J";
 
 /// Executes one legacy screen-buffer scroll against live cell state and returns
-/// the exact VT projection selected by the ConPTY writer.
+/// the exact VT projection selected by the `ConPTY` writer.
 #[must_use]
 pub fn scroll_console_screen_buffer(
     state: &mut VtScreenOutputState,
@@ -41,8 +41,7 @@ pub fn scroll_console_screen_buffer(
     let source_viewport = Viewport::from_inclusive(source);
     let clip_viewport = clip
         .map(Viewport::from_inclusive)
-        .map(|value| Viewport::intersect(value, screen))
-        .unwrap_or(screen);
+        .map_or(screen, |value| Viewport::intersect(value, screen));
 
     let fill_character = if fill_character == 0 {
         u16::from(b' ')

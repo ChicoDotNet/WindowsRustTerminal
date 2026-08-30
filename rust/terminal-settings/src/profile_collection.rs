@@ -268,10 +268,10 @@ fn requested_default_profile_is_missing(
         JsonMember::Value(_) => return Err(ProfileParseError::InvalidString),
     };
 
-    if let Ok(guid) = ProfileGuid::parse(requested) {
-        if profiles.iter().any(|profile| profile.guid() == Some(guid)) {
-            return Ok(false);
-        }
+    if let Ok(guid) = ProfileGuid::parse(requested)
+        && profiles.iter().any(|profile| profile.guid() == Some(guid))
+    {
+        return Ok(false);
     }
 
     Ok(!profiles
@@ -286,9 +286,7 @@ fn profiles_have_unknown_color_scheme(
     let known_schemes = known_color_scheme_names(root)?;
     for profile in profiles {
         let (dark, light) = profile_color_scheme_names(profile)?;
-        if !known_schemes.iter().any(|name| *name == dark)
-            || !known_schemes.iter().any(|name| *name == light)
-        {
+        if !known_schemes.contains(&dark) || !known_schemes.contains(&light) {
             return Ok(true);
         }
     }

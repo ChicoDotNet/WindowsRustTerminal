@@ -15,10 +15,8 @@ fn last_non_space_row(buffer: &TextBuffer) -> Option<u16> {
     buffer
         .logical_rows()
         .enumerate()
-        .filter_map(|(row, content)| {
-            (content.measure_right() != 0)
-                .then(|| u16::try_from(row).expect("TextBuffer row index fits u16"))
-        })
+        .filter(|&(row, content)| (content.measure_right() != 0))
+        .map(|(row, content)| u16::try_from(row).expect("TextBuffer row index fits u16"))
         .last()
 }
 

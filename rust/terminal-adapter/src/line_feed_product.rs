@@ -3,7 +3,7 @@
 //! The VT parser already distinguishes LF/IND, NEL, and mode-dependent LF;
 //! `terminal-buffer::viewport_index::line_feed` already owns the real buffer and
 //! viewport mutation. This decorator connects that buffer owner to the same
-//! `AdaptDispatchCore` cursor and live `TerminalInput` LineFeed mode used by the
+//! `AdaptDispatchCore` cursor and live `TerminalInput` `LineFeed` mode used by the
 //! rest of the final adapter product, avoiding a second cursor model.
 
 use terminal_buffer::{

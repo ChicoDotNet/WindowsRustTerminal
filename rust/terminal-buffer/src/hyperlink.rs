@@ -2,7 +2,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::text_buffer::TextBuffer;
 
-/// Safe, platform-neutral ownership of the hyperlink map semantics used by TextBuffer.
+/// Safe, platform-neutral ownership of the hyperlink map semantics used by `TextBuffer`.
 ///
 /// Hyperlinks without a custom id receive a fresh numeric id every time. Hyperlinks with
 /// a custom id are stable for the same `(custom_id, uri)` pair, while the same custom id
@@ -15,6 +15,7 @@ pub struct HyperlinkStore {
 }
 
 impl HyperlinkStore {
+    #[must_use]
     pub fn new() -> Self {
         Self {
             next_id: 1,
@@ -47,10 +48,12 @@ impl HyperlinkStore {
         self.uri_by_id.get(&id).map(String::as_str)
     }
 
+    #[must_use]
     pub fn len(&self) -> usize {
         self.uri_by_id.len()
     }
 
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.uri_by_id.is_empty()
     }
@@ -62,7 +65,7 @@ impl HyperlinkStore {
         let live_ids: HashSet<u16> = buffer
             .logical_rows()
             .flat_map(|row| row.attributes().iter().copied())
-            .map(|attribute| attribute.hyperlink_id())
+            .map(super::text_attribute::TextAttribute::hyperlink_id)
             .filter(|&id| id != 0)
             .collect();
 

@@ -175,15 +175,14 @@ fn to_eight_bit_c1(response: &str) -> String {
     let mut chars = response.chars().peekable();
 
     while let Some(character) = chars.next() {
-        if character == ESC {
-            if let Some(&next) = chars.peek() {
-                if ('@'..='_').contains(&next) {
-                    let next = chars.next().expect("peeked character exists");
-                    if let Some(c1) = char::from_u32(u32::from(next) + 0x40) {
-                        result.push(c1);
-                        continue;
-                    }
-                }
+        if character == ESC
+            && let Some(&next) = chars.peek()
+            && ('@'..='_').contains(&next)
+        {
+            let next = chars.next().expect("peeked character exists");
+            if let Some(c1) = char::from_u32(u32::from(next) + 0x40) {
+                result.push(c1);
+                continue;
             }
         }
         result.push(character);

@@ -1,4 +1,4 @@
-//! Portable CascadiaSettings profile deserialization aggregate.
+//! Portable `CascadiaSettings` profile deserialization aggregate.
 //!
 //! This owner models the profile-collection behavior shared by Microsoft's
 //! deserialization validation, ordering, hiding and default-profile contracts.
@@ -329,13 +329,12 @@ fn requested_default_profile(
 }
 
 fn resolve_default_profile(requested: &str, profiles: &[DeserializedProfile]) -> Option<usize> {
-    if let Ok(guid) = ProfileGuid::parse(requested) {
-        if let Some(index) = profiles
+    if let Ok(guid) = ProfileGuid::parse(requested)
+        && let Some(index) = profiles
             .iter()
             .position(|profile| profile.identity == ProfileIdentity::Guid(guid))
-        {
-            return Some(index);
-        }
+    {
+        return Some(index);
     }
     profiles
         .iter()

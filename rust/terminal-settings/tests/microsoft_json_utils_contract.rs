@@ -145,7 +145,7 @@ fn microsoft_json_utils_basic_type_conversion_contract() {
         JsonValue::Number(f64::from(1.1_f32)),
         None,
     );
-    roundtrip(1.1_f32, JsonValue::Number(1.1_f32 as f64), None);
+    roundtrip(1.1_f32, JsonValue::Number(f64::from(1.1_f32)), None);
     roundtrip(
         RgbColor {
             r: 0xab,

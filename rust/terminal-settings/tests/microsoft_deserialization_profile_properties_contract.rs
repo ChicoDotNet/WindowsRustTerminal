@@ -3,7 +3,7 @@ use terminal_settings::{
     profile::ProfileGuid,
 };
 
-const EMPTY_INBOX: &str = r#"{}"#;
+const EMPTY_INBOX: &str = r"{}";
 
 #[test]
 fn microsoft_deserialization_close_on_exit_parsing_contract() {

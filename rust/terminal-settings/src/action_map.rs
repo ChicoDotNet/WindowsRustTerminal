@@ -1,7 +1,7 @@
 //! Portable serialization owner for Windows Terminal actions and keybindings.
 //!
 //! The action map keeps the shared typed JSON tree as its serialization source
-//! of truth while progressively owning portable ActionMap fixup semantics.
+//! of truth while progressively owning portable `ActionMap` fixup semantics.
 
 use crate::settings_json::{self, JsonObject, JsonValue};
 
@@ -25,11 +25,11 @@ pub struct ActionMapDocument {
 }
 
 impl ActionMapDocument {
-    /// Parses an ActionMap serialization vector while retaining all typed JSON
+    /// Parses an `ActionMap` serialization vector while retaining all typed JSON
     /// values for structure-identical projection.
     ///
-    /// Microsoft serializes ActionMap either as a bare action array or through
-    /// GlobalAppSettings as an object containing `actions` and `keybindings`.
+    /// Microsoft serializes `ActionMap` either as a bare action array or through
+    /// `GlobalAppSettings` as an object containing `actions` and `keybindings`.
     /// Both forms are accepted here and validated recursively for the portable
     /// structural contract used by `SerializationTests::Actions`.
     ///
@@ -48,7 +48,7 @@ impl ActionMapDocument {
         &self.root
     }
 
-    /// Reports whether Microsoft's user-origin ActionMap loader would mark the
+    /// Reports whether Microsoft's user-origin `ActionMap` loader would mark the
     /// document as needing write-back fixups while layering these actions.
     ///
     /// Native `ActionMap::LayerJson` flags only ordinary user commands that
@@ -91,7 +91,7 @@ impl ActionMapDocument {
         Ok(false)
     }
 
-    /// Canonicalizes user ActionMap JSON to the modern actions/keybindings
+    /// Canonicalizes user `ActionMap` JSON to the modern actions/keybindings
     /// representation used by `SettingsLoader::FixupUserSettings`.
     ///
     /// The fixup migrates inline legacy keys, converts `unbound` actions to
@@ -202,7 +202,7 @@ impl ActionMapDocument {
     }
 
     /// Resolves the action ID associated with a key chord, including the legacy
-    /// `keys`-inside-action form used by SettingsLoader before action fixup.
+    /// `keys`-inside-action form used by `SettingsLoader` before action fixup.
     ///
     /// If the action does not already have an explicit ID, this method applies
     /// Microsoft's portable `ActionAndArgs::GenerateID` rule. Argument hashing
@@ -226,10 +226,10 @@ impl ActionMapDocument {
                 let JsonValue::Object(binding) = binding else {
                     return Err(ActionMapError::ExpectedEntryObject);
                 };
-                if binding.get("keys").and_then(JsonValue::as_str) == Some(key_chord) {
-                    if let Some(id) = binding.get("id").and_then(JsonValue::as_str) {
-                        return Ok(Some(id.to_owned()));
-                    }
+                if binding.get("keys").and_then(JsonValue::as_str) == Some(key_chord)
+                    && let Some(id) = binding.get("id").and_then(JsonValue::as_str)
+                {
+                    return Ok(Some(id.to_owned()));
                 }
             }
         }

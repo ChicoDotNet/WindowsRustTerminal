@@ -1,4 +1,4 @@
-//! Safe VT cursor movement semantics derived from Host ScreenBuffer tests.
+//! Safe VT cursor movement semantics derived from Host `ScreenBuffer` tests.
 //!
 //! This owner models cursor movement and DEC margin clamping only. It
 //! intentionally excludes text mutation, saved cursor attributes/charset state,

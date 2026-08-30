@@ -1,4 +1,4 @@
-//! Safe viewport/cursor/virtual-bottom semantics derived from Host ScreenBuffer tests.
+//! Safe viewport/cursor/virtual-bottom semantics derived from Host `ScreenBuffer` tests.
 //!
 //! The core owner models the portable state transitions shared by cursor movement,
 //! viewport sizing, offscreen line feeds, cursor visibility and returning to the
@@ -165,10 +165,8 @@ impl VirtualBottomState {
         let last_non_space_row = buffer
             .logical_rows()
             .enumerate()
-            .filter_map(|(row, content)| {
-                (content.measure_right() != 0)
-                    .then(|| u16::try_from(row).expect("TextBuffer row index always fits u16"))
-            })
+            .filter(|&(row, content)| (content.measure_right() != 0))
+            .map(|(row, content)| u16::try_from(row).expect("TextBuffer row index always fits u16"))
             .last();
 
         let minimum_bottom = last_non_space_row.map_or(self.viewport.bottom(), |row| {

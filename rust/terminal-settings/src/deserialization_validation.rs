@@ -1,4 +1,4 @@
-//! Portable CascadiaSettings deserialization validation.
+//! Portable `CascadiaSettings` deserialization validation.
 //!
 //! This owner centralizes validation that spans the already-migrated profile and
 //! action JSON surfaces: color-scheme references plus ActionMap/keybinding
@@ -280,10 +280,10 @@ fn collect_scheme_names(
         let object = scheme
             .as_object()
             .ok_or(DeserializationValidationError::ExpectedObject)?;
-        if let Some(name) = optional_string(object, "name")? {
-            if !names.iter().any(|known| known == name) {
-                names.push(name.to_owned());
-            }
+        if let Some(name) = optional_string(object, "name")?
+            && !names.iter().any(|known| known == name)
+        {
+            names.push(name.to_owned());
         }
     }
     Ok(())
@@ -311,10 +311,10 @@ fn actions_have_invalid_scheme(
         let object = entry
             .as_object()
             .ok_or(DeserializationValidationError::ExpectedObject)?;
-        if let Some(command) = object.get("command") {
-            if command_has_invalid_scheme(command, known_schemes)? {
-                return Ok(true);
-            }
+        if let Some(command) = object.get("command")
+            && command_has_invalid_scheme(command, known_schemes)?
+        {
+            return Ok(true);
         }
         if let Some(commands) = object.get("commands") {
             let JsonValue::Array(commands) = commands else {

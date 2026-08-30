@@ -1,7 +1,7 @@
-//! Legacy conhost selection geometry mapped onto the migrated TerminalCore owner.
+//! Legacy conhost selection geometry mapped onto the migrated `TerminalCore` owner.
 //!
 //! `src/host/selection.cpp` stores an inclusive selection rectangle plus the
-//! corner where the drag began. TerminalCore already owns half-open selection
+//! corner where the drag began. `TerminalCore` already owns half-open selection
 //! spans; this module preserves the small compatibility transformation between
 //! those representations and the historical Ctrl+Shift word-stepping behavior.
 
@@ -15,7 +15,7 @@ use terminal_buffer::text_buffer::TextBuffer;
 ///
 /// Effective line selection is XOR between the configured line mode and the
 /// temporary alternate-selection modifier. Conhost stores inclusive corners,
-/// so the physically-later endpoint is advanced once before TerminalCore's
+/// so the physically-later endpoint is advanced once before `TerminalCore`'s
 /// half-open span owner is invoked.
 #[must_use]
 pub fn legacy_selection_spans(
@@ -66,7 +66,7 @@ pub fn legacy_selection_spans(
 }
 
 /// Reproduces `Selection::WordByWordSelection` when cooked-read boundaries are
-/// unavailable, which is the state exercised by Microsoft's SelectionInputTests.
+/// unavailable, which is the state exercised by Microsoft's `SelectionInputTests`.
 /// Whitespace/control cells are delimiters; ordinary punctuation remains part
 /// of the word exactly as in the source vector (`text.`).
 #[must_use]

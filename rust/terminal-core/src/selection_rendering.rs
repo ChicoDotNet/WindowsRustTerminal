@@ -29,7 +29,7 @@ impl SelectionSpan {
 /// into one horizontal half-open span per selected row, matching the shape
 /// consumed by the renderer while keeping the terminal buffer representation
 /// platform-neutral. Per-row block boundaries are repaired when they cut
-/// through the trailing half of a wide glyph, matching TerminalCore.
+/// through the trailing half of a wide glyph, matching `TerminalCore`.
 #[must_use]
 pub fn selection_spans(buffer: &TextBuffer, selection: &SelectionInfo) -> Vec<SelectionSpan> {
     if !selection.active {

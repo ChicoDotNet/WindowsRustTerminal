@@ -1,7 +1,7 @@
-//! KeyChord-aware SettingsModel projection layered on the portable ActionMap owner.
+//! KeyChord-aware `SettingsModel` projection layered on the portable `ActionMap` owner.
 //!
 //! `LayeredActionMap` remains the action/keybinding owner. This module adds the
-//! KeyChord identity required by Microsoft's scan-code contracts without
+//! `KeyChord` identity required by Microsoft's scan-code contracts without
 //! claiming Windows keyboard-layout translation as portable Rust behavior.
 
 use std::collections::BTreeMap;
@@ -69,7 +69,7 @@ impl KeyChord {
         }
     }
 
-    /// Parses the deterministic KeyChord subset exercised by KeyBindingsTests.
+    /// Parses the deterministic `KeyChord` subset exercised by `KeyBindingsTests`.
     /// Active-layout Windows translation remains an explicit platform boundary.
     ///
     /// # Errors
@@ -106,8 +106,8 @@ impl KeyChord {
             return result;
         }
 
-        if (b'0' as i32..=b'9' as i32).contains(&self.vkey)
-            || (b'A' as i32..=b'Z' as i32).contains(&self.vkey)
+        if (i32::from(b'0')..=i32::from(b'9')).contains(&self.vkey)
+            || (i32::from(b'A')..=i32::from(b'Z')).contains(&self.vkey)
         {
             result.push((self.vkey as u8 as char).to_ascii_lowercase());
         } else if let Some(name) = vkey_name(self.vkey) {
@@ -146,13 +146,13 @@ impl KeyBindingsModel {
         Self::default()
     }
 
-    /// Layers one ActionMap vector while tracking Microsoft's effective
-    /// KeyChord identity separately from its source spelling.
+    /// Layers one `ActionMap` vector while tracking Microsoft's effective
+    /// `KeyChord` identity separately from its source spelling.
     ///
     /// # Errors
     ///
     /// Returns [`KeyBindingsModelError`] for malformed JSON/chords or if the
-    /// underlying portable ActionMap rejects the layer.
+    /// underlying portable `ActionMap` rejects the layer.
     pub fn layer_json(&mut self, input: &str) -> Result<(), KeyBindingsModelError> {
         let root = settings_json::parse(input).map_err(|_| KeyBindingsModelError::InvalidJson)?;
         let JsonValue::Array(entries) = root else {

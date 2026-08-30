@@ -1,8 +1,8 @@
-//! Portable owner for SettingsModel command layering and commandline projection.
+//! Portable owner for `SettingsModel` command layering and commandline projection.
 //!
 //! Microsoft `Command::LayerJson` shares action argument semantics with
 //! keybindings, but owns a distinct name-keyed command collection. This module
-//! keeps that layering state portable while leaving WinRT resource projection at
+//! keeps that layering state portable while leaving `WinRT` resource projection at
 //! the boundary.
 
 use std::collections::BTreeMap;
@@ -44,7 +44,7 @@ impl LayeredCommands {
     ///
     /// Explicit names layer by identity. Null commands remove an existing entry.
     /// Unnamed split-pane commands receive the same generated display names used
-    /// by Microsoft's SettingsModel resources for the source vectors.
+    /// by Microsoft's `SettingsModel` resources for the source vectors.
     ///
     /// # Errors
     ///
@@ -140,15 +140,13 @@ impl LayeredCommands {
             return Ok(());
         }
 
-        if let JsonValue::Object(command) = command {
-            if command.get("action").and_then(JsonValue::as_str) == Some("splitPane") {
-                if let Some(size) = command.get("size").and_then(JsonValue::as_f64) {
-                    if !(0.0..1.0).contains(&size) || size == 0.0 {
-                        self.warnings += 1;
-                        return Ok(());
-                    }
-                }
-            }
+        if let JsonValue::Object(command) = command
+            && command.get("action").and_then(JsonValue::as_str) == Some("splitPane")
+            && let Some(size) = command.get("size").and_then(JsonValue::as_f64)
+            && (!(0.0..1.0).contains(&size) || size == 0.0)
+        {
+            self.warnings += 1;
+            return Ok(());
         }
 
         self.commands.insert(name, command.clone());

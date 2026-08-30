@@ -304,7 +304,7 @@ fn parse_terminal(tokens: &[String], implicit: bool) -> Result<NewTerminalArgs, 
             }
             "-p" | "--profile" => out.profile = required(tokens, &mut index, token)?,
             "-d" | "--startingDirectory" => {
-                out.starting_directory = required(tokens, &mut index, token)?
+                out.starting_directory = required(tokens, &mut index, token)?;
             }
             "--tabColor" => {
                 let value = required(tokens, &mut index, token)?;
@@ -372,7 +372,7 @@ fn parse_split(tokens: &[String]) -> Result<StartupAction, CommandlineError> {
             }
             "-p" | "--profile" => terminal.profile = required(tokens, &mut index, token)?,
             "-d" | "--startingDirectory" => {
-                terminal.starting_directory = required(tokens, &mut index, token)?
+                terminal.starting_directory = required(tokens, &mut index, token)?;
             }
             "--tabColor" => {
                 let value = required(tokens, &mut index, token)?;
