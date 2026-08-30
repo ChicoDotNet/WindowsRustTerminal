@@ -28,7 +28,8 @@ impl SelectionSpan {
 /// Linear selections remain one row-major span. Block selections are expanded
 /// into one horizontal half-open span per selected row, matching the shape
 /// consumed by the renderer while keeping the terminal buffer representation
-/// platform-neutral.
+/// platform-neutral. Per-row block boundaries are repaired when they cut
+/// through the trailing half of a wide glyph, matching TerminalCore.
 #[must_use]
 pub fn selection_spans(buffer: &TextBuffer, selection: &SelectionInfo) -> Vec<SelectionSpan> {
     if !selection.active {
@@ -50,9 +51,26 @@ pub fn selection_spans(buffer: &TextBuffer, selection: &SelectionInfo) -> Vec<Se
     let bottom = start.y.max(end.y);
     let left = start.x.min(end.x).clamp(0, i32::from(buffer.width()));
     let right = start.x.max(end.x).clamp(0, i32::from(buffer.width()));
+    let width = i32::from(buffer.width());
 
     (top..=bottom)
-        .map(|y| SelectionSpan::new(BufferPoint::new(left, y), BufferPoint::new(right, y)))
+        .map(|y| {
+            let row = buffer.row(y);
+            let mut row_left = left;
+            let mut row_right = right;
+
+            if row_left < width && row.dbcs_attribute_at(row_left) == DbcsAttribute::Trailing {
+                row_left = i32::from(row.adjust_to_glyph_start(row_left));
+            }
+            if row_right < width && row.dbcs_attribute_at(row_right) == DbcsAttribute::Trailing {
+                row_right = i32::from(row.adjust_to_glyph_end(row_right.saturating_add(1)));
+            }
+
+            SelectionSpan::new(
+                BufferPoint::new(row_left, y),
+                BufferPoint::new(row_right, y),
+            )
+        })
         .collect()
 }
 
@@ -210,6 +228,38 @@ mod tests {
                 SelectionSpan::new(BufferPoint::new(2, 1), BufferPoint::new(6, 1)),
                 SelectionSpan::new(BufferPoint::new(2, 2), BufferPoint::new(6, 2)),
                 SelectionSpan::new(BufferPoint::new(2, 3), BufferPoint::new(6, 3)),
+            ]
+        );
+    }
+
+    #[test]
+    fn microsoft_selection_wide_glyph_block_spans_expand_per_row() {
+        let mut buffer = buffer(100, 100);
+        buffer
+            .row_mut(10)
+            .replace_glyph(4, 2, &[0xd83c, 0xdf2f])
+            .expect("first wide glyph fits");
+        buffer
+            .row_mut(11)
+            .replace_glyph(7, 2, &[0xd83c, 0xdf2f])
+            .expect("second wide glyph fits");
+
+        let selection = SelectionInfo {
+            start: BufferPoint::new(5, 8),
+            end: BufferPoint::new(8, 12),
+            pivot: BufferPoint::new(5, 8),
+            block_selection: true,
+            active: true,
+        };
+
+        assert_eq!(
+            selection_spans(&buffer, &selection),
+            [
+                SelectionSpan::new(BufferPoint::new(5, 8), BufferPoint::new(8, 8)),
+                SelectionSpan::new(BufferPoint::new(5, 9), BufferPoint::new(8, 9)),
+                SelectionSpan::new(BufferPoint::new(4, 10), BufferPoint::new(8, 10)),
+                SelectionSpan::new(BufferPoint::new(5, 11), BufferPoint::new(9, 11)),
+                SelectionSpan::new(BufferPoint::new(5, 12), BufferPoint::new(8, 12)),
             ]
         );
     }
