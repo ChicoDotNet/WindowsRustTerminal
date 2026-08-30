@@ -293,4 +293,36 @@ mod tests {
         assert!(!buffer.row(0).was_double_byte_padded());
         assert_eq!(buffer.row(0).glyph_at(4), &[0x30ab]);
     }
+
+    #[test]
+    fn far_right_cursor_whitespace_survives_shrink_then_grow() {
+        let attribute = TextAttribute::default();
+        let mut buffer = TextBuffer::new(6, 5, attribute).unwrap();
+        for (x, byte) in b"ABCDEF".iter().copied().enumerate() {
+            buffer
+                .row_mut(0)
+                .replace_glyph(i32::try_from(x).unwrap(), 1, &[u16::from(byte)])
+                .unwrap();
+        }
+        buffer
+            .row_mut(1)
+            .replace_glyph(0, 1, &[u16::from(b'$')])
+            .unwrap();
+        let mut cursor = TextBufferPoint::new(5, 1);
+
+        resize_with_reflow_and_cursor(&mut buffer, &mut cursor, 5, 5, attribute).unwrap();
+        assert_eq!(cursor, TextBufferPoint::new(0, 3));
+        assert!(buffer.row(2).was_wrap_forced());
+
+        let lines = collect_logical_lines(&buffer, cursor);
+        assert_eq!(lines.len(), 2);
+        assert_eq!(lines[1].cursor_column, Some(5));
+        assert_eq!(lines[1].columns, 6);
+        assert_eq!(lines[1].glyphs.len(), 6);
+        let (_, remapped) = wrap_logical_lines(&lines, 6).unwrap();
+        assert_eq!(remapped, TextBufferPoint::new(5, 1));
+
+        resize_with_reflow_and_cursor(&mut buffer, &mut cursor, 6, 5, attribute).unwrap();
+        assert_eq!(cursor, TextBufferPoint::new(5, 1));
+    }
 }
