@@ -80,7 +80,7 @@ fn microsoft_keybindings_set_tab_color_args_contract() {
 
     assert_eq!(map.keybinding_count(), 3);
     assert_eq!(map.tab_color_for_key("ctrl+c"), Some(None));
-    assert_eq!(map.tab_color_for_key("ctrl+d"), Some(Some(0x563412)));
+    assert_eq!(map.tab_color_for_key("ctrl+d"), Some(Some(0x0056_3412)));
     assert_eq!(map.tab_color_for_key("ctrl+f"), Some(None));
 }
 
