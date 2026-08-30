@@ -77,21 +77,39 @@ pub const fn ss3_virtual_key(final_character: u16) -> Option<u16> {
 mod tests {
     use super::{cursor_virtual_key, generic_virtual_key, ss3_virtual_key};
 
+    const CURSOR_AND_SS3_CASES: [(u8, u16); 10] = [
+        (b'A', 0x26),
+        (b'B', 0x28),
+        (b'C', 0x27),
+        (b'D', 0x25),
+        (b'H', 0x24),
+        (b'F', 0x23),
+        (b'P', 0x70),
+        (b'Q', 0x71),
+        (b'R', 0x72),
+        (b'S', 0x73),
+    ];
+
+    const GENERIC_CASES: [(i32, u16); 14] = [
+        (1, 0x24),
+        (2, 0x2d),
+        (3, 0x2e),
+        (4, 0x23),
+        (5, 0x21),
+        (6, 0x22),
+        (15, 0x74),
+        (17, 0x75),
+        (18, 0x76),
+        (19, 0x77),
+        (20, 0x78),
+        (21, 0x79),
+        (23, 0x7a),
+        (24, 0x7b),
+    ];
+
     #[test]
     fn cursor_map_matches_microsoft_input_engine_table() {
-        let expected = [
-            (b'A', 0x26),
-            (b'B', 0x28),
-            (b'C', 0x27),
-            (b'D', 0x25),
-            (b'H', 0x24),
-            (b'F', 0x23),
-            (b'P', 0x70),
-            (b'Q', 0x71),
-            (b'R', 0x72),
-            (b'S', 0x73),
-        ];
-        for (final_character, vkey) in expected {
+        for (final_character, vkey) in CURSOR_AND_SS3_CASES {
             assert_eq!(cursor_virtual_key(u16::from(final_character)), Some(vkey));
         }
         assert_eq!(cursor_virtual_key(u16::from(b'X')), None);
@@ -99,32 +117,19 @@ mod tests {
 
     #[test]
     fn generic_map_matches_microsoft_input_engine_table() {
-        let expected = [
-            (1, 0x24),
-            (2, 0x2d),
-            (3, 0x2e),
-            (4, 0x23),
-            (5, 0x21),
-            (6, 0x22),
-            (15, 0x74),
-            (17, 0x75),
-            (18, 0x76),
-            (19, 0x77),
-            (20, 0x78),
-            (21, 0x79),
-            (23, 0x7a),
-            (24, 0x7b),
-        ];
-        for (identifier, vkey) in expected {
+        for (identifier, vkey) in GENERIC_CASES {
             assert_eq!(generic_virtual_key(identifier), Some(vkey));
         }
-        assert_eq!(generic_virtual_key(22), None);
+        for unmapped in [0, 7, 14, 16, 22, 25, i32::MAX] {
+            assert_eq!(generic_virtual_key(unmapped), None);
+        }
     }
 
     #[test]
     fn ss3_map_matches_microsoft_input_engine_table() {
-        assert_eq!(ss3_virtual_key(u16::from(b'A')), Some(0x26));
-        assert_eq!(ss3_virtual_key(u16::from(b'S')), Some(0x73));
+        for (final_character, vkey) in CURSOR_AND_SS3_CASES {
+            assert_eq!(ss3_virtual_key(u16::from(final_character)), Some(vkey));
+        }
         assert_eq!(ss3_virtual_key(u16::from(b'X')), None);
     }
 }
