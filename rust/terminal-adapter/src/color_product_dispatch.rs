@@ -267,11 +267,10 @@ impl TermDispatch for ColorProductDispatch {
                     self.collect_inner_response();
                 }
             }
-            action @ OutputAction::AdvancedCsi { ref id, ref parameters }
-                if *id == VtId::from_ascii("$u") =>
-            {
-                if !self.request_color_table_report(parameters) {
-                    self.inner.dispatch(action);
+            OutputAction::AdvancedCsi { id, parameters } if id == VtId::from_ascii("$u") => {
+                if !self.request_color_table_report(&parameters) {
+                    self.inner
+                        .dispatch(OutputAction::AdvancedCsi { id, parameters });
                     self.collect_inner_response();
                 }
             }
