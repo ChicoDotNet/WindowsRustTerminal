@@ -34,6 +34,7 @@ pub mod reporting_product_dispatch;
 pub mod response_dispatch;
 pub mod screen_buffer_cursor;
 pub mod sixel;
+#[allow(clippy::too_many_lines)]
 pub mod soft_font_size;
 pub mod terminal_surface_product;
 pub mod user_preference_charset;
