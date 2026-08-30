@@ -1,6 +1,7 @@
 aci
 addref
 allcolors
+autowraps
 breadcrumb
 breadcrumbs
 ccmp
@@ -17,6 +18,7 @@ decac
 DECMAC
 decsca
 decscusr
+defgh
 deselection
 diffing
 Dimidium
@@ -93,6 +95,7 @@ Uids
 UIDs
 und
 vsdevcmd
+vtio
 westus
 workarounds
 WSLs
