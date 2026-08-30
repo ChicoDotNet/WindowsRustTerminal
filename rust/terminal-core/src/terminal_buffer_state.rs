@@ -154,8 +154,9 @@ mod tests {
         assert_eq!(terminal.viewport_top(), 0);
         assert_eq!(terminal.viewport_bottom_exclusive(), 32);
         for (column, code_unit) in expected.into_iter().enumerate() {
+            let column = i32::try_from(column).expect("Hello World column fits in i32");
             assert_eq!(
-                terminal.buffer().row(0).glyph_at(column as i32),
+                terminal.buffer().row(0).glyph_at(column),
                 &[code_unit],
                 "column {column} must preserve Microsoft's source string"
             );
