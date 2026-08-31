@@ -76,19 +76,47 @@ try {
     Import-Module (Join-Path $root 'tools\OpenConsole.psm1') -Force
     Set-R09MsbuildDevEnvironment
 
+    $diagnosticsDir = Join-Path $root 'artifacts'
+    New-Item -ItemType Directory -Path $diagnosticsDir -Force | Out-Null
+    $textLog = Join-Path $diagnosticsDir 'r09-product-build.log'
+    $binaryLog = Join-Path $diagnosticsDir 'r09-product-build.binlog'
+    Remove-Item $textLog, $binaryLog -Force -ErrorAction SilentlyContinue
+
     $msbuildArgs = @(
         "/p:Configuration=$Configuration",
         "/p:Platform=$Platform",
         '/p:AppxSymbolPackageEnabled=false',
         '/t:Terminal\CascadiaPackage',
-        '/m'
+        '/m',
+        '/fl',
+        "/flp:logfile=$textLog;verbosity=normal",
+        "/bl:$binaryLog"
     )
 
     Write-Host "Building the canonical Terminal product path: Terminal\CascadiaPackage ($Platform $Configuration)"
+    Write-Host "MSBuild diagnostics: $textLog"
+    Write-Host "MSBuild binary log: $binaryLog"
     Invoke-OpenConsoleBuild @msbuildArgs
+    $buildExitCode = $LASTEXITCODE
 
-    if ($LASTEXITCODE -ne 0) {
-        throw "Terminal product build failed with exit code $LASTEXITCODE"
+    if ($buildExitCode -ne 0) {
+        if (Test-Path $textLog) {
+            $diagnostics = Select-String -Path $textLog -Pattern '(?i)\b(error (?:C|LNK|MSB|NETSDK|NU|APPX|WMC|XLS|PRI)\d+|fatal error [A-Z]+\d+|: error )' | Select-Object -First 40
+            if ($diagnostics) {
+                Write-Host 'R09 first actionable MSBuild diagnostics:' -ForegroundColor Red
+                foreach ($diagnostic in $diagnostics) {
+                    Write-Host $diagnostic.Line
+                }
+            }
+            else {
+                Write-Warning "The product build failed, but no standard compiler/linker/MSBuild diagnostic was matched in '$textLog'."
+            }
+        }
+        else {
+            Write-Warning "The product build failed before the MSBuild text log was created at '$textLog'."
+        }
+
+        throw "Terminal product build failed with exit code $buildExitCode"
     }
 
     Write-Host 'Canonical Terminal product build completed successfully.'
