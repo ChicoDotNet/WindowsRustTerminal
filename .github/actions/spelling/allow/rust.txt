@@ -37,9 +37,12 @@ peekable
 preexisting
 psobject
 retargeting
+rlib
 rposition
+rus
 rustup
 splitn
+staticlib
 subcluster
 subparams
 swrapped
