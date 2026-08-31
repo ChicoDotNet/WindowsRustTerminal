@@ -2,115 +2,39 @@
 #include "fzf.h"
 #include "terminal_app_ffi.h"
 
-#undef CharLower
-#undef CharUpper
-
 using namespace fzf::matcher;
-
-namespace
-{
-    static std::vector<UChar32> utf16ToUtf32(std::wstring_view text)
-    {
-        const UChar* data = reinterpret_cast<const UChar*>(text.data());
-        const int32_t dataLen = static_cast<int32_t>(text.size());
-        const int32_t cpCount = u_countChar32(data, dataLen);
-
-        std::vector<UChar32> out(cpCount);
-
-        UErrorCode status = U_ZERO_ERROR;
-        u_strToUTF32(out.data(), static_cast<int32_t>(out.size()), nullptr, data, dataLen, &status);
-        THROW_HR_IF(E_UNEXPECTED, status > U_ZERO_ERROR);
-
-        return out;
-    }
-
-    static void foldStringUtf32(std::vector<UChar32>& str)
-    {
-        for (auto& cp : str)
-        {
-            cp = u_foldCase(cp, U_FOLD_CASE_DEFAULT);
-        }
-    }
-
-    static std::wstring serializePattern(const Pattern& pattern)
-    {
-        std::wstring result;
-        for (const auto& term : pattern.terms)
-        {
-            if (!result.empty())
-            {
-                result.push_back(L' ');
-            }
-
-            for (auto codePoint : term)
-            {
-                if (codePoint <= 0xffff)
-                {
-                    result.push_back(static_cast<wchar_t>(codePoint));
-                }
-                else
-                {
-                    codePoint -= 0x10000;
-                    result.push_back(static_cast<wchar_t>(0xd800 + (codePoint >> 10)));
-                    result.push_back(static_cast<wchar_t>(0xdc00 + (codePoint & 0x3ff)));
-                }
-            }
-        }
-        return result;
-    }
-}
 
 Pattern fzf::matcher::ParsePattern(const std::wstring_view patternStr)
 {
-    Pattern patObj;
-    size_t pos = 0;
+    static_assert(sizeof(wchar_t) == sizeof(uint16_t));
 
-    while (true)
-    {
-        const auto beg = patternStr.find_first_not_of(L' ', pos);
-        if (beg == std::wstring_view::npos)
-        {
-            break;
-        }
+    terminal_app_ffi_fzf_pattern* rawPattern = nullptr;
+    const auto status = terminal_app_ffi_fzf_pattern_create_utf16(
+        reinterpret_cast<const uint16_t*>(patternStr.data()),
+        patternStr.size(),
+        &rawPattern);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_APP_FFI_OK || rawPattern == nullptr);
 
-        const auto end = std::min(patternStr.size(), patternStr.find_first_of(L' ', beg));
-        const auto word = patternStr.substr(beg, end - beg);
-        auto codePoints = utf16ToUtf32(word);
-        foldStringUtf32(codePoints);
-        patObj.terms.push_back(std::move(codePoints));
-        pos = end;
-    }
-
-    return patObj;
+    return Pattern{
+        std::shared_ptr<terminal_app_ffi_fzf_pattern>{ rawPattern, [](terminal_app_ffi_fzf_pattern* value) noexcept {
+                                                         if (value)
+                                                         {
+                                                             terminal_app_ffi_fzf_pattern_destroy(value);
+                                                         }
+                                                     } }
+    };
 }
 
 std::optional<MatchResult> fzf::matcher::Match(std::wstring_view text, const Pattern& pattern)
 {
-    if (pattern.terms.empty())
-    {
-        return MatchResult{};
-    }
-
     static_assert(sizeof(wchar_t) == sizeof(uint16_t));
-
-    const auto serializedPattern = serializePattern(pattern);
-    terminal_app_ffi_fzf_pattern* rawPattern = nullptr;
-    auto status = terminal_app_ffi_fzf_pattern_create_utf16(
-        reinterpret_cast<const uint16_t*>(serializedPattern.data()),
-        serializedPattern.size(),
-        &rawPattern);
-    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_APP_FFI_OK || rawPattern == nullptr);
-
-    const std::unique_ptr<terminal_app_ffi_fzf_pattern, decltype(&terminal_app_ffi_fzf_pattern_destroy)> rustPattern{
-        rawPattern,
-        terminal_app_ffi_fzf_pattern_destroy
-    };
+    THROW_HR_IF(E_UNEXPECTED, !pattern.RustPattern);
 
     int32_t score = 0;
     uint8_t matched = 0;
     size_t requiredRuns = 0;
-    status = terminal_app_ffi_fzf_match_utf16(
-        rustPattern.get(),
+    auto status = terminal_app_ffi_fzf_match_utf16(
+        pattern.RustPattern.get(),
         reinterpret_cast<const uint16_t*>(text.data()),
         text.size(),
         &score,
@@ -130,7 +54,7 @@ std::optional<MatchResult> fzf::matcher::Match(std::wstring_view text, const Pat
     {
         size_t writtenRuns = 0;
         status = terminal_app_ffi_fzf_match_utf16(
-            rustPattern.get(),
+            pattern.RustPattern.get(),
             reinterpret_cast<const uint16_t*>(text.data()),
             text.size(),
             &score,
