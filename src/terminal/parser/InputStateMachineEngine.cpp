@@ -5,6 +5,7 @@
 
 #include "stateMachine.hpp"
 #include "InputStateMachineEngine.hpp"
+#include "terminal_parser_ffi.h"
 
 #include <til/atomic.h>
 
@@ -110,7 +111,7 @@ til::enumset<DeviceAttribute, uint64_t> InputStateMachineEngine::WaitUntilDA1(DW
     // but I suspect infinite spurious wake-ups are a theoretical problem.
     for (;;)
     {
-        val = _deviceAttributes.load(std::memory_order::relaxed);
+        val = _deviceAttributes.load(std::memory_order_relaxed);
         if (val)
         {
             break;
@@ -1009,16 +1010,9 @@ bool InputStateMachineEngine::_UpdateSGRMouseButtonState(const VTID id,
 // true iff we found the key
 bool InputStateMachineEngine::_GetGenericVkey(const GenericKeyIdentifiers identifier, short& vkey) const
 {
-    vkey = 0;
-
-    const auto mapping = std::find(s_genericMap.cbegin(), s_genericMap.cend(), identifier);
-    if (mapping != s_genericMap.end())
-    {
-        vkey = mapping->vkey;
-        return true;
-    }
-
-    return false;
+    const auto mapped = terminal_parser_ffi_input_generic_vkey(static_cast<int32_t>(identifier));
+    vkey = gsl::narrow_cast<short>(mapped);
+    return mapped != 0;
 }
 
 // Method Description:
@@ -1030,16 +1024,9 @@ bool InputStateMachineEngine::_GetGenericVkey(const GenericKeyIdentifiers identi
 // true iff we found the key
 bool InputStateMachineEngine::_GetCursorKeysVkey(const VTID id, short& vkey) const
 {
-    vkey = 0;
-
-    const auto mapping = std::find(s_csiMap.cbegin(), s_csiMap.cend(), id);
-    if (mapping != s_csiMap.end())
-    {
-        vkey = mapping->vkey;
-        return true;
-    }
-
-    return false;
+    const auto mapped = terminal_parser_ffi_input_cursor_vkey(gsl::narrow_cast<uint16_t>(id));
+    vkey = gsl::narrow_cast<short>(mapped);
+    return mapped != 0;
 }
 
 // Method Description:
@@ -1051,16 +1038,9 @@ bool InputStateMachineEngine::_GetCursorKeysVkey(const VTID id, short& vkey) con
 // true iff we found the key
 bool InputStateMachineEngine::_GetSs3KeysVkey(const wchar_t wch, short& vkey) const
 {
-    vkey = 0;
-
-    const auto mapping = std::find(s_ss3Map.cbegin(), s_ss3Map.cend(), (Ss3ActionCodes)wch);
-    if (mapping != s_ss3Map.end())
-    {
-        vkey = mapping->vkey;
-        return true;
-    }
-
-    return false;
+    const auto mapped = terminal_parser_ffi_input_ss3_vkey(gsl::narrow_cast<uint16_t>(wch));
+    vkey = gsl::narrow_cast<short>(mapped);
+    return mapped != 0;
 }
 
 // Method Description:
