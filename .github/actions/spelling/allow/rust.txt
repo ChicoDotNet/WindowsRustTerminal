@@ -2,9 +2,11 @@ AAAAZ
 AAZZZ
 ABG
 ENH
+Griesemer
 KLMNOPQRSTUVWXY
 KLMNOPQRSTY
 MNOPQRSTUVWXY
+Torvalds
 abf
 altgr
 autotests
@@ -35,6 +37,7 @@ nhelp
 nuls
 peekable
 preexisting
+problema
 psobject
 retargeting
 rposition
