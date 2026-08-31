@@ -49,3 +49,13 @@ jobs:
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
+      - name: Preserve product build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-product-build-diagnostics
+          path: |
+            artifacts/r09-product-build.log
+            artifacts/r09-product-build.binlog
+          if-no-files-found: warn
+          retention-days: 7
