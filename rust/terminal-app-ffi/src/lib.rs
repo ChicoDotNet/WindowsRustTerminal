@@ -35,6 +35,7 @@ pub struct FzfRun {
 /// Opaque parse-once pattern handle. C++ never inspects this representation.
 pub struct FzfPattern {
     pattern: Pattern,
+    is_empty: bool,
 }
 
 pub const ABI_VERSION: u32 = 1;
@@ -86,13 +87,33 @@ pub extern "C" fn terminal_app_ffi_fzf_pattern_create_utf16(
             Ok(input) => input,
             Err(_) => return FfiStatus::InvalidUtf16,
         };
-        let pattern = Box::new(FzfPattern {
-            pattern: parse_pattern(&input),
-        });
+        let pattern = parse_pattern(&input);
+        let is_empty = match_text("", &pattern).is_some();
+        let pattern = Box::new(FzfPattern { pattern, is_empty });
 
         // SAFETY: `out_pattern` is a valid writable pointer and Box::into_raw
         // transfers ownership to the caller until the matching destroy call.
         unsafe { ptr::write(out_pattern, Box::into_raw(pattern)) };
+        FfiStatus::Ok
+    })
+}
+
+/// Reports whether a parsed pattern has no effective FZF terms.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_app_ffi_fzf_pattern_is_empty(
+    pattern: *const FzfPattern,
+    out_is_empty: *mut u8,
+) -> FfiStatus {
+    ffi_guard(|| {
+        if pattern.is_null() || out_is_empty.is_null() {
+            return FfiStatus::InvalidArgument;
+        }
+
+        // SAFETY: Both pointers were checked non-null. The ABI requires the
+        // pattern handle to remain alive and `out_is_empty` to be writable for
+        // the duration of this call.
+        let pattern = unsafe { &*pattern };
+        unsafe { ptr::write(out_is_empty, u8::from(pattern.is_empty)) };
         FfiStatus::Ok
     })
 }
@@ -197,7 +218,7 @@ mod tests {
     use super::{
         FfiStatus, FzfPattern, FzfRun, terminal_app_ffi_abi_version,
         terminal_app_ffi_fzf_match_utf16, terminal_app_ffi_fzf_pattern_create_utf16,
-        terminal_app_ffi_fzf_pattern_destroy,
+        terminal_app_ffi_fzf_pattern_destroy, terminal_app_ffi_fzf_pattern_is_empty,
     };
 
     fn utf16(value: &str) -> Vec<u16> {
@@ -217,6 +238,15 @@ mod tests {
         );
         assert!(!pattern.is_null());
         pattern
+    }
+
+    fn pattern_is_empty(pattern: *const FzfPattern) -> bool {
+        let mut is_empty = u8::MAX;
+        assert_eq!(
+            terminal_app_ffi_fzf_pattern_is_empty(pattern, &mut is_empty),
+            FfiStatus::Ok
+        );
+        is_empty != 0
     }
 
     fn match_runs(pattern: *const FzfPattern, text: &str) -> (u8, i32, Vec<FzfRun>) {
@@ -268,8 +298,25 @@ mod tests {
         let pattern = create_pattern("");
         let (matched, score, runs) = match_runs(pattern, "anything");
 
+        assert!(pattern_is_empty(pattern));
         assert_eq!((matched, score), (1, 0));
         assert!(runs.is_empty());
+        assert_eq!(terminal_app_ffi_fzf_pattern_destroy(pattern), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn fzf_ffi_treats_separator_only_pattern_as_empty() {
+        let pattern = create_pattern("   ");
+
+        assert!(pattern_is_empty(pattern));
+        assert_eq!(terminal_app_ffi_fzf_pattern_destroy(pattern), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn fzf_ffi_reports_nonempty_pattern_without_matching_text() {
+        let pattern = create_pattern("foo");
+
+        assert!(!pattern_is_empty(pattern));
         assert_eq!(terminal_app_ffi_fzf_pattern_destroy(pattern), FfiStatus::Ok);
     }
 
@@ -335,6 +382,10 @@ mod tests {
                 value.len(),
                 std::ptr::null_mut(),
             ),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_app_ffi_fzf_pattern_is_empty(std::ptr::null(), std::ptr::null_mut()),
             FfiStatus::InvalidArgument
         );
     }
