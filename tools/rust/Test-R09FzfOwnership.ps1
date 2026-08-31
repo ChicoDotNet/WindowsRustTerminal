@@ -51,7 +51,9 @@ Assert-NotContains $fzfHeader 'terms' 'C++ must not regain ownership of parsed F
 
 Assert-Contains $fzfSource 'terminal_app_ffi_fzf_pattern_create_utf16' 'ParsePattern must delegate to terminal-app-ffi.'
 Assert-Contains $fzfSource 'terminal_app_ffi_fzf_match_utf16' 'Match must delegate to terminal-app-ffi.'
+Assert-Contains $fzfSource 'terminal_app_ffi_fzf_pattern_is_empty' 'Pattern emptiness must be queried from the Rust owner.'
 Assert-Contains $fzfSource 'terminal_app_ffi_fzf_pattern_destroy' 'Rust-owned FZF patterns must be released through terminal-app-ffi.'
+Assert-NotContains $fzfSource 'return Match({}, pattern).has_value();' 'C++ must not infer Rust pattern emptiness by executing a match.'
 
 foreach ($legacySymbol in @(
     'utf16ToUtf32',
@@ -65,10 +67,11 @@ foreach ($legacySymbol in @(
 }
 
 Assert-Contains $ffiHeader 'terminal_app_ffi_fzf_pattern_create_utf16' 'The C ABI must expose Rust-owned FZF pattern creation.'
+Assert-Contains $ffiHeader 'terminal_app_ffi_fzf_pattern_is_empty' 'The C ABI must expose Rust-owned FZF pattern emptiness.'
 Assert-Contains $ffiHeader 'terminal_app_ffi_fzf_match_utf16' 'The C ABI must expose Rust-owned FZF matching.'
 Assert-Contains $ffiHeader 'terminal_app_ffi_fzf_pattern_destroy' 'The C ABI must expose Rust-owned FZF pattern destruction.'
 
 Assert-Contains $rustFzf 'pub fn parse_pattern' 'terminal-app must remain the semantic FZF pattern owner.'
-Assert-Contains $rustFzf 'pub fn match_pattern' 'terminal-app must remain the semantic FZF matcher owner.'
+Assert-Contains $rustFzf 'pub fn match_text' 'terminal-app must remain the semantic FZF matcher owner.'
 
 Write-Host 'R09 FZF ownership promotion validated: C++ is a narrow compatibility seam and portable FZF behavior remains Rust-owned.'
