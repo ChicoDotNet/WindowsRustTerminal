@@ -77,5 +77,10 @@ std::optional<MatchResult> fzf::matcher::Match(std::wstring_view text, const Pat
 
 bool fzf::matcher::IsEmpty(const Pattern& pattern)
 {
-    return Match({}, pattern).has_value();
+    THROW_HR_IF(E_UNEXPECTED, !pattern.RustPattern);
+
+    uint8_t isEmpty = 0;
+    const auto status = terminal_app_ffi_fzf_pattern_is_empty(pattern.RustPattern.get(), &isEmpty);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_APP_FFI_OK);
+    return isEmpty != 0;
 }
