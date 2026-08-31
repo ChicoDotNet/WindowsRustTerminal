@@ -19,6 +19,7 @@ on:
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
       - "tools/rust/Test-R09ParserOwnership.ps1"
+      - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
 
@@ -42,6 +43,9 @@ jobs:
       - name: Validate parser ownership promotion
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
+      - name: Validate FZF ownership promotion
+        shell: pwsh
+        run: ./tools/rust/Test-R09FzfOwnership.ps1
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
