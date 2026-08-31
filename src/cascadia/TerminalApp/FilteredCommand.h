@@ -7,8 +7,6 @@
 #include "FilteredCommand.g.h"
 #include "fzf/fzf.h"
 
-struct terminal_app_ffi_fzf_pattern;
-
 // fwdecl unittest classes
 namespace TerminalAppLocalTests
 {
@@ -36,7 +34,6 @@ namespace winrt::TerminalApp::implementation
 
     private:
         std::shared_ptr<fzf::matcher::Pattern> _pattern;
-        std::shared_ptr<terminal_app_ffi_fzf_pattern> _rustPattern;
         void _update();
         Windows::UI::Xaml::Data::INotifyPropertyChanged::PropertyChanged_revoker _itemChangedRevoker;
 
