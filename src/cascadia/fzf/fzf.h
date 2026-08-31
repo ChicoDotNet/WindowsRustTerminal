@@ -28,4 +28,5 @@ namespace fzf::matcher
 
     Pattern ParsePattern(std::wstring_view patternStr);
     std::optional<MatchResult> Match(std::wstring_view text, const Pattern& pattern);
+    bool IsEmpty(const Pattern& pattern);
 }
