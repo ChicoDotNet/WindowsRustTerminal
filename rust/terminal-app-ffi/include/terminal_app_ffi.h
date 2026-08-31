@@ -31,6 +31,10 @@ int32_t terminal_app_ffi_fzf_pattern_create_utf16(
     size_t input_len,
     terminal_app_ffi_fzf_pattern** out_pattern);
 
+int32_t terminal_app_ffi_fzf_pattern_is_empty(
+    const terminal_app_ffi_fzf_pattern* pattern,
+    uint8_t* out_is_empty);
+
 int32_t terminal_app_ffi_fzf_pattern_destroy(terminal_app_ffi_fzf_pattern* pattern);
 
 int32_t terminal_app_ffi_fzf_match_utf16(
