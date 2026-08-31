@@ -74,3 +74,8 @@ std::optional<MatchResult> fzf::matcher::Match(std::wstring_view text, const Pat
     }
     return result;
 }
+
+bool fzf::matcher::IsEmpty(const Pattern& pattern)
+{
+    return Match({}, pattern).has_value();
+}
