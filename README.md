@@ -1,428 +1,772 @@
-![Windows Terminal project logos and branding image](https://github.com/microsoft/terminal/assets/91625426/333ddc76-8ab2-4eb4-a8c0-4d7b953b1179)
+# WindowsRustTerminal
 
-[![Terminal Build Status](https://dev.azure.com/shine-oss/terminal/_apis/build/status%2FTerminal%20CI?branchName=main)](https://dev.azure.com/shine-oss/terminal/_build/latest?definitionId=1&branchName=main)
-
-# Welcome to the Windows Terminal, Console and Command-Line repo
-
-<details>
-  <summary><strong>Table of Contents</strong></summary>
-
-- [Installing and running Windows Terminal](#installing-and-running-windows-terminal)
-  - [Microsoft Store \[Recommended\]](#microsoft-store-recommended)
-  - [Other install methods](#other-install-methods)
-    - [Via GitHub](#via-github)
-    - [Via Windows Package Manager CLI (aka winget)](#via-windows-package-manager-cli-aka-winget)
-    - [Via Chocolatey (unofficial)](#via-chocolatey-unofficial)
-    - [Via Scoop (unofficial)](#via-scoop-unofficial)
-- [Installing Windows Terminal Canary](#installing-windows-terminal-canary)
-- [Terminal \& Console Overview](#terminal--console-overview)
-  - [Windows Terminal](#windows-terminal)
-  - [The Windows Console Host](#the-windows-console-host)
-  - [Shared Components](#shared-components)
-  - [Creating the new Windows Terminal](#creating-the-new-windows-terminal)
-- [Resources](#resources)
-- [FAQ](#faq)
-  - [I built and ran the new Terminal, but it looks just like the old console](#i-built-and-ran-the-new-terminal-but-it-looks-just-like-the-old-console)
-- [Documentation](#documentation)
-- [Contributing](#contributing)
-- [Communicating with the Team](#communicating-with-the-team)
-- [Developer Guidance](#developer-guidance)
-- [Prerequisites](#prerequisites)
-- [Building the Code](#building-the-code)
-  - [Building in PowerShell](#building-in-powershell)
-  - [Building in Cmd](#building-in-cmd)
-- [Running \& Debugging](#running--debugging)
-  - [Coding Guidance](#coding-guidance)
-- [Code of Conduct](#code-of-conduct)
-
-</details>
-
-<br />
-
-This repository contains the source code for:
-
-* [Windows Terminal](https://aka.ms/terminal)
-* [Windows Terminal Preview](https://aka.ms/terminal-preview)
-* The Windows console host (`conhost.exe`)
-* Components shared between the two projects
-* [ColorTool](./src/tools/ColorTool)
-* [Sample projects](./samples)
-  that show how to consume the Windows Console APIs
-
-Related repositories include:
-
-* [Windows Terminal Documentation](https://learn.microsoft.com/windows/terminal)
-  ([Repo: Contribute to the docs](https://github.com/MicrosoftDocs/terminal))
-* [Console API Documentation](https://github.com/MicrosoftDocs/Console-Docs)
-* [Cascadia Code Font](https://github.com/Microsoft/Cascadia-Code)
-
-## Installing and running Windows Terminal
-
-> [!NOTE]
-> Windows Terminal requires Windows 10 2004 (build 19041) or later
-
-### Microsoft Store [Recommended]
-
-Install the [Windows Terminal from the Microsoft Store][store-install-link].
-This allows you to always be on the latest version when we release new builds
-with automatic upgrades.
-
-This is our preferred method.
-
-### Other install methods
-
-#### Via GitHub
-
-For users who are unable to install Windows Terminal from the Microsoft Store,
-released builds can be manually downloaded from this repository's [Releases
-page](https://github.com/microsoft/terminal/releases).
-
-Download the `Microsoft.WindowsTerminal_<versionNumber>.msixbundle` file from
-the **Assets** section. To install the app, you can simply double-click on the
-`.msixbundle` file, and the app installer should automatically run. If that
-fails for any reason, you can try the following command at a PowerShell prompt:
-
-```powershell
-# NOTE: If you are using PowerShell 7+, please run
-# Import-Module Appx -UseWindowsPowerShell
-# before using Add-AppxPackage.
-
-Add-AppxPackage Microsoft.WindowsTerminal_<versionNumber>.msixbundle
-```
-
-> [!NOTE]
-> If you install Terminal manually:
+> **An experimental Rust-first evolution of Windows Terminal.**
 >
-> * You may need to install the [VC++ v14 Desktop Framework Package](https://learn.microsoft.com/troubleshoot/cpp/c-runtime-packages-desktop-bridge#how-to-install-and-update-desktop-framework-packages).
->   This should only be necessary on older builds of Windows 10 and only if you get an error about missing framework packages.
-> * Terminal will not auto-update when new builds are released so you will need
->   to regularly install the latest Terminal release to receive all the latest
->   fixes and improvements!
+> **No hay problema.**
 
-#### Via Windows Package Manager CLI (aka winget)
+WindowsRustTerminal is an independent open-source engineering experiment based on
+[Microsoft Windows Terminal](https://github.com/microsoft/terminal).
 
-[winget](https://github.com/microsoft/winget-cli) users can download and install
-the latest Terminal release by installing the `Microsoft.WindowsTerminal`
-package:
+The question behind the project is deliberately simple:
 
-```powershell
-winget install --id Microsoft.WindowsTerminal -e
-```
+**What happens if a mature, production-grade Windows terminal codebase is progressively migrated toward Rust while preserving its behavior, user experience, Windows integration, and accumulated engineering knowledge?**
 
-> [!NOTE]
-> Dependency support is available in WinGet version [1.6.2631 or later](https://github.com/microsoft/winget-cli/releases). To install the Terminal stable release 1.18 or later, please make sure you have the updated version of the WinGet client.
+I wanted to know.
 
-#### Via Chocolatey (unofficial)
+So I started building it.
 
-[Chocolatey](https://chocolatey.org) users can download and install the latest
-Terminal release by installing the `microsoft-windows-terminal` package:
+This repository is not an argument that another team should rewrite its software.
+It is not an attempt to prescribe how Microsoft should develop Windows Terminal.
+It is not a rejection of the extraordinary engineering work already present in
+the upstream project.
 
-```powershell
-choco install microsoft-windows-terminal
-```
+It is a working experiment.
 
-To upgrade Windows Terminal using Chocolatey, run the following:
-
-```powershell
-choco upgrade microsoft-windows-terminal
-```
-
-If you have any issues when installing/upgrading the package please go to the
-[Windows Terminal package
-page](https://chocolatey.org/packages/microsoft-windows-terminal) and follow the
-[Chocolatey triage process](https://chocolatey.org/docs/package-triage-process)
-
-#### Via Scoop (unofficial)
-
-[Scoop](https://scoop.sh) users can download and install the latest Terminal
-release by installing the `windows-terminal` package:
-
-```powershell
-scoop bucket add extras
-scoop install windows-terminal
-```
-
-To update Windows Terminal using Scoop, run the following:
-
-```powershell
-scoop update windows-terminal
-```
-
-If you have any issues when installing/updating the package, please search for
-or report the same on the [issues
-page](https://github.com/lukesampson/scoop-extras/issues) of Scoop Extras bucket
-repository.
+A place to explore Rust, software modernization, behavioral compatibility,
+incremental migration, architecture, automated testing, and the economics of
+rewriting mature systems through code rather than speculation.
 
 ---
 
-## Installing Windows Terminal Canary
-Windows Terminal Canary is a nightly build of Windows Terminal. This build has the latest code from our `main` branch, giving you an opportunity to try features before they make it to Windows Terminal Preview.
+## No hay problema
 
-Windows Terminal Canary is our least stable offering, so you may discover bugs before we have had a chance to find them.
+There is a phrase I have used since childhood:
 
-Windows Terminal Canary is available as an App Installer distribution and a Portable ZIP distribution.
+> **No hay problema.**
 
-The App Installer distribution supports automatic updates. Due to platform limitations, this installer only works on Windows 11.
+Literally: **“There is no problem.”**
 
-The Portable ZIP distribution is a portable application. It will not automatically update and will not automatically check for updates. This portable ZIP distribution works on Windows 10 (19041+) and Windows 11.
+It does not mean problems are imaginary.
 
-| Distribution  | Architecture    | Link                                                 |
-|---------------|:---------------:|------------------------------------------------------|
-| App Installer | x64, arm64, x86 | [Download](https://aka.ms/terminal-canary-installer) |
-| Portable ZIP  | x64             | [Download](https://aka.ms/terminal-canary-zip-x64)   |
-| Portable ZIP  | ARM64           | [Download](https://aka.ms/terminal-canary-zip-arm64) |
-| Portable ZIP  | x86             | [Download](https://aka.ms/terminal-canary-zip-x86)   |
+It means that when a problem appears, my first instinct is not to surrender to
+its size.
 
-_Learn more about the [types of Windows Terminal distributions](https://learn.microsoft.com/windows/terminal/distributions)._
+Understand it.
 
----
+Break it down.
 
-## Terminal & Console Overview
+Test assumptions.
 
-Please take a few minutes to review the overview below before diving into the
-code:
+Build something.
 
-### Windows Terminal
+Measure the result.
 
-Windows Terminal is a new, modern, feature-rich, productive terminal application
-for command-line users. It includes many of the features most frequently
-requested by the Windows command-line community including support for tabs, rich
-text, globalization, configurability, theming & styling, and more.
+Learn.
 
-The Terminal will also need to meet our goals and measures to ensure it remains
-fast and efficient, and doesn't consume vast amounts of memory or power.
+Repeat.
 
-### The Windows Console Host
+That philosophy became one of the reasons WindowsRustTerminal exists.
 
-The Windows Console host, `conhost.exe`, is Windows' original command-line user
-experience. It also hosts Windows' command-line infrastructure and the Windows
-Console API server, input engine, rendering engine, user preferences, etc. The
-console host code in this repository is the actual source from which the
-`conhost.exe` in Windows itself is built.
+Large legacy systems are often surrounded by perfectly reasonable explanations
+for why something would be difficult, expensive, risky, or impractical.
 
-Since taking ownership of the Windows command-line in 2014, the team added
-several new features to the Console, including background transparency,
-line-based selection, support for [ANSI / Virtual Terminal
-sequences](https://en.wikipedia.org/wiki/ANSI_escape_code), [24-bit
-color](https://devblogs.microsoft.com/commandline/24-bit-color-in-the-windows-console/),
-a [Pseudoconsole
-("ConPTY")](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/),
-and more.
+Those explanations matter.
 
-However, because Windows Console's primary goal is to maintain backward
-compatibility, we have been unable to add many of the features the community
-(and the team) have been wanting for the last several years including tabs,
-unicode text, and emoji.
+But sometimes there is still value in asking:
 
-These limitations led us to create the new Windows Terminal.
-
-> You can read more about the evolution of the command-line in general, and the
-> Windows command-line specifically in [this accompanying series of blog
-> posts](https://devblogs.microsoft.com/commandline/windows-command-line-backgrounder/)
-> on the Command-Line team's blog.
-
-### Shared Components
-
-While overhauling Windows Console, we modernized its codebase considerably,
-cleanly separating logical entities into modules and classes, introduced some
-key extensibility points, replaced several old, home-grown collections and
-containers with safer, more efficient [STL
-containers](https://docs.microsoft.com/en-us/cpp/standard-library/stl-containers?view=vs-2022),
-and made the code simpler and safer by using Microsoft's [Windows Implementation
-Libraries - WIL](https://github.com/Microsoft/wil).
-
-This overhaul resulted in several of Console's key components being available
-for re-use in any terminal implementation on Windows. These components include a
-new DirectWrite-based text layout and rendering engine, a text buffer capable of
-storing both UTF-16 and UTF-8, a VT parser/emitter, and more.
-
-### Creating the new Windows Terminal
-
-When we started planning the new Windows Terminal application, we explored and
-evaluated several approaches and technology stacks. We ultimately decided that
-our goals would be best met by continuing our investment in our C++ codebase,
-which would allow us to reuse several of the aforementioned modernized
-components in both the existing Console and the new Terminal. Further, we
-realized that this would allow us to build much of the Terminal's core itself as
-a reusable UI control that others can incorporate into their own applications.
-
-The result of this work is contained within this repo and delivered as the
-Windows Terminal application you can download from the Microsoft Store, or
-[directly from this repo's
-releases](https://github.com/microsoft/terminal/releases).
+**What if we simply try?**
 
 ---
 
-## Resources
+## Why this project exists
 
-For more information about Windows Terminal, you may find some of these
-resources useful and interesting:
+Windows Terminal is a particularly interesting system for this experiment.
 
-* [Command-Line Blog](https://devblogs.microsoft.com/commandline)
-* [Command-Line Backgrounder Blog
-  Series](https://devblogs.microsoft.com/commandline/windows-command-line-backgrounder/)
-* Windows Terminal Launch: [Terminal "Sizzle
-  Video"](https://www.youtube.com/watch?v=8gw0rXPMMPE&list=PLEHMQNlPj-Jzh9DkNpqipDGCZZuOwrQwR&index=2&t=0s)
-* Windows Terminal Launch: [Build 2019
-  Session](https://www.youtube.com/watch?v=KMudkRcwjCw)
-* Run As Radio: [Show 645 - Windows Terminal with Richard
-  Turner](https://www.runasradio.com/Shows/Show/645)
-* Azure DevOps Podcast: [Episode 54 - Kayla Cinnamon and Rich Turner on DevOps
-  on the Windows
-  Terminal](http://azuredevopspodcast.clear-measure.com/kayla-cinnamon-and-rich-turner-on-devops-on-the-windows-terminal-team-episode-54)
-* Microsoft Ignite 2019 Session: [The Modern Windows Command Line: Windows
-  Terminal -
-  BRK3321](https://myignite.techcommunity.microsoft.com/sessions/81329?source=sessions)
+It is mature.
+
+It is highly visible.
+
+It interacts deeply with Windows.
+
+It contains years of compatibility decisions, terminal behavior, rendering,
+input handling, VT processing, platform integration, UI architecture, and
+production experience.
+
+That makes it exactly the kind of software where a rewrite should **not** be
+treated casually.
+
+And that is precisely what makes it interesting.
+
+The goal is not to erase the engineering history of Windows Terminal.
+
+The goal is to preserve what works while investigating whether Rust can become
+an increasingly strong owner of the product's core behavior.
+
+This project explores questions such as:
+
+- Can a large C++ Windows application be migrated incrementally to Rust?
+- Can behavioral compatibility be measured instead of assumed?
+- Can Rust replace components without requiring a big-bang rewrite?
+- Can existing Windows, XAML, WinRT, and product integration be preserved where
+  rewriting them provides little value?
+- Can automated contracts turn the original implementation into an executable
+  specification?
+- Can Rust improve memory-safety boundaries without sacrificing compatibility?
+- What is the actual engineering cost of such a migration?
+- Which parts should be copied conceptually, transformed, adapted, or left alone?
+- Where does Rust provide meaningful architectural value, and where does it not?
+
+The repository exists to produce evidence for those questions.
 
 ---
 
-## FAQ
+## Rust-first does not mean rewrite everything
 
-### I built and ran the new Terminal, but it looks just like the old console
+One of the most important lessons from this experiment is that language migration
+and product migration are not the same thing.
 
-Cause: You're launching the incorrect solution in Visual Studio.
+WindowsRustTerminal follows a **progressive ownership** model.
 
-Solution: Make sure you're building & deploying the `CascadiaPackage` project in
-Visual Studio.
+Rust should own components when there is a meaningful reason for Rust to own
+them.
 
-> [!NOTE]
-> `OpenConsole.exe` is just a locally-built `conhost.exe`, the classic
-> Windows Console that hosts Windows' command-line infrastructure. OpenConsole
-> is used by Windows Terminal to connect to and communicate with command-line
-> applications (via
-> [ConPty](https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/)).
+Existing Windows infrastructure should remain when replacing it would merely
+recreate something that already works.
+
+The target is therefore not:
+
+> “Make every file Rust.”
+
+The target is:
+
+> **Move product responsibility toward Rust while preserving the best existing
+> assets of the system.**
+
+That distinction matters.
+
+A successful modernization is not measured by the percentage of files that use
+a new programming language.
+
+It is measured by whether the resulting product is simpler to reason about,
+safer to change, verifiably compatible, maintainable, and useful.
 
 ---
 
-## Documentation
+## Migration philosophy
 
-All project documentation is located at [aka.ms/terminal-docs](https://aka.ms/terminal-docs). If you would like
-to contribute to the documentation, please submit a pull request on the [Windows
-Terminal Documentation repo](https://github.com/MicrosoftDocs/terminal).
+The migration is being developed as a sequence of small, testable engineering
+increments rather than a single rewrite event.
+
+The core loop is:
+
+1. **Observe the existing behavior.**
+2. **Capture that behavior as a contract.**
+3. **Implement the equivalent behavior in Rust.**
+4. **Replay the contract against both implementations.**
+5. **Investigate every difference.**
+6. **Integrate only when equivalence is understood.**
+7. **Let CI preserve what has already been learned.**
+
+This makes the existing implementation more than legacy code.
+
+It becomes an **oracle**.
+
+Instead of trying to reproduce years of behavior from documentation or memory,
+the migration asks the running system what it actually does.
+
+That approach is especially valuable for terminal software, where edge cases,
+escape sequences, parser state, input behavior, compatibility rules, and
+historical details can matter as much as the obvious feature set.
+
+---
+
+## Contract Replay
+
+A central technique in WindowsRustTerminal is what I call the **Contract Replay
+Loop**.
+
+For a migration or refactor:
+
+```text
+Existing implementation
+        │
+        ▼
+Observed behavior
+        │
+        ▼
+Executable contract
+        │
+        ├──────────────► Existing implementation
+        │
+        └──────────────► Rust implementation
+                              │
+                              ▼
+                         Compare results
+                              │
+                    ┌─────────┴─────────┐
+                    │                   │
+                 Equivalent          Different
+                    │                   │
+                 Integrate          Investigate
+```
+
+This changes the question from:
+
+> “Does the Rust version look correct?”
+
+to:
+
+> **“Can the Rust implementation demonstrate the same externally observable
+> behavior?”**
+
+That is a much stronger engineering question.
+
+---
+
+## Current migration state
+
+The project has progressed through a series of migration rounds.
+
+By the completion of **R08**, the functional contract suite had reached:
+
+**968 / 968 covered contracts**
+
+with:
+
+**Missing = 0**
+
+That does not mean the entire Windows Terminal product has already been replaced
+by Rust.
+
+It means something more precise:
+
+The migrated behavioral surface covered by that contract system had reached
+measured equivalence against the reference C++ implementation.
+
+The current work moves beyond isolated behavioral equivalence and into
+**product integration**: connecting Rust ownership to the actual application
+architecture while retaining the parts of the Windows product stack that still
+make sense to keep.
+
+That distinction is important.
+
+Passing tests is not the finish line.
+
+**Shipping a coherent product is.**
+
+---
+
+## Why Rust?
+
+I believe Rust is one of the strongest languages available today for building
+systems software that must balance:
+
+- performance,
+- memory safety,
+- explicit ownership,
+- predictable resource management,
+- concurrency,
+- low-level control,
+- strong tooling,
+- testability,
+- and long-term maintainability.
+
+But this project is not based on the claim that:
+
+> Rust automatically makes software fast.
+
+It does not.
+
+Nor does Rust automatically make an architecture good.
+
+It does not.
+
+Rust does, however, give engineers a powerful set of constraints and abstractions
+for expressing ownership and safety decisions explicitly.
+
+In a codebase that handles parsers, buffers, terminal state, Windows APIs,
+concurrency, process interaction, and large amounts of stateful behavior, that
+is worth exploring seriously.
+
+WindowsRustTerminal exists to discover where those advantages survive contact
+with a real production codebase.
+
+---
+
+## Why experiment instead of debate?
+
+Software engineering has always advanced through people who were curious enough
+to build something.
+
+Linus Torvalds began Linux as a personal project rather than an attempt to command
+the operating-system world.
+
+Grace Hopper pushed programming toward higher-level languages because making
+computers easier for humans to instruct was worth exploring.
+
+Robert Griesemer, Rob Pike, and Ken Thompson created Go while trying to reduce
+the complexity engineers experienced building large software systems.
+
+Apple popularized a remarkably durable invitation to **Think Different**.
+
+Microsoft's modern mission is to **empower every person and every organization
+on the planet to achieve more**.
+
+These stories are very different.
+
+But I see a common engineering instinct in them:
+
+**Curiosity becomes much more useful when it produces an artifact.**
+
+WindowsRustTerminal follows that tradition in a very modest way.
+
+I had authentic curiosity.
+
+I enjoy Rust.
+
+I care deeply about software architecture.
+
+I wanted to understand this codebase.
+
+I had some extra time.
+
+And the source code was available.
+
+So instead of limiting the question to:
+
+> “Would rewriting Windows Terminal in Rust make sense?”
+
+I chose a different question:
+
+> **“How far can I actually take it?”**
+
+No hay problema.
+
+---
+
+## This is an experiment, but it is not a toy
+
+There is a useful difference between an experimental project and a disposable
+one.
+
+WindowsRustTerminal is experimental because its architecture is exploring a
+different technical direction.
+
+It is not intended to be careless.
+
+The migration values:
+
+- behavioral evidence over intuition,
+- incremental change over blind rewrites,
+- reproducible builds,
+- automated testing,
+- continuous integration,
+- explicit architectural decisions,
+- small verifiable increments,
+- compatibility,
+- measurable progress,
+- and preserving valuable existing engineering.
+
+The objective is not merely to produce Rust code.
+
+The objective is to learn whether a **credible Rust-first Windows terminal** can
+emerge from the experiment.
+
+---
+
+## Relationship to Microsoft Windows Terminal
+
+WindowsRustTerminal originates from Microsoft's open-source
+[Windows Terminal](https://github.com/microsoft/terminal) project.
+
+The upstream Windows Terminal team created the application, architecture,
+terminal behavior, Windows integration, rendering infrastructure, documentation,
+tests, and enormous body of engineering knowledge on which this experiment is
+based.
+
+That work deserves explicit credit.
+
+**WindowsRustTerminal is an independent fork and is not affiliated with,
+endorsed by, or maintained by Microsoft.**
+
+Microsoft Windows Terminal continues to have its own architecture, roadmap,
+governance, maintainers, and engineering priorities.
+
+This fork has a different purpose:
+
+**to explore a Rust-first architectural path and document what happens.**
+
+There is no requirement that upstream agree with the experiment.
+
+There is no requirement that this experiment become upstream.
+
+Open source allows both projects to pursue the questions their maintainers find
+valuable.
+
+That is a feature.
+
+---
+
+## What this project is not
+
+WindowsRustTerminal is **not**:
+
+- a demand that Microsoft rewrite Windows Terminal;
+- a claim that C++ is obsolete;
+- a claim that Rust automatically produces better software;
+- an attempt to erase the work of the original Windows Terminal engineers;
+- a promise that every Windows Terminal component will eventually be rewritten;
+- a benchmark result disguised as a conclusion;
+- or a finished product pretending to be one.
+
+It is:
+
+**an engineering experiment being progressively turned into software.**
+
+---
+
+## Engineering principles
+
+### 1. Behavior before implementation
+
+The original implementation tells us what the product actually does.
+
+We capture that behavior before replacing it.
+
+### 2. Evidence before confidence
+
+A green contract is stronger than “this should work.”
+
+### 3. Incremental migration
+
+Large rewrites become safer when decomposed into independently verifiable
+ownership transitions.
+
+### 4. CI as engineering memory
+
+Once a behavior has been discovered, CI should help prevent the project from
+forgetting it.
+
+### 5. Preserve valuable assets
+
+Rewriting working infrastructure merely to increase the percentage of Rust is
+not a goal.
+
+### 6. Explicit boundaries
+
+FFI, ownership, compatibility, platform integration, and unsafe code should have
+clear reasons to exist.
+
+### 7. Product over language purity
+
+Rust serves the product.
+
+The product does not exist to serve Rust.
+
+---
+
+## Architecture direction
+
+The long-term architectural direction is a terminal in which Rust increasingly
+owns product behavior while integrating pragmatically with the Windows platform.
+
+Areas of investigation include:
+
+- terminal parser behavior,
+- VT processing,
+- text and buffer behavior,
+- input handling,
+- state machines,
+- command-line infrastructure,
+- process and pseudoconsole integration,
+- Windows API boundaries,
+- WinRT interoperability,
+- UI integration,
+- configuration,
+- product packaging,
+- startup,
+- runtime ownership,
+- performance,
+- memory behavior,
+- and failure safety.
+
+Some components may migrate completely.
+
+Some may remain platform-native.
+
+Some may become adapters.
+
+Some may prove not worth changing.
+
+**The experiment decides through evidence.**
+
+---
+
+## Migration classification
+
+When examining existing code, changes are generally treated as one of four
+categories:
+
+### COPY
+
+The behavior and structure are sufficiently correct that the new implementation
+should preserve them directly.
+
+### TRANSFORM
+
+The behavior remains, but Rust allows the implementation to be expressed more
+clearly or safely.
+
+### ADAPT
+
+The existing architecture depends on APIs, runtime assumptions, or language
+boundaries that require an interoperability layer.
+
+### PRESERVE
+
+Rewriting the component would currently add more cost than value.
+
+This classification helps prevent a language migration from turning into an
+uncontrolled architecture rewrite.
+
+---
+
+## For Rust developers
+
+If you come from Rust, this repository is an opportunity to work with a large
+Windows-native application rather than an isolated systems-programming example.
+
+Expect to encounter:
+
+- Windows APIs,
+- WinRT,
+- XAML integration,
+- C++ interop,
+- terminal protocols,
+- build-system constraints,
+- platform packaging,
+- behavioral compatibility,
+- and migration boundaries.
+
+The goal is to make the Rust portions of the repository feel like a serious Rust
+codebase while respecting the reality of the Windows ecosystem around them.
+
+---
+
+## For .NET and Windows developers
+
+If you come from .NET, C#, XAML, WinUI, or the broader Microsoft ecosystem, Rust
+should not need to feel like an alien island inside the repository.
+
+The architecture aims to keep responsibilities explicit and discoverable.
+
+The migration is intentionally being shaped so that developers familiar with
+either Rust or Microsoft application development can understand where product
+responsibilities live and how the pieces interact.
+
+---
+
+## For software architects
+
+WindowsRustTerminal is also a case study in a broader problem:
+
+**How do you modernize a large system without throwing away everything the old
+system already knows?**
+
+The techniques explored here can apply beyond terminal emulators:
+
+- C++ to Rust migration,
+- legacy-system modernization,
+- strangler-style architecture,
+- behavioral characterization,
+- contract testing,
+- compatibility preservation,
+- incremental rewrites,
+- native interoperability,
+- and evidence-driven architecture.
+
+Windows Terminal happens to be the laboratory.
+
+The engineering problem is much larger.
+
+---
+
+## Project status
+
+WindowsRustTerminal is under active development.
+
+Expect:
+
+- incomplete product integration,
+- architecture changes,
+- temporary adapters,
+- experimental branches,
+- evolving build instructions,
+- and migration infrastructure that may disappear once its purpose has been
+  fulfilled.
+
+The project should be evaluated by the evidence present at a particular
+migration stage, not by assumptions about the final architecture.
+
+---
+
+## Building
+
+The repository currently contains both the original Windows Terminal
+infrastructure and the Rust migration work.
+
+Because product integration is still evolving, build instructions may differ
+depending on the migration stage and branch.
+
+For the latest Rust development path, inspect:
+
+```text
+rust/
+Cargo.toml
+.github/workflows/rust-ci.yml
+```
+
+The original Windows Terminal build infrastructure remains available while the
+product migration progresses.
+
+More streamlined WindowsRustTerminal build and run instructions will replace
+this section as product ownership converges.
 
 ---
 
 ## Contributing
 
-We are excited to work alongside you, our amazing community, to build and
-enhance Windows Terminal\!
+Contributions that help answer the engineering questions of this fork are
+welcome.
 
-***BEFORE you start work on a feature/fix***, please read & follow our
-[Contributor's
-Guide](./CONTRIBUTING.md) to
-help avoid any wasted or duplicate effort.
+Particularly valuable areas include:
 
-## Communicating with the Team
+- behavioral compatibility,
+- Rust implementations,
+- Windows interoperability,
+- test coverage,
+- performance measurement,
+- memory analysis,
+- unsafe-code reduction,
+- architectural simplification,
+- build reproducibility,
+- documentation,
+- and migration tooling.
 
-The easiest way to communicate with the team is via GitHub issues.
+A useful contribution should ideally make one of these statements easier to
+prove:
 
-Please file new issues, feature requests and suggestions, but **DO search for
-similar open/closed preexisting issues before creating a new issue.**
+> The Rust implementation behaves correctly.
 
-If you would like to ask a question that you feel doesn't warrant an issue
-(yet), please reach out to us via Twitter:
+> The architecture became simpler.
 
-* Christopher Nguyen, Product Manager:
-  [@nguyen_dows](https://twitter.com/nguyen_dows)
-* Dustin Howett, Engineering Lead: [@dhowett](https://twitter.com/DHowett)
-* Mike Griese, Senior Developer: [@zadjii@mastodon.social](https://mastodon.social/@zadjii)
-* Carlos Zamora, Developer: [@cazamor_msft](https://twitter.com/cazamor_msft)
-* Pankaj Bhojwani, Developer
-* Leonard Hecker, Developer: [@LeonardHecker](https://twitter.com/LeonardHecker)
+> A boundary became safer.
 
-## Developer Guidance
+> The product became easier to build or maintain.
 
-## Prerequisites
-
-You can configure your environment to build Terminal in one of two ways:
-
-### Using WinGet configuration file
-
-After cloning the repository, you can use a [WinGet configuration file](https://learn.microsoft.com/en-us/windows/package-manager/configuration/#use-a-winget-configuration-file-to-configure-your-machine)
-to set up your environment. The [default configuration file](.config/configuration.winget) installs Visual Studio 2026 Community & rest of the required tools. There are two other variants of the configuration file available in the [.config](.config) directory for Enterprise & Professional editions of Visual Studio 2026. To run the default configuration file, you can either double-click the file from explorer or run the following command:
-
-```powershell
-winget configure .config\configuration.winget
-```
-
-### Manual configuration
-
-* You must be running Windows 10 2004 (build >= 10.0.19041.0) or later to run
-  Windows Terminal
-* You must [enable Developer Mode in the Windows Settings
-  app](https://learn.microsoft.com/windows/uwp/get-started/enable-your-device-for-development)
-  to locally install and run Windows Terminal
-* You must have [PowerShell 7 or later](https://github.com/PowerShell/PowerShell/releases/latest) installed
-* You must have the [Windows 11 (10.0.26100) SDK](https://developer.microsoft.com/windows/downloads/windows-sdk/) installed at version 10.0.26100.8249 or greater.
-* You must have at least [VS 2026](https://visualstudio.microsoft.com/downloads/) version 18.6 installed
-* You must install the following Workloads via the VS Installer. Note: Opening
-  the solution will [prompt you to install missing components automatically](https://devblogs.microsoft.com/setup/configure-visual-studio-across-your-organization-with-vsconfig/):
-  * Desktop Development with C++
-  * WinUI application development
-* You must install the [.NET Framework 4.7.2 Targeting Pack](https://learn.microsoft.com/dotnet/framework/install/guide-for-developers#to-install-the-net-framework-developer-pack-or-targeting-pack) to build test projects
-
-## Building the Code
-
-OpenConsole.slnx may be built from within Visual Studio or from the command-line
-using a set of convenience scripts & tools in the **/tools** directory:
-
-### Building in PowerShell
-
-```powershell
-Import-Module .\tools\OpenConsole.psm1
-Set-MsBuildDevEnvironment
-Invoke-OpenConsoleBuild
-```
-
-### Building in Cmd
-
-```shell
-.\tools\razzle.cmd
-bcz
-```
-
-## Running & Debugging
-
-To debug the Windows Terminal in VS, right click on `CascadiaPackage` (in the
-Solution Explorer) and go to properties. In the Debug menu, change "Application
-process" and "Background task process" to "Native Only".
-
-You should then be able to build & debug the Terminal project by hitting
-<kbd>F5</kbd>. Make sure to select either the "x64" or the "x86" platform - the
-Terminal doesn't build for "Any Cpu" (because the Terminal is a C++ application,
-not a C# one).
-
-> 👉 You will _not_ be able to launch the Terminal directly by running the
-> WindowsTerminal.exe. For more details on why, see
-> [#926](https://github.com/microsoft/terminal/issues/926),
-> [#4043](https://github.com/microsoft/terminal/issues/4043)
-
-### Coding Guidance
-
-Please review these brief docs below about our coding practices.
-
-> 👉 If you find something missing from these docs, feel free to contribute to
-> any of our documentation files anywhere in the repository (or write some new
-> ones!)
-
-This is a work in progress as we learn what we'll need to provide people in
-order to be effective contributors to our project.
-
-* [Coding Style](./doc/STYLE.md)
-* [Code Organization](./doc/ORGANIZATION.md)
-* [Exceptions in our legacy codebase](./doc/EXCEPTIONS.md)
-* [Helpful smart pointers and macros for interfacing with Windows in WIL](./doc/WIL.md)
+> A previously unknown migration risk became measurable.
 
 ---
 
-## Code of Conduct
+## A note on disagreement
 
-This project has adopted the [Microsoft Open Source Code of
-Conduct][conduct-code]. For more information see the [Code of Conduct
-FAQ][conduct-FAQ] or contact [opencode@microsoft.com][conduct-email] with any
-additional questions or comments.
+Good engineers can examine the same system and choose different architectures.
 
-[conduct-code]: https://opensource.microsoft.com/codeofconduct/
-[conduct-FAQ]: https://opensource.microsoft.com/codeofconduct/faq/
-[conduct-email]: mailto:opencode@microsoft.com
-[store-install-link]: https://aka.ms/terminal
+That is normal.
+
+One team may reasonably conclude that maintaining the existing C++ architecture
+is the right investment.
+
+Another engineer may reasonably be curious about what a Rust-first architecture
+could become.
+
+Both can be intellectually honest.
+
+WindowsRustTerminal does not need another project to be wrong in order for this
+experiment to be worthwhile.
+
+The repository only needs to answer its own question well.
+
+---
+
+## The larger idea
+
+Technology history contains many examples of useful things beginning with a
+developer asking a question nobody assigned them to answer.
+
+Sometimes the experiment fails.
+
+That is useful information.
+
+Sometimes it works only partially.
+
+That is useful information too.
+
+And occasionally the experiment reveals that something assumed to be
+impractical was simply unexplored.
+
+The important part is that the answer becomes inspectable.
+
+Code can be read.
+
+Tests can be rerun.
+
+Benchmarks can be challenged.
+
+Architectures can be compared.
+
+Claims can be falsified.
+
+That is one of the things I love most about software engineering.
+
+You do not always have to win an argument.
+
+Sometimes you can simply build the alternative and learn from the result.
+
+---
+
+# No hay problema.
+
+A difficult problem is not an insult.
+
+A disagreement is not an emergency.
+
+A failed experiment is not wasted work if it produces knowledge.
+
+And an open-source codebase is an invitation to learn.
+
+WindowsRustTerminal began because I was curious whether this could be done.
+
+It continues because the answer has become much more interesting than the
+question.
+
+**Build. Measure. Learn. Improve.**
+
+No hay problema.
+
+---
+
+## Upstream project
+
+WindowsRustTerminal is derived from:
+
+**Microsoft Windows Terminal**  
+https://github.com/microsoft/terminal
+
+Please visit the upstream repository for the official Microsoft Windows Terminal
+project, releases, documentation, support, roadmap, and contribution process.
+
+---
+
+## License
+
+This project preserves the licensing requirements of the upstream Windows
+Terminal source code.
+
+See [LICENSE](./LICENSE) and the applicable notices in this repository for
+details.
+
+---
+
+## Search and research topics
+
+WindowsRustTerminal may be useful to engineers researching:
+
+**Windows Terminal Rust rewrite, Windows Terminal Rust port, C++ to Rust
+migration, large C++ codebase modernization, Rust Windows development, Rust
+WinRT interoperability, Rust XAML integration, terminal emulator architecture,
+VT parser Rust, ConPTY Rust, Windows console Rust, incremental rewrite strategy,
+contract replay testing, characterization testing, legacy system modernization,
+Rust FFI Windows, memory-safe systems programming, Rust migration case study,
+behavioral compatibility testing, Windows native Rust application, terminal
+emulator migration, and evidence-driven software architecture.**
