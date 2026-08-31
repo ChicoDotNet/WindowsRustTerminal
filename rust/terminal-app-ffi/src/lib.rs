@@ -264,6 +264,16 @@ mod tests {
     }
 
     #[test]
+    fn fzf_ffi_preserves_empty_pattern_as_zero_weight_match() {
+        let pattern = create_pattern("");
+        let (matched, score, runs) = match_runs(pattern, "anything");
+
+        assert_eq!((matched, score), (1, 0));
+        assert!(runs.is_empty());
+        assert_eq!(terminal_app_ffi_fzf_pattern_destroy(pattern), FfiStatus::Ok);
+    }
+
+    #[test]
     fn fzf_ffi_preserves_parse_once_multi_term_score_and_runs() {
         let pattern = create_pattern("sp anta");
         let (matched, score, runs) = match_runs(
