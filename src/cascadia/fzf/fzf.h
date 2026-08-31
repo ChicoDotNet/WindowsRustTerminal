@@ -1,7 +1,11 @@
 #pragma once
 
+#include <memory>
+#include <optional>
+#include <string_view>
 #include <vector>
-#include <icu.h>
+
+struct terminal_app_ffi_fzf_pattern;
 
 namespace fzf::matcher
 {
@@ -19,7 +23,7 @@ namespace fzf::matcher
 
     struct Pattern
     {
-        std::vector<std::vector<UChar32>> terms;
+        std::shared_ptr<terminal_app_ffi_fzf_pattern> RustPattern;
     };
 
     Pattern ParsePattern(std::wstring_view patternStr);
