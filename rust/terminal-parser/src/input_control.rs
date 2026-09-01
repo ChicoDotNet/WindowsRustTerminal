@@ -21,6 +21,8 @@ pub struct ControlCharacterPlan {
     pub clear_layout_modifiers: bool,
 }
 
+const VK_C: u16 = 0x43;
+
 /// Classifies one UTF-16 code unit using Microsoft's input-engine control rules.
 ///
 /// `write_alt` matters for Ctrl+C because ESC-prefixed ETX is treated as the
@@ -31,7 +33,7 @@ pub const fn classify_control_character(code_unit: u16, write_alt: bool) -> Cont
         return ControlCharacterPlan {
             kind: ControlCharacterKind::CtrlC,
             character: 0x03,
-            forced_virtual_key: b'C' as u16,
+            forced_virtual_key: VK_C,
             write_ctrl: true,
             clear_layout_modifiers: true,
         };
