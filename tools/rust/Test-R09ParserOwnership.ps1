@@ -63,6 +63,14 @@ $ffiWin32Text = Get-Content -LiteralPath $ffiWin32 -Raw
 $rustKeymapText = Get-Content -LiteralPath $rustKeymap -Raw
 $rustInputEngineText = Get-Content -LiteralPath $rustInputEngine -Raw
 $inputEngineText = Get-Content -LiteralPath $inputEngine -Raw
+$win32KeyMarker = 'INPUT_RECORD InputStateMachineEngine::_GenerateWin32Key'
+$win32KeyStart = $inputEngineText.IndexOf($win32KeyMarker, [System.StringComparison]::Ordinal)
+if ($win32KeyStart -lt 0)
+{
+    throw 'R09 parser ownership regression: InputStateMachineEngine no longer contains the native Win32 key adapter.'
+}
+$win32KeyText = $inputEngineText.Substring($win32KeyStart)
+
 foreach ($function in $expectedKeymapFunctions)
 {
     if ($ffiHeaderText -notmatch [regex]::Escape($function))
@@ -103,7 +111,7 @@ if ($ffiWin32Text -notmatch [regex]::Escape($win32KeyFunction))
 {
     throw "R09 parser ownership regression: terminal-parser-ffi no longer exports Win32 key seam $win32KeyFunction."
 }
-if ($inputEngineText -notmatch [regex]::Escape($win32KeyFunction))
+if ($win32KeyText -notmatch [regex]::Escape($win32KeyFunction))
 {
     throw "R09 parser ownership regression: InputStateMachineEngine no longer routes Win32 key normalization through $win32KeyFunction."
 }
@@ -217,7 +225,7 @@ foreach ($legacyWin32KeyNormalization in @(
     'parameters.at(4).value_or(0)'
 ))
 {
-    if ($inputEngineText -match [regex]::Escape($legacyWin32KeyNormalization))
+    if ($win32KeyText -match [regex]::Escape($legacyWin32KeyNormalization))
     {
         throw "R09 parser ownership regression: portable Win32 key normalization returned to C++: $legacyWin32KeyNormalization"
     }
