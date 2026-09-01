@@ -76,4 +76,11 @@ terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
 
 #ifdef __cplusplus
 }
+
+static_assert(sizeof(terminal_parser_ffi_control_character_plan) == 16);
+static_assert(offsetof(terminal_parser_ffi_control_character_plan, kind) == 0);
+static_assert(offsetof(terminal_parser_ffi_control_character_plan, character) == 4);
+static_assert(offsetof(terminal_parser_ffi_control_character_plan, forced_virtual_key) == 6);
+static_assert(offsetof(terminal_parser_ffi_control_character_plan, write_ctrl) == 8);
+static_assert(offsetof(terminal_parser_ffi_control_character_plan, clear_layout_modifiers) == 12);
 #endif
