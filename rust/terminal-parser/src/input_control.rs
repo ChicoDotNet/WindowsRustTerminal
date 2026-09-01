@@ -106,42 +106,40 @@ mod tests {
     fn ctrl_c_is_host_special_only_without_alt() {
         let plain = classify_control_character(0x03, false);
         assert_eq!(plain.kind, ControlCharacterKind::CtrlC);
+        assert_eq!(plain.character, 0x03);
         assert_eq!(plain.forced_virtual_key, u16::from(b'C'));
+        assert!(plain.write_ctrl);
+        assert!(plain.clear_layout_modifiers);
 
         let alt = classify_control_character(0x03, true);
         assert_eq!(alt.kind, ControlCharacterKind::MappedC0);
+        assert_eq!(alt.character, 0x03);
+        assert_eq!(alt.forced_virtual_key, 0);
         assert!(alt.write_ctrl);
+        assert!(!alt.clear_layout_modifiers);
     }
 
     #[test]
-    fn replays_microsoft_c0_special_cases() {
-        let backspace = classify_control_character(0x08, false);
-        assert_eq!(backspace.character, 0x7f);
-        assert!(backspace.write_ctrl);
-        assert!(backspace.clear_layout_modifiers);
-
-        let tab = classify_control_character(0x09, false);
-        assert!(!tab.write_ctrl);
-        assert!(!tab.clear_layout_modifiers);
-
-        let carriage_return = classify_control_character(0x0d, false);
-        assert!(!carriage_return.write_ctrl);
-        assert!(carriage_return.clear_layout_modifiers);
-
-        let escape = classify_control_character(0x1b, false);
-        assert_eq!(escape.forced_virtual_key, 0x1b);
-        assert!(!escape.write_ctrl);
-    }
-
-    #[test]
-    fn classifies_all_control_code_units_as_mapped_c0_except_plain_ctrl_c() {
+    fn replays_microsoft_c0_execution_contract() {
         for code_unit in 0u16..0x20 {
-            let plan = classify_control_character(code_unit, false);
-            if code_unit == 0x03 {
-                assert_eq!(plan.kind, ControlCharacterKind::CtrlC);
-            } else {
-                assert_eq!(plan.kind, ControlCharacterKind::MappedC0);
-            }
+            let plan = classify_control_character(code_unit, true);
+            assert_eq!(plan.kind, ControlCharacterKind::MappedC0);
+
+            let expected_character = if code_unit == 0x08 { 0x7f } else { code_unit };
+            let expected_virtual_key = if code_unit == 0x1b { 0x1b } else { 0 };
+            let expected_write_ctrl = !matches!(code_unit, 0x09 | 0x0d | 0x1b);
+            let expected_clear_layout_modifiers = matches!(code_unit, 0x08 | 0x0d | 0x1b);
+
+            assert_eq!(plan.character, expected_character, "character for C0 {code_unit:#04x}");
+            assert_eq!(
+                plan.forced_virtual_key, expected_virtual_key,
+                "forced virtual key for C0 {code_unit:#04x}"
+            );
+            assert_eq!(plan.write_ctrl, expected_write_ctrl, "Ctrl state for C0 {code_unit:#04x}");
+            assert_eq!(
+                plan.clear_layout_modifiers, expected_clear_layout_modifiers,
+                "layout modifiers for C0 {code_unit:#04x}"
+            );
         }
     }
 
@@ -150,9 +148,15 @@ mod tests {
         let delete = classify_control_character(0x7f, true);
         assert_eq!(delete.kind, ControlCharacterKind::DeleteAsBackspace);
         assert_eq!(delete.character, 0x08);
+        assert_eq!(delete.forced_virtual_key, 0x08);
+        assert!(!delete.write_ctrl);
+        assert!(delete.clear_layout_modifiers);
 
         let printable = classify_control_character(u16::from(b'A'), false);
         assert_eq!(printable.kind, ControlCharacterKind::Print);
         assert_eq!(printable.character, u16::from(b'A'));
+        assert_eq!(printable.forced_virtual_key, 0);
+        assert!(!printable.write_ctrl);
+        assert!(!printable.clear_layout_modifiers);
     }
 }
