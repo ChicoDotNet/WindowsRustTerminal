@@ -33,11 +33,6 @@ static constexpr std::array<CsiToVkey, 10> s_csiMap = {
     CsiToVkey{ CsiActionCodes::CSI_F4, VK_F4 }
 };
 
-static bool operator==(const CsiToVkey& pair, const VTID id) noexcept
-{
-    return pair.action == id;
-}
-
 struct GenericToVkey
 {
     GenericKeyIdentifiers identifier;
@@ -61,11 +56,6 @@ static constexpr std::array<GenericToVkey, 14> s_genericMap = {
     GenericToVkey{ GenericKeyIdentifiers::F12, VK_F12 },
 };
 
-static bool operator==(const GenericToVkey& pair, const GenericKeyIdentifiers identifier) noexcept
-{
-    return pair.identifier == identifier;
-}
-
 struct Ss3ToVkey
 {
     Ss3ActionCodes action;
@@ -84,11 +74,6 @@ static constexpr std::array<Ss3ToVkey, 10> s_ss3Map = {
     Ss3ToVkey{ Ss3ActionCodes::SS3_F3, VK_F3 },
     Ss3ToVkey{ Ss3ActionCodes::SS3_F4, VK_F4 },
 };
-
-static bool operator==(const Ss3ToVkey& pair, const Ss3ActionCodes code) noexcept
-{
-    return pair.action == code;
-}
 
 InputStateMachineEngine::InputStateMachineEngine(std::unique_ptr<IInteractDispatch> pDispatch) :
     _pDispatch(std::move(pDispatch)),
