@@ -59,6 +59,60 @@ function Set-R09MsbuildDevEnvironment
     Write-Host "Dev environment variables set from $installationPath" -ForegroundColor Green
 }
 
+function Invoke-R09ControlCharacterAbiReplay
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Root,
+
+        [Parameter(Mandatory)]
+        [string]$DiagnosticsDir,
+
+        [Parameter(Mandatory)]
+        [string]$Configuration,
+
+        [Parameter(Mandatory)]
+        [string]$Platform
+    )
+
+    $targetTriple = switch ($Platform) {
+        'x64' { 'x86_64-pc-windows-msvc' }
+        'Win32' { 'i686-pc-windows-msvc' }
+        'ARM64' { 'aarch64-pc-windows-msvc' }
+        default { throw "Unsupported R09 parser ABI probe platform '$Platform'." }
+    }
+    $cargoProfile = if ($Configuration -eq 'Debug') { 'debug' } else { 'release' }
+
+    $probeSource = Join-Path $Root 'tools\rust\R09ControlCharacterAbiProbe.cpp'
+    $ffiInclude = Join-Path $Root 'rust\terminal-parser-ffi\include'
+    $ffiLib = Join-Path $Root "artifacts\cargo-target\$targetTriple\$cargoProfile\terminal_parser_ffi.lib"
+    $probeExe = Join-Path $DiagnosticsDir 'r09-control-character-abi-probe.exe'
+    $probeObj = Join-Path $DiagnosticsDir 'r09-control-character-abi-probe.obj'
+
+    if (-not (Test-Path $ffiLib)) {
+        throw "Rust parser FFI library was not produced at '$ffiLib'."
+    }
+
+    Remove-Item $probeExe, $probeObj -Force -ErrorAction SilentlyContinue
+
+    Write-Host 'Compiling and linking the R09 control-character C ABI replay probe.'
+    & cl.exe /nologo /EHsc /std:c++20 "/I$ffiInclude" /c $probeSource "/Fo:$probeObj"
+    if ($LASTEXITCODE -ne 0) {
+        throw "R09 control-character ABI probe compilation failed with exit code $LASTEXITCODE"
+    }
+
+    & link.exe /nologo $probeObj $ffiLib "/OUT:$probeExe"
+    if ($LASTEXITCODE -ne 0) {
+        throw "R09 control-character ABI probe link failed with exit code $LASTEXITCODE"
+    }
+
+    & $probeExe
+    if ($LASTEXITCODE -ne 0) {
+        throw "R09 control-character ABI replay failed with exit code $LASTEXITCODE"
+    }
+}
+
 $root = (git rev-parse --show-toplevel 2>$null)
 if (-not $root) {
     throw 'Run this script from inside the WindowsRusTerminal/terminal checkout.'
@@ -119,6 +173,7 @@ try {
         throw "Terminal product build failed with exit code $buildExitCode"
     }
 
+    Invoke-R09ControlCharacterAbiReplay -Root $root -DiagnosticsDir $diagnosticsDir -Configuration $Configuration -Platform $Platform
     Write-Host 'Canonical Terminal product build completed successfully.'
 }
 finally {
