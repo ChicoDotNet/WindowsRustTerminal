@@ -104,6 +104,30 @@ foreach ($ownerFunction in @(
     }
 }
 
+foreach ($rustKeymapAdapter in @(
+    'keymap_cursor_virtual_key(',
+    'keymap_generic_virtual_key(',
+    'keymap_ss3_virtual_key('
+))
+{
+    if ($rustInputEngineText -notmatch [regex]::Escape($rustKeymapAdapter))
+    {
+        throw "R09 parser ownership regression: terminal-parser input engine no longer delegates key mapping through $rustKeymapAdapter"
+    }
+}
+
+foreach ($legacyRustKeymapImplementation in @(
+    'fn cursor_virtual_key(',
+    'fn generic_virtual_key(',
+    'fn ss3_virtual_key('
+))
+{
+    if ($rustInputEngineText -match [regex]::Escape($legacyRustKeymapImplementation))
+    {
+        throw "R09 parser ownership regression: duplicate Rust key-map implementation returned to input_engine.rs: $legacyRustKeymapImplementation"
+    }
+}
+
 foreach ($rustModifierAdapter in @(
     'vt_modifier_state_from_parameter',
     'sgr_mouse_modifier_state_from_encoding'
@@ -158,4 +182,4 @@ foreach ($legacyModifierImplementation in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; C++ routes promoted parser behavior through terminal-parser-ffi and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
