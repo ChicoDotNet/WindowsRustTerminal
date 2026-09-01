@@ -154,6 +154,34 @@ foreach ($controlContractToken in @(
     }
 }
 
+if ($inputEngineText -notmatch [regex]::Escape($controlCharacterFunction))
+{
+    throw "R09 parser ownership regression: InputStateMachineEngine no longer routes control-character classification through $controlCharacterFunction."
+}
+foreach ($controlKindToken in @(
+    'TERMINAL_PARSER_FFI_CONTROL_CHARACTER_CTRL_C',
+    'TERMINAL_PARSER_FFI_CONTROL_CHARACTER_MAPPED_C0',
+    'TERMINAL_PARSER_FFI_CONTROL_CHARACTER_DELETE_AS_BACKSPACE',
+    'TERMINAL_PARSER_FFI_CONTROL_CHARACTER_PRINT'
+))
+{
+    if ($inputEngineText -notmatch [regex]::Escape($controlKindToken))
+    {
+        throw "R09 parser ownership regression: native control-character adapter lost ABI kind $controlKindToken."
+    }
+}
+foreach ($legacyControlImplementation in @(
+    'if (wch == UNICODE_ETX && !writeAlt)',
+    "else if (wch >= '\x0' && wch < '\x20')",
+    "else if (wch == '\x7f')"
+))
+{
+    if ($inputEngineText -match [regex]::Escape($legacyControlImplementation))
+    {
+        throw "R09 parser ownership regression: portable control-character classification returned to C++: $legacyControlImplementation"
+    }
+}
+
 foreach ($ownerFunction in @(
     'cursor_virtual_key',
     'generic_virtual_key',
@@ -265,4 +293,4 @@ foreach ($legacyWin32KeyNormalization in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and the control-character owner seam are Rust-owned or promotion-ready; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and control-character classification are Rust-owned; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
