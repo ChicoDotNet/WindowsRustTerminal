@@ -26,6 +26,7 @@ decoalesces
 defgh
 fdd
 ffi
+flp
 hpr
 lookalike
 microcommit
