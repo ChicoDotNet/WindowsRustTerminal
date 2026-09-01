@@ -6,6 +6,7 @@
 
 #![deny(unsafe_op_in_unsafe_fn)]
 
+mod input_control;
 mod input_keymap;
 mod input_win32;
 
