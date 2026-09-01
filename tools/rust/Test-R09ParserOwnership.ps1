@@ -76,28 +76,19 @@ foreach ($ownerFunction in @('cursor_virtual_key', 'generic_virtual_key', 'ss3_v
     }
 }
 
-# During the product-validation checkpoint the original tables remain only as a
-# preserved oracle/deletion candidate. They must not execute anymore. Once the
-# canonical product build certifies the Rust call sites, the next checkpoint
-# deletes them and promotes this gate to require their absence.
-foreach ($legacyLookup in @(
-    'std::find(s_csiMap',
-    'std::find(s_genericMap',
-    'std::find(s_ss3Map'
+foreach ($legacySymbol in @(
+    'CsiToVkey',
+    'GenericToVkey',
+    'Ss3ToVkey',
+    's_csiMap',
+    's_genericMap',
+    's_ss3Map'
 ))
 {
-    if ($inputEngineText -match [regex]::Escape($legacyLookup))
+    if ($inputEngineText -match [regex]::Escape($legacySymbol))
     {
-        throw "R09 parser ownership regression: legacy C++ key-map lookup is active: $legacyLookup"
+        throw "R09 parser ownership regression: legacy C++ key-map symbol returned after Rust promotion: $legacySymbol"
     }
 }
 
-$stagedTables = @('s_csiMap', 's_genericMap', 's_ss3Map')
-$presentTables = @($stagedTables | Where-Object { $inputEngineText -match [regex]::Escape($_) })
-if ($presentTables.Count -ne $stagedTables.Count)
-{
-    $missing = @($stagedTables | Where-Object { $_ -notin $presentTables }) -join ', '
-    throw "R09 parser ownership state changed unexpectedly: staged C++ key-map table(s) missing before product promotion: $missing"
-}
-
-Write-Host 'R09 parser ownership gate passed: Base64 is Rust-owned; InputStateMachineEngine key-map call sites route through Rust and legacy tables are retained only pending product promotion.'
+Write-Host 'R09 parser ownership gate passed: Base64 and input key maps are Rust-owned; C++ routes through terminal-parser-ffi and legacy key-map implementations are absent.'
