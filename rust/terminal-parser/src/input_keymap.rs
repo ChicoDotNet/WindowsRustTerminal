@@ -30,6 +30,7 @@ const VK_F12: u16 = 0x7b;
 const SHIFT_PRESSED: u32 = 0x0010;
 const LEFT_ALT_PRESSED: u32 = 0x0002;
 const LEFT_CTRL_PRESSED: u32 = 0x0008;
+const ENHANCED_KEY: u32 = 0x0100;
 const VT_SHIFT: u32 = 1;
 const VT_ALT: u32 = 2;
 const VT_CTRL: u32 = 4;
@@ -103,6 +104,33 @@ pub const fn vt_modifier_state(modifier_parameter: u32) -> u32 {
     modifiers
 }
 
+/// Composes VT modifier translation with the enhanced-key bit required by
+/// mapped CSI cursor/navigation keys. CSI F1-F4 are not enhanced keys.
+#[must_use]
+pub const fn cursor_modifier_state(final_character: u16, modifier_parameter: u32) -> u32 {
+    let mut modifiers = vt_modifier_state(modifier_parameter);
+    if let Some(virtual_key) = cursor_virtual_key(final_character)
+        && virtual_key != VK_F1
+        && virtual_key != VK_F2
+        && virtual_key != VK_F3
+        && virtual_key != VK_F4
+    {
+        modifiers |= ENHANCED_KEY;
+    }
+    modifiers
+}
+
+/// Composes VT modifier translation with the enhanced-key bit required by
+/// generic navigation keys (Home/Insert/Delete/End/PageUp/PageDown).
+#[must_use]
+pub const fn generic_modifier_state(identifier: i32, modifier_parameter: u32) -> u32 {
+    let mut modifiers = vt_modifier_state(modifier_parameter);
+    if identifier >= 1 && identifier <= 6 && generic_virtual_key(identifier).is_some() {
+        modifiers |= ENHANCED_KEY;
+    }
+    modifiers
+}
+
 /// Normalizes the parser's signed/optional VT parameter representation before
 /// applying the shared modifier mapping.
 #[must_use]
@@ -138,9 +166,10 @@ pub const fn sgr_mouse_modifier_state_from_encoding(encoding: i32) -> u32 {
 #[cfg(test)]
 mod tests {
     use super::{
-        LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, SHIFT_PRESSED, cursor_virtual_key,
-        generic_virtual_key, sgr_mouse_modifier_state, sgr_mouse_modifier_state_from_encoding,
-        ss3_virtual_key, vt_modifier_state, vt_modifier_state_from_parameter,
+        ENHANCED_KEY, LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, SHIFT_PRESSED, cursor_modifier_state,
+        cursor_virtual_key, generic_modifier_state, generic_virtual_key, sgr_mouse_modifier_state,
+        sgr_mouse_modifier_state_from_encoding, ss3_virtual_key, vt_modifier_state,
+        vt_modifier_state_from_parameter,
     };
 
     const CURSOR_AND_SS3_CASES: [(u8, u16); 10] = [
@@ -215,6 +244,23 @@ mod tests {
             assert_eq!(vt_modifier_state(parameter), expected);
         }
         assert_eq!(vt_modifier_state(0), 0);
+    }
+
+    #[test]
+    fn key_modifier_contract_replays_microsoft_enhanced_key_rules() {
+        assert_eq!(cursor_modifier_state(u16::from(b'A'), 1), ENHANCED_KEY);
+        assert_eq!(cursor_modifier_state(u16::from(b'H'), 8), ENHANCED_KEY | 0x001a);
+        for final_character in [b'P', b'Q', b'R', b'S'] {
+            assert_eq!(cursor_modifier_state(u16::from(final_character), 1), 0);
+        }
+        assert_eq!(cursor_modifier_state(u16::from(b'X'), 8), 0x001a);
+
+        for identifier in 1..=6 {
+            assert_eq!(generic_modifier_state(identifier, 1), ENHANCED_KEY);
+        }
+        assert_eq!(generic_modifier_state(6, 8), ENHANCED_KEY | 0x001a);
+        assert_eq!(generic_modifier_state(15, 1), 0);
+        assert_eq!(generic_modifier_state(0, 8), 0x001a);
     }
 
     #[test]

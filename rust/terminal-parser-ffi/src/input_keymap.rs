@@ -1,6 +1,6 @@
 use terminal_parser::input_keymap::{
-    cursor_virtual_key, generic_virtual_key, sgr_mouse_modifier_state, ss3_virtual_key,
-    vt_modifier_state,
+    cursor_modifier_state, cursor_virtual_key, generic_modifier_state, generic_virtual_key,
+    sgr_mouse_modifier_state, ss3_virtual_key, vt_modifier_state,
 };
 
 /// Maps a CSI final character to a Windows virtual-key value.
@@ -30,6 +30,24 @@ pub extern "C" fn terminal_parser_ffi_input_vt_modifier_state(modifier_parameter
     vt_modifier_state(modifier_parameter)
 }
 
+/// Composes VT modifiers with the Windows enhanced-key flag for CSI cursor keys.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_input_cursor_modifier_state(
+    final_character: u16,
+    modifier_parameter: u32,
+) -> u32 {
+    cursor_modifier_state(final_character, modifier_parameter)
+}
+
+/// Composes VT modifiers with the Windows enhanced-key flag for generic CSI keys.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_input_generic_modifier_state(
+    identifier: i32,
+    modifier_parameter: u32,
+) -> u32 {
+    generic_modifier_state(identifier, modifier_parameter)
+}
+
 /// Extracts Windows input modifier flags from an SGR mouse encoding.
 #[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_input_sgr_mouse_modifier_state(encoding: u32) -> u32 {
@@ -39,7 +57,8 @@ pub extern "C" fn terminal_parser_ffi_input_sgr_mouse_modifier_state(encoding: u
 #[cfg(test)]
 mod tests {
     use super::{
-        terminal_parser_ffi_input_cursor_vkey, terminal_parser_ffi_input_generic_vkey,
+        terminal_parser_ffi_input_cursor_modifier_state, terminal_parser_ffi_input_cursor_vkey,
+        terminal_parser_ffi_input_generic_modifier_state, terminal_parser_ffi_input_generic_vkey,
         terminal_parser_ffi_input_sgr_mouse_modifier_state, terminal_parser_ffi_input_ss3_vkey,
         terminal_parser_ffi_input_vt_modifier_state,
     };
@@ -126,5 +145,17 @@ mod tests {
                 expected
             );
         }
+    }
+
+    #[test]
+    fn input_key_modifier_ffi_replays_cpp_enhanced_key_contracts() {
+        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'A'), 1), 0x0100);
+        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'H'), 8), 0x011a);
+        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'P'), 1), 0);
+        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'S'), 8), 0x001a);
+
+        assert_eq!(terminal_parser_ffi_input_generic_modifier_state(1, 1), 0x0100);
+        assert_eq!(terminal_parser_ffi_input_generic_modifier_state(6, 8), 0x011a);
+        assert_eq!(terminal_parser_ffi_input_generic_modifier_state(15, 1), 0);
     }
 }
