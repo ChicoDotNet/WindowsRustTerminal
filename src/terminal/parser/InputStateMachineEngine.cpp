@@ -698,20 +698,9 @@ void InputStateMachineEngine::_WriteMouseEvent(const til::point uiPos, const DWO
 // - the INPUT_RECORD compatible modifier state.
 DWORD InputStateMachineEngine::_GetCursorKeysModifierState(const VTParameters parameters, const VTID id) noexcept
 {
-    auto modifiers = _GetModifier(parameters.at(1));
-
-    // Enhanced Keys (from https://docs.microsoft.com/en-us/windows/console/key-event-record-str):
-    //   Enhanced keys for the IBM 101- and 102-key keyboards are the INS, DEL,
-    //   HOME, END, PAGE UP, PAGE DOWN, and direction keys in the clusters to the left
-    //   of the keypad; and the divide (/) and ENTER keys in the keypad.
-    // This snippet detects the direction keys + HOME + END
-    // actionCode should be one of the above, so just make sure it's not a CSI_F# code
-    if (id < CsiActionCodes::CSI_F1 || id > CsiActionCodes::CSI_F4)
-    {
-        WI_SetFlag(modifiers, ENHANCED_KEY);
-    }
-
-    return modifiers;
+    return terminal_parser_ffi_input_cursor_modifier_state(
+        gsl::narrow_cast<uint16_t>(id),
+        gsl::narrow_cast<uint32_t>(parameters.at(1)));
 }
 
 // Method Description:
@@ -723,20 +712,9 @@ DWORD InputStateMachineEngine::_GetCursorKeysModifierState(const VTParameters pa
 // - the INPUT_RECORD compatible modifier state.
 DWORD InputStateMachineEngine::_GetGenericKeysModifierState(const VTParameters parameters) noexcept
 {
-    auto modifiers = _GetModifier(parameters.at(1));
-
-    // Enhanced Keys (from https://docs.microsoft.com/en-us/windows/console/key-event-record-str):
-    //   Enhanced keys for the IBM 101- and 102-key keyboards are the INS, DEL,
-    //   HOME, END, PAGE UP, PAGE DOWN, and direction keys in the clusters to the left
-    //   of the keypad; and the divide (/) and ENTER keys in the keypad.
-    // This snippet detects the non-direction keys
-    const GenericKeyIdentifiers identifier = parameters.at(0);
-    if (identifier <= GenericKeyIdentifiers::Next)
-    {
-        modifiers = WI_SetFlag(modifiers, ENHANCED_KEY);
-    }
-
-    return modifiers;
+    return terminal_parser_ffi_input_generic_modifier_state(
+        static_cast<int32_t>(parameters.at(0)),
+        gsl::narrow_cast<uint32_t>(parameters.at(1)));
 }
 
 // Method Description:
