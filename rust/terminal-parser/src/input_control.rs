@@ -31,7 +31,7 @@ pub const fn classify_control_character(code_unit: u16, write_alt: bool) -> Cont
         return ControlCharacterPlan {
             kind: ControlCharacterKind::CtrlC,
             character: 0x03,
-            forced_virtual_key: u16::from(b'C'),
+            forced_virtual_key: b'C' as u16,
             write_ctrl: true,
             clear_layout_modifiers: true,
         };
