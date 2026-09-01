@@ -9,7 +9,11 @@ use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
 use crate::input_keymap::{
-    sgr_mouse_modifier_state_from_encoding, vt_modifier_state_from_parameter,
+    cursor_virtual_key as keymap_cursor_virtual_key,
+    generic_virtual_key as keymap_generic_virtual_key,
+    sgr_mouse_modifier_state_from_encoding,
+    ss3_virtual_key as keymap_ss3_virtual_key,
+    vt_modifier_state_from_parameter,
 };
 use crate::state_machine::{Parameters, StateMachineEngine, VtId};
 
@@ -42,28 +46,12 @@ const VK_CONTROL: u16 = 0x11;
 const VK_MENU: u16 = 0x12;
 const VK_ESCAPE: u16 = 0x1b;
 const VK_SPACE: u16 = 0x20;
-const VK_PRIOR: u16 = 0x21;
-const VK_NEXT: u16 = 0x22;
-const VK_END: u16 = 0x23;
-const VK_HOME: u16 = 0x24;
 const VK_LEFT: u16 = 0x25;
 const VK_UP: u16 = 0x26;
-const VK_RIGHT: u16 = 0x27;
-const VK_DOWN: u16 = 0x28;
-const VK_INSERT: u16 = 0x2d;
-const VK_DELETE: u16 = 0x2e;
 const VK_F1: u16 = 0x70;
 const VK_F2: u16 = 0x71;
 const VK_F3: u16 = 0x72;
 const VK_F4: u16 = 0x73;
-const VK_F5: u16 = 0x74;
-const VK_F6: u16 = 0x75;
-const VK_F7: u16 = 0x76;
-const VK_F8: u16 = 0x77;
-const VK_F9: u16 = 0x78;
-const VK_F10: u16 = 0x79;
-const VK_F11: u16 = 0x7a;
-const VK_F12: u16 = 0x7b;
 const VK_OEM_1: u16 = 0xba;
 const VK_OEM_PLUS: u16 = 0xbb;
 const VK_OEM_COMMA: u16 = 0xbc;
@@ -360,7 +348,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
             if vt_input_enabled {
                 return false;
             }
-            if let Some(virtual_key) = generic_virtual_key(raw_parameter(parameters, 0, 0)) {
+            if let Some(virtual_key) = keymap_generic_virtual_key(raw_parameter(parameters, 0, 0)) {
                 let mut modifiers = vt_modifier_state_from_parameter(parameters.at(1));
                 if (1..=6).contains(&raw_parameter(parameters, 0, 0)) {
                     modifiers |= ENHANCED_KEY;
@@ -415,7 +403,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
     }
 
     fn write_cursor_key(&mut self, id: VtId, parameters: &Parameters) {
-        let Some(virtual_key) = cursor_virtual_key(id) else {
+        let Some(virtual_key) = cursor_virtual_key_from_id(id) else {
             return;
         };
         let mut modifiers = vt_modifier_state_from_parameter(parameters.at(1));
@@ -429,7 +417,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
         if self.dispatch.is_vt_input_enabled() {
             return false;
         }
-        if let Some(virtual_key) = ss3_virtual_key(code_unit) {
+        if let Some(virtual_key) = keymap_ss3_virtual_key(code_unit) {
             self.write_virtual_key(virtual_key, 0);
         }
         true
@@ -715,70 +703,16 @@ fn char_for_virtual_key(virtual_key: u16) -> u16 {
     }
 }
 
-fn cursor_virtual_key(id: VtId) -> Option<u16> {
-    if id_is(id, "A") {
-        Some(VK_UP)
-    } else if id_is(id, "B") {
-        Some(VK_DOWN)
-    } else if id_is(id, "C") {
-        Some(VK_RIGHT)
-    } else if id_is(id, "D") {
-        Some(VK_LEFT)
-    } else if id_is(id, "H") {
-        Some(VK_HOME)
-    } else if id_is(id, "F") {
-        Some(VK_END)
-    } else if id_is(id, "P") {
-        Some(VK_F1)
-    } else if id_is(id, "Q") {
-        Some(VK_F2)
-    } else if id_is(id, "R") {
-        Some(VK_F3)
-    } else if id_is(id, "S") {
-        Some(VK_F4)
-    } else {
-        None
+fn cursor_virtual_key_from_id(id: VtId) -> Option<u16> {
+    let bytes = id.value().to_le_bytes();
+    if bytes[1..].iter().any(|&byte| byte != 0) {
+        return None;
     }
+    keymap_cursor_virtual_key(u16::from(bytes[0]))
 }
 
 fn is_cursor_key(id: VtId) -> bool {
-    cursor_virtual_key(id).is_some() && !id_is(id, "R")
-}
-
-fn generic_virtual_key(identifier: i32) -> Option<u16> {
-    match identifier {
-        1 => Some(VK_HOME),
-        2 => Some(VK_INSERT),
-        3 => Some(VK_DELETE),
-        4 => Some(VK_END),
-        5 => Some(VK_PRIOR),
-        6 => Some(VK_NEXT),
-        15 => Some(VK_F5),
-        17 => Some(VK_F6),
-        18 => Some(VK_F7),
-        19 => Some(VK_F8),
-        20 => Some(VK_F9),
-        21 => Some(VK_F10),
-        23 => Some(VK_F11),
-        24 => Some(VK_F12),
-        _ => None,
-    }
-}
-
-fn ss3_virtual_key(code_unit: u16) -> Option<u16> {
-    match u8::try_from(code_unit).ok()? {
-        b'A' => Some(VK_UP),
-        b'B' => Some(VK_DOWN),
-        b'C' => Some(VK_RIGHT),
-        b'D' => Some(VK_LEFT),
-        b'H' => Some(VK_HOME),
-        b'F' => Some(VK_END),
-        b'P' => Some(VK_F1),
-        b'Q' => Some(VK_F2),
-        b'R' => Some(VK_F3),
-        b'S' => Some(VK_F4),
-        _ => None,
-    }
+    cursor_virtual_key_from_id(id).is_some() && !id_is(id, "R")
 }
 
 fn numeric_parameter(parameters: &Parameters, index: usize) -> i32 {
