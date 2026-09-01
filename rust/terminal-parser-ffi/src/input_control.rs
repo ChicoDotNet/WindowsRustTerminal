@@ -51,32 +51,54 @@ mod tests {
             FfiStatus::Ok
         );
         assert_eq!(plan.kind, ControlCharacterKind::CtrlC as u32);
+        assert_eq!(plan.character, 0x03);
         assert_eq!(plan.forced_virtual_key, u16::from(b'C'));
+        assert_eq!(plan.write_ctrl, 1);
+        assert_eq!(plan.clear_layout_modifiers, 1);
 
         assert_eq!(
             terminal_parser_ffi_input_control_character_plan(0x03, 1, &mut plan),
             FfiStatus::Ok
         );
         assert_eq!(plan.kind, ControlCharacterKind::MappedC0 as u32);
+        assert_eq!(plan.character, 0x03);
+        assert_eq!(plan.forced_virtual_key, 0);
         assert_eq!(plan.write_ctrl, 1);
+        assert_eq!(plan.clear_layout_modifiers, 0);
     }
 
     #[test]
-    fn replays_backspace_escape_delete_and_printable_paths() {
+    fn replays_every_c0_execution_plan_across_ffi() {
         let mut plan = TerminalParserFfiControlCharacterPlan::default();
 
-        assert_eq!(
-            terminal_parser_ffi_input_control_character_plan(0x08, 0, &mut plan),
-            FfiStatus::Ok
-        );
-        assert_eq!(plan.character, 0x7f);
-        assert_eq!(plan.clear_layout_modifiers, 1);
+        for code_unit in 0u16..0x20 {
+            assert_eq!(
+                terminal_parser_ffi_input_control_character_plan(code_unit, 1, &mut plan),
+                FfiStatus::Ok
+            );
+            assert_eq!(plan.kind, ControlCharacterKind::MappedC0 as u32);
 
-        assert_eq!(
-            terminal_parser_ffi_input_control_character_plan(0x1b, 0, &mut plan),
-            FfiStatus::Ok
-        );
-        assert_eq!(plan.forced_virtual_key, 0x1b);
+            let expected_character = if code_unit == 0x08 { 0x7f } else { code_unit };
+            let expected_virtual_key = if code_unit == 0x1b { 0x1b } else { 0 };
+            let expected_write_ctrl = u32::from(!matches!(code_unit, 0x09 | 0x0d | 0x1b));
+            let expected_clear_layout_modifiers = u32::from(matches!(code_unit, 0x08 | 0x0d | 0x1b));
+
+            assert_eq!(plan.character, expected_character, "character for C0 {code_unit:#04x}");
+            assert_eq!(
+                plan.forced_virtual_key, expected_virtual_key,
+                "forced virtual key for C0 {code_unit:#04x}"
+            );
+            assert_eq!(plan.write_ctrl, expected_write_ctrl, "Ctrl state for C0 {code_unit:#04x}");
+            assert_eq!(
+                plan.clear_layout_modifiers, expected_clear_layout_modifiers,
+                "layout modifiers for C0 {code_unit:#04x}"
+            );
+        }
+    }
+
+    #[test]
+    fn replays_delete_and_printable_paths() {
+        let mut plan = TerminalParserFfiControlCharacterPlan::default();
 
         assert_eq!(
             terminal_parser_ffi_input_control_character_plan(0x7f, 1, &mut plan),
@@ -84,12 +106,19 @@ mod tests {
         );
         assert_eq!(plan.kind, ControlCharacterKind::DeleteAsBackspace as u32);
         assert_eq!(plan.character, 0x08);
+        assert_eq!(plan.forced_virtual_key, 0x08);
+        assert_eq!(plan.write_ctrl, 0);
+        assert_eq!(plan.clear_layout_modifiers, 1);
 
         assert_eq!(
             terminal_parser_ffi_input_control_character_plan(u16::from(b'A'), 0, &mut plan),
             FfiStatus::Ok
         );
         assert_eq!(plan.kind, ControlCharacterKind::Print as u32);
+        assert_eq!(plan.character, u16::from(b'A'));
+        assert_eq!(plan.forced_virtual_key, 0);
+        assert_eq!(plan.write_ctrl, 0);
+        assert_eq!(plan.clear_layout_modifiers, 0);
     }
 
     #[test]
