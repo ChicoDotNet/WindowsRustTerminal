@@ -17,6 +17,14 @@ typedef enum terminal_parser_ffi_status
     TERMINAL_PARSER_FFI_PANIC = 255,
 } terminal_parser_ffi_status;
 
+typedef enum terminal_parser_ffi_control_character_kind
+{
+    TERMINAL_PARSER_FFI_CONTROL_CHARACTER_PRINT = 0,
+    TERMINAL_PARSER_FFI_CONTROL_CHARACTER_CTRL_C = 1,
+    TERMINAL_PARSER_FFI_CONTROL_CHARACTER_MAPPED_C0 = 2,
+    TERMINAL_PARSER_FFI_CONTROL_CHARACTER_DELETE_AS_BACKSPACE = 3,
+} terminal_parser_ffi_control_character_kind;
+
 typedef struct terminal_parser_ffi_key_event
 {
     uint32_t key_down;
