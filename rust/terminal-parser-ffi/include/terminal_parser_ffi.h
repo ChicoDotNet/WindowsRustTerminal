@@ -27,6 +27,15 @@ typedef struct terminal_parser_ffi_key_event
     uint32_t control_key_state;
 } terminal_parser_ffi_key_event;
 
+typedef struct terminal_parser_ffi_control_character_plan
+{
+    uint32_t kind;
+    uint16_t character;
+    uint16_t forced_virtual_key;
+    uint32_t write_ctrl;
+    uint32_t clear_layout_modifiers;
+} terminal_parser_ffi_control_character_plan;
+
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
 terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(
@@ -43,6 +52,10 @@ uint32_t terminal_parser_ffi_input_vt_modifier_state(uint32_t modifier_parameter
 uint32_t terminal_parser_ffi_input_cursor_modifier_state(uint16_t final_character, uint32_t modifier_parameter);
 uint32_t terminal_parser_ffi_input_generic_modifier_state(int32_t identifier, uint32_t modifier_parameter);
 uint32_t terminal_parser_ffi_input_sgr_mouse_modifier_state(uint32_t encoding);
+terminal_parser_ffi_status terminal_parser_ffi_input_control_character_plan(
+    uint16_t code_unit,
+    uint32_t write_alt,
+    terminal_parser_ffi_control_character_plan* out_plan);
 terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
     uint32_t present_mask,
     int32_t virtual_key,
