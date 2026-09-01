@@ -59,6 +59,56 @@ function Set-R09MsbuildDevEnvironment
     Write-Host "Dev environment variables set from $installationPath" -ForegroundColor Green
 }
 
+function Get-R09RustNativeStaticLibraries
+{
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string]$Root,
+
+        [Parameter(Mandatory)]
+        [string]$TargetTriple,
+
+        [Parameter(Mandatory)]
+        [string]$CargoProfile
+    )
+
+    $manifest = Join-Path $Root 'rust\terminal-parser-ffi\Cargo.toml'
+    $targetDir = Join-Path $Root 'artifacts\cargo-target'
+    $cargoArgs = @(
+        'rustc',
+        '--manifest-path', $manifest,
+        '--target', $TargetTriple,
+        '--target-dir', $targetDir
+    )
+    if ($CargoProfile -eq 'release') {
+        $cargoArgs += '--release'
+    }
+    $cargoArgs += @('--', '--print', 'native-static-libs')
+
+    Write-Host 'Querying rustc for the native libraries required by the parser staticlib.'
+    $nativeStaticOutput = @(& cargo.exe @cargoArgs 2>&1)
+    $cargoExitCode = $LASTEXITCODE
+    $nativeStaticOutput | ForEach-Object { Write-Host $_ }
+    if ($cargoExitCode -ne 0) {
+        throw "Unable to query Rust native static libraries; cargo exited with code $cargoExitCode"
+    }
+
+    $nativeStaticMatch = $nativeStaticOutput |
+        Select-String -Pattern 'native-static-libs:\s*(?<libraries>.+)$' |
+        Select-Object -Last 1
+    if (-not $nativeStaticMatch) {
+        throw 'rustc did not report native-static-libs for terminal-parser-ffi.'
+    }
+
+    $libraries = $nativeStaticMatch.Matches[0].Groups['libraries'].Value -split '\s+' | Where-Object { $_ }
+    if (-not $libraries) {
+        throw 'rustc reported an empty native-static-libs set for terminal-parser-ffi.'
+    }
+
+    return $libraries
+}
+
 function Invoke-R09ControlCharacterAbiReplay
 {
     [CmdletBinding()]
@@ -94,6 +144,8 @@ function Invoke-R09ControlCharacterAbiReplay
         throw "Rust parser FFI library was not produced at '$ffiLib'."
     }
 
+    $nativeStaticLibraries = Get-R09RustNativeStaticLibraries -Root $Root -TargetTriple $targetTriple -CargoProfile $cargoProfile
+
     Remove-Item $probeExe, $probeObj -Force -ErrorAction SilentlyContinue
 
     Write-Host 'Compiling and linking the R09 control-character C ABI replay probe.'
@@ -102,7 +154,7 @@ function Invoke-R09ControlCharacterAbiReplay
         throw "R09 control-character ABI probe compilation failed with exit code $LASTEXITCODE"
     }
 
-    & cl.exe /nologo $probeObj $ffiLib "/Fe:$probeExe"
+    & cl.exe /nologo $probeObj $ffiLib $nativeStaticLibraries "/Fe:$probeExe"
     if ($LASTEXITCODE -ne 0) {
         throw "R09 control-character ABI probe link failed with exit code $LASTEXITCODE"
     }
@@ -115,7 +167,7 @@ function Invoke-R09ControlCharacterAbiReplay
 
 $root = (git rev-parse --show-toplevel 2>$null)
 if (-not $root) {
-    throw 'Run this script from inside the WindowsRusTerminal/terminal checkout.'
+    throw 'Run this script from inside the WindowsRustTerminal checkout.'
 }
 
 Push-Location $root
