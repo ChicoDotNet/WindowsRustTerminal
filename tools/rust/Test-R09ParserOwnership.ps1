@@ -82,6 +82,10 @@ foreach ($function in $expectedModifierFunctions)
     {
         throw "R09 parser ownership regression: terminal-parser-ffi no longer exports modifier seam $function."
     }
+    if ($inputEngineText -notmatch [regex]::Escape($function))
+    {
+        throw "R09 parser ownership regression: InputStateMachineEngine no longer routes modifier translation through $function."
+    }
 }
 
 foreach ($ownerFunction in @(
@@ -113,4 +117,15 @@ foreach ($legacySymbol in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64 and input key maps are Rust-owned; modifier seams are contract-covered; C++ routes promoted key maps through terminal-parser-ffi and legacy key-map implementations are absent.'
+foreach ($legacyModifierImplementation in @(
+    'const auto vtParam = modifierParam - 1;',
+    'WI_SetFlagIf(modifiers, SHIFT_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Shift));'
+))
+{
+    if ($inputEngineText -match [regex]::Escape($legacyModifierImplementation))
+    {
+        throw "R09 parser ownership regression: portable modifier translation returned to C++: $legacyModifierImplementation"
+    }
+}
+
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; C++ routes promoted parser behavior through terminal-parser-ffi and legacy portable implementations are absent.'

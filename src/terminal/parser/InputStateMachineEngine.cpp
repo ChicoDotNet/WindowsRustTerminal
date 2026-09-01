@@ -748,18 +748,7 @@ DWORD InputStateMachineEngine::_GetGenericKeysModifierState(const VTParameters p
 // - the INPUT_RECORD compatible modifier state.
 DWORD InputStateMachineEngine::_GetSGRMouseModifierState(const size_t modifierParam) noexcept
 {
-    DWORD modifiers = 0;
-    // The first parameter of mouse events is encoded as the following two bytes:
-    // BBDM'MMBB
-    // Where each of the bits mean the following
-    //   BB__'__BB - which button was pressed/released
-    //   MMM - Control, Alt, Shift state (respectively)
-    //   D - flag signifying a drag event
-    // This retrieves the modifier state from bits [5..3] ('M' above)
-    WI_SetFlagIf(modifiers, SHIFT_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Shift));
-    WI_SetFlagIf(modifiers, LEFT_ALT_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Meta));
-    WI_SetFlagIf(modifiers, LEFT_CTRL_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Ctrl));
-    return modifiers;
+    return terminal_parser_ffi_input_sgr_mouse_modifier_state(gsl::narrow_cast<uint32_t>(modifierParam));
 }
 
 // Method Description:
@@ -770,13 +759,7 @@ DWORD InputStateMachineEngine::_GetSGRMouseModifierState(const size_t modifierPa
 // - The equivalent INPUT_RECORD modifier value.
 DWORD InputStateMachineEngine::_GetModifier(const size_t modifierParam) noexcept
 {
-    // VT Modifiers are 1+(modifier flags)
-    const auto vtParam = modifierParam - 1;
-    DWORD modifierState = 0;
-    WI_SetFlagIf(modifierState, SHIFT_PRESSED, WI_IsFlagSet(vtParam, VT_SHIFT));
-    WI_SetFlagIf(modifierState, LEFT_ALT_PRESSED, WI_IsFlagSet(vtParam, VT_ALT));
-    WI_SetFlagIf(modifierState, LEFT_CTRL_PRESSED, WI_IsFlagSet(vtParam, VT_CTRL));
-    return modifierState;
+    return terminal_parser_ffi_input_vt_modifier_state(gsl::narrow_cast<uint32_t>(modifierParam));
 }
 
 // Method Description:
