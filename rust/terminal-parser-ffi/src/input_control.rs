@@ -46,7 +46,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn control_character_kind_discriminants_match_c_header() {
+    fn control_character_kind_values_match_c_header() {
         assert_eq!(ControlCharacterKind::Print as u32, 0);
         assert_eq!(ControlCharacterKind::CtrlC as u32, 1);
         assert_eq!(ControlCharacterKind::MappedC0 as u32, 2);
