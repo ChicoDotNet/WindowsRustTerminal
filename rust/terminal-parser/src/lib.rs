@@ -9,6 +9,7 @@
 #[allow(clippy::chunks_exact_to_as_chunks)]
 pub mod base64;
 pub mod input_c0;
+pub mod input_control;
 pub mod input_engine;
 pub mod input_keymap;
 pub mod input_layout;
