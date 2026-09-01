@@ -16,6 +16,7 @@ $inputEngine = Join-Path $parserRoot 'InputStateMachineEngine.cpp'
 $ffiHeader = Join-Path $repoRoot 'rust\terminal-parser-ffi\include\terminal_parser_ffi.h'
 $ffiKeymap = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_keymap.rs'
 $rustKeymap = Join-Path $repoRoot 'rust\terminal-parser\src\input_keymap.rs'
+$rustInputEngine = Join-Path $repoRoot 'rust\terminal-parser\src\input_engine.rs'
 
 if (Test-Path $base64Cpp)
 {
@@ -55,6 +56,7 @@ $expectedModifierFunctions = @(
 $ffiHeaderText = Get-Content -LiteralPath $ffiHeader -Raw
 $ffiKeymapText = Get-Content -LiteralPath $ffiKeymap -Raw
 $rustKeymapText = Get-Content -LiteralPath $rustKeymap -Raw
+$rustInputEngineText = Get-Content -LiteralPath $rustInputEngine -Raw
 $inputEngineText = Get-Content -LiteralPath $inputEngine -Raw
 foreach ($function in $expectedKeymapFunctions)
 {
@@ -102,6 +104,34 @@ foreach ($ownerFunction in @(
     }
 }
 
+foreach ($rustModifierAdapter in @(
+    'vt_modifier_state_from_parameter',
+    'sgr_mouse_modifier_state_from_encoding'
+))
+{
+    if ($rustInputEngineText -notmatch [regex]::Escape($rustModifierAdapter))
+    {
+        throw "R09 parser ownership regression: terminal-parser input engine no longer delegates modifier normalization through $rustModifierAdapter."
+    }
+}
+
+foreach ($legacyRustModifierImplementation in @(
+    'const VT_SHIFT:',
+    'const VT_ALT:',
+    'const VT_CTRL:',
+    'const SGR_SHIFT:',
+    'const SGR_META:',
+    'const SGR_CTRL:',
+    'fn vt_modifiers(',
+    'fn sgr_mouse_modifiers('
+))
+{
+    if ($rustInputEngineText -match [regex]::Escape($legacyRustModifierImplementation))
+    {
+        throw "R09 parser ownership regression: duplicate Rust modifier implementation returned to input_engine.rs: $legacyRustModifierImplementation"
+    }
+}
+
 foreach ($legacySymbol in @(
     'CsiToVkey',
     'GenericToVkey',
@@ -128,4 +158,4 @@ foreach ($legacyModifierImplementation in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; C++ routes promoted parser behavior through terminal-parser-ffi and legacy portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; C++ routes promoted parser behavior through terminal-parser-ffi and duplicate portable implementations are absent.'
