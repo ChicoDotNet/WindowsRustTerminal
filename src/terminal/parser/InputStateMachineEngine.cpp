@@ -14,67 +14,6 @@
 
 using namespace Microsoft::Console::VirtualTerminal;
 
-struct CsiToVkey
-{
-    CsiActionCodes action;
-    short vkey;
-};
-
-static constexpr std::array<CsiToVkey, 10> s_csiMap = {
-    CsiToVkey{ CsiActionCodes::ArrowUp, VK_UP },
-    CsiToVkey{ CsiActionCodes::ArrowDown, VK_DOWN },
-    CsiToVkey{ CsiActionCodes::ArrowRight, VK_RIGHT },
-    CsiToVkey{ CsiActionCodes::ArrowLeft, VK_LEFT },
-    CsiToVkey{ CsiActionCodes::Home, VK_HOME },
-    CsiToVkey{ CsiActionCodes::End, VK_END },
-    CsiToVkey{ CsiActionCodes::CSI_F1, VK_F1 },
-    CsiToVkey{ CsiActionCodes::CSI_F2, VK_F2 },
-    CsiToVkey{ CsiActionCodes::CSI_F3, VK_F3 },
-    CsiToVkey{ CsiActionCodes::CSI_F4, VK_F4 }
-};
-
-struct GenericToVkey
-{
-    GenericKeyIdentifiers identifier;
-    short vkey;
-};
-
-static constexpr std::array<GenericToVkey, 14> s_genericMap = {
-    GenericToVkey{ GenericKeyIdentifiers::GenericHome, VK_HOME },
-    GenericToVkey{ GenericKeyIdentifiers::Insert, VK_INSERT },
-    GenericToVkey{ GenericKeyIdentifiers::Delete, VK_DELETE },
-    GenericToVkey{ GenericKeyIdentifiers::GenericEnd, VK_END },
-    GenericToVkey{ GenericKeyIdentifiers::Prior, VK_PRIOR },
-    GenericToVkey{ GenericKeyIdentifiers::Next, VK_NEXT },
-    GenericToVkey{ GenericKeyIdentifiers::F5, VK_F5 },
-    GenericToVkey{ GenericKeyIdentifiers::F6, VK_F6 },
-    GenericToVkey{ GenericKeyIdentifiers::F7, VK_F7 },
-    GenericToVkey{ GenericKeyIdentifiers::F8, VK_F8 },
-    GenericToVkey{ GenericKeyIdentifiers::F9, VK_F9 },
-    GenericToVkey{ GenericKeyIdentifiers::F10, VK_F10 },
-    GenericToVkey{ GenericKeyIdentifiers::F11, VK_F11 },
-    GenericToVkey{ GenericKeyIdentifiers::F12, VK_F12 },
-};
-
-struct Ss3ToVkey
-{
-    Ss3ActionCodes action;
-    short vkey;
-};
-
-static constexpr std::array<Ss3ToVkey, 10> s_ss3Map = {
-    Ss3ToVkey{ Ss3ActionCodes::ArrowUp, VK_UP },
-    Ss3ToVkey{ Ss3ActionCodes::ArrowDown, VK_DOWN },
-    Ss3ToVkey{ Ss3ActionCodes::ArrowRight, VK_RIGHT },
-    Ss3ToVkey{ Ss3ActionCodes::ArrowLeft, VK_LEFT },
-    Ss3ToVkey{ Ss3ActionCodes::End, VK_END },
-    Ss3ToVkey{ Ss3ActionCodes::Home, VK_HOME },
-    Ss3ToVkey{ Ss3ActionCodes::SS3_F1, VK_F1 },
-    Ss3ToVkey{ Ss3ActionCodes::SS3_F2, VK_F2 },
-    Ss3ToVkey{ Ss3ActionCodes::SS3_F3, VK_F3 },
-    Ss3ToVkey{ Ss3ActionCodes::SS3_F4, VK_F4 },
-};
-
 InputStateMachineEngine::InputStateMachineEngine(std::unique_ptr<IInteractDispatch> pDispatch) :
     _pDispatch(std::move(pDispatch)),
     _doubleClickTime(std::chrono::milliseconds(GetDoubleClickTime()))
@@ -139,7 +78,7 @@ bool InputStateMachineEngine::ActionExecute(const wchar_t wch)
 // Routine Description:
 // - Writes a control character into the buffer. Think characters like tab, backspace, etc.
 // Arguments:
-// - wch - The character to write
+// - wch - the character to write
 // - writeAlt - Pass in the alt-state information here as it's not embedded
 // Return Value:
 // - True if successfully generated and written. False otherwise.
