@@ -103,6 +103,15 @@ pub const fn vt_modifier_state(modifier_parameter: u32) -> u32 {
     modifiers
 }
 
+/// Normalizes the parser's signed/optional VT parameter representation before
+/// applying the shared modifier mapping.
+#[must_use]
+pub fn vt_modifier_state_from_parameter(modifier_parameter: Option<i32>) -> u32 {
+    let normalized = modifier_parameter.unwrap_or(1).max(1);
+    let normalized = u32::try_from(normalized).unwrap_or(1);
+    vt_modifier_state(normalized)
+}
+
 /// Extracts Shift/Alt/Ctrl state from the SGR mouse encoding bitfield.
 #[must_use]
 pub const fn sgr_mouse_modifier_state(encoding: u32) -> u32 {
@@ -119,11 +128,19 @@ pub const fn sgr_mouse_modifier_state(encoding: u32) -> u32 {
     modifiers
 }
 
+/// Preserves the parser's signed SGR encoding bit pattern before applying the
+/// shared modifier mapping.
+#[must_use]
+pub const fn sgr_mouse_modifier_state_from_encoding(encoding: i32) -> u32 {
+    sgr_mouse_modifier_state(u32::from_ne_bytes(encoding.to_ne_bytes()))
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, SHIFT_PRESSED, cursor_virtual_key,
-        generic_virtual_key, sgr_mouse_modifier_state, ss3_virtual_key, vt_modifier_state,
+        generic_virtual_key, sgr_mouse_modifier_state, sgr_mouse_modifier_state_from_encoding,
+        ss3_virtual_key, vt_modifier_state, vt_modifier_state_from_parameter,
     };
 
     const CURSOR_AND_SS3_CASES: [(u8, u16); 10] = [
@@ -201,6 +218,18 @@ mod tests {
     }
 
     #[test]
+    fn parser_vt_modifier_adapter_preserves_default_and_lower_bound_semantics() {
+        assert_eq!(vt_modifier_state_from_parameter(None), 0);
+        assert_eq!(vt_modifier_state_from_parameter(Some(-1)), 0);
+        assert_eq!(vt_modifier_state_from_parameter(Some(0)), 0);
+        assert_eq!(vt_modifier_state_from_parameter(Some(1)), 0);
+        assert_eq!(
+            vt_modifier_state_from_parameter(Some(8)),
+            SHIFT_PRESSED | LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED
+        );
+    }
+
+    #[test]
     fn sgr_mouse_modifier_contract_replays_microsoft_bit_translation() {
         let cases = [
             (0, 0),
@@ -213,6 +242,16 @@ mod tests {
         ];
         for (encoding, expected) in cases {
             assert_eq!(sgr_mouse_modifier_state(encoding), expected);
+        }
+    }
+
+    #[test]
+    fn parser_sgr_modifier_adapter_preserves_signed_bit_pattern() {
+        for encoding in [0, 4, 8, 16, 28, 60, 220, -1] {
+            assert_eq!(
+                sgr_mouse_modifier_state_from_encoding(encoding),
+                sgr_mouse_modifier_state(u32::from_ne_bytes(encoding.to_ne_bytes()))
+            );
         }
     }
 }
