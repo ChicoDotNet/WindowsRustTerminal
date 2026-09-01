@@ -8,6 +8,9 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex, PoisonError};
 use std::time::{Duration, Instant};
 
+use crate::input_keymap::{
+    sgr_mouse_modifier_state_from_encoding, vt_modifier_state_from_parameter,
+};
 use crate::state_machine::{Parameters, StateMachineEngine, VtId};
 
 pub const RIGHT_ALT_PRESSED: u32 = 0x0001;
@@ -29,13 +32,6 @@ pub const MOUSE_HWHEELED: u32 = 0x0008;
 pub const SCROLL_DELTA_BACKWARD: u32 = 0xff80_0000;
 pub const SCROLL_DELTA_FORWARD: u32 = 0x0080_0000;
 
-const VT_SHIFT: i32 = 1;
-const VT_ALT: i32 = 2;
-const VT_CTRL: i32 = 4;
-
-const SGR_SHIFT: i32 = 4;
-const SGR_META: i32 = 8;
-const SGR_CTRL: i32 = 16;
 const SGR_DRAG: i32 = 32;
 
 const VK_BACK: u16 = 0x08;
@@ -326,7 +322,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
                 let event = MouseEvent {
                     position,
                     button_state,
-                    control_key_state: sgr_mouse_modifiers(encoding),
+                    control_key_state: sgr_mouse_modifier_state_from_encoding(encoding),
                     event_flags,
                 };
                 self.emit(InputAction::WriteInput(vec![InputRecord::Mouse(event)]));
@@ -365,7 +361,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
                 return false;
             }
             if let Some(virtual_key) = generic_virtual_key(raw_parameter(parameters, 0, 0)) {
-                let mut modifiers = vt_modifiers(parameters.at(1));
+                let mut modifiers = vt_modifier_state_from_parameter(parameters.at(1));
                 if (1..=6).contains(&raw_parameter(parameters, 0, 0)) {
                     modifiers |= ENHANCED_KEY;
                 }
@@ -422,7 +418,7 @@ impl<D: InputDispatch> InputStateMachineEngine<D> {
         let Some(virtual_key) = cursor_virtual_key(id) else {
             return;
         };
-        let mut modifiers = vt_modifiers(parameters.at(1));
+        let mut modifiers = vt_modifier_state_from_parameter(parameters.at(1));
         if !matches!(virtual_key, VK_F1 | VK_F2 | VK_F3 | VK_F4) {
             modifiers |= ENHANCED_KEY;
         }
@@ -783,35 +779,6 @@ fn ss3_virtual_key(code_unit: u16) -> Option<u16> {
         b'S' => Some(VK_F4),
         _ => None,
     }
-}
-
-fn vt_modifiers(parameter: Option<i32>) -> u32 {
-    let encoded = parameter.unwrap_or(1).max(1) - 1;
-    let mut modifiers = 0u32;
-    if encoded & VT_SHIFT != 0 {
-        modifiers |= SHIFT_PRESSED;
-    }
-    if encoded & VT_ALT != 0 {
-        modifiers |= LEFT_ALT_PRESSED;
-    }
-    if encoded & VT_CTRL != 0 {
-        modifiers |= LEFT_CTRL_PRESSED;
-    }
-    modifiers
-}
-
-fn sgr_mouse_modifiers(encoding: i32) -> u32 {
-    let mut modifiers = 0u32;
-    if encoding & SGR_SHIFT != 0 {
-        modifiers |= SHIFT_PRESSED;
-    }
-    if encoding & SGR_META != 0 {
-        modifiers |= LEFT_ALT_PRESSED;
-    }
-    if encoding & SGR_CTRL != 0 {
-        modifiers |= LEFT_CTRL_PRESSED;
-    }
-    modifiers
 }
 
 fn numeric_parameter(parameters: &Parameters, index: usize) -> i32 {
