@@ -84,58 +84,44 @@ bool InputStateMachineEngine::ActionExecute(const wchar_t wch)
 // - True if successfully generated and written. False otherwise.
 bool InputStateMachineEngine::_DoControlCharacter(const wchar_t wch, const bool writeAlt)
 {
-    if (wch == UNICODE_ETX && !writeAlt)
+    terminal_parser_ffi_control_character_plan plan{};
+    const auto status = terminal_parser_ffi_input_control_character_plan(
+        gsl::narrow_cast<uint16_t>(wch),
+        writeAlt ? 1u : 0u,
+        &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-        // This is Ctrl+C, which is handled specially by the host.
-        static constexpr auto keyDown = SynthesizeKeyEvent(true, 1, L'C', 0, UNICODE_ETX, LEFT_CTRL_PRESSED);
-        static constexpr auto keyUp = SynthesizeKeyEvent(false, 1, L'C', 0, UNICODE_ETX, LEFT_CTRL_PRESSED);
+    case TERMINAL_PARSER_FFI_CONTROL_CHARACTER_CTRL_C:
+    {
+        const auto virtualKey = gsl::narrow_cast<short>(plan.forced_virtual_key);
+        const auto character = static_cast<wchar_t>(plan.character);
+        const auto modifierState = plan.write_ctrl != 0 ? LEFT_CTRL_PRESSED : 0;
+        const auto keyDown = SynthesizeKeyEvent(true, 1, virtualKey, 0, character, modifierState);
+        const auto keyUp = SynthesizeKeyEvent(false, 1, virtualKey, 0, character, modifierState);
         _pDispatch->WriteCtrlKey(keyDown);
         _pDispatch->WriteCtrlKey(keyUp);
+        break;
     }
-    else if (wch >= '\x0' && wch < '\x20')
+    case TERMINAL_PARSER_FFI_CONTROL_CHARACTER_MAPPED_C0:
     {
-        // This is a C0 Control Character.
-        // This should be translated as Ctrl+(wch+x40)
-        auto actualChar = wch;
-        auto writeCtrl = true;
-        auto success = false;
-
-        short vkey = 0;
+        const auto actualChar = static_cast<wchar_t>(plan.character);
+        short vkey = gsl::narrow_cast<short>(plan.forced_virtual_key);
         DWORD modifierState = 0;
-
-        switch (wch)
+        auto success = plan.forced_virtual_key != 0;
+        if (!success)
         {
-        case L'\b':
-            // Process Ctrl+Bksp to delete whole words
-            actualChar = '\x7f';
             success = _GenerateKeyFromChar(actualChar, vkey, modifierState);
+        }
+        if (plan.clear_layout_modifiers != 0)
+        {
             modifierState = 0;
-            break;
-        case L'\r':
-            writeCtrl = false;
-            success = _GenerateKeyFromChar(wch, vkey, modifierState);
-            modifierState = 0;
-            break;
-        case L'\x1b':
-            // Translate escape as the ESC key, NOT C-[.
-            // This means that C-[ won't insert ^[ into the buffer anymore,
-            //      which isn't the worst tradeoff.
-            vkey = VK_ESCAPE;
-            writeCtrl = false;
-            success = true;
-            break;
-        case L'\t':
-            writeCtrl = false;
-            success = _GenerateKeyFromChar(actualChar, vkey, modifierState);
-            break;
-        default:
-            success = _GenerateKeyFromChar(actualChar, vkey, modifierState);
-            break;
         }
 
         if (success)
         {
-            if (writeCtrl)
+            if (plan.write_ctrl != 0)
             {
                 WI_SetFlag(modifierState, LEFT_CTRL_PRESSED);
             }
@@ -146,22 +132,21 @@ bool InputStateMachineEngine::_DoControlCharacter(const wchar_t wch, const bool 
 
             _WriteSingleKey(actualChar, vkey, modifierState);
         }
+        break;
     }
-    else if (wch == '\x7f')
-    {
-        // Note:
-        //  The windows telnet expects to send x7f as DELETE, not backspace.
-        //      However, the windows telnetd also wouldn't let you move the
-        //      cursor back into the input line, so it wasn't possible to
-        //      "delete" any input at all, only backspace.
-        //  Because of this, we're treating x7f as backspace, like most
-        //      terminals do.
-        _WriteSingleKey('\x8', VK_BACK, writeAlt ? LEFT_ALT_PRESSED : 0);
+    case TERMINAL_PARSER_FFI_CONTROL_CHARACTER_DELETE_AS_BACKSPACE:
+        _WriteSingleKey(
+            static_cast<wchar_t>(plan.character),
+            gsl::narrow_cast<short>(plan.forced_virtual_key),
+            writeAlt ? LEFT_ALT_PRESSED : 0);
+        break;
+    case TERMINAL_PARSER_FFI_CONTROL_CHARACTER_PRINT:
+        ActionPrint(static_cast<wchar_t>(plan.character));
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
     }
-    else
-    {
-        ActionPrint(wch);
-    }
+
     return true;
 }
 
@@ -305,7 +290,7 @@ bool InputStateMachineEngine::ActionVt52EscDispatch(const VTID /*id*/, const VTP
 //      a control sequence. These sequences perform various API-type commands
 //      that can include many parameters.
 // Arguments:
-// - id - Identifier of the control sequence to dispatch.
+// - id - Identifier of the escape sequence to dispatch.
 // - parameters - set of numeric parameters collected while parsing the sequence.
 // Return Value:
 // - true iff we successfully dispatched the sequence.
@@ -463,7 +448,7 @@ bool InputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParameter
 //      a control sequence. Returns the handler function that is to be used to
 //      process the subsequent data string characters in the sequence.
 // Arguments:
-// - id - Identifier of the control sequence to dispatch.
+// - id - Identifier of the escape sequence to dispatch.
 // - parameters - set of numeric parameters collected while parsing the sequence.
 // Return Value:
 // - the data string handler function or nullptr if the sequence is not supported
