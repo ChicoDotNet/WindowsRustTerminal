@@ -1,6 +1,6 @@
 use std::ptr;
 
-use terminal_parser::input_control::{ControlCharacterKind, classify_control_character};
+use terminal_parser::input_control::classify_control_character;
 
 use super::{FfiStatus, ffi_guard};
 
@@ -41,6 +41,8 @@ pub extern "C" fn terminal_parser_ffi_input_control_character_plan(
 
 #[cfg(test)]
 mod tests {
+    use terminal_parser::input_control::ControlCharacterKind;
+
     use super::*;
 
     #[test]
