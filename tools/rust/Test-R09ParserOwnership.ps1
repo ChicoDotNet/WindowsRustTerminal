@@ -15,6 +15,7 @@ $parserBuild = Join-Path $parserRoot 'parser-common.vcxitems'
 $inputEngine = Join-Path $parserRoot 'InputStateMachineEngine.cpp'
 $ffiHeader = Join-Path $repoRoot 'rust\terminal-parser-ffi\include\terminal_parser_ffi.h'
 $ffiKeymap = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_keymap.rs'
+$ffiWin32 = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_win32.rs'
 $rustKeymap = Join-Path $repoRoot 'rust\terminal-parser\src\input_keymap.rs'
 $rustInputEngine = Join-Path $repoRoot 'rust\terminal-parser\src\input_engine.rs'
 
@@ -54,9 +55,11 @@ $expectedModifierFunctions = @(
     'terminal_parser_ffi_input_generic_modifier_state',
     'terminal_parser_ffi_input_sgr_mouse_modifier_state'
 )
+$win32KeyFunction = 'terminal_parser_ffi_input_win32_key_fields'
 
 $ffiHeaderText = Get-Content -LiteralPath $ffiHeader -Raw
 $ffiKeymapText = Get-Content -LiteralPath $ffiKeymap -Raw
+$ffiWin32Text = Get-Content -LiteralPath $ffiWin32 -Raw
 $rustKeymapText = Get-Content -LiteralPath $rustKeymap -Raw
 $rustInputEngineText = Get-Content -LiteralPath $rustInputEngine -Raw
 $inputEngineText = Get-Content -LiteralPath $inputEngine -Raw
@@ -90,6 +93,23 @@ foreach ($function in $expectedModifierFunctions)
     {
         throw "R09 parser ownership regression: InputStateMachineEngine no longer routes modifier composition through $function."
     }
+}
+
+if ($ffiHeaderText -notmatch [regex]::Escape($win32KeyFunction))
+{
+    throw "R09 parser ownership regression: terminal_parser_ffi.h no longer declares Win32 key seam $win32KeyFunction."
+}
+if ($ffiWin32Text -notmatch [regex]::Escape($win32KeyFunction))
+{
+    throw "R09 parser ownership regression: terminal-parser-ffi no longer exports Win32 key seam $win32KeyFunction."
+}
+if ($inputEngineText -notmatch [regex]::Escape($win32KeyFunction))
+{
+    throw "R09 parser ownership regression: InputStateMachineEngine no longer routes Win32 key normalization through $win32KeyFunction."
+}
+if ($rustInputEngineText -notmatch 'generate_win32_key')
+{
+    throw 'R09 parser ownership regression: terminal-parser no longer owns Win32 key normalization.'
 }
 
 foreach ($ownerFunction in @(
@@ -188,4 +208,19 @@ foreach ($legacyModifierImplementation in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, and enhanced-key modifier composition are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
+foreach ($legacyWin32KeyNormalization in @(
+    'parameters.at(3).value_or(0)',
+    'parameters.at(5).value_or(1)',
+    'parameters.at(0).value_or(0)',
+    'parameters.at(1).value_or(0)',
+    'parameters.at(2).value_or(0)',
+    'parameters.at(4).value_or(0)'
+))
+{
+    if ($inputEngineText -match [regex]::Escape($legacyWin32KeyNormalization))
+    {
+        throw "R09 parser ownership regression: portable Win32 key normalization returned to C++: $legacyWin32KeyNormalization"
+    }
+}
+
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, and Win32 key normalization are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
