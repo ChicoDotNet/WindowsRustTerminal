@@ -102,7 +102,7 @@ function Invoke-R09ControlCharacterAbiReplay
         throw "R09 control-character ABI probe compilation failed with exit code $LASTEXITCODE"
     }
 
-    & link.exe /nologo $probeObj $ffiLib "/OUT:$probeExe"
+    & cl.exe /nologo $probeObj $ffiLib "/Fe:$probeExe"
     if ($LASTEXITCODE -ne 0) {
         throw "R09 control-character ABI probe link failed with exit code $LASTEXITCODE"
     }
