@@ -109,13 +109,14 @@ pub const fn vt_modifier_state(modifier_parameter: u32) -> u32 {
 #[must_use]
 pub const fn cursor_modifier_state(final_character: u16, modifier_parameter: u32) -> u32 {
     let mut modifiers = vt_modifier_state(modifier_parameter);
-    if let Some(virtual_key) = cursor_virtual_key(final_character)
-        && virtual_key != VK_F1
-        && virtual_key != VK_F2
-        && virtual_key != VK_F3
-        && virtual_key != VK_F4
-    {
-        modifiers |= ENHANCED_KEY;
+    if let Some(virtual_key) = cursor_virtual_key(final_character) {
+        if virtual_key != VK_F1
+            && virtual_key != VK_F2
+            && virtual_key != VK_F3
+            && virtual_key != VK_F4
+        {
+            modifiers |= ENHANCED_KEY;
+        }
     }
     modifiers
 }
@@ -249,7 +250,10 @@ mod tests {
     #[test]
     fn key_modifier_contract_replays_microsoft_enhanced_key_rules() {
         assert_eq!(cursor_modifier_state(u16::from(b'A'), 1), ENHANCED_KEY);
-        assert_eq!(cursor_modifier_state(u16::from(b'H'), 8), ENHANCED_KEY | 0x001a);
+        assert_eq!(
+            cursor_modifier_state(u16::from(b'H'), 8),
+            ENHANCED_KEY | 0x001a
+        );
         for final_character in [b'P', b'Q', b'R', b'S'] {
             assert_eq!(cursor_modifier_state(u16::from(final_character), 1), 0);
         }

@@ -149,10 +149,22 @@ mod tests {
 
     #[test]
     fn input_key_modifier_ffi_replays_cpp_enhanced_key_contracts() {
-        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'A'), 1), 0x0100);
-        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'H'), 8), 0x011a);
-        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'P'), 1), 0);
-        assert_eq!(terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'S'), 8), 0x001a);
+        assert_eq!(
+            terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'A'), 1),
+            0x0100
+        );
+        assert_eq!(
+            terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'H'), 8),
+            0x011a
+        );
+        assert_eq!(
+            terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'P'), 1),
+            0
+        );
+        assert_eq!(
+            terminal_parser_ffi_input_cursor_modifier_state(u16::from(b'S'), 8),
+            0x001a
+        );
 
         assert_eq!(terminal_parser_ffi_input_generic_modifier_state(1, 1), 0x0100);
         assert_eq!(terminal_parser_ffi_input_generic_modifier_state(6, 8), 0x011a);
