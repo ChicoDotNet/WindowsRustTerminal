@@ -16,8 +16,10 @@ $inputEngine = Join-Path $parserRoot 'InputStateMachineEngine.cpp'
 $ffiHeader = Join-Path $repoRoot 'rust\terminal-parser-ffi\include\terminal_parser_ffi.h'
 $ffiKeymap = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_keymap.rs'
 $ffiWin32 = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_win32.rs'
+$ffiControl = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_control.rs'
 $rustKeymap = Join-Path $repoRoot 'rust\terminal-parser\src\input_keymap.rs'
 $rustInputEngine = Join-Path $repoRoot 'rust\terminal-parser\src\input_engine.rs'
+$rustControl = Join-Path $repoRoot 'rust\terminal-parser\src\input_control.rs'
 
 if (Test-Path $base64Cpp)
 {
@@ -56,12 +58,15 @@ $expectedModifierFunctions = @(
     'terminal_parser_ffi_input_sgr_mouse_modifier_state'
 )
 $win32KeyFunction = 'terminal_parser_ffi_input_win32_key_fields'
+$controlCharacterFunction = 'terminal_parser_ffi_input_control_character_plan'
 
 $ffiHeaderText = Get-Content -LiteralPath $ffiHeader -Raw
 $ffiKeymapText = Get-Content -LiteralPath $ffiKeymap -Raw
 $ffiWin32Text = Get-Content -LiteralPath $ffiWin32 -Raw
+$ffiControlText = Get-Content -LiteralPath $ffiControl -Raw
 $rustKeymapText = Get-Content -LiteralPath $rustKeymap -Raw
 $rustInputEngineText = Get-Content -LiteralPath $rustInputEngine -Raw
+$rustControlText = Get-Content -LiteralPath $rustControl -Raw
 $inputEngineText = Get-Content -LiteralPath $inputEngine -Raw
 $win32KeyMarker = 'INPUT_RECORD InputStateMachineEngine::_GenerateWin32Key'
 $win32KeyStart = $inputEngineText.IndexOf($win32KeyMarker, [System.StringComparison]::Ordinal)
@@ -118,6 +123,35 @@ if ($win32KeyText -notmatch [regex]::Escape($win32KeyFunction))
 if ($rustInputEngineText -notmatch 'generate_win32_key')
 {
     throw 'R09 parser ownership regression: terminal-parser no longer owns Win32 key normalization.'
+}
+
+if ($ffiHeaderText -notmatch [regex]::Escape($controlCharacterFunction))
+{
+    throw "R09 parser ownership regression: terminal_parser_ffi.h no longer declares control-character seam $controlCharacterFunction."
+}
+if ($ffiControlText -notmatch [regex]::Escape($controlCharacterFunction))
+{
+    throw "R09 parser ownership regression: terminal-parser-ffi no longer exports control-character seam $controlCharacterFunction."
+}
+if ($ffiControlText -notmatch 'classify_control_character')
+{
+    throw 'R09 parser ownership regression: control-character FFI no longer delegates to the terminal-parser owner.'
+}
+if ($rustControlText -notmatch 'pub const fn classify_control_character')
+{
+    throw 'R09 parser ownership regression: terminal-parser no longer owns deterministic control-character classification.'
+}
+foreach ($controlContractToken in @(
+    'ControlCharacterKind::CtrlC',
+    'ControlCharacterKind::MappedC0',
+    'ControlCharacterKind::DeleteAsBackspace',
+    'clear_layout_modifiers'
+))
+{
+    if ($rustControlText -notmatch [regex]::Escape($controlContractToken))
+    {
+        throw "R09 parser ownership regression: control-character owner lost contract token $controlContractToken."
+    }
 }
 
 foreach ($ownerFunction in @(
@@ -231,4 +265,4 @@ foreach ($legacyWin32KeyNormalization in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, and Win32 key normalization are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and the control-character owner seam are Rust-owned or promotion-ready; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
