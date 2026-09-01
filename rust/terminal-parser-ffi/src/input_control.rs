@@ -46,6 +46,28 @@ mod tests {
     use super::*;
 
     #[test]
+    fn control_character_plan_layout_matches_c_header() {
+        assert_eq!(std::mem::size_of::<TerminalParserFfiControlCharacterPlan>(), 16);
+        assert_eq!(std::mem::offset_of!(TerminalParserFfiControlCharacterPlan, kind), 0);
+        assert_eq!(
+            std::mem::offset_of!(TerminalParserFfiControlCharacterPlan, character),
+            4
+        );
+        assert_eq!(
+            std::mem::offset_of!(TerminalParserFfiControlCharacterPlan, forced_virtual_key),
+            6
+        );
+        assert_eq!(
+            std::mem::offset_of!(TerminalParserFfiControlCharacterPlan, write_ctrl),
+            8
+        );
+        assert_eq!(
+            std::mem::offset_of!(TerminalParserFfiControlCharacterPlan, clear_layout_modifiers),
+            12
+        );
+    }
+
+    #[test]
     fn control_character_kind_values_match_c_header() {
         assert_eq!(ControlCharacterKind::Print as u32, 0);
         assert_eq!(ControlCharacterKind::CtrlC as u32, 1);
