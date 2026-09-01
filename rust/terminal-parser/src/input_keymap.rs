@@ -27,6 +27,16 @@ const VK_F10: u16 = 0x79;
 const VK_F11: u16 = 0x7a;
 const VK_F12: u16 = 0x7b;
 
+const SHIFT_PRESSED: u32 = 0x0010;
+const LEFT_ALT_PRESSED: u32 = 0x0002;
+const LEFT_CTRL_PRESSED: u32 = 0x0008;
+const VT_SHIFT: u32 = 1;
+const VT_ALT: u32 = 2;
+const VT_CTRL: u32 = 4;
+const SGR_SHIFT: u32 = 4;
+const SGR_META: u32 = 8;
+const SGR_CTRL: u32 = 16;
+
 /// Maps a single-byte CSI final character to the Windows virtual-key value.
 #[must_use]
 pub const fn cursor_virtual_key(final_character: u16) -> Option<u16> {
@@ -73,9 +83,48 @@ pub const fn ss3_virtual_key(final_character: u16) -> Option<u16> {
     cursor_virtual_key(final_character)
 }
 
+/// Converts a VT encoded modifier parameter to Windows input modifier flags.
+///
+/// VT encodes modifiers as `1 + bitflags`; missing/default parameters are
+/// represented by `1` at the ABI boundary.
+#[must_use]
+pub const fn vt_modifier_state(modifier_parameter: u32) -> u32 {
+    let encoded = modifier_parameter.saturating_sub(1);
+    let mut modifiers = 0;
+    if encoded & VT_SHIFT != 0 {
+        modifiers |= SHIFT_PRESSED;
+    }
+    if encoded & VT_ALT != 0 {
+        modifiers |= LEFT_ALT_PRESSED;
+    }
+    if encoded & VT_CTRL != 0 {
+        modifiers |= LEFT_CTRL_PRESSED;
+    }
+    modifiers
+}
+
+/// Extracts Shift/Alt/Ctrl state from the SGR mouse encoding bitfield.
+#[must_use]
+pub const fn sgr_mouse_modifier_state(encoding: u32) -> u32 {
+    let mut modifiers = 0;
+    if encoding & SGR_SHIFT != 0 {
+        modifiers |= SHIFT_PRESSED;
+    }
+    if encoding & SGR_META != 0 {
+        modifiers |= LEFT_ALT_PRESSED;
+    }
+    if encoding & SGR_CTRL != 0 {
+        modifiers |= LEFT_CTRL_PRESSED;
+    }
+    modifiers
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{cursor_virtual_key, generic_virtual_key, ss3_virtual_key};
+    use super::{
+        LEFT_ALT_PRESSED, LEFT_CTRL_PRESSED, SHIFT_PRESSED, cursor_virtual_key,
+        generic_virtual_key, sgr_mouse_modifier_state, ss3_virtual_key, vt_modifier_state,
+    };
 
     const CURSOR_AND_SS3_CASES: [(u8, u16); 10] = [
         (b'A', 0x26),
@@ -131,5 +180,39 @@ mod tests {
             assert_eq!(ss3_virtual_key(u16::from(final_character)), Some(vkey));
         }
         assert_eq!(ss3_virtual_key(u16::from(b'X')), None);
+    }
+
+    #[test]
+    fn vt_modifier_contract_replays_microsoft_bit_translation() {
+        let cases = [
+            (1, 0),
+            (2, SHIFT_PRESSED),
+            (3, LEFT_ALT_PRESSED),
+            (4, SHIFT_PRESSED | LEFT_ALT_PRESSED),
+            (5, LEFT_CTRL_PRESSED),
+            (6, SHIFT_PRESSED | LEFT_CTRL_PRESSED),
+            (7, LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED),
+            (8, SHIFT_PRESSED | LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED),
+        ];
+        for (parameter, expected) in cases {
+            assert_eq!(vt_modifier_state(parameter), expected);
+        }
+        assert_eq!(vt_modifier_state(0), 0);
+    }
+
+    #[test]
+    fn sgr_mouse_modifier_contract_replays_microsoft_bit_translation() {
+        let cases = [
+            (0, 0),
+            (4, SHIFT_PRESSED),
+            (8, LEFT_ALT_PRESSED),
+            (16, LEFT_CTRL_PRESSED),
+            (28, SHIFT_PRESSED | LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED),
+            (32 | 28, SHIFT_PRESSED | LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED),
+            (0xc0 | 28, SHIFT_PRESSED | LEFT_ALT_PRESSED | LEFT_CTRL_PRESSED),
+        ];
+        for (encoding, expected) in cases {
+            assert_eq!(sgr_mouse_modifier_state(encoding), expected);
+        }
     }
 }

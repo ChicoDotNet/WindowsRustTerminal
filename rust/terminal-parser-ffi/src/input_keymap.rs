@@ -1,4 +1,7 @@
-use terminal_parser::input_keymap::{cursor_virtual_key, generic_virtual_key, ss3_virtual_key};
+use terminal_parser::input_keymap::{
+    cursor_virtual_key, generic_virtual_key, sgr_mouse_modifier_state, ss3_virtual_key,
+    vt_modifier_state,
+};
 
 /// Maps a CSI final character to a Windows virtual-key value.
 /// Returns zero when the sequence is not one of the supported deterministic keys.
@@ -21,11 +24,24 @@ pub extern "C" fn terminal_parser_ffi_input_ss3_vkey(final_character: u16) -> u1
     ss3_virtual_key(final_character).unwrap_or(0)
 }
 
+/// Converts a VT encoded modifier parameter into Windows input modifier flags.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_input_vt_modifier_state(modifier_parameter: u32) -> u32 {
+    vt_modifier_state(modifier_parameter)
+}
+
+/// Extracts Windows input modifier flags from an SGR mouse encoding.
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_input_sgr_mouse_modifier_state(encoding: u32) -> u32 {
+    sgr_mouse_modifier_state(encoding)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         terminal_parser_ffi_input_cursor_vkey, terminal_parser_ffi_input_generic_vkey,
-        terminal_parser_ffi_input_ss3_vkey,
+        terminal_parser_ffi_input_sgr_mouse_modifier_state, terminal_parser_ffi_input_ss3_vkey,
+        terminal_parser_ffi_input_vt_modifier_state,
     };
 
     const CURSOR_AND_SS3_CASES: [(u8, u16); 10] = [
@@ -79,6 +95,36 @@ mod tests {
         assert_eq!(terminal_parser_ffi_input_ss3_vkey(u16::from(b'X')), 0);
         for unmapped in [0, 7, 14, 16, 22, 25, i32::MAX] {
             assert_eq!(terminal_parser_ffi_input_generic_vkey(unmapped), 0);
+        }
+    }
+
+    #[test]
+    fn input_modifier_ffi_replays_cpp_bit_contracts() {
+        let vt_cases = [
+            (1, 0),
+            (2, 0x0010),
+            (3, 0x0002),
+            (4, 0x0012),
+            (5, 0x0008),
+            (8, 0x001a),
+        ];
+        for (parameter, expected) in vt_cases {
+            assert_eq!(terminal_parser_ffi_input_vt_modifier_state(parameter), expected);
+        }
+
+        let sgr_cases = [
+            (0, 0),
+            (4, 0x0010),
+            (8, 0x0002),
+            (16, 0x0008),
+            (28, 0x001a),
+            (60, 0x001a),
+        ];
+        for (encoding, expected) in sgr_cases {
+            assert_eq!(
+                terminal_parser_ffi_input_sgr_mouse_modifier_state(encoding),
+                expected
+            );
         }
     }
 }

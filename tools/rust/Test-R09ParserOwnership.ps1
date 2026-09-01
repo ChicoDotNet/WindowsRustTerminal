@@ -47,6 +47,10 @@ $expectedKeymapFunctions = @(
     'terminal_parser_ffi_input_generic_vkey',
     'terminal_parser_ffi_input_ss3_vkey'
 )
+$expectedModifierFunctions = @(
+    'terminal_parser_ffi_input_vt_modifier_state',
+    'terminal_parser_ffi_input_sgr_mouse_modifier_state'
+)
 
 $ffiHeaderText = Get-Content -LiteralPath $ffiHeader -Raw
 $ffiKeymapText = Get-Content -LiteralPath $ffiKeymap -Raw
@@ -68,7 +72,25 @@ foreach ($function in $expectedKeymapFunctions)
     }
 }
 
-foreach ($ownerFunction in @('cursor_virtual_key', 'generic_virtual_key', 'ss3_virtual_key'))
+foreach ($function in $expectedModifierFunctions)
+{
+    if ($ffiHeaderText -notmatch [regex]::Escape($function))
+    {
+        throw "R09 parser ownership regression: terminal_parser_ffi.h no longer declares modifier seam $function."
+    }
+    if ($ffiKeymapText -notmatch [regex]::Escape($function))
+    {
+        throw "R09 parser ownership regression: terminal-parser-ffi no longer exports modifier seam $function."
+    }
+}
+
+foreach ($ownerFunction in @(
+    'cursor_virtual_key',
+    'generic_virtual_key',
+    'ss3_virtual_key',
+    'vt_modifier_state',
+    'sgr_mouse_modifier_state'
+))
 {
     if ($rustKeymapText -notmatch [regex]::Escape($ownerFunction))
     {
@@ -91,4 +113,4 @@ foreach ($legacySymbol in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64 and input key maps are Rust-owned; C++ routes through terminal-parser-ffi and legacy key-map implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64 and input key maps are Rust-owned; modifier seams are contract-covered; C++ routes promoted key maps through terminal-parser-ffi and legacy key-map implementations are absent.'
