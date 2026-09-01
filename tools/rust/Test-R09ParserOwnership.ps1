@@ -50,6 +50,8 @@ $expectedKeymapFunctions = @(
 )
 $expectedModifierFunctions = @(
     'terminal_parser_ffi_input_vt_modifier_state',
+    'terminal_parser_ffi_input_cursor_modifier_state',
+    'terminal_parser_ffi_input_generic_modifier_state',
     'terminal_parser_ffi_input_sgr_mouse_modifier_state'
 )
 
@@ -86,7 +88,7 @@ foreach ($function in $expectedModifierFunctions)
     }
     if ($inputEngineText -notmatch [regex]::Escape($function))
     {
-        throw "R09 parser ownership regression: InputStateMachineEngine no longer routes modifier translation through $function."
+        throw "R09 parser ownership regression: InputStateMachineEngine no longer routes modifier composition through $function."
     }
 }
 
@@ -95,6 +97,8 @@ foreach ($ownerFunction in @(
     'generic_virtual_key',
     'ss3_virtual_key',
     'vt_modifier_state',
+    'cursor_modifier_state',
+    'generic_modifier_state',
     'sgr_mouse_modifier_state'
 ))
 {
@@ -173,13 +177,15 @@ foreach ($legacySymbol in @(
 
 foreach ($legacyModifierImplementation in @(
     'const auto vtParam = modifierParam - 1;',
-    'WI_SetFlagIf(modifiers, SHIFT_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Shift));'
+    'WI_SetFlagIf(modifiers, SHIFT_PRESSED, WI_IsFlagSet(modifierParam, CsiMouseModifierCodes::Shift));',
+    'if (id < CsiActionCodes::CSI_F1 || id > CsiActionCodes::CSI_F4)',
+    'if (identifier <= GenericKeyIdentifiers::Next)'
 ))
 {
     if ($inputEngineText -match [regex]::Escape($legacyModifierImplementation))
     {
-        throw "R09 parser ownership regression: portable modifier translation returned to C++: $legacyModifierImplementation"
+        throw "R09 parser ownership regression: portable modifier composition returned to C++: $legacyModifierImplementation"
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, and modifier translation are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, and enhanced-key modifier composition are Rust-owned; product and Rust parser consumers route through canonical owners and duplicate portable implementations are absent.'
