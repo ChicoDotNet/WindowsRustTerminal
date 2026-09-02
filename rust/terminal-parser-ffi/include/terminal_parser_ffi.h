@@ -67,11 +67,11 @@ typedef struct terminal_parser_ffi_sgr_mouse_plan
     uint32_t track_click;
 } terminal_parser_ffi_sgr_mouse_plan;
 
-typedef struct terminal_parser_ffi_output_execute_plan
+typedef struct terminal_parser_ffi_output_execute_result
 {
     uint32_t kind;
     uint32_t argument;
-} terminal_parser_ffi_output_execute_plan;
+} terminal_parser_ffi_output_execute_result;
 
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
@@ -109,7 +109,7 @@ terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
     terminal_parser_ffi_key_event* out_key);
 terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(
     uint16_t code_unit,
-    terminal_parser_ffi_output_execute_plan* out_plan);
+    terminal_parser_ffi_output_execute_result* out_plan);
 
 #ifdef __cplusplus
 }
@@ -129,7 +129,7 @@ static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, persistent_button_sta
 static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, event_flags) == 16);
 static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, track_click) == 20);
 
-static_assert(sizeof(terminal_parser_ffi_output_execute_plan) == 8);
-static_assert(offsetof(terminal_parser_ffi_output_execute_plan, kind) == 0);
-static_assert(offsetof(terminal_parser_ffi_output_execute_plan, argument) == 4);
+static_assert(sizeof(terminal_parser_ffi_output_execute_result) == 8);
+static_assert(offsetof(terminal_parser_ffi_output_execute_result, kind) == 0);
+static_assert(offsetof(terminal_parser_ffi_output_execute_result, argument) == 4);
 #endif

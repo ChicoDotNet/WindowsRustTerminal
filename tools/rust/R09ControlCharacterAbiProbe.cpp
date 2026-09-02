@@ -90,7 +90,7 @@ namespace
         const uint32_t expectedKind,
         const uint32_t expectedArgument)
     {
-        terminal_parser_ffi_output_execute_plan plan{};
+        terminal_parser_ffi_output_execute_result plan{};
         const auto status = terminal_parser_ffi_output_execute_plan(codeUnit, &plan);
         if (status != TERMINAL_PARSER_FFI_OK)
         {
