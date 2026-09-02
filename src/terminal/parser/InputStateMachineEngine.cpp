@@ -727,8 +727,8 @@ DWORD InputStateMachineEngine::_GetModifier(const size_t modifierParam) noexcept
 
 // Method Description:
 // - Synthesize the button state for the Mouse Input Record from an SGR VT Sequence
-// - Here, we refer to and maintain the global state of our mouse.
-// - Mouse wheel events are added at the end to keep them out of the global state
+// - Rust owns deterministic SGR decoding and persistent button state.
+// - Native code retains only double-click tracking, which depends on time and position.
 // Arguments:
 // - id: the sequence identifier representing whether the button was pressed or released
 // - sgrEncoding: the first parameter, encoding the button and drag state
@@ -742,131 +742,49 @@ bool InputStateMachineEngine::_UpdateSGRMouseButtonState(const VTID id,
                                                          DWORD& eventFlags,
                                                          const til::point uiPos)
 {
-    // Starting with the state from the last mouse event we received
-    buttonState = _mouseButtonState;
-    eventFlags = 0;
-
-    // The first parameter of mouse events is encoded as the following two bytes:
-    // BBDM'MMBB
-    // Where each of the bits mean the following
-    //   BB__'__BB - which button was pressed/released
-    //   MMM - Control, Alt, Shift state (respectively)
-    //   D - flag signifying a drag event
-
-    // This retrieves the 2 MSBs and concatenates them to the 2 LSBs to create BBBB in binary
-    // This represents which button had a change in state
-    const auto buttonID = (sgrEncoding & 0x3) | ((sgrEncoding & 0xC0) >> 4);
-    const auto currentTime = std::chrono::steady_clock::now();
-    // Step 1: Translate which button was affected
-    // NOTE: if scrolled, having buttonFlag = 0 means
-    //       we don't actually update the buttonState
-    DWORD buttonFlag = 0;
-    switch (buttonID)
+    const auto buttonDown = id == CsiActionCodes::MouseDown;
+    if (!buttonDown && id != CsiActionCodes::MouseUp)
     {
-    case CsiMouseButtonCodes::Left:
-        buttonFlag = FROM_LEFT_1ST_BUTTON_PRESSED;
-        break;
-    case CsiMouseButtonCodes::Right:
-        buttonFlag = RIGHTMOST_BUTTON_PRESSED;
-        break;
-    case CsiMouseButtonCodes::Middle:
-        buttonFlag = FROM_LEFT_2ND_BUTTON_PRESSED;
-        break;
-    case CsiMouseButtonCodes::ScrollBack:
-    {
-        // set high word to proper scroll direction
-        // scroll intensity is assumed to be constant value
-        buttonState |= SCROLL_DELTA_BACKWARD;
-        eventFlags |= MOUSE_WHEELED;
-        break;
-    }
-    case CsiMouseButtonCodes::ScrollForward:
-    {
-        // set high word to proper scroll direction
-        // scroll intensity is assumed to be constant value
-        buttonState |= SCROLL_DELTA_FORWARD;
-        eventFlags |= MOUSE_WHEELED;
-        break;
-    }
-    case CsiMouseButtonCodes::ScrollLeft:
-    {
-        // set high word to proper scroll direction
-        // scroll intensity is assumed to be constant value
-        buttonState |= SCROLL_DELTA_BACKWARD;
-        eventFlags |= MOUSE_HWHEELED;
-        break;
-    }
-    case CsiMouseButtonCodes::ScrollRight:
-    {
-        // set high word to proper scroll direction
-        // scroll intensity is assumed to be constant value
-        buttonState |= SCROLL_DELTA_FORWARD;
-        eventFlags |= MOUSE_HWHEELED;
-        break;
-    }
-    case CsiMouseButtonCodes::Released:
-        // hover event, we still want to send these but we don't
-        // need to do anything special here, so just break
-        break;
-    default:
-        // no detectable buttonID, so we can't update the state
         return false;
     }
 
-    // Step 2: Decide whether to set or clear that button's bit
-    // NOTE: WI_SetFlag/WI_ClearFlag can't be used here because buttonFlag would have to be a compile-time constant
-    switch (id)
+    terminal_parser_ffi_sgr_mouse_plan plan{};
+    const auto status = terminal_parser_ffi_input_sgr_mouse_plan(
+        _mouseButtonState,
+        gsl::narrow_cast<uint32_t>(sgrEncoding),
+        buttonDown ? 1u : 0u,
+        &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+    if (plan.valid == 0)
     {
-    case CsiActionCodes::MouseDown:
-        // set flag
-        // NOTE: scroll events have buttonFlag = 0
-        //       so this intentionally does nothing
-        buttonState |= buttonFlag;
-        // Check if this mouse down is a double click
-        // and also update our trackers for last clicked position, time and button
+        return false;
+    }
+
+    buttonState = plan.button_state;
+    eventFlags = plan.event_flags;
+
+    if (plan.track_click != 0)
+    {
+        const auto currentTime = std::chrono::steady_clock::now();
         if (_lastMouseClickPos && _lastMouseClickTime && _lastMouseClickButton &&
             uiPos == _lastMouseClickPos &&
             (currentTime - _lastMouseClickTime.value()) < _doubleClickTime &&
-            buttonID == _lastMouseClickButton)
+            plan.button_id == _lastMouseClickButton)
         {
-            // This was a double click, set the flag and reset our trackers
-            // for last clicked position, time and button (this is so we don't send
-            // another double click on a third click)
             eventFlags |= DOUBLE_CLICK;
             _lastMouseClickPos.reset();
             _lastMouseClickTime.reset();
             _lastMouseClickButton.reset();
         }
-        else if (buttonID == CsiMouseButtonCodes::Left ||
-                 buttonID == CsiMouseButtonCodes::Right ||
-                 buttonID == CsiMouseButtonCodes::Middle)
+        else
         {
-            // This was a single click, update our trackers for last
-            // clicked position and time
             _lastMouseClickPos = uiPos;
             _lastMouseClickTime = currentTime;
-            _lastMouseClickButton = buttonID;
+            _lastMouseClickButton = plan.button_id;
         }
-        break;
-    case CsiActionCodes::MouseUp:
-        // clear flag
-        buttonState &= (~buttonFlag);
-        break;
-    default:
-        // no detectable change of state, so we can't update the state
-        return false;
     }
 
-    // Step 3: check if mouse moved
-    if (WI_IsFlagSet(sgrEncoding, CsiMouseModifierCodes::Drag))
-    {
-        eventFlags |= MOUSE_MOVED;
-    }
-
-    // Step 4: update internal state before returning, even if we couldn't fully understand this
-    // only take LOWORD here because HIWORD is reserved for mouse wheel delta and release events for the wheel buttons are not reported
-    _mouseButtonState = LOWORD(buttonState);
-
+    _mouseButtonState = plan.persistent_button_state;
     return true;
 }
 
@@ -902,7 +820,7 @@ bool InputStateMachineEngine::_GetCursorKeysVkey(const VTID id, short& vkey) con
 // Method Description:
 // - Gets the Vkey from the SS3 codes table associated with a particular character.
 // Arguments:
-// - wch: the wchar_t to get the mapped vkey of.
+// - wch: the wchar_t to get the vkey and modifier state of.
 // - pVkey: Receives the vkey
 // Return Value:
 // true iff we found the key
