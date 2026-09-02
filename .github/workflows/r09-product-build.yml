@@ -32,7 +32,167 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  output-c0-mechanical-swap:
+    if: contains(github.event.head_commit.message, '[r09-output-c0-swap]')
+    name: Preserve CRLF and route Output C0
+    runs-on: windows-2025-vs2026
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Apply byte-stable Output C0 ownership swap
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = 'src/terminal/parser/OutputStateMachineEngine.cpp'
+          $expectedBlob = '5673b716f632e376f0694c4105e647b42994a2db'
+          $actualBlob = (git hash-object -- $path).Trim()
+          if ($actualBlob -ne $expectedBlob) {
+              throw "First divergence: expected $expectedBlob, found $actualBlob"
+          }
+
+          $encoding = [System.Text.UTF8Encoding]::new($false)
+          $text = [System.IO.File]::ReadAllText($path, $encoding)
+          if (-not $text.Contains("`r`n")) {
+              throw 'First divergence: OutputStateMachineEngine.cpp is not CRLF'
+          }
+
+          $oldInclude = "#include `"stateMachine.hpp`"`r`n#include `"../../types/inc/utils.hpp`""
+          $newInclude = "#include `"stateMachine.hpp`"`r`n#include `"terminal_parser_ffi.h`"`r`n#include `"../../types/inc/utils.hpp`""
+          if (-not $text.Contains($oldInclude)) {
+              throw 'First divergence: include seam not found'
+          }
+          $text = $text.Replace($oldInclude, $newInclude)
+
+          $oldFunction = @"
+          bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
+          {
+              switch (wch)
+              {
+              case AsciiChars::ENQ:
+                  _dispatch->EnquireAnswerback();
+                  break;
+              case AsciiChars::BEL:
+                  _dispatch->WarningBell();
+                  break;
+              case AsciiChars::BS:
+                  _dispatch->CursorBackward(1);
+                  break;
+              case AsciiChars::TAB:
+                  _dispatch->ForwardTab(1);
+                  break;
+              case AsciiChars::CR:
+                  _dispatch->CarriageReturn();
+                  break;
+              case AsciiChars::LF:
+              case AsciiChars::FF:
+              case AsciiChars::VT:
+                  // LF, FF, and VT are identical in function.
+                  _dispatch->LineFeed(DispatchTypes::LineFeedType::DependsOnMode);
+                  break;
+              case AsciiChars::SI:
+                  _dispatch->LockingShift(0);
+                  break;
+              case AsciiChars::SO:
+                  _dispatch->LockingShift(1);
+                  break;
+              case AsciiChars::SUB:
+                  // The SUB control is used to cancel a control sequence in the same
+                  // way as CAN, but unlike CAN it also displays an error character,
+                  // typically a reverse question mark (Unicode substitute form two).
+                  _dispatch->Print(L'\u2426');
+                  break;
+              case AsciiChars::DEL:
+                  // The DEL control can sometimes be translated into a printable glyph
+                  // if a 96-character set is designated, so we need to pass it through
+                  // to the Print method. If not translated, it will be filtered out
+                  // there.
+                  _dispatch->Print(wch);
+                  break;
+              default:
+                  // GH#1825, GH#10786: VT applications expect to be able to write other
+                  // control characters and have _nothing_ happen. We filter out these
+                  // characters here, so they don't fill the buffer.
+                  break;
+              }
+
+              _ClearLastChar();
+
+              return true;
+          }
+          "@ -replace "`n", "`r`n"
+
+          $newFunction = @"
+          bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
+          {
+              terminal_parser_ffi_output_execute_result plan{};
+              const auto status = terminal_parser_ffi_output_execute_plan(gsl::narrow_cast<uint16_t>(wch), &plan);
+              THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+              switch (plan.kind)
+              {
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK:
+                  _dispatch->EnquireAnswerback();
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL:
+                  _dispatch->WarningBell();
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD:
+                  _dispatch->CursorBackward(plan.argument);
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB:
+                  _dispatch->ForwardTab(plan.argument);
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN:
+                  _dispatch->CarriageReturn();
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE:
+                  _dispatch->LineFeed(DispatchTypes::LineFeedType::DependsOnMode);
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT:
+                  _dispatch->LockingShift(plan.argument);
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT:
+                  _dispatch->Print(gsl::narrow_cast<wchar_t>(plan.argument));
+                  break;
+              case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE:
+              default:
+                  break;
+              }
+
+              _ClearLastChar();
+
+              return true;
+          }
+          "@ -replace "`n", "`r`n"
+
+          if (-not $text.Contains($oldFunction)) {
+              throw 'First divergence: ActionExecute source contract not found'
+          }
+          $text = $text.Replace($oldFunction, $newFunction)
+          [System.IO.File]::WriteAllText($path, $text, $encoding)
+
+          $changed = @(git diff --name-only)
+          if ($changed.Count -ne 1 -or $changed[0] -ne $path) {
+              throw "Unexpected changed paths: $($changed -join ', ')"
+          }
+          $numstat = (git diff --numstat -- $path).Trim()
+          $parts = $numstat -split "`t"
+          if ($parts.Count -lt 2 -or [int]$parts[0] + [int]$parts[1] -gt 120) {
+              throw "Unexpected diff size: $numstat"
+          }
+          git diff --check -- $path
+
+          git config user.name 'Alfonso Lara Ramos'
+          git config user.email 'ChicoDotNet@users.noreply.github.com'
+          git add -- $path
+          git commit -m 'Route output C0 actions through Rust'
+          git push origin HEAD:refs/heads/rust/r09-product-integration
+
   cascadia-package:
+    if: ${{ !contains(github.event.head_commit.message, '[r09-output-c0-swap]') }}
     name: CascadiaPackage x64 Debug
     runs-on: windows-2025-vs2026
     steps:
