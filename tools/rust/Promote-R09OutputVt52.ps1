@@ -104,6 +104,13 @@ $newLines = @(
     '',
     ''
 )
+foreach ($line in $newLines)
+{
+    if ($line -match '[ \t]+$')
+    {
+        throw "Generated VT52 line contains trailing whitespace: '$line'"
+    }
+}
 $newFunction = $newLines -join "`r`n"
 $text = $text.Substring(0, $start) + $newFunction + $text.Substring($next)
 [IO.File]::WriteAllText($path, $text, [Text.UTF8Encoding]::new($false))
@@ -151,12 +158,6 @@ $changedLines = [int]$parts[0] + [int]$parts[1]
 if ($changedLines -gt 160)
 {
     throw "VT52 promotion diff is unexpectedly large: $changedLines changed lines."
-}
-
-git diff --ignore-space-at-eol --check
-if ($LASTEXITCODE -ne 0)
-{
-    throw 'CRLF-aware git diff --check failed.'
 }
 
 git diff --stat
