@@ -10,6 +10,7 @@
 #include "base64.hpp"
 #include "stateMachine.hpp"
 #include "terminal_parser_ffi.h"
+#include "terminal_parser_ffi_output_esc.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -182,133 +183,97 @@ bool OutputStateMachineEngine::ActionPassThroughString(const std::wstring_view /
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionEscDispatch(const VTID id)
 {
-    switch (id)
+    terminal_parser_ffi_output_esc_result plan{};
+    const auto status = terminal_parser_ffi_output_esc_plan(static_cast<uint64_t>(id), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case EscActionCodes::ST_StringTerminator:
-        // This is the 7-bit string terminator, which is essentially a no-op.
-        break;
-    case EscActionCodes::DECBI_BackIndex:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_BACK_INDEX:
         _dispatch->BackIndex();
         break;
-    case EscActionCodes::DECSC_CursorSave:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_CURSOR_SAVE_STATE:
         _dispatch->CursorSaveState();
         break;
-    case EscActionCodes::DECRC_CursorRestore:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_CURSOR_RESTORE_STATE:
         _dispatch->CursorRestoreState();
         break;
-    case EscActionCodes::DECFI_ForwardIndex:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_FORWARD_INDEX:
         _dispatch->ForwardIndex();
         break;
-    case EscActionCodes::DECKPAM_KeypadApplicationMode:
-        _dispatch->SetKeypadMode(true);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SET_KEYPAD_MODE:
+        _dispatch->SetKeypadMode(plan.argument != 0);
         break;
-    case EscActionCodes::DECKPNM_KeypadNumericMode:
-        _dispatch->SetKeypadMode(false);
-        break;
-    case EscActionCodes::NEL_NextLine:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LINE_FEED_WITH_RETURN:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::WithReturn);
         break;
-    case EscActionCodes::IND_Index:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LINE_FEED_WITHOUT_RETURN:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::WithoutReturn);
         break;
-    case EscActionCodes::RI_ReverseLineFeed:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_REVERSE_LINE_FEED:
         _dispatch->ReverseLineFeed();
         break;
-    case EscActionCodes::HTS_HorizontalTabSet:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_HORIZONTAL_TAB_SET:
         _dispatch->HorizontalTabSet();
         break;
-    case EscActionCodes::DECID_IdentifyDevice:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DEVICE_ATTRIBUTES_PRIMARY:
         _dispatch->DeviceAttributes();
         break;
-    case EscActionCodes::RIS_ResetToInitialState:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_HARD_RESET:
         _dispatch->HardReset(true);
         break;
-    case EscActionCodes::SS2_SingleShift:
-        _dispatch->SingleShift(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SINGLE_SHIFT:
+        _dispatch->SingleShift(plan.argument);
         break;
-    case EscActionCodes::SS3_SingleShift:
-        _dispatch->SingleShift(3);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LOCKING_SHIFT:
+        _dispatch->LockingShift(plan.argument);
         break;
-    case EscActionCodes::LS2_LockingShift:
-        _dispatch->LockingShift(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LOCKING_SHIFT_RIGHT:
+        _dispatch->LockingShiftRight(plan.argument);
         break;
-    case EscActionCodes::LS3_LockingShift:
-        _dispatch->LockingShift(3);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_ACCEPT_C1_CONTROLS:
+        _dispatch->AcceptC1Controls(plan.argument != 0);
         break;
-    case EscActionCodes::LS1R_LockingShift:
-        _dispatch->LockingShiftRight(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SEND_C1_CONTROLS:
+        _dispatch->SendC1Controls(plan.argument != 0);
         break;
-    case EscActionCodes::LS2R_LockingShift:
-        _dispatch->LockingShiftRight(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_ANNOUNCE_CODE_STRUCTURE:
+        _dispatch->AnnounceCodeStructure(plan.argument);
         break;
-    case EscActionCodes::LS3R_LockingShift:
-        _dispatch->LockingShiftRight(3);
-        break;
-    case EscActionCodes::DECAC1_AcceptC1Controls:
-        _dispatch->AcceptC1Controls(true);
-        break;
-    case EscActionCodes::S7C1T_Send7bitC1Controls:
-        _dispatch->SendC1Controls(false);
-        break;
-    case EscActionCodes::S8C1T_Send8bitC1Controls:
-        _dispatch->SendC1Controls(true);
-        break;
-    case EscActionCodes::ACS_AnsiLevel1:
-        _dispatch->AnnounceCodeStructure(1);
-        break;
-    case EscActionCodes::ACS_AnsiLevel2:
-        _dispatch->AnnounceCodeStructure(2);
-        break;
-    case EscActionCodes::ACS_AnsiLevel3:
-        _dispatch->AnnounceCodeStructure(3);
-        break;
-    case EscActionCodes::DECDHL_DoubleHeightLineTop:
-        _dispatch->SetLineRendition(LineRendition::DoubleHeightTop);
-        break;
-    case EscActionCodes::DECDHL_DoubleHeightLineBottom:
-        _dispatch->SetLineRendition(LineRendition::DoubleHeightBottom);
-        break;
-    case EscActionCodes::DECSWL_SingleWidthLine:
-        _dispatch->SetLineRendition(LineRendition::SingleWidth);
-        break;
-    case EscActionCodes::DECDWL_DoubleWidthLine:
-        _dispatch->SetLineRendition(LineRendition::DoubleWidth);
-        break;
-    case EscActionCodes::DECALN_ScreenAlignmentPattern:
-        _dispatch->ScreenAlignmentPattern();
-        break;
-    default:
-        const auto commandChar = id[0];
-        const auto commandParameter = id.SubSequence(1);
-        switch (commandChar)
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SET_LINE_RENDITION:
+        switch (plan.argument)
         {
-        case '%':
-            _dispatch->DesignateCodingSystem(commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_SINGLE_WIDTH:
+            _dispatch->SetLineRendition(LineRendition::SingleWidth);
             break;
-        case '(':
-            _dispatch->Designate94Charset(0, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_WIDTH:
+            _dispatch->SetLineRendition(LineRendition::DoubleWidth);
             break;
-        case ')':
-            _dispatch->Designate94Charset(1, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_HEIGHT_TOP:
+            _dispatch->SetLineRendition(LineRendition::DoubleHeightTop);
             break;
-        case '*':
-            _dispatch->Designate94Charset(2, commandParameter);
-            break;
-        case '+':
-            _dispatch->Designate94Charset(3, commandParameter);
-            break;
-        case '-':
-            _dispatch->Designate96Charset(1, commandParameter);
-            break;
-        case '.':
-            _dispatch->Designate96Charset(2, commandParameter);
-            break;
-        case '/':
-            _dispatch->Designate96Charset(3, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_HEIGHT_BOTTOM:
+            _dispatch->SetLineRendition(LineRendition::DoubleHeightBottom);
             break;
         default:
-            break;
+            THROW_HR(E_UNEXPECTED);
         }
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SCREEN_ALIGNMENT_PATTERN:
+        _dispatch->ScreenAlignmentPattern();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_CODING_SYSTEM:
+        _dispatch->DesignateCodingSystem(VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_94_CHARSET:
+        _dispatch->Designate94Charset(plan.argument, VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_96_CHARSET:
+        _dispatch->Designate96Charset(plan.argument, VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_NONE:
+    default:
+        break;
     }
 
     _ClearLastChar();
