@@ -18,6 +18,7 @@ on:
       - "src/cascadia/TerminalSettingsEditor/**"
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
+      - "tools/rust/Invoke-R09OutputEscProductSwap.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
@@ -42,6 +43,16 @@ jobs:
           submodules: recursive
       - name: Rust toolchain
         run: rustup show
+      - name: Prepare Output ESC Rust ownership candidate
+        shell: pwsh
+        run: ./tools/rust/Invoke-R09OutputEscProductSwap.ps1
+      - name: Preserve Output ESC ownership candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-output-esc-product-swap-source
+          path: src/terminal/parser/OutputStateMachineEngine.cpp
+          if-no-files-found: error
+          retention-days: 1
       - name: Validate parser ownership promotion
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
