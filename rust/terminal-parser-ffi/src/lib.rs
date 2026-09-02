@@ -10,6 +10,7 @@ mod input_control;
 mod input_keymap;
 mod input_mouse;
 mod input_win32;
+mod output_csi_cursor;
 mod output_esc;
 mod output_execute;
 mod output_vt52;
