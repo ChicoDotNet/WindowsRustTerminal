@@ -84,6 +84,33 @@ namespace
 
         return true;
     }
+
+    bool expect_output_execute_plan(
+        const uint16_t codeUnit,
+        const uint32_t expectedKind,
+        const uint32_t expectedArgument)
+    {
+        terminal_parser_ffi_output_execute_plan plan{};
+        const auto status = terminal_parser_ffi_output_execute_plan(codeUnit, &plan);
+        if (status != TERMINAL_PARSER_FFI_OK)
+        {
+            std::fprintf(stderr, "output execute status %u for U+%04X\n", static_cast<unsigned>(status), codeUnit);
+            return false;
+        }
+
+        if (plan.kind != expectedKind || plan.argument != expectedArgument)
+        {
+            std::fprintf(
+                stderr,
+                "output execute mismatch for U+%04X: kind=%u argument=%u\n",
+                codeUnit,
+                plan.kind,
+                plan.argument);
+            return false;
+        }
+
+        return true;
+    }
 }
 
 int main()
@@ -120,7 +147,22 @@ int main()
         expect_mouse_plan(leftButton | rightButton, 2, 0, 2, leftButton, leftButton, 0, 0) &&
         expect_mouse_plan(leftButton, 0, 0, 0, 0, 0, 0, 0);
 
-    if (!controlOk || !mouseOk)
+    const bool outputExecuteOk =
+        expect_output_execute_plan(0x05, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK, 0) &&
+        expect_output_execute_plan(0x07, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL, 0) &&
+        expect_output_execute_plan(0x08, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD, 1) &&
+        expect_output_execute_plan(0x09, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB, 1) &&
+        expect_output_execute_plan(0x0d, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN, 0) &&
+        expect_output_execute_plan(0x0a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
+        expect_output_execute_plan(0x0b, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
+        expect_output_execute_plan(0x0c, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
+        expect_output_execute_plan(0x0f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 0) &&
+        expect_output_execute_plan(0x0e, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 1) &&
+        expect_output_execute_plan(0x1a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x2426) &&
+        expect_output_execute_plan(0x7f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x7f) &&
+        expect_output_execute_plan(0x01, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE, 0);
+
+    if (!controlOk || !mouseOk || !outputExecuteOk)
     {
         return 1;
     }

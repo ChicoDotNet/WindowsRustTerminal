@@ -25,6 +25,19 @@ typedef enum terminal_parser_ffi_control_character_kind
     TERMINAL_PARSER_FFI_CONTROL_CHARACTER_DELETE_AS_BACKSPACE = 3,
 } terminal_parser_ffi_control_character_kind;
 
+typedef enum terminal_parser_ffi_output_execute_kind
+{
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE = 0,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK = 1,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL = 2,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD = 3,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB = 4,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN = 5,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE = 6,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT = 7,
+    TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT = 8,
+} terminal_parser_ffi_output_execute_kind;
+
 typedef struct terminal_parser_ffi_key_event
 {
     uint32_t key_down;
@@ -53,6 +66,12 @@ typedef struct terminal_parser_ffi_sgr_mouse_plan
     uint32_t event_flags;
     uint32_t track_click;
 } terminal_parser_ffi_sgr_mouse_plan;
+
+typedef struct terminal_parser_ffi_output_execute_plan
+{
+    uint32_t kind;
+    uint32_t argument;
+} terminal_parser_ffi_output_execute_plan;
 
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
@@ -88,6 +107,9 @@ terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
     int32_t control_key_state,
     int32_t repeat_count,
     terminal_parser_ffi_key_event* out_key);
+terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(
+    uint16_t code_unit,
+    terminal_parser_ffi_output_execute_plan* out_plan);
 
 #ifdef __cplusplus
 }
@@ -106,4 +128,8 @@ static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, button_state) == 8);
 static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, persistent_button_state) == 12);
 static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, event_flags) == 16);
 static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, track_click) == 20);
+
+static_assert(sizeof(terminal_parser_ffi_output_execute_plan) == 8);
+static_assert(offsetof(terminal_parser_ffi_output_execute_plan, kind) == 0);
+static_assert(offsetof(terminal_parser_ffi_output_execute_plan, argument) == 4);
 #endif
