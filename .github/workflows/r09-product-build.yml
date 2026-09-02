@@ -44,11 +44,11 @@ jobs:
       - name: Rust toolchain
         run: rustup show
       - name: Prepare Output ESC Rust ownership candidate
-        if: github.sha == 'd9276db389eb5234fc96653843891188d9001a2c'
+        if: contains(github.event.head_commit.message, 'Exercise Output ESC product ownership')
         shell: pwsh
         run: ./tools/rust/Invoke-R09OutputEscProductSwap.ps1
       - name: Preserve Output ESC ownership candidate
-        if: github.sha == 'd9276db389eb5234fc96653843891188d9001a2c'
+        if: contains(github.event.head_commit.message, 'Exercise Output ESC product ownership')
         uses: actions/upload-artifact@v4
         with:
           name: r09-output-esc-product-swap-source
