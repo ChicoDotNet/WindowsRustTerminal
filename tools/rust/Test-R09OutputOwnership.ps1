@@ -2,7 +2,11 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $sourcePath = Join-Path $repoRoot 'src/terminal/parser/OutputStateMachineEngine.cpp'
+$escFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_esc.rs'
+$escProbePath = Join-Path $repoRoot 'tools/rust/R09OutputEscAbiProbe.hpp'
 $source = Get-Content -Raw -LiteralPath $sourcePath
+$escFfi = Get-Content -Raw -LiteralPath $escFfiPath
+$escProbe = Get-Content -Raw -LiteralPath $escProbePath
 
 $signature = 'bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)'
 $start = $source.IndexOf($signature, [StringComparison]::Ordinal)
@@ -62,4 +66,19 @@ if (-not $body.Contains('_ClearLastChar();'))
     throw 'R09 Output ownership gate: native last-character sequencing was removed.'
 }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0 classification; C++ retains native dispatch execution.'
+if (-not $escFfi.Contains('terminal_parser_ffi_output_esc_plan'))
+{
+    throw 'R09 Output ownership gate: terminal-parser-ffi no longer exports the Output ESC planning seam.'
+}
+
+if (-not $escFfi.Contains('engine.action_esc_dispatch(id)'))
+{
+    throw 'R09 Output ownership gate: Output ESC FFI no longer delegates to the Rust output engine.'
+}
+
+if (-not $escProbe.Contains('terminal_parser_ffi_output_esc_plan'))
+{
+    throw 'R09 Output ownership gate: native replay no longer exercises the Output ESC planning seam.'
+}
+
+Write-Host 'R09 Output ownership gate passed: Rust owns C0 classification and the Output ESC bridge remains replay-certified.'
