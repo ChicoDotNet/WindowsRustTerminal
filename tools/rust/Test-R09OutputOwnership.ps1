@@ -4,9 +4,13 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $sourcePath = Join-Path $repoRoot 'src/terminal/parser/OutputStateMachineEngine.cpp'
 $escFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_esc.rs'
 $escProbePath = Join-Path $repoRoot 'tools/rust/R09OutputEscAbiProbe.hpp'
+$vt52FfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_vt52.rs'
+$vt52ProbePath = Join-Path $repoRoot 'tools/rust/R09ControlCharacterAbiProbe.cpp'
 $source = Get-Content -Raw -LiteralPath $sourcePath
 $escFfi = Get-Content -Raw -LiteralPath $escFfiPath
 $escProbe = Get-Content -Raw -LiteralPath $escProbePath
+$vt52Ffi = Get-Content -Raw -LiteralPath $vt52FfiPath
+$vt52Probe = Get-Content -Raw -LiteralPath $vt52ProbePath
 
 function Get-FunctionBody([string] $Signature)
 {
@@ -95,4 +99,41 @@ if (-not $escProbe.Contains('terminal_parser_ffi_output_esc_plan'))
     throw 'R09 Output ownership gate: native replay no longer exercises the Output ESC planning seam.'
 }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0 and ESC classification; native dispatch sequencing remains at the Windows seam.'
+$vt52Body = Get-FunctionBody 'bool OutputStateMachineEngine::ActionVt52EscDispatch(const VTID id, const VTParameters parameters)'
+
+if (-not $vt52Body.Contains('terminal_parser_ffi_output_vt52_plan'))
+{
+    throw 'R09 Output ownership gate: ActionVt52EscDispatch no longer delegates VT52 classification to Rust.'
+}
+
+if ($vt52Body.Contains('switch (id)') -or $vt52Body.Contains('case Vt52ActionCodes::'))
+{
+    throw 'R09 Output ownership gate: portable VT52 classification returned to C++.'
+}
+
+if (-not $vt52Body.Contains('switch (plan.kind)'))
+{
+    throw 'R09 Output ownership gate: native VT52 dispatch materialization no longer consumes the Rust plan.'
+}
+
+if (-not $vt52Body.Contains('_ClearLastChar();'))
+{
+    throw 'R09 Output ownership gate: native VT52 last-character sequencing was removed.'
+}
+
+if (-not $vt52Ffi.Contains('terminal_parser_ffi_output_vt52_plan'))
+{
+    throw 'R09 Output ownership gate: terminal-parser-ffi no longer exports the Output VT52 planning seam.'
+}
+
+if (-not $vt52Ffi.Contains('engine.action_vt52_esc_dispatch(id, &parameters)'))
+{
+    throw 'R09 Output ownership gate: Output VT52 FFI no longer delegates to the Rust output engine.'
+}
+
+if (-not $vt52Probe.Contains('terminal_parser_ffi_output_vt52_plan'))
+{
+    throw 'R09 Output ownership gate: native replay no longer exercises the Output VT52 planning seam.'
+}
+
+Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, and VT52 classification; native dispatch sequencing remains at the Windows seam.'
