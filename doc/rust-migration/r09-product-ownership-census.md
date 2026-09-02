@@ -9,17 +9,27 @@ The classifications used here are:
 - **SPLIT** — the file currently mixes portable behavior with a required native seam; portable ownership should move behind the Rust boundary while the seam remains native.
 - **UNRESOLVED** — more build/ownership evidence is required before changing the surface.
 
-## Parser product slice
+## Certified product owners
+
+| Surface / behavior | Current classification | Evidence / next action |
+|---|---|---|
+| Base64 decoding | **DELETE C++ / Rust owner** | `src/terminal/parser/base64.cpp` is deleted. `base64.hpp` remains a narrow ABI-compatible facade over `terminal_parser_ffi_base64_decode_utf16`. |
+| Input CSI cursor key mapping | **DELETE C++ / Rust owner** | Product routing uses `terminal_parser_ffi_input_cursor_vkey`; the legacy C++ map/table is absent and guarded by `Test-R09ParserOwnership.ps1`. |
+| Input CSI generic key mapping | **DELETE C++ / Rust owner** | Product routing uses `terminal_parser_ffi_input_generic_vkey`; the legacy C++ map/table is absent and guarded. |
+| Input SS3 key mapping | **DELETE C++ / Rust owner** | Product routing uses `terminal_parser_ffi_input_ss3_vkey`; the legacy C++ map/table is absent and guarded. |
+| VT modifier normalization / enhanced-key composition | **DELETE C++ / Rust owner** | Cursor, generic and SGR modifier translation route through `terminal-parser-ffi`; duplicate C++ bit-composition patterns are prohibited by the ownership gate. |
+| Win32 key-field normalization | **DELETE portable C++ / Rust owner** | `_GenerateWin32Key` remains as the native `INPUT_RECORD` adapter, while deterministic parameter/default/saturation policy routes through `terminal_parser_ffi_input_win32_key_fields`. |
+| Control-character classification | **DELETE portable C++ / Rust owner** | `_DoControlCharacter` routes Ctrl+C/C0/DEL/print classification through `terminal_parser_ffi_input_control_character_plan`; C++ retains only keyboard-layout and Win32 event materialization. |
+| Command-palette FZF matching | **DELETE portable C++ / Rust owner** | `CommandPalette`/`FilteredCommand` still expose the product/UI shape, while `fzf.cpp` is a narrow adapter over `terminal-app-ffi`; score and UTF-16 runs come from Rust. `Test-R09FzfOwnership.ps1` guards the real consumer route. |
+
+## Remaining parser product surfaces
 
 | Surface | Current classification | Evidence / next action |
 |---|---|---|
-| `src/terminal/parser/base64.cpp` | **DELETE — complete** | Deleted after `Base64::Decode` was routed through `terminal-parser-ffi`; canonical `CascadiaPackage x64 Debug` run #5 passed on commit `b68392a4`. |
-| `src/terminal/parser/base64.hpp` | **KEEP-NATIVE/ABI** | Minimal compatibility seam retaining the existing C++ API while delegating decoding to `terminal_parser_ffi_base64_decode_utf16`. |
-| `rust/terminal-parser/src/base64.rs` | **Rust owner** | Safe deterministic implementation certified during R08 and now used by the product graph. |
 | `rust/terminal-parser-ffi` | **KEEP-ABI** | Narrow C ABI/static-library boundary. Raw pointer handling stays here; product semantics stay in safe Rust crates. |
-| `src/terminal/parser/InputStateMachineEngine.cpp` | **SPLIT** | Contains substantial deterministic VT/input policy already represented by `terminal-parser`, but also Windows keyboard-layout, `INPUT_RECORD`, ConPTY/interactivity and timing integration. Migrate deterministic helpers incrementally; keep Win32/interactivity seams native. |
+| `src/terminal/parser/InputStateMachineEngine.cpp` | **SPLIT** | Several deterministic key/control policies are already Rust-owned. Remaining C++ includes SGR mouse button/state transitions plus legitimate keyboard-layout, `INPUT_RECORD`, ConPTY/interactivity and timing integration. Continue extracting only deterministic policy. |
 | `src/terminal/parser/OutputStateMachineEngine.cpp` | **SPLIT** | Deterministic parser/dispatch policy is represented in Rust; existing C++ surface still participates in native dispatch/product integration. Promote narrow behaviors before attempting translation-unit removal. |
-| `src/terminal/parser/stateMachine.cpp` | **SPLIT** | Rust owns the portable state-machine semantics, but C++ consumers still depend on the native class/API shape. Replace ownership through a product seam before removing the C++ implementation. |
+| `src/terminal/parser/stateMachine.cpp` | **SPLIT** | Rust owns portable state-machine semantics, but C++ consumers still depend on the native class/API shape. Replace ownership through product seams before removing the implementation. |
 | `src/terminal/parser/tracing.cpp` | **KEEP-NATIVE** | Telemetry/tracing is a platform integration concern, not a reason to duplicate parser semantics in Rust. |
 | `src/terminal/parser/precomp.cpp` / `precomp.h` | **KEEP-NATIVE** | Native build infrastructure while C++ parser seams remain. |
 
@@ -30,11 +40,13 @@ A surface moves from `SPLIT` to `DELETE` only after all of the following are tru
 1. the existing product consumer routes the relevant behavior through the Rust owner;
 2. Rust and Microsoft contract tests remain green;
 3. the canonical `CascadiaPackage` product build remains green;
-4. the C++ implementation is removed from MSBuild/source lists;
+4. the redundant C++ implementation is removed from the product path or reduced to a native/ABI adapter;
 5. a repository ownership gate prevents the obsolete implementation from being reintroduced.
 
-`tools/rust/Test-R09ParserOwnership.ps1` is the first such gate. It locks the completed Base64 promotion by verifying that `base64.cpp` remains absent, no build/source reference to it exists, the C++ compatibility header still delegates to Rust, and the parser project still builds/links `terminal-parser-ffi`.
+`tools/rust/Test-R09ParserOwnership.ps1` records the parser promotions already completed: Base64, CSI/generic/SS3 key maps, modifier translation and enhanced-key composition, Win32 key normalization, and control-character classification. It also verifies that the product C++ consumer still routes through those Rust owners and that known legacy implementations remain absent.
 
 ## Next parser candidate
 
-The next low-blast-radius target is the deterministic key-mapping policy embedded in `InputStateMachineEngine.cpp` (`CSI`, generic and `SS3` key-to-VKEY mappings). Rust already contains equivalent mappings in `terminal-parser::input_engine`. Promote these mappings through the existing parser FFI while leaving keyboard-layout lookup, scan-code generation, `INPUT_RECORD` synthesis and ConPTY dispatch in C++/Win32. This advances `InputStateMachineEngine.cpp` as a **SPLIT** without rewriting its legitimate native responsibilities.
+The previous census named CSI/generic/SS3 key-to-VKEY mappings as the next candidate, but the live product source has already promoted all three. The next low-blast-radius parser target is therefore the **deterministic portion of SGR mouse button/state decoding** in `InputStateMachineEngine::_UpdateSGRMouseButtonState`.
+
+Rust already contains equivalent SGR behavior in `terminal-parser::input_engine`, including button identity, wheel/horizontal-wheel direction, drag flags and persistent low-word button state. The promotion should keep native timing/double-click observation and `INPUT_RECORD` emission in C++, while moving only deterministic encoding/state-transition policy behind a narrow ABI. Required evidence before deleting the duplicate C++ policy: Contract Replay for press/release/drag/wheel cases, a native ABI probe or product build sensor, canonical `CascadiaPackage` green, and an ownership gate that prevents the removed decision tree from returning.
