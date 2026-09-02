@@ -117,16 +117,46 @@ for ($i = 0; $i -lt $patched.Length; $i++)
     }
 }
 
+$patchedText = [Text.Encoding]::UTF8.GetString($patched)
+$patchedStart = $patchedText.IndexOf($signature, [StringComparison]::Ordinal)
+$patchedNext = $patchedText.IndexOf($nextMarker, $patchedStart, [StringComparison]::Ordinal)
+$patchedFunction = $patchedText.Substring($patchedStart, $patchedNext - $patchedStart)
+if (-not $patchedText.Contains('terminal_parser_ffi_output_vt52.h') -or
+    -not $patchedFunction.Contains('terminal_parser_ffi_output_vt52_plan') -or
+    -not $patchedFunction.Contains('switch (plan.kind)') -or
+    $patchedFunction.Contains('switch (id)') -or
+    $patchedFunction.Contains('case Vt52ActionCodes::') -or
+    -not $patchedFunction.Contains('_ClearLastChar();'))
+{
+    throw 'VT52 postconditions failed after mechanical promotion.'
+}
+
 $diffNames = @(git diff --name-only)
 if ($diffNames.Count -ne 1 -or $diffNames[0] -ne 'src/terminal/parser/OutputStateMachineEngine.cpp')
 {
     throw "Unexpected files changed: $($diffNames -join ', ')"
 }
 
-git diff --check
+$numstat = git diff --numstat -- src/terminal/parser/OutputStateMachineEngine.cpp
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($numstat))
+{
+    throw 'Unable to measure VT52 promotion diff.'
+}
+$parts = $numstat -split "`t"
+if ($parts.Count -lt 2 -or $parts[0] -notmatch '^\d+$' -or $parts[1] -notmatch '^\d+$')
+{
+    throw "Unexpected VT52 numstat: $numstat"
+}
+$changedLines = [int]$parts[0] + [int]$parts[1]
+if ($changedLines -gt 160)
+{
+    throw "VT52 promotion diff is unexpectedly large: $changedLines changed lines."
+}
+
+git diff --ignore-space-at-eol --check
 if ($LASTEXITCODE -ne 0)
 {
-    throw 'git diff --check failed.'
+    throw 'CRLF-aware git diff --check failed.'
 }
 
 git diff --stat
