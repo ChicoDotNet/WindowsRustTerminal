@@ -22,12 +22,11 @@ on:
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
-      - "tools/rust/Promote-R09OutputVt52.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: r09-product-build-${{ github.ref }}
@@ -44,45 +43,18 @@ jobs:
           fetch-depth: 0
       - name: Rust toolchain
         run: rustup show
-      - name: Prepare Output VT52 Rust ownership candidate
-        shell: pwsh
-        run: ./tools/rust/Promote-R09OutputVt52.ps1
-      - name: Validate parser ownership promotion
+      - name: Validate parser ownership
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
-      - name: Validate Output ownership promotion
+      - name: Validate Output ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputOwnership.ps1
-      - name: Validate FZF ownership promotion
+      - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
-      - name: Promote verified Output VT52 Rust ownership
-        shell: pwsh
-        env:
-          EXPECTED_HEAD: ${{ github.sha }}
-        run: |
-          $ErrorActionPreference = 'Stop'
-          if (-not (git status --short -- src/terminal/parser/OutputStateMachineEngine.cpp)) {
-              Write-Host 'No VT52 promotion delta remains.'
-              exit 0
-          }
-          git fetch origin rust/r09-product-integration
-          $remoteHead = git rev-parse origin/rust/r09-product-integration
-          if ($remoteHead -ne $env:EXPECTED_HEAD) {
-              throw "Concurrent branch update detected: expected $env:EXPECTED_HEAD, found $remoteHead."
-          }
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- src/terminal/parser/OutputStateMachineEngine.cpp
-          $staged = @(git diff --cached --name-only)
-          if ($staged.Count -ne 1 -or $staged[0] -ne 'src/terminal/parser/OutputStateMachineEngine.cpp') {
-              throw "Unexpected staged files: $($staged -join ', ')"
-          }
-          git commit -m 'Route Output VT52 actions through Rust'
-          git push origin HEAD:rust/r09-product-integration
       - name: Preserve product build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
