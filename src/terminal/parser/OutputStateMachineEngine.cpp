@@ -9,6 +9,7 @@
 #include "ascii.hpp"
 #include "base64.hpp"
 #include "stateMachine.hpp"
+#include "terminal_parser_ffi.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -53,52 +54,38 @@ ITermDispatch& OutputStateMachineEngine::Dispatch() noexcept
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
 {
-    switch (wch)
+    terminal_parser_ffi_output_execute_result plan{};
+    const auto status = terminal_parser_ffi_output_execute_plan(gsl::narrow_cast<uint16_t>(wch), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case AsciiChars::ENQ:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK:
         _dispatch->EnquireAnswerback();
         break;
-    case AsciiChars::BEL:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL:
         _dispatch->WarningBell();
         break;
-    case AsciiChars::BS:
-        _dispatch->CursorBackward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD:
+        _dispatch->CursorBackward(plan.argument);
         break;
-    case AsciiChars::TAB:
-        _dispatch->ForwardTab(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB:
+        _dispatch->ForwardTab(plan.argument);
         break;
-    case AsciiChars::CR:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN:
         _dispatch->CarriageReturn();
         break;
-    case AsciiChars::LF:
-    case AsciiChars::FF:
-    case AsciiChars::VT:
-        // LF, FF, and VT are identical in function.
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::DependsOnMode);
         break;
-    case AsciiChars::SI:
-        _dispatch->LockingShift(0);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT:
+        _dispatch->LockingShift(plan.argument);
         break;
-    case AsciiChars::SO:
-        _dispatch->LockingShift(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT:
+        _dispatch->Print(gsl::narrow_cast<wchar_t>(plan.argument));
         break;
-    case AsciiChars::SUB:
-        // The SUB control is used to cancel a control sequence in the same
-        // way as CAN, but unlike CAN it also displays an error character,
-        // typically a reverse question mark (Unicode substitute form two).
-        _dispatch->Print(L'\u2426');
-        break;
-    case AsciiChars::DEL:
-        // The DEL control can sometimes be translated into a printable glyph
-        // if a 96-character set is designated, so we need to pass it through
-        // to the Print method. If not translated, it will be filtered out
-        // there.
-        _dispatch->Print(wch);
-        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE:
     default:
-        // GH#1825, GH#10786: VT applications expect to be able to write other
-        // control characters and have _nothing_ happen. We filter out these
-        // characters here, so they don't fill the buffer.
         break;
     }
 
@@ -106,7 +93,6 @@ bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
 
     return true;
 }
-
 // Routine Description:
 // - Triggers the Execute action to indicate that the listener should
 //      immediately respond to a C0 control character.
