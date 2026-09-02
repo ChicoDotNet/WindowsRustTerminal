@@ -18,7 +18,6 @@ on:
       - "src/cascadia/TerminalSettingsEditor/**"
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
-      - "tools/rust/Invoke-R09OutputEscProductSwap.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
@@ -27,7 +26,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: r09-product-build-${{ github.ref }}
@@ -43,18 +42,6 @@ jobs:
           submodules: recursive
       - name: Rust toolchain
         run: rustup show
-      - name: Prepare Output ESC Rust ownership candidate
-        if: contains(github.event.head_commit.message, 'Promote Output ESC product ownership')
-        shell: pwsh
-        run: ./tools/rust/Invoke-R09OutputEscProductSwap.ps1
-      - name: Preserve Output ESC ownership candidate
-        if: contains(github.event.head_commit.message, 'Promote Output ESC product ownership')
-        uses: actions/upload-artifact@v4
-        with:
-          name: r09-output-esc-product-swap-source
-          path: src/terminal/parser/OutputStateMachineEngine.cpp
-          if-no-files-found: error
-          retention-days: 1
       - name: Validate parser ownership promotion
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
@@ -67,48 +54,6 @@ jobs:
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
-      - name: Promote verified Output ESC Rust ownership
-        if: contains(github.event.head_commit.message, 'Promote Output ESC product ownership')
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $branch = 'rust/r09-product-integration'
-          $source = 'src/terminal/parser/OutputStateMachineEngine.cpp'
-          $expectedBlob = '2f0f6f28dafd9f9048074f84dbf05249c3e56884'
-
-          $actualBlob = (git hash-object -- $source).Trim()
-          if ($actualBlob -ne $expectedBlob)
-          {
-              throw "Output ESC candidate blob drifted: expected $expectedBlob, got $actualBlob"
-          }
-
-          git fetch --no-tags origin "refs/heads/$branch"
-          $remoteHead = (git rev-parse FETCH_HEAD).Trim()
-          if ($remoteHead -ne '${{ github.sha }}')
-          {
-              throw "Remote branch advanced to $remoteHead; refusing to overwrite concurrent work."
-          }
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- $source
-
-          $staged = @(git diff --cached --name-only)
-          if ($staged.Count -ne 1 -or $staged[0] -ne $source)
-          {
-              throw "Promotion staged unexpected paths: $($staged -join ', ')"
-          }
-
-          git commit -m 'Route Output ESC actions through Rust'
-
-          git fetch --no-tags origin "refs/heads/$branch"
-          $remoteHead = (git rev-parse FETCH_HEAD).Trim()
-          if ($remoteHead -ne '${{ github.sha }}')
-          {
-              throw "Remote branch advanced to $remoteHead before push; refusing to overwrite concurrent work."
-          }
-
-          git push origin "HEAD:$branch"
       - name: Preserve product build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
