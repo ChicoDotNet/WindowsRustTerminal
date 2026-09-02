@@ -209,12 +209,15 @@ if (-not $updatedAction.Contains('_ClearLastChar();'))
     throw 'R09 Output ESC swap: native last-character sequencing was lost.'
 }
 
+$normalizedUpdated = $updated.Replace("`r`n", "`n")
+if ($normalizedUpdated -match '[ \t]+(?=\n)')
+{
+    throw 'R09 Output ESC swap: transformed source contains trailing horizontal whitespace.'
+}
+
 Push-Location $repoRoot
 try
 {
-    git diff --check --ignore-space-at-eol -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
-    if ($LASTEXITCODE -ne 0) { throw 'R09 Output ESC swap: git diff --check failed.' }
-
     $numstat = git diff --numstat -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
     if ($LASTEXITCODE -ne 0 -or -not $numstat) { throw 'R09 Output ESC swap: expected source diff was not produced.' }
     $parts = $numstat -split '\s+'
