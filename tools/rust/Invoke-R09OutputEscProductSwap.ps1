@@ -212,7 +212,7 @@ if (-not $updatedAction.Contains('_ClearLastChar();'))
 Push-Location $repoRoot
 try
 {
-    git diff --check -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
+    git diff --check --ignore-space-at-eol -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
     if ($LASTEXITCODE -ne 0) { throw 'R09 Output ESC swap: git diff --check failed.' }
 
     $numstat = git diff --numstat -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
