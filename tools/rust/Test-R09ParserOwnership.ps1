@@ -222,6 +222,35 @@ if ($nativeAbiProbeText -notmatch [regex]::Escape($sgrMousePlanFunction))
 {
     throw "R09 parser ownership regression: native ABI replay no longer exercises SGR mouse seam $sgrMousePlanFunction."
 }
+if ($inputEngineText -notmatch [regex]::Escape($sgrMousePlanFunction))
+{
+    throw "R09 parser ownership regression: InputStateMachineEngine no longer routes SGR mouse state through $sgrMousePlanFunction."
+}
+foreach ($sgrMouseAdapterToken in @(
+    'plan.button_state',
+    'plan.event_flags',
+    'plan.track_click',
+    'plan.persistent_button_state'
+))
+{
+    if ($inputEngineText -notmatch [regex]::Escape($sgrMouseAdapterToken))
+    {
+        throw "R09 parser ownership regression: native SGR mouse adapter lost ABI field $sgrMouseAdapterToken."
+    }
+}
+foreach ($legacySgrMouseImplementation in @(
+    'const auto buttonID = (sgrEncoding & 0x3)',
+    'case CsiMouseButtonCodes::ScrollBack:',
+    'case CsiMouseButtonCodes::ScrollForward:',
+    'WI_IsFlagSet(sgrEncoding, CsiMouseModifierCodes::Drag)',
+    '_mouseButtonState = LOWORD(buttonState);'
+))
+{
+    if ($inputEngineText -match [regex]::Escape($legacySgrMouseImplementation))
+    {
+        throw "R09 parser ownership regression: portable SGR mouse implementation returned to C++: $legacySgrMouseImplementation"
+    }
+}
 
 foreach ($ownerFunction in @(
     'cursor_virtual_key',
@@ -334,4 +363,4 @@ foreach ($legacyWin32KeyNormalization in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and control-character classification are Rust-owned; SGR mouse deterministic decoding is Rust-owned with native ABI replay coverage; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, control-character classification, and SGR mouse deterministic decoding are Rust-owned; native product consumers route through canonical promoted owners and duplicate portable implementations are absent.'
