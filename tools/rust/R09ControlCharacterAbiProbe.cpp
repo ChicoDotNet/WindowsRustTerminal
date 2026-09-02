@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 #include "terminal_parser_ffi.h"
+#include "R09OutputEscAbiProbe.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -162,7 +163,9 @@ int main()
         expect_output_execute_plan(0x7f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x7f) &&
         expect_output_execute_plan(0x01, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE, 0);
 
-    if (!controlOk || !mouseOk || !outputExecuteOk)
+    const bool outputEscOk = r09::output_esc_replay();
+
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk)
     {
         return 1;
     }
