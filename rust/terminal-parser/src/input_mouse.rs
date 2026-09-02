@@ -106,6 +106,27 @@ mod tests {
     }
 
     #[test]
+    fn releasing_one_primary_button_preserves_other_pressed_buttons() {
+        let all_primary = FROM_LEFT_1ST_BUTTON_PRESSED
+            | FROM_LEFT_2ND_BUTTON_PRESSED
+            | RIGHTMOST_BUTTON_PRESSED;
+
+        let release_middle = plan_sgr_mouse(all_primary, 1, false).unwrap();
+        assert_eq!(
+            release_middle.persistent_button_state,
+            FROM_LEFT_1ST_BUTTON_PRESSED | RIGHTMOST_BUTTON_PRESSED
+        );
+        assert_eq!(release_middle.event_flags, 0);
+        assert!(!release_middle.track_click);
+
+        let release_right = plan_sgr_mouse(release_middle.persistent_button_state, 2, false).unwrap();
+        assert_eq!(release_right.persistent_button_state, FROM_LEFT_1ST_BUTTON_PRESSED);
+
+        let release_left = plan_sgr_mouse(release_right.persistent_button_state, 0, false).unwrap();
+        assert_eq!(release_left.persistent_button_state, 0);
+    }
+
+    #[test]
     fn wheel_events_use_transient_high_word_and_do_not_persist_it() {
         let previous = FROM_LEFT_1ST_BUTTON_PRESSED;
         let cases = [
