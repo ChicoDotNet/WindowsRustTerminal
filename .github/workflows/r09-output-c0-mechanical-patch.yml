@@ -1,0 +1,118 @@
+name: R09 Output C0 Mechanical Patch
+
+on:
+  push:
+    branches:
+      - rust/r09-product-integration
+    paths:
+      - .github/workflows/r09-output-c0-mechanical-patch.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-output-c0:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: rust/r09-product-integration
+          fetch-depth: 0
+
+      - name: Verify certified source blob
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git hash-object src/terminal/parser/OutputStateMachineEngine.cpp)"
+          test "$actual" = "5673b716f632e376f0694c4105e647b42994a2db"
+
+      - name: Apply byte-preserving Output C0 route
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/terminal/parser/OutputStateMachineEngine.cpp")
+          data = path.read_bytes()
+          assert data.count(b"\n") == data.count(b"\r\n"), "source is not CRLF-only"
+
+          include_old = b'#include "stateMachine.hpp"\r\n#include "../../types/inc/utils.hpp"'
+          include_new = b'#include "stateMachine.hpp"\r\n#include "terminal_parser_ffi.h"\r\n#include "../../types/inc/utils.hpp"'
+          assert data.count(include_old) == 1
+          data = data.replace(include_old, include_new, 1)
+
+          start_marker = b"bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)\r\n"
+          start = data.index(start_marker)
+          next_comment = data.index(
+              b"// Routine Description:\r\n// - Triggers the Execute action",
+              start + len(start_marker),
+          )
+
+          replacement = b"""bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)\r
+{\r
+    terminal_parser_ffi_output_execute_result plan{};\r
+    const auto status = terminal_parser_ffi_output_execute_plan(gsl::narrow_cast<uint16_t>(wch), &plan);\r
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);\r
+\r
+    switch (plan.kind)\r
+    {\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK:\r
+        _dispatch->EnquireAnswerback();\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL:\r
+        _dispatch->WarningBell();\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD:\r
+        _dispatch->CursorBackward(plan.argument);\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB:\r
+        _dispatch->ForwardTab(plan.argument);\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN:\r
+        _dispatch->CarriageReturn();\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE:\r
+        _dispatch->LineFeed(DispatchTypes::LineFeedType::DependsOnMode);\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT:\r
+        _dispatch->LockingShift(plan.argument);\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT:\r
+        _dispatch->Print(gsl::narrow_cast<wchar_t>(plan.argument));\r
+        break;\r
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE:\r
+    default:\r
+        break;\r
+    }\r
+\r
+    _ClearLastChar();\r
+\r
+    return true;\r
+}\r
+\r
+"""
+
+          data = data[:start] + replacement + data[next_comment:]
+          assert data.count(b"\n") == data.count(b"\r\n"), "patch changed CRLF discipline"
+          path.write_bytes(data)
+
+      - name: Verify focused delta
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff --numstat -- src/terminal/parser/OutputStateMachineEngine.cpp | tee /tmp/numstat
+          changed="$(awk '{print $1+$2}' /tmp/numstat)"
+          test "$changed" -gt 0
+          test "$changed" -lt 120
+          test "$(git diff --name-only | wc -l)" -eq 1
+          git diff -- src/terminal/parser/OutputStateMachineEngine.cpp
+
+      - name: Commit and push focused route
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "Alfonso Lara Ramos"
+          git config user.email "ChicoDotNet@users.noreply.github.com"
+          git add src/terminal/parser/OutputStateMachineEngine.cpp
+          git commit -m "Route output C0 actions through Rust"
+          git push origin HEAD:rust/r09-product-integration
