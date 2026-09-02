@@ -8,62 +8,76 @@ $source = Get-Content -Raw -LiteralPath $sourcePath
 $escFfi = Get-Content -Raw -LiteralPath $escFfiPath
 $escProbe = Get-Content -Raw -LiteralPath $escProbePath
 
-$signature = 'bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)'
-$start = $source.IndexOf($signature, [StringComparison]::Ordinal)
-if ($start -lt 0)
+function Get-FunctionBody([string] $Signature)
 {
-    throw 'R09 Output ownership gate: ActionExecute signature not found.'
-}
-
-$openBrace = $source.IndexOf('{', $start)
-if ($openBrace -lt 0)
-{
-    throw 'R09 Output ownership gate: ActionExecute opening brace not found.'
-}
-
-$depth = 0
-$end = -1
-for ($i = $openBrace; $i -lt $source.Length; $i++)
-{
-    switch ($source[$i])
+    $start = $source.IndexOf($Signature, [StringComparison]::Ordinal)
+    if ($start -lt 0)
     {
-        '{' { $depth++ }
-        '}' {
-            $depth--
-            if ($depth -eq 0)
-            {
-                $end = $i
-                break
+        throw "R09 Output ownership gate: $Signature signature not found."
+    }
+
+    $openBrace = $source.IndexOf('{', $start)
+    if ($openBrace -lt 0)
+    {
+        throw "R09 Output ownership gate: $Signature opening brace not found."
+    }
+
+    $depth = 0
+    for ($i = $openBrace; $i -lt $source.Length; $i++)
+    {
+        switch ($source[$i])
+        {
+            '{' { $depth++ }
+            '}' {
+                $depth--
+                if ($depth -eq 0)
+                {
+                    return $source.Substring($start, $i - $start + 1)
+                }
             }
         }
     }
 
-    if ($end -ge 0)
-    {
-        break
-    }
+    throw "R09 Output ownership gate: $Signature closing brace not found."
 }
 
-if ($end -lt 0)
-{
-    throw 'R09 Output ownership gate: ActionExecute closing brace not found.'
-}
+$executeBody = Get-FunctionBody 'bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)'
 
-$body = $source.Substring($start, $end - $start + 1)
-
-if (-not $body.Contains('terminal_parser_ffi_output_execute_plan'))
+if (-not $executeBody.Contains('terminal_parser_ffi_output_execute_plan'))
 {
     throw 'R09 Output ownership gate: ActionExecute no longer delegates C0 classification to Rust.'
 }
 
-if ($body.Contains('case AsciiChars::'))
+if ($executeBody.Contains('case AsciiChars::'))
 {
     throw 'R09 Output ownership gate: portable C0 classification returned to C++.'
 }
 
-if (-not $body.Contains('_ClearLastChar();'))
+if (-not $executeBody.Contains('_ClearLastChar();'))
 {
-    throw 'R09 Output ownership gate: native last-character sequencing was removed.'
+    throw 'R09 Output ownership gate: native C0 last-character sequencing was removed.'
+}
+
+$escBody = Get-FunctionBody 'bool OutputStateMachineEngine::ActionEscDispatch(const VTID id)'
+
+if (-not $escBody.Contains('terminal_parser_ffi_output_esc_plan'))
+{
+    throw 'R09 Output ownership gate: ActionEscDispatch no longer delegates ESC classification to Rust.'
+}
+
+if ($escBody.Contains('switch (id)'))
+{
+    throw 'R09 Output ownership gate: portable ESC classification returned to C++.'
+}
+
+if (-not $escBody.Contains('switch (plan.kind)'))
+{
+    throw 'R09 Output ownership gate: native ESC dispatch materialization no longer consumes the Rust plan.'
+}
+
+if (-not $escBody.Contains('_ClearLastChar();'))
+{
+    throw 'R09 Output ownership gate: native ESC last-character sequencing was removed.'
 }
 
 if (-not $escFfi.Contains('terminal_parser_ffi_output_esc_plan'))
@@ -81,4 +95,4 @@ if (-not $escProbe.Contains('terminal_parser_ffi_output_esc_plan'))
     throw 'R09 Output ownership gate: native replay no longer exercises the Output ESC planning seam.'
 }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0 classification and the Output ESC bridge remains replay-certified.'
+Write-Host 'R09 Output ownership gate passed: Rust owns C0 and ESC classification; native dispatch sequencing remains at the Windows seam.'
