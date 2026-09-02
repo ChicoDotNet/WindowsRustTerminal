@@ -99,11 +99,14 @@ int main()
         expect_control_plan(0x41, 0, TERMINAL_PARSER_FFI_CONTROL_CHARACTER_PRINT, 0x41, 0x00, 0, 0);
 
     constexpr uint32_t leftButton = 0x0001;
+    constexpr uint32_t rightButton = 0x0002;
+    constexpr uint32_t middleButton = 0x0004;
     constexpr uint32_t mouseMoved = 0x0001;
     constexpr uint32_t mouseWheeled = 0x0004;
     constexpr uint32_t mouseHorizontalWheeled = 0x0008;
     constexpr uint32_t scrollBackward = 0xff800000;
     constexpr uint32_t scrollForward = 0x00800000;
+    constexpr uint32_t allPrimaryButtons = leftButton | rightButton | middleButton;
 
     const bool mouseOk =
         expect_mouse_plan(0, 0, 1, 0, leftButton, leftButton, 0, 1) &&
@@ -112,7 +115,10 @@ int main()
         expect_mouse_plan(leftButton, 64, 1, 4, leftButton | scrollForward, leftButton, mouseWheeled, 0) &&
         expect_mouse_plan(leftButton, 65, 1, 5, leftButton | scrollBackward, leftButton, mouseWheeled, 0) &&
         expect_mouse_plan(leftButton, 66, 1, 6, leftButton | scrollBackward, leftButton, mouseHorizontalWheeled, 0) &&
-        expect_mouse_plan(leftButton, 67, 1, 7, leftButton | scrollForward, leftButton, mouseHorizontalWheeled, 0);
+        expect_mouse_plan(leftButton, 67, 1, 7, leftButton | scrollForward, leftButton, mouseHorizontalWheeled, 0) &&
+        expect_mouse_plan(allPrimaryButtons, 1, 0, 1, leftButton | rightButton, leftButton | rightButton, 0, 0) &&
+        expect_mouse_plan(leftButton | rightButton, 2, 0, 2, leftButton, leftButton, 0, 0) &&
+        expect_mouse_plan(leftButton, 0, 0, 0, 0, 0, 0, 0);
 
     if (!controlOk || !mouseOk)
     {
