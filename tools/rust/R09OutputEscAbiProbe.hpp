@@ -7,7 +7,7 @@
 
 namespace r09
 {
-    inline uint64_t pack_vtid(const char* text)
+    inline uint64_t pack_esc_sequence(const char* text)
     {
         uint64_t value = 0;
         for (uint32_t index = 0; index < 7 && text[index] != '\0'; ++index)
@@ -24,7 +24,7 @@ namespace r09
         const uint64_t expectedPayload = 0)
     {
         terminal_parser_ffi_output_esc_result plan{};
-        const auto status = terminal_parser_ffi_output_esc_plan(pack_vtid(id), &plan);
+        const auto status = terminal_parser_ffi_output_esc_plan(pack_esc_sequence(id), &plan);
         if (status != TERMINAL_PARSER_FFI_OK)
         {
             std::fprintf(stderr, "output ESC status %u for %s\n", static_cast<unsigned>(status), id);
