@@ -11,6 +11,7 @@
 #include "stateMachine.hpp"
 #include "terminal_parser_ffi.h"
 #include "terminal_parser_ffi_output_esc.h"
+#include "terminal_parser_ffi_output_vt52.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -292,55 +293,53 @@ bool OutputStateMachineEngine::ActionEscDispatch(const VTID id)
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionVt52EscDispatch(const VTID id, const VTParameters parameters)
 {
-    switch (id)
+    terminal_parser_ffi_output_vt52_result plan{};
+    const auto status = terminal_parser_ffi_output_vt52_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case Vt52ActionCodes::CursorUp:
-        _dispatch->CursorUp(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_UP:
+        _dispatch->CursorUp(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorDown:
-        _dispatch->CursorDown(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_DOWN:
+        _dispatch->CursorDown(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorRight:
-        _dispatch->CursorForward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_FORWARD:
+        _dispatch->CursorForward(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorLeft:
-        _dispatch->CursorBackward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_BACKWARD:
+        _dispatch->CursorBackward(plan.argument1);
         break;
-    case Vt52ActionCodes::EnterGraphicsMode:
-        _dispatch->Designate94Charset(0, DispatchTypes::CharacterSets::DecSpecialGraphics);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_DESIGNATE_94_CHARSET:
+        _dispatch->Designate94Charset(plan.argument1, VTID{ plan.payload });
         break;
-    case Vt52ActionCodes::ExitGraphicsMode:
-        _dispatch->Designate94Charset(0, DispatchTypes::CharacterSets::ASCII);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_POSITION:
+        _dispatch->CursorPosition(plan.argument1, plan.argument2);
         break;
-    case Vt52ActionCodes::CursorToHome:
-        _dispatch->CursorPosition(1, 1);
-        break;
-    case Vt52ActionCodes::ReverseLineFeed:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_REVERSE_LINE_FEED:
         _dispatch->ReverseLineFeed();
         break;
-    case Vt52ActionCodes::EraseToEndOfScreen:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_ERASE_IN_DISPLAY:
         _dispatch->EraseInDisplay(DispatchTypes::EraseType::ToEnd);
         break;
-    case Vt52ActionCodes::EraseToEndOfLine:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_ERASE_IN_LINE:
         _dispatch->EraseInLine(DispatchTypes::EraseType::ToEnd);
         break;
-    case Vt52ActionCodes::DirectCursorAddress:
-        // VT52 cursor addresses are provided as ASCII characters, with
-        // the lowest value being a space, representing an address of 1.
-        _dispatch->CursorPosition(parameters.at(0).value() - ' ' + 1, parameters.at(1).value() - ' ' + 1);
-        break;
-    case Vt52ActionCodes::Identify:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_DEVICE_ATTRIBUTES:
         _dispatch->Vt52DeviceAttributes();
         break;
-    case Vt52ActionCodes::EnterAlternateKeypadMode:
-        _dispatch->SetKeypadMode(true);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_SET_KEYPAD_MODE:
+        _dispatch->SetKeypadMode(plan.argument1 != 0);
         break;
-    case Vt52ActionCodes::ExitAlternateKeypadMode:
-        _dispatch->SetKeypadMode(false);
-        break;
-    case Vt52ActionCodes::ExitVt52Mode:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_SET_ANSI_MODE:
         _dispatch->SetMode(DispatchTypes::ModeParams::DECANM_AnsiMode);
         break;
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_NONE:
     default:
         break;
     }
