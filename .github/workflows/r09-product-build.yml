@@ -74,7 +74,6 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $branch = 'rust/r09-product-integration'
           $source = 'src/terminal/parser/OutputStateMachineEngine.cpp'
-          $workflow = '.github/workflows/r09-product-build.yml'
           $expectedBlob = '2f0f6f28dafd9f9048074f84dbf05249c3e56884'
 
           $actualBlob = (git hash-object -- $source).Trim()
@@ -90,14 +89,12 @@ jobs:
               throw "Remote branch advanced to $remoteHead; refusing to overwrite concurrent work."
           }
 
-          git checkout '${{ github.sha }}^' -- $workflow
-
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- $source $workflow
+          git add -- $source
 
           $staged = @(git diff --cached --name-only)
-          if ($staged.Count -ne 2 -or $staged -notcontains $source -or $staged -notcontains $workflow)
+          if ($staged.Count -ne 1 -or $staged[0] -ne $source)
           {
               throw "Promotion staged unexpected paths: $($staged -join ', ')"
           }
