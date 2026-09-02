@@ -17,9 +17,12 @@ $ffiHeader = Join-Path $repoRoot 'rust\terminal-parser-ffi\include\terminal_pars
 $ffiKeymap = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_keymap.rs'
 $ffiWin32 = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_win32.rs'
 $ffiControl = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_control.rs'
+$ffiMouse = Join-Path $repoRoot 'rust\terminal-parser-ffi\src\input_mouse.rs'
 $rustKeymap = Join-Path $repoRoot 'rust\terminal-parser\src\input_keymap.rs'
 $rustInputEngine = Join-Path $repoRoot 'rust\terminal-parser\src\input_engine.rs'
 $rustControl = Join-Path $repoRoot 'rust\terminal-parser\src\input_control.rs'
+$rustMouse = Join-Path $repoRoot 'rust\terminal-parser\src\input_mouse.rs'
+$nativeAbiProbe = Join-Path $repoRoot 'tools\rust\R09ControlCharacterAbiProbe.cpp'
 
 if (Test-Path $base64Cpp)
 {
@@ -59,14 +62,18 @@ $expectedModifierFunctions = @(
 )
 $win32KeyFunction = 'terminal_parser_ffi_input_win32_key_fields'
 $controlCharacterFunction = 'terminal_parser_ffi_input_control_character_plan'
+$sgrMousePlanFunction = 'terminal_parser_ffi_input_sgr_mouse_plan'
 
 $ffiHeaderText = Get-Content -LiteralPath $ffiHeader -Raw
 $ffiKeymapText = Get-Content -LiteralPath $ffiKeymap -Raw
 $ffiWin32Text = Get-Content -LiteralPath $ffiWin32 -Raw
 $ffiControlText = Get-Content -LiteralPath $ffiControl -Raw
+$ffiMouseText = Get-Content -LiteralPath $ffiMouse -Raw
 $rustKeymapText = Get-Content -LiteralPath $rustKeymap -Raw
 $rustInputEngineText = Get-Content -LiteralPath $rustInputEngine -Raw
 $rustControlText = Get-Content -LiteralPath $rustControl -Raw
+$rustMouseText = Get-Content -LiteralPath $rustMouse -Raw
+$nativeAbiProbeText = Get-Content -LiteralPath $nativeAbiProbe -Raw
 $inputEngineText = Get-Content -LiteralPath $inputEngine -Raw
 $win32KeyMarker = 'INPUT_RECORD InputStateMachineEngine::_GenerateWin32Key'
 $win32KeyStart = $inputEngineText.IndexOf($win32KeyMarker, [System.StringComparison]::Ordinal)
@@ -182,6 +189,40 @@ foreach ($legacyControlImplementation in @(
     }
 }
 
+if ($ffiHeaderText -notmatch [regex]::Escape($sgrMousePlanFunction))
+{
+    throw "R09 parser ownership regression: terminal_parser_ffi.h no longer declares SGR mouse seam $sgrMousePlanFunction."
+}
+if ($ffiMouseText -notmatch [regex]::Escape($sgrMousePlanFunction))
+{
+    throw "R09 parser ownership regression: terminal-parser-ffi no longer exports SGR mouse seam $sgrMousePlanFunction."
+}
+if ($ffiMouseText -notmatch 'plan_sgr_mouse')
+{
+    throw 'R09 parser ownership regression: SGR mouse FFI no longer delegates to the terminal-parser owner.'
+}
+if ($rustMouseText -notmatch 'pub fn plan_sgr_mouse')
+{
+    throw 'R09 parser ownership regression: terminal-parser no longer owns deterministic SGR mouse state decoding.'
+}
+foreach ($sgrMouseContractToken in @(
+    'persistent_button_state',
+    'event_flags',
+    'track_click',
+    'MOUSE_WHEELED',
+    'MOUSE_HWHEELED'
+))
+{
+    if ($rustMouseText -notmatch [regex]::Escape($sgrMouseContractToken))
+    {
+        throw "R09 parser ownership regression: SGR mouse owner lost contract token $sgrMouseContractToken."
+    }
+}
+if ($nativeAbiProbeText -notmatch [regex]::Escape($sgrMousePlanFunction))
+{
+    throw "R09 parser ownership regression: native ABI replay no longer exercises SGR mouse seam $sgrMousePlanFunction."
+}
+
 foreach ($ownerFunction in @(
     'cursor_virtual_key',
     'generic_virtual_key',
@@ -293,4 +334,4 @@ foreach ($legacyWin32KeyNormalization in @(
     }
 }
 
-Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and control-character classification are Rust-owned; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
+Write-Host 'R09 parser ownership gate passed: Base64, input key maps, modifier translation, enhanced-key modifier composition, Win32 key normalization, and control-character classification are Rust-owned; SGR mouse deterministic decoding is Rust-owned with native ABI replay coverage; product and Rust parser consumers route through canonical promoted owners and duplicate portable implementations are absent.'
