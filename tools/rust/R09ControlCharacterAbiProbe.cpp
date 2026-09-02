@@ -3,6 +3,7 @@
 
 #include "terminal_parser_ffi.h"
 #include "R09OutputEscAbiProbe.hpp"
+#include "R09OutputVt52AbiProbe.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -164,8 +165,9 @@ int main()
         expect_output_execute_plan(0x01, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE, 0);
 
     const bool outputEscOk = r09::output_esc_replay();
+    const bool outputVt52Ok = r09::output_vt52_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok)
     {
         return 1;
     }
