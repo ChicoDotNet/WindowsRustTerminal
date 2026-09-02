@@ -44,6 +44,16 @@ typedef struct terminal_parser_ffi_control_character_plan
     uint32_t clear_layout_modifiers;
 } terminal_parser_ffi_control_character_plan;
 
+typedef struct terminal_parser_ffi_sgr_mouse_plan
+{
+    uint32_t valid;
+    uint32_t button_id;
+    uint32_t button_state;
+    uint32_t persistent_button_state;
+    uint32_t event_flags;
+    uint32_t track_click;
+} terminal_parser_ffi_sgr_mouse_plan;
+
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
 terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(
@@ -64,6 +74,11 @@ terminal_parser_ffi_status terminal_parser_ffi_input_control_character_plan(
     uint16_t code_unit,
     uint32_t write_alt,
     terminal_parser_ffi_control_character_plan* out_plan);
+terminal_parser_ffi_status terminal_parser_ffi_input_sgr_mouse_plan(
+    uint32_t previous_button_state,
+    uint32_t encoding,
+    uint32_t button_down,
+    terminal_parser_ffi_sgr_mouse_plan* out_plan);
 terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
     uint32_t present_mask,
     int32_t virtual_key,
@@ -83,4 +98,12 @@ static_assert(offsetof(terminal_parser_ffi_control_character_plan, character) ==
 static_assert(offsetof(terminal_parser_ffi_control_character_plan, forced_virtual_key) == 6);
 static_assert(offsetof(terminal_parser_ffi_control_character_plan, write_ctrl) == 8);
 static_assert(offsetof(terminal_parser_ffi_control_character_plan, clear_layout_modifiers) == 12);
+
+static_assert(sizeof(terminal_parser_ffi_sgr_mouse_plan) == 24);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, valid) == 0);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, button_id) == 4);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, button_state) == 8);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, persistent_button_state) == 12);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, event_flags) == 16);
+static_assert(offsetof(terminal_parser_ffi_sgr_mouse_plan, track_click) == 20);
 #endif

@@ -8,6 +8,7 @@
 
 mod input_control;
 mod input_keymap;
+mod input_mouse;
 mod input_win32;
 
 use std::{
