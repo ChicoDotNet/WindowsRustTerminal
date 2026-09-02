@@ -7,18 +7,24 @@ $ErrorActionPreference = 'Stop'
 
 $root = (git rev-parse --show-toplevel 2>$null)
 if (-not $root) {
-    throw 'Run this script from inside the WindowsRusTerminal/terminal checkout.'
+    throw 'Run this script from inside the WindowsRustTerminal checkout.'
 }
 
 $fzfHeaderPath = Join-Path $root 'src\cascadia\fzf\fzf.h'
 $fzfSourcePath = Join-Path $root 'src\cascadia\fzf\fzf.cpp'
 $ffiHeaderPath = Join-Path $root 'rust\terminal-app-ffi\include\terminal_app_ffi.h'
 $rustFzfPath = Join-Path $root 'rust\terminal-app\src\fzf.rs'
+$commandPalettePath = Join-Path $root 'src\cascadia\TerminalApp\CommandPalette.cpp'
+$filteredCommandPath = Join-Path $root 'src\cascadia\TerminalApp\FilteredCommand.cpp'
+$terminalAppProjectPath = Join-Path $root 'src\cascadia\TerminalApp\TerminalAppLib.vcxproj'
 
 $fzfHeader = Get-Content $fzfHeaderPath -Raw
 $fzfSource = Get-Content $fzfSourcePath -Raw
 $ffiHeader = Get-Content $ffiHeaderPath -Raw
 $rustFzf = Get-Content $rustFzfPath -Raw
+$commandPalette = Get-Content $commandPalettePath -Raw
+$filteredCommand = Get-Content $filteredCommandPath -Raw
+$terminalAppProject = Get-Content $terminalAppProjectPath -Raw
 
 function Assert-Contains {
     param(
@@ -74,4 +80,14 @@ Assert-Contains $ffiHeader 'terminal_app_ffi_fzf_pattern_destroy' 'The C ABI mus
 Assert-Contains $rustFzf 'pub fn parse_pattern' 'terminal-app must remain the semantic FZF pattern owner.'
 Assert-Contains $rustFzf 'pub fn match_text' 'terminal-app must remain the semantic FZF matcher owner.'
 
-Write-Host 'R09 FZF ownership promotion validated: C++ is a narrow compatibility seam and portable FZF behavior remains Rust-owned.'
+# Guard the real product route, not just the bridge implementation. CommandPalette
+# must parse the user's search into the seam, FilteredCommand must consume score/runs,
+# and TerminalAppLib must keep the narrow adapter in the CascadiaPackage build graph.
+Assert-Contains $commandPalette 'fzf::matcher::ParsePattern(searchText)' 'CommandPalette must route product search text through the Rust-owned FZF seam.'
+Assert-Contains $commandPalette 'impl->UpdateFilter(pattern);' 'CommandPalette must pass the Rust-owned pattern to product filtered commands.'
+Assert-Contains $filteredCommand 'fzf::matcher::Match(haystack, *pattern)' 'FilteredCommand must consume matching from the Rust-owned FZF seam.'
+Assert-Contains $filteredCommand 'weight = match->Score;' 'FilteredCommand must preserve the Rust-owned FZF score in product ordering.'
+Assert-Contains $filteredCommand 'match->Runs' 'FilteredCommand must preserve Rust-owned UTF-16 highlight runs in the UI adapter.'
+Assert-Contains $terminalAppProject '<ClCompile Include="../fzf/fzf.cpp" />' 'TerminalAppLib must compile the narrow FZF adapter into the real product graph.'
+
+Write-Host 'R09 FZF ownership promotion validated: CommandPalette and FilteredCommand route through the Rust owner while C++ remains a narrow product/UI adapter.'
