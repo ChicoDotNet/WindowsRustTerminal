@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 #include "terminal_parser_ffi.h"
+#include "R09OutputCsiCursorAbiProbe.hpp"
 #include "R09OutputEscAbiProbe.hpp"
 #include "R09OutputVt52AbiProbe.hpp"
 
@@ -166,8 +167,9 @@ int main()
 
     const bool outputEscOk = r09::output_esc_replay();
     const bool outputVt52Ok = r09::output_vt52_replay();
+    const bool outputCsiCursorOk = r09::output_csi_cursor_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk)
     {
         return 1;
     }
