@@ -12,6 +12,7 @@ mod input_mouse;
 mod input_win32;
 mod output_esc;
 mod output_execute;
+mod output_vt52;
 
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
