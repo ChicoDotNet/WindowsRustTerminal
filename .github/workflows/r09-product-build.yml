@@ -20,6 +20,7 @@ on:
       - "tools/rust/Invoke-R09ProductBuild.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
+      - "tools/rust/Test-R09OutputOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -44,6 +45,9 @@ jobs:
       - name: Validate parser ownership promotion
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
+      - name: Validate Output ownership promotion
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputOwnership.ps1
       - name: Validate FZF ownership promotion
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
