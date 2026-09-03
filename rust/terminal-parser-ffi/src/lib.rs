@@ -12,6 +12,7 @@ mod input_mouse;
 mod input_win32;
 mod output_csi_cursor;
 mod output_csi_edit;
+mod output_csi_line_edit;
 mod output_csi_margins;
 mod output_esc;
 mod output_execute;
