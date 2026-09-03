@@ -17,6 +17,7 @@
 #include "terminal_parser_ffi_output_csi_edit.h"
 #include "terminal_parser_ffi_output_csi_line_edit.h"
 #include "terminal_parser_ffi_output_csi_erase_characters.h"
+#include "terminal_parser_ffi_output_csi_scroll.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -532,6 +533,33 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_scroll_result scrollPlan{};
+    const auto scrollStatus = terminal_parser_ffi_output_csi_scroll_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &scrollPlan);
+    THROW_HR_IF(E_UNEXPECTED, scrollStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (scrollPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_UP:
+        _dispatch->ScrollUp(scrollPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_DOWN:
+        _dispatch->ScrollDown(scrollPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (scrollPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -604,12 +632,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECREQTPARM_RequestTerminalParameters:
         _dispatch->RequestTerminalParameters(parameters.at(0));
         break;
-    case CsiActionCodes::SU_ScrollUp:
-        _dispatch->ScrollUp(parameters.at(0));
-        break;
-    case CsiActionCodes::SD_ScrollDown:
-        _dispatch->ScrollDown(parameters.at(0));
-        break;
+
     case CsiActionCodes::NP_NextPage:
         _dispatch->NextPage(parameters.at(0));
         break;
