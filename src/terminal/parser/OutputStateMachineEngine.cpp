@@ -14,6 +14,7 @@
 #include "terminal_parser_ffi_output_vt52.h"
 #include "terminal_parser_ffi_output_csi_cursor.h"
 #include "terminal_parser_ffi_output_csi_margins.h"
+#include "terminal_parser_ffi_output_csi_edit.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -451,14 +452,35 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_edit_result editPlan{};
+    const auto editStatus = terminal_parser_ffi_output_csi_edit_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &editPlan);
+    THROW_HR_IF(E_UNEXPECTED, editStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (editPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_INSERT_CHARACTER:
+        _dispatch->InsertCharacter(editPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_DELETE_CHARACTER:
+        _dispatch->DeleteCharacter(editPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (editPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
-    case CsiActionCodes::ICH_InsertCharacter:
-        _dispatch->InsertCharacter(parameters.at(0));
-        break;
-    case CsiActionCodes::DCH_DeleteCharacter:
-        _dispatch->DeleteCharacter(parameters.at(0));
-        break;
     case CsiActionCodes::ED_EraseDisplay:
         parameters.for_each([&](const auto eraseType) {
             _dispatch->EraseInDisplay(eraseType);
