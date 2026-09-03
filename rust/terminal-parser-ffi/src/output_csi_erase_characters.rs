@@ -72,9 +72,9 @@ fn vt_id_from_value(identifier: u64) -> Option<VtId> {
     Some(VtId::from_ascii(text))
 }
 
-/// Replays CSI ECH through the existing Rust output engine. Unrelated CSI
-/// actions return `None`, preserving native C++ ownership until this slice is
-/// independently verified and promoted.
+/// Replays CSI erase characters through the existing Rust output engine.
+/// Unrelated CSI actions return `None`, preserving native C++ ownership until
+/// this slice is independently verified and promoted.
 #[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_output_csi_erase_characters_plan(
     identifier: u64,
@@ -125,7 +125,7 @@ mod tests {
     }
 
     #[test]
-    fn csi_erase_characters_ffi_replays_microsoft_ech_contract() {
+    fn csi_erase_characters_ffi_replays_microsoft_erase_characters_contract() {
         expect("X", 0, OutputCsiEraseCharactersKind::EraseCharacters, 1);
         expect("X", 5, OutputCsiEraseCharactersKind::EraseCharacters, 5);
         expect("m", 3, OutputCsiEraseCharactersKind::None, 0);
