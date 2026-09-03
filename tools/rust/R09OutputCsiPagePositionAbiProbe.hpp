@@ -48,6 +48,12 @@ namespace r09
 
     inline bool output_csi_page_position_replay()
     {
+        terminal_parser_ffi_output_csi_page_position_result unrelated{};
+        const auto unrelatedStatus = terminal_parser_ffi_output_csi_page_position_plan(
+            static_cast<uint64_t>(static_cast<unsigned char>('m')),
+            3,
+            &unrelated);
+
         return
             expect_output_csi_page_position_plan('P', 0, TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_ABSOLUTE, 1) &&
             expect_output_csi_page_position_plan('P', 4, TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_ABSOLUTE, 4) &&
@@ -55,9 +61,8 @@ namespace r09
             expect_output_csi_page_position_plan('Q', 5, TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_RELATIVE, 5) &&
             expect_output_csi_page_position_plan('R', 0, TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_BACK, 1) &&
             expect_output_csi_page_position_plan('R', 6, TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_BACK, 6) &&
-            terminal_parser_ffi_output_csi_page_position_plan(
-                static_cast<uint64_t>(static_cast<unsigned char>('m')),
-                3,
-                new terminal_parser_ffi_output_csi_page_position_result{}) == TERMINAL_PARSER_FFI_OK;
+            unrelatedStatus == TERMINAL_PARSER_FFI_OK &&
+            unrelated.kind == TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_NONE &&
+            unrelated.count == 0;
     }
 }
