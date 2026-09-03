@@ -16,6 +16,7 @@
 #include "terminal_parser_ffi_output_csi_margins.h"
 #include "terminal_parser_ffi_output_csi_edit.h"
 #include "terminal_parser_ffi_output_csi_line_edit.h"
+#include "terminal_parser_ffi_output_csi_erase_characters.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -507,6 +508,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_erase_characters_result eraseCharactersPlan{};
+    const auto eraseCharactersStatus = terminal_parser_ffi_output_csi_erase_characters_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &eraseCharactersPlan);
+    THROW_HR_IF(E_UNEXPECTED, eraseCharactersStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (eraseCharactersPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_ERASE_CHARACTERS:
+        _dispatch->EraseCharacters(eraseCharactersPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (eraseCharactersPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -612,9 +637,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
             _dispatch->TabSet(setType);
         });
         break;
-    case CsiActionCodes::ECH_EraseCharacters:
-        _dispatch->EraseCharacters(parameters.at(0));
-        break;
+
     case CsiActionCodes::DTTERM_WindowManipulation:
         _dispatch->WindowManipulation(parameters.at(0), parameters.at(1), parameters.at(2));
         break;
