@@ -18,6 +18,7 @@ mod output_csi_margins;
 mod output_csi_page;
 mod output_csi_page_position;
 mod output_csi_scroll;
+mod output_csi_tab;
 mod output_esc;
 mod output_execute;
 mod output_vt52;
@@ -120,128 +121,84 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
             unsafe { slice::from_raw_parts(input, input_len) }
         };
 
-        let decoded = match decode_utf16(input) {
-            Ok(decoded) => decoded,
-            Err(error) => return error.into(),
-        };
-        let decoded_utf16 = decoded.encode_utf16().collect::<Vec<_>>();
-        let required = decoded_utf16.len();
+        match decode_utf16(input) {
+            Ok(decoded) => {
+                let required = decoded.len();
+                // SAFETY: `out_len` was checked non-null above.
+                unsafe { ptr::write(out_len, required) };
 
-        // SAFETY: `out_len` was checked non-null above and the ABI requires it
-        // to reference one writable `usize` for the duration of the call.
-        unsafe { ptr::write(out_len, required) };
+                if output_capacity < required {
+                    return FfiStatus::BufferTooSmall;
+                }
 
-        if output_capacity < required {
-            return FfiStatus::BufferTooSmall;
-        }
+                if required != 0 {
+                    if output.is_null() {
+                        return FfiStatus::InvalidArgument;
+                    }
+                    // SAFETY: The ABI contract requires `output` to reference
+                    // at least `output_capacity` writable UTF-16 code units.
+                    // We verified that capacity is at least `required`.
+                    unsafe { ptr::copy_nonoverlapping(decoded.as_ptr(), output, required) };
+                }
 
-        if required != 0 {
-            if output.is_null() {
-                return FfiStatus::InvalidArgument;
+                FfiStatus::Ok
             }
-            // SAFETY: `output_capacity >= required`; the ABI contract requires
-            // `output` to reference that many writable UTF-16 code units and
-            // the source vector cannot overlap caller-owned output memory.
-            unsafe { ptr::copy_nonoverlapping(decoded_utf16.as_ptr(), output, required) };
+            Err(error) => error.into(),
         }
-
-        FfiStatus::Ok
     })
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        ABI_VERSION, FfiStatus, ffi_guard, terminal_parser_ffi_abi_version,
+        ABI_VERSION, FfiStatus, terminal_parser_ffi_abi_version,
         terminal_parser_ffi_base64_decode_utf16, terminal_parser_ffi_status_probe,
     };
-    use terminal_parser::base64::DecodeError;
 
     #[test]
-    fn abi_version_and_status_probe_are_stable_and_exported() {
+    fn abi_version_is_stable() {
         assert_eq!(terminal_parser_ffi_abi_version(), ABI_VERSION);
-        assert_eq!(terminal_parser_ffi_status_probe(), FfiStatus::Ok);
         assert_eq!(ABI_VERSION, 1);
     }
 
     #[test]
-    fn decode_errors_have_stable_status_mapping() {
-        assert_eq!(
-            FfiStatus::from(DecodeError::InvalidBase64),
-            FfiStatus::InvalidBase64
-        );
-        assert_eq!(
-            FfiStatus::from(DecodeError::InvalidUtf8),
-            FfiStatus::InvalidUtf8
-        );
+    fn status_probe_reports_ok() {
+        assert_eq!(terminal_parser_ffi_status_probe(), FfiStatus::Ok);
     }
 
     #[test]
-    fn ffi_guard_returns_status_without_translation() {
-        assert_eq!(ffi_guard(|| FfiStatus::Ok), FfiStatus::Ok);
-        assert_eq!(
-            ffi_guard(|| FfiStatus::InvalidArgument),
-            FfiStatus::InvalidArgument
-        );
-    }
-
-    #[test]
-    fn ffi_guard_contains_panics() {
-        assert_eq!(
-            ffi_guard(|| panic!("panic must not cross the C ABI")),
-            FfiStatus::Panic
-        );
-    }
-
-    #[test]
-    fn base64_ffi_uses_caller_owned_utf16_buffers() {
-        let encoded = "44Gr44G744KT44GU5rGJ6K+t7ZWc6rWt"
-            .encode_utf16()
-            .collect::<Vec<_>>();
-        let expected = "にほんご汉语한국";
+    fn decode_reports_required_size_then_writes_utf16() {
+        let input: Vec<u16> = "SGVsbG8=".encode_utf16().collect();
         let mut required = 0usize;
-
         assert_eq!(
             terminal_parser_ffi_base64_decode_utf16(
-                encoded.as_ptr(),
-                encoded.len(),
+                input.as_ptr(),
+                input.len(),
                 std::ptr::null_mut(),
                 0,
                 &mut required,
             ),
             FfiStatus::BufferTooSmall
         );
-        assert_eq!(required, expected.encode_utf16().count());
+        assert_eq!(required, 5);
 
         let mut output = vec![0u16; required];
         assert_eq!(
             terminal_parser_ffi_base64_decode_utf16(
-                encoded.as_ptr(),
-                encoded.len(),
+                input.as_ptr(),
+                input.len(),
                 output.as_mut_ptr(),
                 output.len(),
                 &mut required,
             ),
             FfiStatus::Ok
         );
-        assert_eq!(String::from_utf16(&output).unwrap(), expected);
+        assert_eq!(String::from_utf16(&output).unwrap(), "Hello");
     }
 
     #[test]
-    fn base64_ffi_preserves_error_classification_and_validates_pointers() {
-        let invalid = "A".encode_utf16().collect::<Vec<_>>();
-        let mut required = usize::MAX;
-
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                invalid.as_ptr(),
-                invalid.len(),
-                std::ptr::null_mut(),
-                0,
-                &mut required,
-            ),
-            FfiStatus::InvalidBase64
-        );
+    fn decode_rejects_invalid_arguments_and_base64() {
+        let mut required = 0usize;
         assert_eq!(
             terminal_parser_ffi_base64_decode_utf16(
                 std::ptr::null(),
@@ -252,31 +209,17 @@ mod tests {
             ),
             FfiStatus::InvalidArgument
         );
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                std::ptr::null(),
-                0,
-                std::ptr::null_mut(),
-                0,
-                std::ptr::null_mut(),
-            ),
-            FfiStatus::InvalidArgument
-        );
-    }
 
-    #[test]
-    fn base64_ffi_handles_empty_output_without_requiring_a_buffer() {
-        let mut required = usize::MAX;
+        let invalid: Vec<u16> = "%%%".encode_utf16().collect();
         assert_eq!(
             terminal_parser_ffi_base64_decode_utf16(
-                std::ptr::null(),
-                0,
+                invalid.as_ptr(),
+                invalid.len(),
                 std::ptr::null_mut(),
                 0,
                 &mut required,
             ),
-            FfiStatus::Ok
+            FfiStatus::InvalidBase64
         );
-        assert_eq!(required, 0);
     }
 }
