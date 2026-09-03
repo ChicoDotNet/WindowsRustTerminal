@@ -19,6 +19,7 @@
 #include "terminal_parser_ffi_output_csi_erase_characters.h"
 #include "terminal_parser_ffi_output_csi_scroll.h"
 #include "terminal_parser_ffi_output_csi_page.h"
+#include "terminal_parser_ffi_output_csi_page_position.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -588,6 +589,36 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_page_position_result pagePositionPlan{};
+    const auto pagePositionStatus = terminal_parser_ffi_output_csi_page_position_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &pagePositionPlan);
+    THROW_HR_IF(E_UNEXPECTED, pagePositionStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (pagePositionPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_ABSOLUTE:
+        _dispatch->PagePositionAbsolute(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_RELATIVE:
+        _dispatch->PagePositionRelative(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_BACK:
+        _dispatch->PagePositionBack(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (pagePositionPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -700,15 +731,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
             _dispatch->PrintString(wstr);
         }
         break;
-    case CsiActionCodes::PPA_PagePositionAbsolute:
-        _dispatch->PagePositionAbsolute(parameters.at(0));
-        break;
-    case CsiActionCodes::PPR_PagePositionRelative:
-        _dispatch->PagePositionRelative(parameters.at(0));
-        break;
-    case CsiActionCodes::PPB_PagePositionBack:
-        _dispatch->PagePositionBack(parameters.at(0));
-        break;
+
     case CsiActionCodes::DECSCUSR_SetCursorStyle:
         _dispatch->SetCursorStyle(parameters.at(0));
         break;
