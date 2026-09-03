@@ -13,6 +13,7 @@
 #include "terminal_parser_ffi_output_esc.h"
 #include "terminal_parser_ffi_output_vt52.h"
 #include "terminal_parser_ffi_output_csi_cursor.h"
+#include "terminal_parser_ffi_output_csi_margins.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -422,15 +423,36 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_margins_result marginsPlan{};
+    const auto marginsStatus = terminal_parser_ffi_output_csi_margins_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &marginsPlan);
+    THROW_HR_IF(E_UNEXPECTED, marginsStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (marginsPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_TOP_BOTTOM:
+        _dispatch->SetTopBottomScrollingMargins(marginsPlan.first, marginsPlan.second);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_LEFT_RIGHT:
+        _dispatch->SetLeftRightScrollingMargins(marginsPlan.first, marginsPlan.second);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (marginsPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
-    case CsiActionCodes::DECSTBM_SetTopBottomMargins:
-        _dispatch->SetTopBottomScrollingMargins(parameters.at(0).value_or(0), parameters.at(1).value_or(0));
-        break;
-    case CsiActionCodes::DECSLRM_SetLeftRightMargins:
-        // Note that this can also be ANSISYSSC, depending on the state of DECLRMM.
-        _dispatch->SetLeftRightScrollingMargins(parameters.at(0).value_or(0), parameters.at(1).value_or(0));
-        break;
     case CsiActionCodes::ICH_InsertCharacter:
         _dispatch->InsertCharacter(parameters.at(0));
         break;
