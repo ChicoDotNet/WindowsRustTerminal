@@ -7,24 +7,24 @@ use super::{FfiStatus, ffi_guard};
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum OutputCsiEraseCharsKind {
+pub enum OutputCsiEraseCharactersKind {
     None = 0,
     EraseCharacters = 1,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct OutputCsiEraseCharsPlan {
+pub struct OutputCsiEraseCharactersPlan {
     pub kind: u32,
     pub count: i32,
     pub reserved0: u32,
     pub reserved1: u32,
 }
 
-impl Default for OutputCsiEraseCharsPlan {
+impl Default for OutputCsiEraseCharactersPlan {
     fn default() -> Self {
         Self {
-            kind: OutputCsiEraseCharsKind::None as u32,
+            kind: OutputCsiEraseCharactersKind::None as u32,
             count: 0,
             reserved0: 0,
             reserved1: 0,
@@ -34,20 +34,20 @@ impl Default for OutputCsiEraseCharsPlan {
 
 #[derive(Default)]
 struct PlanDispatch {
-    plan: OutputCsiEraseCharsPlan,
+    plan: OutputCsiEraseCharactersPlan,
 }
 
 impl TermDispatch for PlanDispatch {
     fn dispatch(&mut self, action: OutputAction) {
         self.plan = match action {
-            OutputAction::EraseCharacters(count) => plan(OutputCsiEraseCharsKind::EraseCharacters, count),
-            _ => OutputCsiEraseCharsPlan::default(),
+            OutputAction::EraseCharacters(count) => plan(OutputCsiEraseCharactersKind::EraseCharacters, count),
+            _ => OutputCsiEraseCharactersPlan::default(),
         };
     }
 }
 
-const fn plan(kind: OutputCsiEraseCharsKind, count: i32) -> OutputCsiEraseCharsPlan {
-    OutputCsiEraseCharsPlan {
+const fn plan(kind: OutputCsiEraseCharactersKind, count: i32) -> OutputCsiEraseCharactersPlan {
+    OutputCsiEraseCharactersPlan {
         kind: kind as u32,
         count,
         reserved0: 0,
@@ -76,10 +76,10 @@ fn vt_id_from_value(identifier: u64) -> Option<VtId> {
 /// actions return `None`, preserving native C++ ownership until this slice is
 /// independently verified and promoted.
 #[unsafe(no_mangle)]
-pub extern "C" fn terminal_parser_ffi_output_csi_erase_chars_plan(
+pub extern "C" fn terminal_parser_ffi_output_csi_erase_characters_plan(
     identifier: u64,
     parameter0: i32,
-    out_plan: *mut OutputCsiEraseCharsPlan,
+    out_plan: *mut OutputCsiEraseCharactersPlan,
 ) -> FfiStatus {
     ffi_guard(|| {
         if out_plan.is_null() {
@@ -95,7 +95,7 @@ pub extern "C" fn terminal_parser_ffi_output_csi_erase_chars_plan(
         let dispatch = engine.into_dispatch();
 
         // SAFETY: `out_plan` was checked non-null above and the ABI requires
-        // one writable `OutputCsiEraseCharsPlan` for this call.
+        // one writable `OutputCsiEraseCharactersPlan` for this call.
         unsafe { ptr::write(out_plan, dispatch.plan) };
         FfiStatus::Ok
     })
@@ -104,16 +104,16 @@ pub extern "C" fn terminal_parser_ffi_output_csi_erase_chars_plan(
 #[cfg(test)]
 mod tests {
     use super::{
-        OutputCsiEraseCharsKind, OutputCsiEraseCharsPlan,
-        terminal_parser_ffi_output_csi_erase_chars_plan,
+        OutputCsiEraseCharactersKind, OutputCsiEraseCharactersPlan,
+        terminal_parser_ffi_output_csi_erase_characters_plan,
     };
     use crate::FfiStatus;
     use terminal_parser::state_machine::VtId;
 
-    fn expect(id: &str, parameter0: i32, kind: OutputCsiEraseCharsKind, count: i32) {
-        let mut result = OutputCsiEraseCharsPlan::default();
+    fn expect(id: &str, parameter0: i32, kind: OutputCsiEraseCharactersKind, count: i32) {
+        let mut result = OutputCsiEraseCharactersPlan::default();
         assert_eq!(
-            terminal_parser_ffi_output_csi_erase_chars_plan(
+            terminal_parser_ffi_output_csi_erase_characters_plan(
                 VtId::from_ascii(id).value(),
                 parameter0,
                 &mut result,
@@ -125,21 +125,21 @@ mod tests {
     }
 
     #[test]
-    fn csi_erase_chars_ffi_replays_microsoft_ech_contract() {
-        expect("X", 0, OutputCsiEraseCharsKind::EraseCharacters, 1);
-        expect("X", 5, OutputCsiEraseCharsKind::EraseCharacters, 5);
-        expect("m", 3, OutputCsiEraseCharsKind::None, 0);
+    fn csi_erase_characters_ffi_replays_microsoft_ech_contract() {
+        expect("X", 0, OutputCsiEraseCharactersKind::EraseCharacters, 1);
+        expect("X", 5, OutputCsiEraseCharactersKind::EraseCharacters, 5);
+        expect("m", 3, OutputCsiEraseCharactersKind::None, 0);
     }
 
     #[test]
-    fn csi_erase_chars_ffi_validates_pointer_and_identifier() {
+    fn csi_erase_characters_ffi_validates_pointer_and_identifier() {
         assert_eq!(
-            terminal_parser_ffi_output_csi_erase_chars_plan(0, 0, std::ptr::null_mut()),
+            terminal_parser_ffi_output_csi_erase_characters_plan(0, 0, std::ptr::null_mut()),
             FfiStatus::InvalidArgument
         );
-        let mut result = OutputCsiEraseCharsPlan::default();
+        let mut result = OutputCsiEraseCharactersPlan::default();
         assert_eq!(
-            terminal_parser_ffi_output_csi_erase_chars_plan(
+            terminal_parser_ffi_output_csi_erase_characters_plan(
                 0xff00_0000_0000_0000,
                 0,
                 &mut result,
