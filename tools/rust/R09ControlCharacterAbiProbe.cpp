@@ -8,6 +8,7 @@
 #include "R09OutputCsiLineEditAbiProbe.hpp"
 #include "R09OutputCsiMarginsAbiProbe.hpp"
 #include "R09OutputCsiPageAbiProbe.hpp"
+#include "R09OutputCsiPagePositionAbiProbe.hpp"
 #include "R09OutputCsiScrollAbiProbe.hpp"
 #include "R09OutputEscAbiProbe.hpp"
 #include "R09OutputVt52AbiProbe.hpp"
@@ -179,9 +180,10 @@ int main()
     const bool outputCsiEraseCharactersOk = r09::output_csi_erase_characters_replay();
     const bool outputCsiLineEditOk = r09::output_csi_line_edit_replay();
     const bool outputCsiPageOk = r09::output_csi_page_replay();
+    const bool outputCsiPagePositionOk = r09::output_csi_page_position_replay();
     const bool outputCsiScrollOk = r09::output_csi_scroll_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiPageOk || !outputCsiScrollOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiScrollOk)
     {
         return 1;
     }
