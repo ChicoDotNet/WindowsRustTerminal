@@ -10,6 +10,8 @@ $csiCursorFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi
 $csiCursorProbePath = Join-Path $repoRoot 'tools/rust/R09OutputCsiCursorAbiProbe.hpp'
 $csiMarginsFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi_margins.rs'
 $csiMarginsProbePath = Join-Path $repoRoot 'tools/rust/R09OutputCsiMarginsAbiProbe.hpp'
+$csiEditFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi_edit.rs'
+$csiEditProbePath = Join-Path $repoRoot 'tools/rust/R09OutputCsiEditAbiProbe.hpp'
 $source = Get-Content -Raw -LiteralPath $sourcePath
 $escFfi = Get-Content -Raw -LiteralPath $escFfiPath
 $escProbe = Get-Content -Raw -LiteralPath $escProbePath
@@ -19,6 +21,8 @@ $csiCursorFfi = Get-Content -Raw -LiteralPath $csiCursorFfiPath
 $csiCursorProbe = Get-Content -Raw -LiteralPath $csiCursorProbePath
 $csiMarginsFfi = Get-Content -Raw -LiteralPath $csiMarginsFfiPath
 $csiMarginsProbe = Get-Content -Raw -LiteralPath $csiMarginsProbePath
+$csiEditFfi = Get-Content -Raw -LiteralPath $csiEditFfiPath
+$csiEditProbe = Get-Content -Raw -LiteralPath $csiEditProbePath
 
 function Get-FunctionBody([string] $Signature)
 {
@@ -80,4 +84,13 @@ if (-not $csiMarginsFfi.Contains('terminal_parser_ffi_output_csi_margins_plan'))
 if (-not $csiMarginsFfi.Contains('engine.action_csi_dispatch')) { throw 'R09 Output ownership gate: CSI margins FFI no longer delegates to the Rust output engine.' }
 if (-not $csiMarginsProbe.Contains('terminal_parser_ffi_output_csi_margins_plan')) { throw 'R09 Output ownership gate: native replay no longer exercises the CSI margins planning seam.' }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, VT52, CSI cursor/navigation, and CSI scrolling-margin classification; native dispatch sequencing remains at the Windows seam.'
+if (-not $csiBody.Contains('terminal_parser_ffi_output_csi_edit_plan')) { throw 'R09 Output ownership gate: ActionCsiDispatch no longer delegates character-editing classification to Rust.' }
+if (-not $csiBody.Contains('switch (editPlan.kind)')) { throw 'R09 Output ownership gate: native CSI character-edit dispatch materialization no longer consumes the Rust plan.' }
+$legacyEditCases = @('case CsiActionCodes::ICH_InsertCharacter:','case CsiActionCodes::DCH_DeleteCharacter:')
+foreach ($legacyCase in $legacyEditCases) { if ($csiBody.Contains($legacyCase)) { throw "R09 Output ownership gate: portable CSI character-edit classification returned to C++ at $legacyCase" } }
+if (-not $csiBody.Contains('if (editPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_NONE)')) { throw 'R09 Output ownership gate: CSI character-edit Rust ownership no longer short-circuits before the remaining native CSI switch.' }
+if (-not $csiEditFfi.Contains('terminal_parser_ffi_output_csi_edit_plan')) { throw 'R09 Output ownership gate: terminal-parser-ffi no longer exports the CSI character-edit planning seam.' }
+if (-not $csiEditFfi.Contains('engine.action_csi_dispatch')) { throw 'R09 Output ownership gate: CSI character-edit FFI no longer delegates to the Rust output engine.' }
+if (-not $csiEditProbe.Contains('terminal_parser_ffi_output_csi_edit_plan')) { throw 'R09 Output ownership gate: native replay no longer exercises the CSI character-edit planning seam.' }
+
+Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, VT52, CSI cursor/navigation, CSI scrolling margins, and CSI character editing; native dispatch sequencing remains at the Windows seam.'
