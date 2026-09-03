@@ -16,6 +16,7 @@ mod output_csi_erase_characters;
 mod output_csi_line_edit;
 mod output_csi_margins;
 mod output_csi_page;
+mod output_csi_page_position;
 mod output_csi_scroll;
 mod output_esc;
 mod output_execute;
