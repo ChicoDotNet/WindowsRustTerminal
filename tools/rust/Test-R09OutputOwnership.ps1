@@ -6,11 +6,15 @@ $escFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_esc.rs'
 $escProbePath = Join-Path $repoRoot 'tools/rust/R09OutputEscAbiProbe.hpp'
 $vt52FfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_vt52.rs'
 $vt52ProbePath = Join-Path $repoRoot 'tools/rust/R09OutputVt52AbiProbe.hpp'
+$csiCursorFfiPath = Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi_cursor.rs'
+$csiCursorProbePath = Join-Path $repoRoot 'tools/rust/R09OutputCsiCursorAbiProbe.hpp'
 $source = Get-Content -Raw -LiteralPath $sourcePath
 $escFfi = Get-Content -Raw -LiteralPath $escFfiPath
 $escProbe = Get-Content -Raw -LiteralPath $escProbePath
 $vt52Ffi = Get-Content -Raw -LiteralPath $vt52FfiPath
 $vt52Probe = Get-Content -Raw -LiteralPath $vt52ProbePath
+$csiCursorFfi = Get-Content -Raw -LiteralPath $csiCursorFfiPath
+$csiCursorProbe = Get-Content -Raw -LiteralPath $csiCursorProbePath
 
 function Get-FunctionBody([string] $Signature)
 {
@@ -136,4 +140,60 @@ if (-not $vt52Probe.Contains('terminal_parser_ffi_output_vt52_plan'))
     throw 'R09 Output ownership gate: native replay no longer exercises the Output VT52 planning seam.'
 }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, and VT52 classification; native dispatch sequencing remains at the Windows seam.'
+$csiBody = Get-FunctionBody 'bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParameters parameters)'
+
+if (-not $csiBody.Contains('terminal_parser_ffi_output_csi_cursor_plan'))
+{
+    throw 'R09 Output ownership gate: ActionCsiDispatch no longer delegates cursor/navigation classification to Rust.'
+}
+
+if (-not $csiBody.Contains('switch (cursorPlan.kind)'))
+{
+    throw 'R09 Output ownership gate: native CSI cursor dispatch materialization no longer consumes the Rust plan.'
+}
+
+$legacyCursorCases = @(
+    'case CsiActionCodes::CUU_CursorUp:',
+    'case CsiActionCodes::CUD_CursorDown:',
+    'case CsiActionCodes::CUF_CursorForward:',
+    'case CsiActionCodes::CUB_CursorBackward:',
+    'case CsiActionCodes::CNL_CursorNextLine:',
+    'case CsiActionCodes::CPL_CursorPrevLine:',
+    'case CsiActionCodes::CHA_CursorHorizontalAbsolute:',
+    'case CsiActionCodes::HPA_HorizontalPositionAbsolute:',
+    'case CsiActionCodes::VPA_VerticalLinePositionAbsolute:',
+    'case CsiActionCodes::HPR_HorizontalPositionRelative:',
+    'case CsiActionCodes::VPR_VerticalPositionRelative:',
+    'case CsiActionCodes::CUP_CursorPosition:',
+    'case CsiActionCodes::HVP_HorizontalVerticalPosition:'
+)
+
+foreach ($legacyCase in $legacyCursorCases)
+{
+    if ($csiBody.Contains($legacyCase))
+    {
+        throw "R09 Output ownership gate: portable CSI cursor classification returned to C++ at $legacyCase"
+    }
+}
+
+if (-not $csiBody.Contains('if (cursorPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_NONE)'))
+{
+    throw 'R09 Output ownership gate: CSI cursor Rust ownership no longer short-circuits before the remaining native CSI switch.'
+}
+
+if (-not $csiCursorFfi.Contains('terminal_parser_ffi_output_csi_cursor_plan'))
+{
+    throw 'R09 Output ownership gate: terminal-parser-ffi no longer exports the CSI cursor planning seam.'
+}
+
+if (-not $csiCursorFfi.Contains('engine.action_csi_dispatch'))
+{
+    throw 'R09 Output ownership gate: CSI cursor FFI no longer delegates to the Rust output engine.'
+}
+
+if (-not $csiCursorProbe.Contains('terminal_parser_ffi_output_csi_cursor_plan'))
+{
+    throw 'R09 Output ownership gate: native replay no longer exercises the CSI cursor planning seam.'
+}
+
+Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, VT52, and CSI cursor/navigation classification; native dispatch sequencing remains at the Windows seam.'
