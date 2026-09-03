@@ -18,6 +18,7 @@
 #include "terminal_parser_ffi_output_csi_line_edit.h"
 #include "terminal_parser_ffi_output_csi_erase_characters.h"
 #include "terminal_parser_ffi_output_csi_scroll.h"
+#include "terminal_parser_ffi_output_csi_page.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -560,6 +561,33 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_page_result pagePlan{};
+    const auto pageStatus = terminal_parser_ffi_output_csi_page_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &pagePlan);
+    THROW_HR_IF(E_UNEXPECTED, pageStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (pagePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NEXT:
+        _dispatch->NextPage(pagePlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_PRECEDING:
+        _dispatch->PrecedingPage(pagePlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (pagePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -633,12 +661,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _dispatch->RequestTerminalParameters(parameters.at(0));
         break;
 
-    case CsiActionCodes::NP_NextPage:
-        _dispatch->NextPage(parameters.at(0));
-        break;
-    case CsiActionCodes::PP_PrecedingPage:
-        _dispatch->PrecedingPage(parameters.at(0));
-        break;
+
     case CsiActionCodes::ANSISYSRC_CursorRestore:
         _dispatch->CursorRestoreState();
         break;
