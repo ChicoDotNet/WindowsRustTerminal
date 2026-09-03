@@ -4,6 +4,7 @@
 #include "terminal_parser_ffi.h"
 #include "R09OutputCsiCursorAbiProbe.hpp"
 #include "R09OutputCsiEditAbiProbe.hpp"
+#include "R09OutputCsiLineEditAbiProbe.hpp"
 #include "R09OutputCsiMarginsAbiProbe.hpp"
 #include "R09OutputEscAbiProbe.hpp"
 #include "R09OutputVt52AbiProbe.hpp"
@@ -172,8 +173,9 @@ int main()
     const bool outputCsiCursorOk = r09::output_csi_cursor_replay();
     const bool outputCsiMarginsOk = r09::output_csi_margins_replay();
     const bool outputCsiEditOk = r09::output_csi_edit_replay();
+    const bool outputCsiLineEditOk = r09::output_csi_line_edit_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiMarginsOk || !outputCsiEditOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiLineEditOk)
     {
         return 1;
     }
