@@ -15,6 +15,7 @@
 #include "terminal_parser_ffi_output_csi_cursor.h"
 #include "terminal_parser_ffi_output_csi_margins.h"
 #include "terminal_parser_ffi_output_csi_edit.h"
+#include "terminal_parser_ffi_output_csi_line_edit.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -479,6 +480,33 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_line_edit_result lineEditPlan{};
+    const auto lineEditStatus = terminal_parser_ffi_output_csi_line_edit_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &lineEditPlan);
+    THROW_HR_IF(E_UNEXPECTED, lineEditStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (lineEditPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_INSERT_LINE:
+        _dispatch->InsertLine(lineEditPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_DELETE_LINE:
+        _dispatch->DeleteLine(lineEditPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (lineEditPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -566,12 +594,8 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::ANSISYSRC_CursorRestore:
         _dispatch->CursorRestoreState();
         break;
-    case CsiActionCodes::IL_InsertLine:
-        _dispatch->InsertLine(parameters.at(0));
-        break;
-    case CsiActionCodes::DL_DeleteLine:
-        _dispatch->DeleteLine(parameters.at(0));
-        break;
+
+
     case CsiActionCodes::CHT_CursorForwardTab:
         _dispatch->ForwardTab(parameters.at(0));
         break;
