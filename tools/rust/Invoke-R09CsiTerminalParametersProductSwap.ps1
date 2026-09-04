@@ -50,7 +50,7 @@ $dispatchReplacement = @"
     switch (terminalParametersPlan.kind)
     {
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_REQUEST:
-        _dispatch->RequestTerminalParameters(terminalParametersPlan.parameter);
+        _dispatch->RequestTerminalParameters(static_cast<DispatchTypes::ReportingPermission>(terminalParametersPlan.parameter));
         break;
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_NONE:
         break;
