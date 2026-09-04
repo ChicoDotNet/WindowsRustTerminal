@@ -12,6 +12,7 @@ mod input_mouse;
 mod input_win32;
 mod output_csi_cursor;
 mod output_csi_cursor_restore;
+mod output_csi_cursor_style;
 mod output_csi_device_attributes;
 mod output_csi_displayed_extent;
 mod output_csi_edit;
