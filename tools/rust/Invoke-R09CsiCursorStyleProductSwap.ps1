@@ -50,7 +50,7 @@ $dispatchReplacement = @"
     switch (cursorStylePlan.kind)
     {
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_SET_CURSOR_STYLE:
-        _dispatch->SetCursorStyle(cursorStylePlan.style);
+        _dispatch->SetCursorStyle(static_cast<DispatchTypes::CursorStyle>(cursorStylePlan.style));
         break;
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_NONE:
         break;
