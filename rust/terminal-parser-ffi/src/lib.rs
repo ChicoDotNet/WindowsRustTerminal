@@ -19,6 +19,7 @@ mod output_csi_page;
 mod output_csi_page_position;
 mod output_csi_scroll;
 mod output_csi_tab;
+mod output_csi_terminal_parameters;
 mod output_esc;
 mod output_execute;
 mod output_vt52;
