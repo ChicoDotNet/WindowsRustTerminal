@@ -21,6 +21,7 @@
 #include "terminal_parser_ffi_output_csi_page.h"
 #include "terminal_parser_ffi_output_csi_page_position.h"
 #include "terminal_parser_ffi_output_csi_tab.h"
+#include "terminal_parser_ffi_output_csi_terminal_parameters.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -647,6 +648,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_terminal_parameters_result terminalParametersPlan{};
+    const auto terminalParametersStatus = terminal_parser_ffi_output_csi_terminal_parameters_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &terminalParametersPlan);
+    THROW_HR_IF(E_UNEXPECTED, terminalParametersStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (terminalParametersPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_REQUEST:
+        _dispatch->RequestTerminalParameters(static_cast<DispatchTypes::ReportingPermission>(terminalParametersPlan.parameter));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (terminalParametersPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -716,9 +741,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
             _dispatch->TertiaryDeviceAttributes();
         }
         break;
-    case CsiActionCodes::DECREQTPARM_RequestTerminalParameters:
-        _dispatch->RequestTerminalParameters(parameters.at(0));
-        break;
+
 
 
     case CsiActionCodes::ANSISYSRC_CursorRestore:
