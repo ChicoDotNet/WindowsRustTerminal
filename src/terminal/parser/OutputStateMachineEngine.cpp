@@ -23,6 +23,7 @@
 #include "terminal_parser_ffi_output_csi_tab.h"
 #include "terminal_parser_ffi_output_csi_terminal_parameters.h"
 #include "terminal_parser_ffi_output_csi_device_attributes.h"
+#include "terminal_parser_ffi_output_csi_cursor_restore.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -703,6 +704,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_cursor_restore_result cursorRestorePlan{};
+    const auto cursorRestoreStatus = terminal_parser_ffi_output_csi_cursor_restore_plan(
+        static_cast<uint64_t>(id),
+        &cursorRestorePlan);
+    THROW_HR_IF(E_UNEXPECTED, cursorRestoreStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (cursorRestorePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_RESTORE:
+        _dispatch->CursorRestoreState();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (cursorRestorePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -758,9 +782,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::ANSISYSRC_CursorRestore:
-        _dispatch->CursorRestoreState();
-        break;
+
 
 
 
