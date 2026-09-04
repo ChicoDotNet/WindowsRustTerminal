@@ -22,6 +22,7 @@
 #include "terminal_parser_ffi_output_csi_page_position.h"
 #include "terminal_parser_ffi_output_csi_tab.h"
 #include "terminal_parser_ffi_output_csi_terminal_parameters.h"
+#include "terminal_parser_ffi_output_csi_device_attributes.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -672,6 +673,36 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_device_attributes_result deviceAttributesPlan{};
+    const auto deviceAttributesStatus = terminal_parser_ffi_output_csi_device_attributes_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &deviceAttributesPlan);
+    THROW_HR_IF(E_UNEXPECTED, deviceAttributesStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (deviceAttributesPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_PRIMARY:
+        _dispatch->DeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_SECONDARY:
+        _dispatch->SecondaryDeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_TERTIARY:
+        _dispatch->TertiaryDeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (deviceAttributesPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -723,24 +754,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DSR_PrivateDeviceStatusReport:
         _dispatch->DeviceStatusReport(DispatchTypes::DECPrivateStatus(parameters.at(0)), parameters.at(1));
         break;
-    case CsiActionCodes::DA_DeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->DeviceAttributes();
-        }
-        break;
-    case CsiActionCodes::DA2_SecondaryDeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->SecondaryDeviceAttributes();
-        }
-        break;
-    case CsiActionCodes::DA3_TertiaryDeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->TertiaryDeviceAttributes();
-        }
-        break;
+
 
 
 
