@@ -20,6 +20,7 @@
 #include "terminal_parser_ffi_output_csi_scroll.h"
 #include "terminal_parser_ffi_output_csi_page.h"
 #include "terminal_parser_ffi_output_csi_page_position.h"
+#include "terminal_parser_ffi_output_csi_tab.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -619,6 +620,33 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_tab_result tabPlan{};
+    const auto tabStatus = terminal_parser_ffi_output_csi_tab_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &tabPlan);
+    THROW_HR_IF(E_UNEXPECTED, tabStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (tabPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_FORWARD:
+        _dispatch->ForwardTab(tabPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_BACKWARD:
+        _dispatch->BackwardsTab(tabPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (tabPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -698,12 +726,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         break;
 
 
-    case CsiActionCodes::CHT_CursorForwardTab:
-        _dispatch->ForwardTab(parameters.at(0));
-        break;
-    case CsiActionCodes::CBT_CursorBackTab:
-        _dispatch->BackwardsTab(parameters.at(0));
-        break;
+
     case CsiActionCodes::TBC_TabClear:
         parameters.for_each([&](const auto clearType) {
             _dispatch->TabClear(clearType);
