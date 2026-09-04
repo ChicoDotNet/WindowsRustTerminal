@@ -42,9 +42,9 @@ if ($csiBody.Contains('case CsiActionCodes::DA3_TertiaryDeviceAttributes:')) { t
 
 if (-not $ffi.Contains('terminal_parser_ffi_output_csi_device_attributes_plan')) { throw 'R09 CSI device attributes ownership gate: terminal-parser-ffi no longer exports the planning seam.' }
 if (-not $ffi.Contains('engine.action_csi_dispatch')) { throw 'R09 CSI device attributes ownership gate: FFI no longer delegates to the Rust output engine.' }
-if (-not $probe.Contains("expect_output_csi_device_attributes_plan('\\0', 'c', 0")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the primary witness.' }
+if (-not $probe.Contains("expect_output_csi_device_attributes_plan('\0', 'c', 0")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the primary witness.' }
 if (-not $probe.Contains("expect_output_csi_device_attributes_plan('>', 'c', 0")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the secondary witness.' }
 if (-not $probe.Contains("expect_output_csi_device_attributes_plan('=', 'c', 0")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the tertiary witness.' }
-if (-not $probe.Contains("expect_output_csi_device_attributes_plan('\\0', 'c', 1")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the nonzero primary rejection witness.' }
+if (-not $probe.Contains("expect_output_csi_device_attributes_plan('\0', 'c', 1")) { throw 'R09 CSI device attributes ownership gate: native replay no longer protects the nonzero primary rejection witness.' }
 
 Write-Host 'R09 CSI device attributes ownership gate passed: Rust owns DA/DA2/DA3 classification; C++ retains only native dispatch materialization.'
