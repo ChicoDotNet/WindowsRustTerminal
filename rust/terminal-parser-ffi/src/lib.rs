@@ -13,6 +13,7 @@ mod input_win32;
 mod output_csi_cursor;
 mod output_csi_cursor_restore;
 mod output_csi_device_attributes;
+mod output_csi_displayed_extent;
 mod output_csi_edit;
 mod output_csi_erase_characters;
 mod output_csi_line_edit;
