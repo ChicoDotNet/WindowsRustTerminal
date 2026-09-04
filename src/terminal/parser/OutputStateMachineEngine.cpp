@@ -25,6 +25,7 @@
 #include "terminal_parser_ffi_output_csi_device_attributes.h"
 #include "terminal_parser_ffi_output_csi_cursor_restore.h"
 #include "terminal_parser_ffi_output_csi_soft_reset.h"
+#include "terminal_parser_ffi_output_csi_displayed_extent.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -751,6 +752,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_displayed_extent_result displayedExtentPlan{};
+    const auto displayedExtentStatus = terminal_parser_ffi_output_csi_displayed_extent_plan(
+        static_cast<uint64_t>(id),
+        &displayedExtentPlan);
+    THROW_HR_IF(E_UNEXPECTED, displayedExtentStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (displayedExtentPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_REQUEST:
+        _dispatch->RequestDisplayedExtent();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (displayedExtentPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -845,9 +869,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECSCA_SetCharacterProtectionAttribute:
         _dispatch->SetCharacterProtectionAttribute(parameters);
         break;
-    case CsiActionCodes::DECRQDE_RequestDisplayedExtent:
-        _dispatch->RequestDisplayedExtent();
-        break;
+
     case CsiActionCodes::XT_PushSgr:
     case CsiActionCodes::XT_PushSgrAlias:
         _dispatch->PushGraphicsRendition(parameters);
