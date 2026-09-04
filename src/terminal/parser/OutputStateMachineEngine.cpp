@@ -24,6 +24,7 @@
 #include "terminal_parser_ffi_output_csi_terminal_parameters.h"
 #include "terminal_parser_ffi_output_csi_device_attributes.h"
 #include "terminal_parser_ffi_output_csi_cursor_restore.h"
+#include "terminal_parser_ffi_output_csi_soft_reset.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -727,6 +728,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_soft_reset_result softResetPlan{};
+    const auto softResetStatus = terminal_parser_ffi_output_csi_soft_reset_plan(
+        static_cast<uint64_t>(id),
+        &softResetPlan);
+    THROW_HR_IF(E_UNEXPECTED, softResetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (softResetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_SOFT_RESET:
+        _dispatch->SoftReset();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (softResetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -817,9 +841,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECSCUSR_SetCursorStyle:
         _dispatch->SetCursorStyle(parameters.at(0));
         break;
-    case CsiActionCodes::DECSTR_SoftReset:
-        _dispatch->SoftReset();
-        break;
+
     case CsiActionCodes::DECSCA_SetCharacterProtectionAttribute:
         _dispatch->SetCharacterProtectionAttribute(parameters);
         break;
