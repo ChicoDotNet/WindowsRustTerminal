@@ -26,6 +26,7 @@
 #include "terminal_parser_ffi_output_csi_cursor_restore.h"
 #include "terminal_parser_ffi_output_csi_soft_reset.h"
 #include "terminal_parser_ffi_output_csi_displayed_extent.h"
+#include "terminal_parser_ffi_output_csi_cursor_style.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -775,6 +776,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_cursor_style_result cursorStylePlan{};
+    const auto cursorStyleStatus = terminal_parser_ffi_output_csi_cursor_style_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &cursorStylePlan);
+    THROW_HR_IF(E_UNEXPECTED, cursorStyleStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (cursorStylePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_SET_CURSOR_STYLE:
+        _dispatch->SetCursorStyle(static_cast<DispatchTypes::CursorStyle>(cursorStylePlan.style));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (cursorStylePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -862,9 +887,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         }
         break;
 
-    case CsiActionCodes::DECSCUSR_SetCursorStyle:
-        _dispatch->SetCursorStyle(parameters.at(0));
-        break;
+
 
     case CsiActionCodes::DECSCA_SetCharacterProtectionAttribute:
         _dispatch->SetCharacterProtectionAttribute(parameters);
