@@ -28,6 +28,7 @@ mod output_csi_request_mode;
 mod output_csi_scroll;
 mod output_csi_soft_reset;
 mod output_csi_tab;
+mod output_csi_tab_control;
 mod output_csi_terminal_parameters;
 mod output_esc;
 mod output_execute;
