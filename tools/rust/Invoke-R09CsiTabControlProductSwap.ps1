@@ -66,7 +66,7 @@ $dispatchReplacement = @"
         switch (tabControlPlan.kind)
         {
         case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_CLEAR:
-            _dispatch->TabClear(tabControlPlan.value);
+            _dispatch->TabClear(static_cast<DispatchTypes::TabClearType>(tabControlPlan.value));
             break;
         case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_SET:
             _dispatch->TabSet(tabControlPlan.value);
