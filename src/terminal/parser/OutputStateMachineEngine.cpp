@@ -31,6 +31,7 @@
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
+#include "terminal_parser_ffi_output_csi_tab_control.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -971,6 +972,48 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t tabControlPlanCapacity = 32;
+    int32_t tabControlParameters[tabControlPlanCapacity]{};
+    size_t tabControlParameterCount = 0;
+    parameters.for_each([&](const auto tabControlType) {
+        THROW_HR_IF(E_UNEXPECTED, tabControlParameterCount >= tabControlPlanCapacity);
+        tabControlParameters[tabControlParameterCount++] = static_cast<int32_t>(tabControlType);
+    });
+
+    terminal_parser_ffi_output_csi_tab_control_result tabControlPlans[tabControlPlanCapacity]{};
+    size_t tabControlPlanCount = 0;
+    const auto tabControlStatus = terminal_parser_ffi_output_csi_tab_control_plans(
+        static_cast<uint64_t>(id),
+        tabControlParameters,
+        tabControlParameterCount,
+        tabControlPlans,
+        tabControlPlanCapacity,
+        &tabControlPlanCount);
+    THROW_HR_IF(E_UNEXPECTED, tabControlStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < tabControlPlanCount; ++index)
+    {
+        const auto& tabControlPlan = tabControlPlans[index];
+
+        switch (tabControlPlan.kind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_CLEAR:
+            _dispatch->TabClear(static_cast<DispatchTypes::TabClearType>(tabControlPlan.value));
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_SET:
+            _dispatch->TabSet(tabControlPlan.value);
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+    }
+
+    if (tabControlPlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -987,16 +1030,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::TBC_TabClear:
-        parameters.for_each([&](const auto clearType) {
-            _dispatch->TabClear(clearType);
-        });
-        break;
-    case CsiActionCodes::DECST8C_SetTabEvery8Columns:
-        parameters.for_each([&](const auto setType) {
-            _dispatch->TabSet(setType);
-        });
-        break;
+
 
     case CsiActionCodes::DTTERM_WindowManipulation:
         _dispatch->WindowManipulation(parameters.at(0), parameters.at(1), parameters.at(2));
