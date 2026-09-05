@@ -52,7 +52,7 @@ $dispatchReplacement = @"
     switch (windowManipulationPlan.kind)
     {
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION:
-        _dispatch->WindowManipulation(windowManipulationPlan.function, windowManipulationPlan.parameter1, windowManipulationPlan.parameter2);
+        _dispatch->WindowManipulation(static_cast<DispatchTypes::WindowManipulationType>(windowManipulationPlan.function), windowManipulationPlan.parameter1, windowManipulationPlan.parameter2);
         break;
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION_NONE:
         break;
