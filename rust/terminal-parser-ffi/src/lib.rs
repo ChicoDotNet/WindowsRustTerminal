@@ -129,6 +129,9 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
         let input = if input_len == 0 {
             &[]
         } else {
+            // SAFETY: The C ABI contract requires `input` to reference
+            // `input_len` readable UTF-16 code units for the duration of this
+            // call. Null with a non-zero length was rejected above.
             unsafe { slice::from_raw_parts(input, input_len) }
         };
 
@@ -139,6 +142,8 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
         let decoded_utf16 = decoded.encode_utf16().collect::<Vec<_>>();
         let required = decoded_utf16.len();
 
+        // SAFETY: `out_len` was checked non-null above and the ABI requires it
+        // to reference one writable `usize` for the duration of the call.
         unsafe { ptr::write(out_len, required) };
 
         if output_capacity < required {
@@ -149,6 +154,9 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
             if output.is_null() {
                 return FfiStatus::InvalidArgument;
             }
+            // SAFETY: `output_capacity >= required`; the ABI contract requires
+            // `output` to reference that many writable UTF-16 code units and
+            // the source vector cannot overlap caller-owned output memory.
             unsafe { ptr::copy_nonoverlapping(decoded_utf16.as_ptr(), output, required) };
         }
 
@@ -173,32 +181,64 @@ mod tests {
 
     #[test]
     fn decode_errors_have_stable_status_mapping() {
-        assert_eq!(FfiStatus::from(DecodeError::InvalidBase64), FfiStatus::InvalidBase64);
-        assert_eq!(FfiStatus::from(DecodeError::InvalidUtf8), FfiStatus::InvalidUtf8);
+        assert_eq!(
+            FfiStatus::from(DecodeError::InvalidBase64),
+            FfiStatus::InvalidBase64
+        );
+        assert_eq!(
+            FfiStatus::from(DecodeError::InvalidUtf8),
+            FfiStatus::InvalidUtf8
+        );
     }
 
     #[test]
     fn ffi_guard_returns_status_without_translation() {
         assert_eq!(ffi_guard(|| FfiStatus::Ok), FfiStatus::Ok);
-        assert_eq!(ffi_guard(|| FfiStatus::InvalidArgument), FfiStatus::InvalidArgument);
+        assert_eq!(
+            ffi_guard(|| FfiStatus::InvalidArgument),
+            FfiStatus::InvalidArgument
+        );
     }
 
     #[test]
     fn ffi_guard_contains_panics() {
-        assert_eq!(ffi_guard(|| panic!("panic must not cross the C ABI")), FfiStatus::Panic);
+        assert_eq!(
+            ffi_guard(|| panic!("panic must not cross the C ABI")),
+            FfiStatus::Panic
+        );
     }
 
     #[test]
     fn base64_ffi_uses_caller_owned_utf16_buffers() {
-        let encoded = "44Gr44G744KT44GU5rGJ6K+t7ZWc6rWt".encode_utf16().collect::<Vec<_>>();
+        let encoded = "44Gr44G744KT44GU5rGJ6K+t7ZWc6rWt"
+            .encode_utf16()
+            .collect::<Vec<_>>();
         let expected = "にほんご汉语한국";
         let mut required = 0usize;
 
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(encoded.as_ptr(), encoded.len(), std::ptr::null_mut(), 0, &mut required), FfiStatus::BufferTooSmall);
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                encoded.as_ptr(),
+                encoded.len(),
+                std::ptr::null_mut(),
+                0,
+                &mut required,
+            ),
+            FfiStatus::BufferTooSmall
+        );
         assert_eq!(required, expected.encode_utf16().count());
 
         let mut output = vec![0u16; required];
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(encoded.as_ptr(), encoded.len(), output.as_mut_ptr(), output.len(), &mut required), FfiStatus::Ok);
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                encoded.as_ptr(),
+                encoded.len(),
+                output.as_mut_ptr(),
+                output.len(),
+                &mut required,
+            ),
+            FfiStatus::Ok
+        );
         assert_eq!(String::from_utf16(&output).unwrap(), expected);
     }
 
@@ -207,15 +247,51 @@ mod tests {
         let invalid = "A".encode_utf16().collect::<Vec<_>>();
         let mut required = usize::MAX;
 
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(invalid.as_ptr(), invalid.len(), std::ptr::null_mut(), 0, &mut required), FfiStatus::InvalidBase64);
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 1, std::ptr::null_mut(), 0, &mut required), FfiStatus::InvalidArgument);
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 0, std::ptr::null_mut(), 0, std::ptr::null_mut()), FfiStatus::InvalidArgument);
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                invalid.as_ptr(),
+                invalid.len(),
+                std::ptr::null_mut(),
+                0,
+                &mut required,
+            ),
+            FfiStatus::InvalidBase64
+        );
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                std::ptr::null(),
+                1,
+                std::ptr::null_mut(),
+                0,
+                &mut required,
+            ),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+                0,
+                std::ptr::null_mut(),
+            ),
+            FfiStatus::InvalidArgument
+        );
     }
 
     #[test]
     fn base64_ffi_handles_empty_output_without_requiring_a_buffer() {
         let mut required = usize::MAX;
-        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 0, std::ptr::null_mut(), 0, &mut required), FfiStatus::Ok);
+        assert_eq!(
+            terminal_parser_ffi_base64_decode_utf16(
+                std::ptr::null(),
+                0,
+                std::ptr::null_mut(),
+                0,
+                &mut required,
+            ),
+            FfiStatus::Ok
+        );
         assert_eq!(required, 0);
     }
 }
