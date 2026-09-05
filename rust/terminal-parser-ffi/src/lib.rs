@@ -17,6 +17,7 @@ mod output_csi_device_attributes;
 mod output_csi_device_status_report;
 mod output_csi_displayed_extent;
 mod output_csi_edit;
+mod output_csi_erase;
 mod output_csi_erase_characters;
 mod output_csi_line_edit;
 mod output_csi_margins;
