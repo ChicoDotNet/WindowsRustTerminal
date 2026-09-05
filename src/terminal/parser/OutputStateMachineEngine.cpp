@@ -33,6 +33,7 @@
 #include "terminal_parser_ffi_output_csi_erase.h"
 #include "terminal_parser_ffi_output_csi_tab_control.h"
 #include "terminal_parser_ffi_output_csi_window_manipulation.h"
+#include "terminal_parser_ffi_output_csi_pop_sgr.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1041,6 +1042,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_pop_sgr_result popSgrPlan{};
+    const auto popSgrStatus = terminal_parser_ffi_output_csi_pop_sgr_plan(
+        static_cast<uint64_t>(id),
+        &popSgrPlan);
+    THROW_HR_IF(E_UNEXPECTED, popSgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (popSgrPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_POP:
+        _dispatch->PopGraphicsRendition();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (popSgrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1084,10 +1108,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::XT_PushSgrAlias:
         _dispatch->PushGraphicsRendition(parameters);
         break;
-    case CsiActionCodes::XT_PopSgr:
-    case CsiActionCodes::XT_PopSgrAlias:
-        _dispatch->PopGraphicsRendition();
-        break;
+
 
     case CsiActionCodes::DECCARA_ChangeAttributesRectangularArea:
         _dispatch->ChangeAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
