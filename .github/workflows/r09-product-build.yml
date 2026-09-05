@@ -60,7 +60,7 @@ jobs:
       - name: Rust toolchain
         run: rustup show
       - name: Prepare CSI tab control Rust ownership candidate
-        if: contains(github.event.head_commit.message, 'Promote CSI tab control product ownership')
+        if: contains(github.event.head_commit.message, 'Promote CSI tab control product ownership') || contains(github.event.head_commit.message, 'Retry CSI tab control product ownership')
         shell: pwsh
         run: ./tools/rust/Invoke-R09CsiTabControlProductSwap.ps1
       - name: Validate parser ownership
@@ -121,7 +121,7 @@ jobs:
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
       - name: Promote verified CSI tab control Rust ownership
-        if: contains(github.event.head_commit.message, 'Promote CSI tab control product ownership')
+        if: contains(github.event.head_commit.message, 'Promote CSI tab control product ownership') || contains(github.event.head_commit.message, 'Retry CSI tab control product ownership')
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
