@@ -12,6 +12,7 @@
 #include "R09OutputCsiEraseCharactersAbiProbe.hpp"
 #include "R09OutputCsiLineEditAbiProbe.hpp"
 #include "R09OutputCsiMarginsAbiProbe.hpp"
+#include "R09OutputCsiModeAbiProbe.hpp"
 #include "R09OutputCsiPageAbiProbe.hpp"
 #include "R09OutputCsiPagePositionAbiProbe.hpp"
 #include "R09OutputCsiRequestModeAbiProbe.hpp"
@@ -193,6 +194,7 @@ int main()
     const bool outputCsiEditOk = r09::output_csi_edit_replay();
     const bool outputCsiEraseCharactersOk = r09::output_csi_erase_characters_replay();
     const bool outputCsiLineEditOk = r09::output_csi_line_edit_replay();
+    const bool outputCsiModeOk = r09::output_csi_mode_replay();
     const bool outputCsiPageOk = r09::output_csi_page_replay();
     const bool outputCsiPagePositionOk = r09::output_csi_page_position_replay();
     const bool outputCsiRequestModeOk = r09::output_csi_request_mode_replay();
@@ -201,7 +203,7 @@ int main()
     const bool outputCsiTabOk = r09::output_csi_tab_replay();
     const bool outputCsiTerminalParametersOk = r09::output_csi_terminal_parameters_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTerminalParametersOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTerminalParametersOk)
     {
         return 1;
     }
