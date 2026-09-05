@@ -20,6 +20,7 @@
 #include "R09OutputCsiScrollAbiProbe.hpp"
 #include "R09OutputCsiSoftResetAbiProbe.hpp"
 #include "R09OutputCsiTabAbiProbe.hpp"
+#include "R09OutputCsiTabControlAbiProbe.hpp"
 #include "R09OutputCsiTerminalParametersAbiProbe.hpp"
 #include "R09OutputEscAbiProbe.hpp"
 #include "R09OutputVt52AbiProbe.hpp"
@@ -203,9 +204,10 @@ int main()
     const bool outputCsiScrollOk = r09::output_csi_scroll_replay();
     const bool outputCsiSoftResetOk = r09::output_csi_soft_reset_replay();
     const bool outputCsiTabOk = r09::output_csi_tab_replay();
+    const bool outputCsiTabControlOk = r09::output_csi_tab_control_replay();
     const bool outputCsiTerminalParametersOk = r09::output_csi_terminal_parameters_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTerminalParametersOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk)
     {
         return 1;
     }
