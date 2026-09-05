@@ -29,6 +29,7 @@
 #include "terminal_parser_ffi_output_csi_cursor_style.h"
 #include "terminal_parser_ffi_output_csi_request_mode.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
+#include "terminal_parser_ffi_output_csi_mode.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -869,6 +870,57 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t modePlanCapacity = 32;
+    int32_t modeParameters[modePlanCapacity]{};
+    size_t modeParameterCount = 0;
+    parameters.for_each([&](const auto mode) {
+        THROW_HR_IF(E_UNEXPECTED, modeParameterCount >= modePlanCapacity);
+        modeParameters[modeParameterCount++] = static_cast<int32_t>(mode);
+    });
+
+    terminal_parser_ffi_output_csi_mode_result modePlans[modePlanCapacity]{};
+    size_t modePlanCount = 0;
+    const auto modeStatus = terminal_parser_ffi_output_csi_mode_plans(
+        static_cast<uint64_t>(id),
+        modeParameters,
+        modeParameterCount,
+        modePlans,
+        modePlanCapacity,
+        &modePlanCount);
+    THROW_HR_IF(E_UNEXPECTED, modeStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < modePlanCount; ++index)
+    {
+        const auto& modePlan = modePlans[index];
+        THROW_HR_IF(E_UNEXPECTED, modePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_MODE_MODE);
+
+        if (modePlan.private_mode != 0)
+        {
+            if (modePlan.enabled != 0)
+            {
+                _dispatch->SetMode(static_cast<DispatchTypes::DECPrivateMode>(modePlan.mode));
+            }
+            else
+            {
+                _dispatch->ResetMode(static_cast<DispatchTypes::DECPrivateMode>(modePlan.mode));
+            }
+        }
+        else if (modePlan.enabled != 0)
+        {
+            _dispatch->SetMode(static_cast<DispatchTypes::ANSIStandardMode>(modePlan.mode));
+        }
+        else
+        {
+            _dispatch->ResetMode(static_cast<DispatchTypes::ANSIStandardMode>(modePlan.mode));
+        }
+    }
+
+    if (modePlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -891,26 +943,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
             _dispatch->SelectiveEraseInLine(eraseType);
         });
         break;
-    case CsiActionCodes::SM_SetMode:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->SetMode(DispatchTypes::ANSIStandardMode(mode));
-        });
-        break;
-    case CsiActionCodes::DECSET_PrivateModeSet:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->SetMode(DispatchTypes::DECPrivateMode(mode));
-        });
-        break;
-    case CsiActionCodes::RM_ResetMode:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->ResetMode(DispatchTypes::ANSIStandardMode(mode));
-        });
-        break;
-    case CsiActionCodes::DECRST_PrivateModeReset:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->ResetMode(DispatchTypes::DECPrivateMode(mode));
-        });
-        break;
+
     case CsiActionCodes::SGR_SetGraphicsRendition:
         _dispatch->SetGraphicsRendition(parameters);
         break;
