@@ -30,6 +30,7 @@
 #include "terminal_parser_ffi_output_csi_request_mode.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
+#include "terminal_parser_ffi_output_csi_erase.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -921,28 +922,58 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t erasePlanCapacity = 32;
+    int32_t eraseParameters[erasePlanCapacity]{};
+    size_t eraseParameterCount = 0;
+    parameters.for_each([&](const auto eraseType) {
+        THROW_HR_IF(E_UNEXPECTED, eraseParameterCount >= erasePlanCapacity);
+        eraseParameters[eraseParameterCount++] = static_cast<int32_t>(eraseType);
+    });
+
+    terminal_parser_ffi_output_csi_erase_result erasePlans[erasePlanCapacity]{};
+    size_t erasePlanCount = 0;
+    const auto eraseStatus = terminal_parser_ffi_output_csi_erase_plans(
+        static_cast<uint64_t>(id),
+        eraseParameters,
+        eraseParameterCount,
+        erasePlans,
+        erasePlanCapacity,
+        &erasePlanCount);
+    THROW_HR_IF(E_UNEXPECTED, eraseStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < erasePlanCount; ++index)
+    {
+        const auto& erasePlan = erasePlans[index];
+        const auto eraseType = static_cast<DispatchTypes::EraseType>(erasePlan.value);
+
+        switch (erasePlan.kind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_DISPLAY:
+            _dispatch->EraseInDisplay(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_SELECTIVE_DISPLAY:
+            _dispatch->SelectiveEraseInDisplay(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_LINE:
+            _dispatch->EraseInLine(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_SELECTIVE_LINE:
+            _dispatch->SelectiveEraseInLine(eraseType);
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+    }
+
+    if (erasePlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
-    case CsiActionCodes::ED_EraseDisplay:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->EraseInDisplay(eraseType);
-        });
-        break;
-    case CsiActionCodes::DECSED_SelectiveEraseDisplay:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->SelectiveEraseInDisplay(eraseType);
-        });
-        break;
-    case CsiActionCodes::EL_EraseLine:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->EraseInLine(eraseType);
-        });
-        break;
-    case CsiActionCodes::DECSEL_SelectiveEraseLine:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->SelectiveEraseInLine(eraseType);
-        });
-        break;
+
 
     case CsiActionCodes::SGR_SetGraphicsRendition:
         _dispatch->SetGraphicsRendition(parameters);
