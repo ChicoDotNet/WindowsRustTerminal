@@ -28,6 +28,7 @@
 #include "terminal_parser_ffi_output_csi_displayed_extent.h"
 #include "terminal_parser_ffi_output_csi_cursor_style.h"
 #include "terminal_parser_ffi_output_csi_request_mode.h"
+#include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -832,6 +833,42 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_device_status_report_result deviceStatusReportPlan{};
+    const auto deviceStatusReportStatus = terminal_parser_ffi_output_csi_device_status_report_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        parameters.at(1).has_value() ? 1u : 0u,
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &deviceStatusReportPlan);
+    THROW_HR_IF(E_UNEXPECTED, deviceStatusReportStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (deviceStatusReportPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_REPORT:
+    {
+        const auto reportId = deviceStatusReportPlan.has_id != 0 ? VTParameter{ deviceStatusReportPlan.id } : VTParameter{};
+        if (deviceStatusReportPlan.private_mode != 0)
+        {
+            _dispatch->DeviceStatusReport(DispatchTypes::DECPrivateStatus(deviceStatusReportPlan.status), reportId);
+        }
+        else
+        {
+            _dispatch->DeviceStatusReport(DispatchTypes::ANSIStandardStatus(deviceStatusReportPlan.status), reportId);
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (deviceStatusReportPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -877,12 +914,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::SGR_SetGraphicsRendition:
         _dispatch->SetGraphicsRendition(parameters);
         break;
-    case CsiActionCodes::DSR_DeviceStatusReport:
-        _dispatch->DeviceStatusReport(DispatchTypes::ANSIStandardStatus(parameters.at(0)), parameters.at(1));
-        break;
-    case CsiActionCodes::DSR_PrivateDeviceStatusReport:
-        _dispatch->DeviceStatusReport(DispatchTypes::DECPrivateStatus(parameters.at(0)), parameters.at(1));
-        break;
+
 
 
 
