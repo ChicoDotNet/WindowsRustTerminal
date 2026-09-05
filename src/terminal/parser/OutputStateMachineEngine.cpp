@@ -27,6 +27,7 @@
 #include "terminal_parser_ffi_output_csi_soft_reset.h"
 #include "terminal_parser_ffi_output_csi_displayed_extent.h"
 #include "terminal_parser_ffi_output_csi_cursor_style.h"
+#include "terminal_parser_ffi_output_csi_request_mode.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -800,6 +801,37 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_request_mode_result requestModePlan{};
+    const auto requestModeStatus = terminal_parser_ffi_output_csi_request_mode_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &requestModePlan);
+    THROW_HR_IF(E_UNEXPECTED, requestModeStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (requestModePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_REQUEST_MODE:
+        if (requestModePlan.private_mode != 0)
+        {
+            _dispatch->RequestMode(static_cast<DispatchTypes::DECPrivateMode>(requestModePlan.mode));
+        }
+        else
+        {
+            _dispatch->RequestMode(static_cast<DispatchTypes::ANSIStandardMode>(requestModePlan.mode));
+        }
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (requestModePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
     case CsiActionCodes::ED_EraseDisplay:
@@ -901,12 +933,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::XT_PopSgrAlias:
         _dispatch->PopGraphicsRendition();
         break;
-    case CsiActionCodes::DECRQM_RequestMode:
-        _dispatch->RequestMode(DispatchTypes::ANSIStandardMode(parameters.at(0)));
-        break;
-    case CsiActionCodes::DECRQM_PrivateRequestMode:
-        _dispatch->RequestMode(DispatchTypes::DECPrivateMode(parameters.at(0)));
-        break;
+
     case CsiActionCodes::DECCARA_ChangeAttributesRectangularArea:
         _dispatch->ChangeAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
         break;
