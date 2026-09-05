@@ -20,6 +20,7 @@ mod output_csi_edit;
 mod output_csi_erase_characters;
 mod output_csi_line_edit;
 mod output_csi_margins;
+mod output_csi_mode;
 mod output_csi_page;
 mod output_csi_page_position;
 mod output_csi_request_mode;
