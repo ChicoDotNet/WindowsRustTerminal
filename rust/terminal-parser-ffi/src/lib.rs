@@ -14,6 +14,7 @@ mod output_csi_cursor;
 mod output_csi_cursor_restore;
 mod output_csi_cursor_style;
 mod output_csi_device_attributes;
+mod output_csi_device_status_report;
 mod output_csi_displayed_extent;
 mod output_csi_edit;
 mod output_csi_erase_characters;
@@ -122,9 +123,6 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
         let input = if input_len == 0 {
             &[]
         } else {
-            // SAFETY: The C ABI contract requires `input` to reference
-            // `input_len` readable UTF-16 code units for the duration of this
-            // call. Null with a non-zero length was rejected above.
             unsafe { slice::from_raw_parts(input, input_len) }
         };
 
@@ -135,8 +133,6 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
         let decoded_utf16 = decoded.encode_utf16().collect::<Vec<_>>();
         let required = decoded_utf16.len();
 
-        // SAFETY: `out_len` was checked non-null above and the ABI requires it
-        // to reference one writable `usize` for the duration of the call.
         unsafe { ptr::write(out_len, required) };
 
         if output_capacity < required {
@@ -147,9 +143,6 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
             if output.is_null() {
                 return FfiStatus::InvalidArgument;
             }
-            // SAFETY: `output_capacity >= required`; the ABI contract requires
-            // `output` to reference that many writable UTF-16 code units and
-            // the source vector cannot overlap caller-owned output memory.
             unsafe { ptr::copy_nonoverlapping(decoded_utf16.as_ptr(), output, required) };
         }
 
