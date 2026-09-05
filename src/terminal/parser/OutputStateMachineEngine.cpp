@@ -32,6 +32,7 @@
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
 #include "terminal_parser_ffi_output_csi_tab_control.h"
+#include "terminal_parser_ffi_output_csi_window_manipulation.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1014,6 +1015,32 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_window_manipulation_result windowManipulationPlan{};
+    const auto windowManipulationStatus = terminal_parser_ffi_output_csi_window_manipulation_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        &windowManipulationPlan);
+    THROW_HR_IF(E_UNEXPECTED, windowManipulationStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (windowManipulationPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION:
+        _dispatch->WindowManipulation(static_cast<DispatchTypes::WindowManipulationType>(windowManipulationPlan.function), windowManipulationPlan.parameter1, windowManipulationPlan.parameter2);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (windowManipulationPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1032,9 +1059,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::DTTERM_WindowManipulation:
-        _dispatch->WindowManipulation(parameters.at(0), parameters.at(1), parameters.at(2));
-        break;
+
     case CsiActionCodes::REP_RepeatCharacter:
         // Handled w/o the dispatch. This function is unique in that way
         // If this were in the ITerminalDispatch, then each
