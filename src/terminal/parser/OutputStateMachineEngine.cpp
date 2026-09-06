@@ -37,6 +37,7 @@
 #include "terminal_parser_ffi_output_csi_decsca.h"
 #include "terminal_parser_ffi_output_csi_push_sgr.h"
 #include "terminal_parser_ffi_output_csi_sgr.h"
+#include "terminal_parser_ffi_output_csi_decfra.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1168,6 +1169,40 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t decfraCapacity = 32;
+    int32_t decfraInput[decfraCapacity]{};
+    size_t decfraInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, decfraInputCount >= decfraCapacity);
+        decfraInput[decfraInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t decfraOutput[decfraCapacity]{};
+    size_t decfraOutputCount = 0;
+    uint32_t decfraMatched = 0;
+    const auto decfraStatus = terminal_parser_ffi_output_csi_decfra_values(
+        static_cast<uint64_t>(id),
+        decfraInput,
+        decfraInputCount,
+        decfraOutput,
+        decfraCapacity,
+        &decfraOutputCount,
+        &decfraMatched);
+    THROW_HR_IF(E_UNEXPECTED, decfraStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (decfraMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, decfraOutputCount != decfraInputCount);
+        for (size_t index = 0; index < decfraOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, decfraOutput[index] != decfraInput[index]);
+        }
+
+        _dispatch->FillRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2), parameters.at(3).value_or(0), parameters.at(4).value_or(0));
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1218,9 +1253,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECRQPSR_RequestPresentationStateReport:
         _dispatch->RequestPresentationStateReport(parameters.at(0));
         break;
-    case CsiActionCodes::DECFRA_FillRectangularArea:
-        _dispatch->FillRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2), parameters.at(3).value_or(0), parameters.at(4).value_or(0));
-        break;
+
     case CsiActionCodes::DECERA_EraseRectangularArea:
         _dispatch->EraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
         break;
