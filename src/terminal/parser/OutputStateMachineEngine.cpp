@@ -34,6 +34,7 @@
 #include "terminal_parser_ffi_output_csi_tab_control.h"
 #include "terminal_parser_ffi_output_csi_window_manipulation.h"
 #include "terminal_parser_ffi_output_csi_pop_sgr.h"
+#include "terminal_parser_ffi_output_csi_decsca.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1065,6 +1066,38 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t decscaCapacity = 32;
+    int32_t decscaInput[decscaCapacity]{};
+    size_t decscaInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, decscaInputCount >= decscaCapacity);
+        decscaInput[decscaInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t decscaOutput[decscaCapacity]{};
+    size_t decscaOutputCount = 0;
+    const auto decscaStatus = terminal_parser_ffi_output_csi_decsca_values(
+        static_cast<uint64_t>(id),
+        decscaInput,
+        decscaInputCount,
+        decscaOutput,
+        decscaCapacity,
+        &decscaOutputCount);
+    THROW_HR_IF(E_UNEXPECTED, decscaStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (decscaOutputCount != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, decscaOutputCount != decscaInputCount);
+        for (size_t index = 0; index < decscaOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, decscaOutput[index] != decscaInput[index]);
+        }
+
+        _dispatch->SetCharacterProtectionAttribute(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1100,9 +1133,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::DECSCA_SetCharacterProtectionAttribute:
-        _dispatch->SetCharacterProtectionAttribute(parameters);
-        break;
 
     case CsiActionCodes::XT_PushSgr:
     case CsiActionCodes::XT_PushSgrAlias:
