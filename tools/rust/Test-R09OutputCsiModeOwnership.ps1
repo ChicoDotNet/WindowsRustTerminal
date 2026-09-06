@@ -53,7 +53,7 @@ foreach ($legacyCase in @(
 
 if (-not $ffi.Contains('terminal_parser_ffi_output_csi_mode_plans')) { throw 'R09 CSI mode ownership gate: terminal-parser-ffi no longer exports the batch planning seam.' }
 if (-not $ffi.Contains('engine.action_csi_dispatch')) { throw 'R09 CSI mode ownership gate: FFI no longer delegates classification to the Rust output engine.' }
-if (-not $probe.Contains('constexpr std::array<int32_t, 3> modes{ 4, 20, 25 };')) { throw 'R09 CSI mode ownership gate: native replay no longer protects ordered multiparameter witnesses.' }
+if (-not $probe.Contains('constexpr std::array<int32_t, 3> modes{ 4, 20, 25 };')) { throw 'R09 CSI mode ownership gate: native replay no longer protects ordered multiple-parameter witnesses.' }
 if (-not $probe.Contains('expect_output_csi_mode_batch(false, true)')) { throw 'R09 CSI mode ownership gate: ANSI SetMode witness is missing.' }
 if (-not $probe.Contains('expect_output_csi_mode_batch(true, true)')) { throw 'R09 CSI mode ownership gate: DEC-private SetMode witness is missing.' }
 if (-not $probe.Contains('expect_output_csi_mode_batch(false, false)')) { throw 'R09 CSI mode ownership gate: ANSI ResetMode witness is missing.' }
