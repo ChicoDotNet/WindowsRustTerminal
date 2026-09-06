@@ -18,6 +18,7 @@
 #include "R09OutputCsiPageAbiProbe.hpp"
 #include "R09OutputCsiPagePositionAbiProbe.hpp"
 #include "R09OutputCsiPopSgrAbiProbe.hpp"
+#include "R09OutputCsiPushSgrAbiProbe.hpp"
 #include "R09OutputCsiRequestModeAbiProbe.hpp"
 #include "R09OutputCsiScrollAbiProbe.hpp"
 #include "R09OutputCsiSoftResetAbiProbe.hpp"
@@ -205,6 +206,7 @@ int main()
     const bool outputCsiPageOk = r09::output_csi_page_replay();
     const bool outputCsiPagePositionOk = r09::output_csi_page_position_replay();
     const bool outputCsiPopSgrOk = r09::output_csi_pop_sgr_replay();
+    const bool outputCsiPushSgrOk = r09::output_csi_push_sgr_replay();
     const bool outputCsiRequestModeOk = r09::output_csi_request_mode_replay();
     const bool outputCsiScrollOk = r09::output_csi_scroll_replay();
     const bool outputCsiSoftResetOk = r09::output_csi_soft_reset_replay();
@@ -213,7 +215,7 @@ int main()
     const bool outputCsiTerminalParametersOk = r09::output_csi_terminal_parameters_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
