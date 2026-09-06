@@ -91,7 +91,7 @@ namespace r09
             return false;
         }
 
-        required = 99;
+        required = 0;
         matched = 0;
         status = terminal_parser_ffi_output_csi_push_sgr_values(
             primaryId,
@@ -101,9 +101,24 @@ namespace r09
             0,
             &required,
             &matched);
-        if (status != TERMINAL_PARSER_FFI_OK || required != 0 || matched != 1)
+        if (status != TERMINAL_PARSER_FFI_BUFFER_TOO_SMALL || required != 1 || matched != 1)
         {
-            std::fprintf(stderr, "output CSI empty push SGR mismatch: status=%u required=%zu matched=%u\n", static_cast<unsigned>(status), required, matched);
+            std::fprintf(stderr, "output CSI default push SGR sizing mismatch: status=%u required=%zu matched=%u\n", static_cast<unsigned>(status), required, matched);
+            return false;
+        }
+
+        int32_t defaultOutput = -1;
+        status = terminal_parser_ffi_output_csi_push_sgr_values(
+            primaryId,
+            nullptr,
+            0,
+            &defaultOutput,
+            1,
+            &required,
+            &matched);
+        if (status != TERMINAL_PARSER_FFI_OK || required != 1 || matched != 1 || defaultOutput != 0)
+        {
+            std::fprintf(stderr, "output CSI default push SGR payload mismatch: status=%u required=%zu matched=%u value=%d\n", static_cast<unsigned>(status), required, matched, defaultOutput);
             return false;
         }
 
