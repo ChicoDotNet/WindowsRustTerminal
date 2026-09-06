@@ -7,12 +7,14 @@ use super::{FfiStatus, ffi_guard};
 
 #[derive(Default)]
 struct PlanDispatch {
+    matched: bool,
     values: Vec<i32>,
 }
 
 impl TermDispatch for PlanDispatch {
     fn dispatch(&mut self, action: OutputAction) {
         if let OutputAction::PushGraphicsRendition(parameters) = action {
+            self.matched = true;
             self.values = (0..parameters.size())
                 .map(|index| parameters.at(index).unwrap_or(0))
                 .collect();
@@ -48,9 +50,11 @@ pub extern "C" fn terminal_parser_ffi_output_csi_push_sgr_values(
     out_values: *mut i32,
     output_capacity: usize,
     out_count: *mut usize,
+    out_matched: *mut u32,
 ) -> FfiStatus {
     ffi_guard(|| {
         if out_count.is_null()
+            || out_matched.is_null()
             || value_count > MAX_PARAMETER_COUNT
             || (values.is_null() && value_count != 0)
             || (out_values.is_null() && output_capacity != 0)
@@ -75,9 +79,12 @@ pub extern "C" fn terminal_parser_ffi_output_csi_push_sgr_values(
         let dispatch = engine.into_dispatch();
         let required = dispatch.values.len();
 
-        // SAFETY: `out_count` was checked non-null above and the ABI requires
-        // one writable usize for the duration of this call.
-        unsafe { ptr::write(out_count, required) };
+        // SAFETY: `out_count` and `out_matched` were checked non-null above;
+        // the ABI requires one writable value of each type for this call.
+        unsafe {
+            ptr::write(out_count, required);
+            ptr::write(out_matched, u32::from(dispatch.matched));
+        }
 
         if output_capacity < required {
             return FfiStatus::BufferTooSmall;
@@ -88,7 +95,7 @@ pub extern "C" fn terminal_parser_ffi_output_csi_push_sgr_values(
             }
             // SAFETY: `output_capacity >= required`; caller guarantees a
             // writable array and it cannot overlap Rust-owned storage.
-            unsafe { ptr::copy_nonoverlapping(dispatch.values.as_ptr(), out_values, required) };
+            unsafe { ptr::copy_nonoverlapping(dispatch.values.as_ptr(), out_values, required) }
         }
 
         FfiStatus::Ok
@@ -101,8 +108,9 @@ mod tests {
     use crate::FfiStatus;
     use terminal_parser::state_machine::VtId;
 
-    fn replay(id: &str, values: &[i32]) -> Vec<i32> {
+    fn replay(id: &str, values: &[i32]) -> (bool, Vec<i32>) {
         let mut required = 0usize;
+        let mut matched = 0u32;
         let status = terminal_parser_ffi_output_csi_push_sgr_values(
             VtId::from_ascii(id).value(),
             values.as_ptr(),
@@ -110,10 +118,11 @@ mod tests {
             std::ptr::null_mut(),
             0,
             &mut required,
+            &mut matched,
         );
         if required == 0 {
             assert_eq!(status, FfiStatus::Ok);
-            return Vec::new();
+            return (matched != 0, Vec::new());
         }
         assert_eq!(status, FfiStatus::BufferTooSmall);
         let mut output = vec![0; required];
@@ -125,23 +134,26 @@ mod tests {
                 output.as_mut_ptr(),
                 output.len(),
                 &mut required,
+                &mut matched,
             ),
             FfiStatus::Ok
         );
-        output
+        (matched != 0, output)
     }
 
     #[test]
     fn csi_push_sgr_ffi_replays_primary_alias_and_parameter_payload() {
-        assert_eq!(replay("#{", &[1]), [1]);
-        assert_eq!(replay("#p", &[1, 2]), [1, 2]);
-        assert!(replay("m", &[1]).is_empty());
+        assert_eq!(replay("#{", &[1]), (true, vec![1]));
+        assert_eq!(replay("#p", &[1, 2]), (true, vec![1, 2]));
+        assert_eq!(replay("#{", &[]), (true, Vec::new()));
+        assert_eq!(replay("m", &[1]), (false, Vec::new()));
     }
 
     #[test]
     fn csi_push_sgr_ffi_reports_capacity_and_validates_arguments() {
         let values = [1, 2];
         let mut required = 0usize;
+        let mut matched = 0u32;
         let mut one = 0i32;
         assert_eq!(
             terminal_parser_ffi_output_csi_push_sgr_values(
@@ -151,10 +163,12 @@ mod tests {
                 &mut one,
                 1,
                 &mut required,
+                &mut matched,
             ),
             FfiStatus::BufferTooSmall
         );
         assert_eq!(required, 2);
+        assert_eq!(matched, 1);
         assert_eq!(
             terminal_parser_ffi_output_csi_push_sgr_values(
                 VtId::from_ascii("#{").value(),
@@ -163,6 +177,7 @@ mod tests {
                 std::ptr::null_mut(),
                 0,
                 &mut required,
+                &mut matched,
             ),
             FfiStatus::InvalidArgument
         );
@@ -173,6 +188,19 @@ mod tests {
                 values.len(),
                 std::ptr::null_mut(),
                 0,
+                std::ptr::null_mut(),
+                &mut matched,
+            ),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_parser_ffi_output_csi_push_sgr_values(
+                VtId::from_ascii("#{").value(),
+                values.as_ptr(),
+                values.len(),
+                std::ptr::null_mut(),
+                0,
+                &mut required,
                 std::ptr::null_mut(),
             ),
             FfiStatus::InvalidArgument
