@@ -54,7 +54,7 @@ foreach ($legacyCase in @(
 if (-not $ffi.Contains('terminal_parser_ffi_output_csi_erase_plans')) { throw 'R09 CSI erase ownership gate: terminal-parser-ffi no longer exports the batch planning seam.' }
 if (-not $ffi.Contains('engine.action_csi_dispatch')) { throw 'R09 CSI erase ownership gate: FFI no longer delegates classification to the Rust output engine.' }
 if (-not $ffi.Contains('value_count > MAX_PARAMETER_COUNT')) { throw 'R09 CSI erase ownership gate: FFI no longer enforces the parser parameter bound.' }
-if (-not $probe.Contains('constexpr std::array<int32_t, 3> values{ 0, 1, 2 };')) { throw 'R09 CSI erase ownership gate: native replay no longer protects ordered multiparameter witnesses.' }
+if (-not $probe.Contains('constexpr std::array<int32_t, 3> values{ 0, 1, 2 };')) { throw 'R09 CSI erase ownership gate: native replay no longer protects ordered multiple-parameter witnesses.' }
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_DISPLAY')) { throw 'R09 CSI erase ownership gate: ED witness is missing.' }
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_SELECTIVE_DISPLAY')) { throw 'R09 CSI erase ownership gate: DECSED witness is missing.' }
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_LINE')) { throw 'R09 CSI erase ownership gate: EL witness is missing.' }
