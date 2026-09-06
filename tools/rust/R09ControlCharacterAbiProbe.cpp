@@ -2,6 +2,7 @@
 // Licensed under the MIT license.
 
 #include "terminal_parser_ffi.h"
+#include "R09OutputCsiColumnAbiProbe.hpp"
 #include "R09OutputCsiCursorAbiProbe.hpp"
 #include "R09OutputCsiCursorRestoreAbiProbe.hpp"
 #include "R09OutputCsiCursorStyleAbiProbe.hpp"
@@ -192,6 +193,7 @@ int main()
 
     const bool outputEscOk = r09::output_esc_replay();
     const bool outputVt52Ok = r09::output_vt52_replay();
+    const bool outputCsiColumnOk = r09::output_csi_column_replay();
     const bool outputCsiCursorOk = r09::output_csi_cursor_replay();
     const bool outputCsiCursorRestoreOk = r09::output_csi_cursor_restore_replay();
     const bool outputCsiCursorStyleOk = r09::output_csi_cursor_style_replay();
@@ -219,7 +221,7 @@ int main()
     const bool outputCsiTerminalParametersOk = r09::output_csi_terminal_parameters_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
