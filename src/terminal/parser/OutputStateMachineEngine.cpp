@@ -35,6 +35,7 @@
 #include "terminal_parser_ffi_output_csi_window_manipulation.h"
 #include "terminal_parser_ffi_output_csi_pop_sgr.h"
 #include "terminal_parser_ffi_output_csi_decsca.h"
+#include "terminal_parser_ffi_output_csi_push_sgr.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1098,6 +1099,40 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t pushSgrCapacity = 32;
+    int32_t pushSgrInput[pushSgrCapacity]{};
+    size_t pushSgrInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, pushSgrInputCount >= pushSgrCapacity);
+        pushSgrInput[pushSgrInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t pushSgrOutput[pushSgrCapacity]{};
+    size_t pushSgrOutputCount = 0;
+    uint32_t pushSgrMatched = 0;
+    const auto pushSgrStatus = terminal_parser_ffi_output_csi_push_sgr_values(
+        static_cast<uint64_t>(id),
+        pushSgrInput,
+        pushSgrInputCount,
+        pushSgrOutput,
+        pushSgrCapacity,
+        &pushSgrOutputCount,
+        &pushSgrMatched);
+    THROW_HR_IF(E_UNEXPECTED, pushSgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (pushSgrMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, pushSgrOutputCount != pushSgrInputCount);
+        for (size_t index = 0; index < pushSgrOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, pushSgrOutput[index] != pushSgrInput[index]);
+        }
+
+        _dispatch->PushGraphicsRendition(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1134,10 +1169,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::XT_PushSgr:
-    case CsiActionCodes::XT_PushSgrAlias:
-        _dispatch->PushGraphicsRendition(parameters);
-        break;
 
 
     case CsiActionCodes::DECCARA_ChangeAttributesRectangularArea:
