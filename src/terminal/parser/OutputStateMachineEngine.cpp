@@ -38,6 +38,7 @@
 #include "terminal_parser_ffi_output_csi_push_sgr.h"
 #include "terminal_parser_ffi_output_csi_sgr.h"
 #include "terminal_parser_ffi_output_csi_decfra.h"
+#include "terminal_parser_ffi_output_csi_column.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1203,6 +1204,33 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_column_plan_result columnPlan{};
+    const auto columnStatus = terminal_parser_ffi_output_csi_column_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &columnPlan);
+    THROW_HR_IF(E_UNEXPECTED, columnStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (columnPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_INSERT:
+        _dispatch->InsertColumn(columnPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_DELETE:
+        _dispatch->DeleteColumn(columnPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (columnPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1263,12 +1291,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECRQUPSS_RequestUserPreferenceSupplementalSet:
         _dispatch->RequestUserPreferenceCharset();
         break;
-    case CsiActionCodes::DECIC_InsertColumn:
-        _dispatch->InsertColumn(parameters.at(0));
-        break;
-    case CsiActionCodes::DECDC_DeleteColumn:
-        _dispatch->DeleteColumn(parameters.at(0));
-        break;
+
     case CsiActionCodes::DECSACE_SelectAttributeChangeExtent:
         _dispatch->SelectAttributeChangeExtent(parameters.at(0));
         break;
