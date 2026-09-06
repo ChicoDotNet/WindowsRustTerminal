@@ -22,6 +22,7 @@ on:
       - "tools/rust/R09OutputCsiColumnAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecfraAbiProbe.hpp"
       - "tools/rust/R09OutputCsiPushSgrAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiRectEraseAbiProbe.hpp"
       - "tools/rust/R09OutputCsiSgrAbiProbe.hpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
