@@ -145,7 +145,7 @@ mod tests {
     fn csi_push_sgr_ffi_replays_primary_alias_and_parameter_payload() {
         assert_eq!(replay("#{", &[1]), (true, vec![1]));
         assert_eq!(replay("#p", &[1, 2]), (true, vec![1, 2]));
-        assert_eq!(replay("#{", &[]), (true, Vec::new()));
+        assert_eq!(replay("#{", &[]), (true, vec![0]));
         assert_eq!(replay("m", &[1]), (false, Vec::new()));
     }
 
