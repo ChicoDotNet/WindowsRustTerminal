@@ -18,7 +18,6 @@ on:
       - "src/cascadia/TerminalSettingsEditor/**"
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
-      - "tools/rust/Invoke-R09CsiColumnProductSwap.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/R09OutputCsiColumnAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecfraAbiProbe.hpp"
@@ -48,12 +47,13 @@ on:
       - "tools/rust/Test-R09OutputCsiPushSgrOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiSgrOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecfraOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiColumnOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: r09-product-build-${{ github.ref }}
@@ -70,10 +70,6 @@ jobs:
           fetch-depth: 0
       - name: Rust toolchain
         run: rustup show
-      - name: Prepare CSI column Rust ownership candidate
-        if: contains(github.event.head_commit.message, 'Promote CSI column product ownership')
-        shell: pwsh
-        run: ./tools/rust/Invoke-R09CsiColumnProductSwap.ps1
       - name: Validate parser ownership
         shell: pwsh
         run: ./tools/rust/Test-R09ParserOwnership.ps1
@@ -146,47 +142,15 @@ jobs:
       - name: Validate CSI DECFRA ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiDecfraOwnership.ps1
+      - name: Validate CSI column ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiColumnOwnership.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
-      - name: Promote verified CSI column Rust ownership
-        if: contains(github.event.head_commit.message, 'Promote CSI column product ownership')
-        shell: pwsh
-        run: |
-          $ErrorActionPreference = 'Stop'
-          $branch = 'rust/r09-product-integration'
-          $source = 'src/terminal/parser/OutputStateMachineEngine.cpp'
-
-          git fetch --no-tags origin "refs/heads/$branch"
-          $remoteHead = (git rev-parse FETCH_HEAD).Trim()
-          if ($remoteHead -ne '${{ github.sha }}')
-          {
-              throw "Remote branch advanced to $remoteHead; refusing to overwrite concurrent work."
-          }
-
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- $source
-
-          $staged = @(git diff --cached --name-only)
-          if ($staged.Count -ne 1 -or $staged[0] -ne $source)
-          {
-              throw "Promotion staged unexpected paths: $($staged -join ', ')"
-          }
-
-          git commit -m 'Route CSI columns through Rust'
-
-          git fetch --no-tags origin "refs/heads/$branch"
-          $remoteHead = (git rev-parse FETCH_HEAD).Trim()
-          if ($remoteHead -ne '${{ github.sha }}')
-          {
-              throw "Remote branch advanced to $remoteHead before push; refusing to overwrite concurrent work."
-          }
-
-          git push origin "HEAD:$branch"
       - name: Preserve product build diagnostics
         if: failure()
         uses: actions/upload-artifact@v4
