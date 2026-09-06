@@ -18,9 +18,11 @@ condvar
 decac
 deccolm
 dececm
+decera
 DECMAC
 decsca
 decscusr
+decsera
 decstbm
 decoalesces
 defgh
