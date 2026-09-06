@@ -49,7 +49,7 @@ foreach ($legacyCase in @(
 if (-not $ffi.Contains('terminal_parser_ffi_output_csi_tab_control_plans')) { throw 'R09 CSI tab control ownership gate: terminal-parser-ffi no longer exports the batch planning seam.' }
 if (-not $ffi.Contains('engine.action_csi_dispatch')) { throw 'R09 CSI tab control ownership gate: FFI no longer delegates classification to the Rust output engine.' }
 if (-not $ffi.Contains('value_count > MAX_PARAMETER_COUNT')) { throw 'R09 CSI tab control ownership gate: FFI no longer enforces the parser parameter bound.' }
-if (-not $probe.Contains('constexpr std::array<int32_t, 3> values{ 0, 1, 3 };')) { throw 'R09 CSI tab control ownership gate: native replay no longer protects ordered multiparameter witnesses.' }
+if (-not $probe.Contains('constexpr std::array<int32_t, 3> values{ 0, 1, 3 };')) { throw 'R09 CSI tab control ownership gate: native replay no longer protects ordered multiple-parameter witnesses.' }
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_CLEAR')) { throw 'R09 CSI tab control ownership gate: TBC witness is missing.' }
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_SET')) { throw 'R09 CSI tab control ownership gate: DECST8C witness is missing.' }
 if (-not $probe.Contains('defaultPlan.value != 0')) { throw 'R09 CSI tab control ownership gate: empty-parameter default witness is missing.' }
