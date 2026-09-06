@@ -142,7 +142,7 @@ mod tests {
     }
 
     #[test]
-    fn csi_sgr_ffi_replays_default_single_and_multi_parameter_payloads() {
+    fn csi_sgr_ffi_replays_default_single_and_multiple_parameter_payloads() {
         assert_eq!(replay("m", &[]), (true, vec![0]));
         assert_eq!(replay("m", &[1]), (true, vec![1]));
         assert_eq!(replay("m", &[1, 31, 44]), (true, vec![1, 31, 44]));
