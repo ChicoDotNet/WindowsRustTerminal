@@ -20,6 +20,7 @@ on:
       - "tools/rust/Invoke-R09ProductBuild.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/R09OutputCsiPushSgrAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiSgrAbiProbe.hpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiEraseCharactersOwnership.ps1"
