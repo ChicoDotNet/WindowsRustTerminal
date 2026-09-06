@@ -14,6 +14,7 @@ mod output_csi_cursor;
 mod output_csi_cursor_restore;
 mod output_csi_cursor_style;
 mod output_csi_decsca;
+mod output_csi_decfra;
 mod output_csi_device_attributes;
 mod output_csi_device_status_report;
 mod output_csi_displayed_extent;
@@ -159,7 +160,7 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
             // SAFETY: `output_capacity >= required`; the ABI contract requires
             // `output` to reference that many writable UTF-16 code units and
             // the source vector cannot overlap caller-owned output memory.
-            unsafe { ptr::copy_nonoverlapping(decoded_utf16.as_ptr(), output, required) };
+            unsafe { ptr::copy_nonoverlapping(decoded_utf16.as_ptr(), output, required) }
         }
 
         FfiStatus::Ok
