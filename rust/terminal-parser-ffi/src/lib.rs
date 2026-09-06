@@ -29,6 +29,7 @@ mod output_csi_page;
 mod output_csi_page_position;
 mod output_csi_pop_sgr;
 mod output_csi_push_sgr;
+mod output_csi_rect_copy;
 mod output_csi_rect_erase;
 mod output_csi_request_mode;
 mod output_csi_scroll;
