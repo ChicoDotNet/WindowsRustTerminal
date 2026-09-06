@@ -36,6 +36,7 @@
 #include "terminal_parser_ffi_output_csi_pop_sgr.h"
 #include "terminal_parser_ffi_output_csi_decsca.h"
 #include "terminal_parser_ffi_output_csi_push_sgr.h"
+#include "terminal_parser_ffi_output_csi_sgr.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1133,13 +1134,44 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t sgrCapacity = 32;
+    int32_t sgrInput[sgrCapacity]{};
+    size_t sgrInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, sgrInputCount >= sgrCapacity);
+        sgrInput[sgrInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t sgrOutput[sgrCapacity]{};
+    size_t sgrOutputCount = 0;
+    uint32_t sgrMatched = 0;
+    const auto sgrStatus = terminal_parser_ffi_output_csi_sgr_values(
+        static_cast<uint64_t>(id),
+        sgrInput,
+        sgrInputCount,
+        sgrOutput,
+        sgrCapacity,
+        &sgrOutputCount,
+        &sgrMatched);
+    THROW_HR_IF(E_UNEXPECTED, sgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (sgrMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, sgrOutputCount != sgrInputCount);
+        for (size_t index = 0; index < sgrOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, sgrOutput[index] != sgrInput[index]);
+        }
+
+        _dispatch->SetGraphicsRendition(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
 
-    case CsiActionCodes::SGR_SetGraphicsRendition:
-        _dispatch->SetGraphicsRendition(parameters);
-        break;
 
 
 
