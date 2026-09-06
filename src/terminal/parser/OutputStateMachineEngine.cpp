@@ -39,6 +39,7 @@
 #include "terminal_parser_ffi_output_csi_sgr.h"
 #include "terminal_parser_ffi_output_csi_decfra.h"
 #include "terminal_parser_ffi_output_csi_column.h"
+#include "terminal_parser_ffi_output_csi_rect_erase.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1231,6 +1232,51 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t rectEraseCapacity = 32;
+    int32_t rectEraseInput[rectEraseCapacity]{};
+    size_t rectEraseInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, rectEraseInputCount >= rectEraseCapacity);
+        rectEraseInput[rectEraseInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t rectEraseOutput[rectEraseCapacity]{};
+    size_t rectEraseOutputCount = 0;
+    uint32_t rectEraseKind = TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE_NONE;
+    const auto rectEraseStatus = terminal_parser_ffi_output_csi_rect_erase_values(
+        static_cast<uint64_t>(id),
+        rectEraseInput,
+        rectEraseInputCount,
+        rectEraseOutput,
+        rectEraseCapacity,
+        &rectEraseOutputCount,
+        &rectEraseKind);
+    THROW_HR_IF(E_UNEXPECTED, rectEraseStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (rectEraseKind != TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE_NONE)
+    {
+        THROW_HR_IF(E_UNEXPECTED, rectEraseOutputCount != rectEraseInputCount);
+        for (size_t index = 0; index < rectEraseOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, rectEraseOutput[index] != rectEraseInput[index]);
+        }
+
+        switch (rectEraseKind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE:
+            _dispatch->EraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_SELECTIVE_ERASE:
+            _dispatch->SelectiveEraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1282,12 +1328,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _dispatch->RequestPresentationStateReport(parameters.at(0));
         break;
 
-    case CsiActionCodes::DECERA_EraseRectangularArea:
-        _dispatch->EraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
-        break;
-    case CsiActionCodes::DECSERA_SelectiveEraseRectangularArea:
-        _dispatch->SelectiveEraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
-        break;
+
     case CsiActionCodes::DECRQUPSS_RequestUserPreferenceSupplementalSet:
         _dispatch->RequestUserPreferenceCharset();
         break;
