@@ -29,6 +29,7 @@ mod output_csi_pop_sgr;
 mod output_csi_push_sgr;
 mod output_csi_request_mode;
 mod output_csi_scroll;
+mod output_csi_sgr;
 mod output_csi_soft_reset;
 mod output_csi_tab;
 mod output_csi_tab_control;
