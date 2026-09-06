@@ -10,6 +10,7 @@ mod input_control;
 mod input_keymap;
 mod input_mouse;
 mod input_win32;
+mod output_csi_column;
 mod output_csi_cursor;
 mod output_csi_cursor_restore;
 mod output_csi_cursor_style;
