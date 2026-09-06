@@ -5,6 +5,7 @@
 #include "R09OutputCsiCursorAbiProbe.hpp"
 #include "R09OutputCsiCursorRestoreAbiProbe.hpp"
 #include "R09OutputCsiCursorStyleAbiProbe.hpp"
+#include "R09OutputCsiDecfraAbiProbe.hpp"
 #include "R09OutputCsiDecscaAbiProbe.hpp"
 #include "R09OutputCsiDeviceAttributesAbiProbe.hpp"
 #include "R09OutputCsiDeviceStatusReportAbiProbe.hpp"
@@ -194,6 +195,7 @@ int main()
     const bool outputCsiCursorOk = r09::output_csi_cursor_replay();
     const bool outputCsiCursorRestoreOk = r09::output_csi_cursor_restore_replay();
     const bool outputCsiCursorStyleOk = r09::output_csi_cursor_style_replay();
+    const bool outputCsiDecfraOk = r09::output_csi_decfra_replay();
     const bool outputCsiDecscaOk = r09::output_csi_decsca_replay();
     const bool outputCsiDeviceAttributesOk = r09::output_csi_device_attributes_replay();
     const bool outputCsiDeviceStatusReportOk = r09::output_csi_device_status_report_replay();
@@ -217,7 +219,7 @@ int main()
     const bool outputCsiTerminalParametersOk = r09::output_csi_terminal_parameters_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
