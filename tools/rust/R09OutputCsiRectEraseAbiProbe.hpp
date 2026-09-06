@@ -1,6 +1,7 @@
 #pragma once
 
 #include "terminal_parser_ffi_output_csi_rect_erase.h"
+#include "R09OutputCsiRectCopyAbiProbe.hpp"
 
 #include <cstddef>
 #include <cstdint>
@@ -114,6 +115,6 @@ namespace r09
             return false;
         }
 
-        return true;
+        return output_csi_rect_copy_replay();
     }
 }
