@@ -12,7 +12,8 @@ terminal_parser_ffi_status terminal_parser_ffi_output_csi_push_sgr_values(
     size_t value_count,
     int32_t* out_values,
     size_t output_capacity,
-    size_t* out_count);
+    size_t* out_count,
+    uint32_t* out_matched);
 
 #ifdef __cplusplus
 }
