@@ -99,3 +99,57 @@ Retained for later analysis:
 - `dev/duhowett/conpty-flags` — old but mixes several ConPTY behavior flags; no definitive successor established yet.
 - `dev/duhowett/hax-selection-exclusive` — incomplete selection experiment; selection lineage still needs reconstruction.
 - Recent/live branches such as `dev/duhowett/hax/cmake`, `dev/duhowett/hax/unix-pty`, and `dev/duhowett/hax/our-own-tabview` remain out of early-cleanup cohorts.
+
+## Cohort 003 — maintenance/tooling branches with no remaining product contract
+
+### `dev/duhowett/eyebeam`
+
+- Sole functional branch-specific commit: `61e46e31595da09363c897eaad5f3ec3a07114fa` (2020-03-25), `whitelist IBeam`.
+- The commit changes only the historical spell-check whitelist by adding the token `IBeam`; the remaining branch-tip commits are mechanical spelling migrations.
+- No application behavior, API, compatibility rule, test contract, or data shape is present in this branch.
+- The old spell-check infrastructure has itself evolved, so preserving a branch for a single historical dictionary token has no recovery value.
+- Classification: **NO-PORT / obsolete spelling-only maintenance branch**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/clang`
+
+- Functional commit: `3ea1ae242a27df9023d713a13cd4af05d4175f36` (2020-11-13), `HAX HAX HAX clang tidy`; later tip commits are spelling migrations.
+- Intent: force AuditMode/projects through `ClangCl` and clang-tidy, experiment with analyzer configuration, and expose compiler-compatibility diagnostics.
+- The branch contains deliberate diagnostic scaffolding and compiler-only hacks (including an artificial `wmemchr` call through a null pointer and temporary disabling/rewriting of telemetry-related code); these are evidence that it is a toolchain laboratory, not candidate product code.
+- Current `main` does not retain the branch's `EnableClangTidyCodeAnalysis`, `clang-tidy-wrapper`, or global `ClangCl` configuration.
+- No product behavior contract or test behavior needs replaying.
+- Classification: **NO-PORT / abandoned compiler-tooling experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/fix-tracing-2`
+
+- Functional commits: `c7a1b257f2a70f8cf3663aaf3cd497988cb4b484` (`Rip out RIPMSG`) and `cb6d4aa402b1f73e14ded27af26fc595decb92ef` (`WIP: Remove the other dbg macros`), July 2023, built on top of the merged tracing cleanup #15737.
+- Intent: remove legacy debug/tracing residue: `RIPMSG*`, `Telemetry::LogRipMessage`, `DBGCHARS`, `DBGOUTPUT`, `_DBGFONTS`, `gDebugFlag`, and their callsites.
+- Current `main` contains none of those symbols. The desired cleanup state is therefore already present in the maintained tree even though these branch commits were WIP archaeology rather than the authoritative final history.
+- There is no runtime feature or compatibility contract to recover from the deleted debug macros.
+- Classification: **ALREADY ABSORBED / cleanup state present in current tree**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/dead-loc`
+
+- Functional commits: `4ac3a98f2a06e441244d25071490d99f5d628329` (`Remove old loc keys from TermApp and Settings`) through `a5dbcb014c3c6cab6ec25db94ab8a2e850554d66` (`Fix more loc issues`), March 2024.
+- Intent: delete stale localization resources and experiment with avoiding UID collisions by renaming caption-button `x:Uid` values.
+- Representative resources removed by the branch (`KeyboardServiceDisabledDialog.*`, `LegacyGlobalsProperty*`, `AddProfile_AddNewButton.Tag`, `ColorScheme_DeleteButton2.Text`, etc.) are absent from current `main`, so the dead-resource cleanup intent has already landed through the maintained localization stream.
+- The final experimental renames (`MinimizeButton` -> `WindowMinimizeButton`, etc.) were not adopted: current `MinMaxCloseControl.xaml` intentionally retains `x:Uid="MinimizeButton"`/`MaximizeButton`/`CloseButton` while using distinct `Window*ButtonToolTip` UIDs for tooltips. The current resource layout is authoritative.
+- Classification: **ALREADY ABSORBED for dead-resource cleanup; NO-PORT for abandoned UID rename experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+## Cohort 003 result
+
+Safe refs:
+
+- `dev/duhowett/eyebeam`
+- `dev/duhowett/clang`
+- `dev/duhowett/fix-tracing-2`
+- `dev/duhowett/dead-loc`
+
+Explicitly retained:
+
+- `dev/duhowett/font-64` — **CONSERVAR / NO BORRAR**. Its checkpoint `49691f891aeabf02dba506d4c5080c49eac3aaba` is explicitly referenced by still-open upstream issue #3123 (long font names through conhost settings/property sheet/TrueTypeFontList). This branch remains a recovery reference for unresolved work.
+- `dev/duhowett/conpty-flags` — unresolved mixed ConPTY behavior prototype; successor contracts not yet proven.
+- `dev/duhowett/hax-selection-exclusive` — selection experiment still requires lineage reconstruction.
