@@ -153,3 +153,36 @@ Explicitly retained:
 - `dev/duhowett/font-64` — **CONSERVAR / NO BORRAR**. Its checkpoint `49691f891aeabf02dba506d4c5080c49eac3aaba` is explicitly referenced by still-open upstream issue #3123 (long font names through conhost settings/property sheet/TrueTypeFontList). This branch remains a recovery reference for unresolved work.
 - `dev/duhowett/conpty-flags` — unresolved mixed ConPTY behavior prototype; successor contracts not yet proven.
 - `dev/duhowett/hax-selection-exclusive` — selection experiment still requires lineage reconstruction.
+
+## Cohort 004 — diagnostics and compiler-architecture experiments
+
+### `dev/duhowett/hax/tsm-graphviz`
+
+- Functional commit: `94b295ab724d746845cd0ca3d8c9ceec967e1272` (2020-10-21), `HAX: Expose the profile inheritance tree as a graphviz document`; later tip commits are spelling migrations.
+- Intent: temporarily make profile-parent internals accessible, walk the inheritance graph after settings load, emit a Graphviz DOT document, and send it to `OutputDebugStringW` for developer inspection.
+- It is a diagnostic visualization instrument rather than product behavior. It changes no persisted settings contract and adds no user-facing supported API or test invariant.
+- The graph dump also intentionally weakens encapsulation (`_parents` moved out of `protected`) solely to support the diagnostic.
+- Classification: **NO-PORT / disposable diagnostic tooling**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/128-bit-compiler`
+
+- Functional commits: `52ae8c1124b140b3d4e4012429a2d57ba692606e` (`Remove PreferredToolArchitecture`) and `2837d8d0040bba8be304c146bd6f5c088e816335` (`I hate it.`), November 2022; branch tip then received a spelling migration.
+- Intent: resolve the tension between 64-bit-native VS2022 tooling and native ARM64 builds. The branch first removed the override, then restored `PreferredToolArchitecture=x64` conditionally under WOW64 because contemporary Azure DevOps tasks still launched 32-bit MSBuild.
+- Definitive successor: upstream PR #20518, `Remove PreferredToolArchitecture override now that we require VS 2026`, merged 2026-08-06. Its rationale explicitly revisits the same historical workaround and removes it now that the supported toolchain makes the old compromise unnecessary.
+- Current `main` contains no `PreferredToolArchitecture` setting.
+- Classification: **NO-PORT / superseded by final toolchain decision #20518**.
+- Disposition: **SAFE TO DELETE**.
+
+## Cohort 004 result
+
+Safe refs:
+
+- `dev/duhowett/hax/tsm-graphviz`
+- `dev/duhowett/128-bit-compiler`
+
+Explicitly retained/recovery candidates discovered while building this cohort:
+
+- `dev/duhowett/no-private-registry-keys` — **CONSERVAR / ADAPT candidate**. Its 2022 prototype replaces direct reads of private DWM accent-color registry state with the public `Windows.UI.ViewManagement::UISettings` API. Current `main` still reads `HKCU\\Software\\Microsoft\\Windows\\DWM\\AccentColor`, so this intent is not absorbed and deserves a future contract/port decision.
+- `dev/duhowett/font-64` — remains protected by still-open issue #3123.
+- Recent experimental branches such as `dev/duhowett/asan-for-all`, `dev/duhowett/hax/clogs`, and `dev/duhowett/interface-projects` are not early-cleanup candidates and remain untouched.
