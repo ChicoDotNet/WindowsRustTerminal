@@ -123,4 +123,51 @@ Once this cohort is recorded on `dev/migrie/main`, these refs no longer carry un
 - `dev/migrie/b/3490-a-simpler-resize`
 - `dev/migrie/b/3490-try-another-resize-algo`
 
+## Cohort 003 — early feature prototypes with definitive upstream successors
+
+### `dev/migrie/b/1503-try-messing-with-cooked-read`
+
+- Historical tip: `bb89a7c3ad784744cab9c397ad1a281de5452f5a`; its apparent 2020 date is contaminated by the later `spelling-0.0.21` migration.
+- Historical intent: investigate `microsoft/terminal#1503`, where `COOKED_READ` could not correctly edit/display complex Unicode input such as emoji.
+- Modern reading: upstream closed `#1503` in `microsoft/terminal#15783` (`821ae3af2d311350fbfaa4c77af09858488681e9`) by rewriting `COOKED_READ_DATA`. The successor explicitly targets going beyond UCS-2, validates surrogate-pair input, reduces the implementation substantially, and closes `#1503` along with several related cooked-read defects.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none that requires preserving this exploratory branch; the modern cooked-read rewrite is the authoritative implementation and the historical problem remains documented by the issue and successor commit.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/f/603-vintage-opacity`
+
+- Historical tip: `b1eb406a4ec7efac800f0a25b7af76bec21f7679`, whose message calls the implementation a rudimentary and unusual test of `microsoft/terminal#603`.
+- Historical intent: experiment with traditional-console-style non-acrylic opacity in Windows Terminal.
+- Modern reading: upstream later implemented the product feature in `microsoft/terminal#11180` (`74f11b8203a3f297372630e164b7b4d51f82d83e`), adding supported vintage opacity, integrating it with appearance settings and mouse-wheel adjustment, adding/passing tests, and explicitly closing `#603`.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond provenance; the shipped settings/appearance implementation supersedes the rudimentary prototype.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/f/632-elevated-profiles`
+
+- Historical tip: `c9b54dd21e5be153a4b00c6d33db30e487d92831`; its tip is mechanical spelling maintenance rather than the age of the functional experiment.
+- Historical intent: explore per-profile elevation for `microsoft/terminal#632` instead of requiring the whole Terminal application to start elevated.
+- Modern reading: after multiple design iterations and the elevation-QOL specification, upstream closed `#632` with `microsoft/terminal#12137` (`bc97af701e4061a18da111dbd00f5a766c6dfb13`). The final implementation introduced profile `elevate` semantics, action-level elevation through `NewTerminalArgs`, the required elevation shim, and tests.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond documenting the early exploration; the final elevation architecture is materially more complete and security-aware.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/f/632-on-warning-dialog`
+
+- Historical tip: `10b97a621f862cb9591e5bda0dd8506ec68f49f8`; again, the tip is polluted by later spelling maintenance.
+- Historical intent: refine the elevation flow around `#632`, specifically the warning/dialog behavior that evolved during the elevation design work.
+- Modern reading: the definitive upstream `#12137` commit explicitly records that the final work was manually assembled using the diff ending at `dev/migrie/f/632-on-warning-dialog`. The useful delta from this branch therefore entered the final product lineage rather than remaining stranded here.
+- Disposition: **ALREADY ABSORBED**.
+- Recovery value: provenance only; the branch's useful work is represented by the final upstream implementation.
+- Branch retirement: **SAFE after this ledger commit**.
+
+## Cohort 003 deletion set
+
+Once this cohort is recorded on `dev/migrie/main`, these refs no longer carry unique implementation or contract knowledge that requires preservation as branches:
+
+- `dev/migrie/b/1503-try-messing-with-cooked-read`
+- `dev/migrie/f/603-vintage-opacity`
+- `dev/migrie/f/632-elevated-profiles`
+- `dev/migrie/f/632-on-warning-dialog`
+
 Continue chronologically. Treat branch-name issue numbers as hints, not dates; later spelling migrations can obscure the actual age of the functional experiment.
