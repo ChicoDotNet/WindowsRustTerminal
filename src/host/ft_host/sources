@@ -31,6 +31,7 @@ SOURCES                         =   \
                                     API_FillOutputTests.cpp \
                                     API_FontTests.cpp \
                                     API_InputTests.cpp \
+                                    API_InputContractReplayTests.cpp \
                                     API_ModeTests.cpp \
                                     API_MultipleInflightMessageTests.cpp \
                                     API_OutputTests.cpp \

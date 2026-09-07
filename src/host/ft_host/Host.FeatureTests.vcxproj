@@ -19,6 +19,7 @@
     <ClCompile Include="API_FillOutputTests.cpp" />
     <ClCompile Include="API_FontTests.cpp" />
     <ClCompile Include="API_InputTests.cpp" />
+    <ClCompile Include="API_InputContractReplayTests.cpp" />
     <ClCompile Include="API_ModeTests.cpp" />
     <ClCompile Include="API_MultipleInflightMessageTests.cpp" />
     <ClCompile Include="API_OutputTests.cpp" />
