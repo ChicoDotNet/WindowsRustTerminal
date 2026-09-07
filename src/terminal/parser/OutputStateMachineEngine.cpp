@@ -45,6 +45,7 @@
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_pop.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_set.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1410,6 +1411,37 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    const auto kittyKeyboardFlagsParameter = parameters.at(0);
+    const auto kittyKeyboardModeParameter = parameters.at(1);
+    terminal_parser_ffi_output_csi_kitty_keyboard_set_result kittyKeyboardSetPlan{};
+    const auto kittyKeyboardSetStatus = terminal_parser_ffi_output_csi_kitty_keyboard_set_plan(
+        static_cast<uint64_t>(id),
+        kittyKeyboardFlagsParameter.has_value() ? 1u : 0u,
+        static_cast<int32_t>(kittyKeyboardFlagsParameter.value_or(0)),
+        kittyKeyboardModeParameter.has_value() ? 1u : 0u,
+        static_cast<int32_t>(kittyKeyboardModeParameter.value_or(0)),
+        &kittyKeyboardSetPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardSetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardSetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_SET:
+        _dispatch->SetKittyKeyboardProtocol(
+            kittyKeyboardSetPlan.has_flags != 0 ? VTParameter{ kittyKeyboardSetPlan.flags } : VTParameter{},
+            kittyKeyboardSetPlan.has_mode != 0 ? VTParameter{ kittyKeyboardSetPlan.mode } : VTParameter{});
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardSetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1477,9 +1509,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECPS_PlaySound:
         _dispatch->PlaySounds(parameters);
         break;
-    case CsiActionCodes::KKP_KittyKeyboardSet:
-        _dispatch->SetKittyKeyboardProtocol(parameters.at(0), parameters.at(1));
-        break;
+
 
 
     default:
