@@ -41,6 +41,7 @@
 #include "terminal_parser_ffi_output_csi_column.h"
 #include "terminal_parser_ffi_output_csi_rect_erase.h"
 #include "terminal_parser_ffi_output_csi_rect_copy.h"
+#include "terminal_parser_ffi_output_csi_user_preference_charset.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1312,6 +1313,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_user_preference_charset_result userPreferenceCharsetPlan{};
+    const auto userPreferenceCharsetStatus = terminal_parser_ffi_output_csi_user_preference_charset_plan(
+        static_cast<uint64_t>(id),
+        &userPreferenceCharsetPlan);
+    THROW_HR_IF(E_UNEXPECTED, userPreferenceCharsetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (userPreferenceCharsetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_REQUEST:
+        _dispatch->RequestUserPreferenceCharset();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (userPreferenceCharsetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1362,9 +1386,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         break;
 
 
-    case CsiActionCodes::DECRQUPSS_RequestUserPreferenceSupplementalSet:
-        _dispatch->RequestUserPreferenceCharset();
-        break;
+
 
     case CsiActionCodes::DECSACE_SelectAttributeChangeExtent:
         _dispatch->SelectAttributeChangeExtent(parameters.at(0));
