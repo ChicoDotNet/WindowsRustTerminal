@@ -25,6 +25,7 @@ mod output_csi_erase_characters;
 mod output_csi_kitty_keyboard_pop;
 mod output_csi_kitty_keyboard_push;
 mod output_csi_kitty_keyboard_query;
+mod output_csi_kitty_keyboard_set;
 mod output_csi_line_edit;
 mod output_csi_margins;
 mod output_csi_mode;
