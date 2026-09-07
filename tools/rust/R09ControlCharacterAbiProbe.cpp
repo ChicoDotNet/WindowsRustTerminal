@@ -17,6 +17,7 @@
 #include "R09OutputCsiKittyKeyboardPopAbiProbe.hpp"
 #include "R09OutputCsiKittyKeyboardPushAbiProbe.hpp"
 #include "R09OutputCsiKittyKeyboardQueryAbiProbe.hpp"
+#include "R09OutputCsiKittyKeyboardSetAbiProbe.hpp"
 #include "R09OutputCsiLineEditAbiProbe.hpp"
 #include "R09OutputCsiMarginsAbiProbe.hpp"
 #include "R09OutputCsiModeAbiProbe.hpp"
@@ -214,6 +215,7 @@ int main()
     const bool outputCsiKittyKeyboardPopOk = r09::output_csi_kitty_keyboard_pop_replay();
     const bool outputCsiKittyKeyboardPushOk = r09::output_csi_kitty_keyboard_push_replay();
     const bool outputCsiKittyKeyboardQueryOk = r09::output_csi_kitty_keyboard_query_replay();
+    const bool outputCsiKittyKeyboardSetOk = r09::output_csi_kitty_keyboard_set_replay();
     const bool outputCsiLineEditOk = r09::output_csi_line_edit_replay();
     const bool outputCsiModeOk = r09::output_csi_mode_replay();
     const bool outputCsiPageOk = r09::output_csi_page_replay();
@@ -231,7 +233,7 @@ int main()
     const bool outputCsiUserPreferenceCharsetOk = r09::output_csi_user_preference_charset_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
