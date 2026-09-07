@@ -22,7 +22,7 @@ decera
 DECMAC
 decsca
 decscusr
-decsase
+decsace
 decsera
 decstbm
 decoalesces
