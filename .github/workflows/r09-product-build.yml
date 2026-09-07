@@ -24,6 +24,7 @@ on:
       - "tools/rust/R09OutputCsiKittyKeyboardQueryAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPushAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPopAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiKittyKeyboardSetAbiProbe.hpp"
       - "tools/rust/R09OutputCsiPushSgrAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectCopyAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectEraseAbiProbe.hpp"
@@ -60,6 +61,7 @@ on:
       - "tools/rust/Test-R09OutputCsiKittyKeyboardQueryOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiKittyKeyboardPushOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiKittyKeyboardPopOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiKittyKeyboardSetOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -175,6 +177,9 @@ jobs:
       - name: Validate CSI Kitty keyboard pop ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiKittyKeyboardPopOwnership.ps1
+      - name: Validate CSI Kitty keyboard set ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiKittyKeyboardSetOwnership.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
