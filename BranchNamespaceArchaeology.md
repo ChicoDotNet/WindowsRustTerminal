@@ -31,6 +31,12 @@ Disposition: **ALIAS REPLACED / SAFE TO DELETE OLD REF**.
 
 ## Root operational branches that should not be renamed to a person
 
+### `1.17`
+
+Despite its release-looking name, `1.17` is not a second 1.17 release branch. Its merge-base with `release/1.17` is `72be9a95af17e8e6e9536452917ef15861fe3e39`; the very next commit is Dustin Howett's `version: bump to 1.18 on main`. The current `1.17` tip (`210414e5a8182eaa3e7f1ed2d07da50edf80e242`) is an exact ancestor of current `main`: `main` is 1,457 commits ahead and 0 behind.
+
+Disposition: **ALREADY ABSORBED / stale main snapshot / SAFE TO DELETE**. Do not rename it to `dev/duhowett/1.17`; Dustin authored the version bump, but the branch represents project mainline history rather than personal work.
+
 ### `inbox`
 
 `inbox` is an ancestor of `release/1.19` (0 commits ahead, 25 behind). It carries no unique payload and is not a personal development line.
@@ -93,10 +99,9 @@ The following refs no longer carry unique knowledge that requires the old branch
 - `of-the-darkening-of-valinor`
 - `wpf-renderer-revert`
 - `loc-update`
+- `1.17`
 - `inbox`
 - `fabricbot-configuration-migration`
 - `selfhost-1.20`
 - `selfhost/1.22-bugbash-2024-06-04`
 - `selfhost-1.22-bugbash-2024-06-04`
-
-`1.17` is intentionally excluded pending provenance reconstruction; it diverges materially from `release/1.17` and must not be assigned from its tip author alone.
