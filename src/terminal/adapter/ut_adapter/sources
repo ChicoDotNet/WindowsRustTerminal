@@ -24,6 +24,7 @@ C_DEFINES               = $(C_DEFINES) -DINLINE_TEST_METHOD_MARKUP -DUNIT_TESTIN
 
 SOURCES = \
     $(SOURCES) \
+    adapterApiContractTest.cpp \
     adapterTest.cpp \
     inputTest.cpp \
     kittyKeyboardProtocol.cpp \

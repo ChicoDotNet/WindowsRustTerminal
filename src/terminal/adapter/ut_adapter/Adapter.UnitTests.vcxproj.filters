@@ -15,6 +15,9 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="adapterApiContractTest.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="adapterTest.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
