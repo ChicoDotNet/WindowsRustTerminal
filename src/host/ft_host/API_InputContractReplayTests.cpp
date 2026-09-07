@@ -11,7 +11,7 @@ namespace
 {
     // Contract Replay provenance:
     // dev/miniksa/input2 @ eb72c7fd3b494107f4c7ff7a78de219ddfbe8949
-    // src/host/ft_host/API_InputTests.cpp::TestCookedTextEntry
+    // Historical scenarios: TestCookedTextEntry and TestCookedAliasProcessing.
     std::vector<INPUT_RECORD> _stringToInputs(const std::wstring_view text)
     {
         std::vector<INPUT_RECORD> result;
@@ -143,10 +143,12 @@ void InputContractReplayTests::TestCookedAliasProcessingContractReplay()
     VERIFY_WIN32_BOOL_SUCCEEDED(AddConsoleAliasW(aliasSource, aliasTarget, mutableExeName.data()));
     VERIFY_SUCCEEDED(_sendStringToInput(input, L"foo\r\n"));
 
+    // input2 observed CR-only command boundaries in 2020. The 2026 product emits CRLF for
+    // both $T expansion and the final alias command, and ReadConsoleA exposes that CRLF.
     constexpr std::array expected{
-        std::string_view{ "echo bar\r" },
-        std::string_view{ "echo baz\r" },
-        std::string_view{ "echo bam\r" },
+        std::string_view{ "echo bar\r\n" },
+        std::string_view{ "echo baz\r\n" },
+        std::string_view{ "echo bam\r\n" },
     };
 
     for (const auto expectedCommand : expected)
