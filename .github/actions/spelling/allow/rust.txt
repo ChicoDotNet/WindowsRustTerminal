@@ -29,6 +29,7 @@ defgh
 fdd
 ffi
 flp
+Griesemer
 hpr
 lookalike
 microcommit
@@ -39,6 +40,7 @@ nuls
 numstat
 peekable
 preexisting
+problema
 psobject
 retargeting
 rlib
@@ -51,6 +53,7 @@ subcluster
 subparams
 swrapped
 TEs
+Torvalds
 unintense
 usize
 vpr
