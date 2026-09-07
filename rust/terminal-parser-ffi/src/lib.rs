@@ -38,6 +38,7 @@ mod output_csi_soft_reset;
 mod output_csi_tab;
 mod output_csi_tab_control;
 mod output_csi_terminal_parameters;
+mod output_csi_user_preference_charset;
 mod output_csi_window_manipulation;
 mod output_esc;
 mod output_execute;
