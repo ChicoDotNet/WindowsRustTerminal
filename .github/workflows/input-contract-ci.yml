@@ -1,0 +1,49 @@
+name: Input Contract CI
+
+on:
+  push:
+    branches:
+      - dev/miniksa/ci-input2-contract-replay
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  input-contract:
+    runs-on: windows-2025-vs2026
+    timeout-minutes: 60
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          submodules: recursive
+
+      - name: Restore NuGet packages
+        shell: cmd
+        run: |
+          dep\nuget\nuget.exe restore OpenConsole.slnx -Verbosity quiet
+          dep\nuget\nuget.exe restore dep\nuget\packages.config -Verbosity quiet
+
+      - name: Build host feature tests
+        shell: cmd
+        run: |
+          set "MSBUILD=C:\Program Files\Microsoft Visual Studio\18\Enterprise\MSBuild\Current\Bin\MSBuild.exe"
+          if not exist "%MSBUILD%" exit /b 2
+          "%MSBUILD%" src\host\ft_host\Host.FeatureTests.vcxproj /m /p:Configuration=Release /p:Platform=x64 /p:SolutionDir=%GITHUB_WORKSPACE%\ /bl:input-contract.binlog
+
+      - name: Run cooked input contract directly with TAEF
+        shell: powershell
+        run: |
+          $bin = Join-Path $env:GITHUB_WORKSPACE 'bin\x64\Release'
+          $te = Join-Path $bin 'TE.exe'
+          $tests = Join-Path $bin 'ConHost.Feature.Tests.dll'
+          if (-not (Test-Path $te)) { throw "TAEF runner not found: $te" }
+          if (-not (Test-Path $tests)) {
+            Write-Host 'Available DLLs:'
+            Get-ChildItem $bin -Filter '*.dll' | Select-Object -ExpandProperty Name
+            throw "Host feature test DLL not found: $tests"
+          }
+          & $te $tests /select:"@Name='InputContractReplayTests::TestCookedTextEntryContractReplay'"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
