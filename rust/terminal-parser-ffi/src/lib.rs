@@ -36,6 +36,7 @@ mod output_csi_push_sgr;
 mod output_csi_rect_copy;
 mod output_csi_rect_erase;
 mod output_csi_request_mode;
+mod output_csi_request_presentation_state;
 mod output_csi_scroll;
 mod output_csi_sgr;
 mod output_csi_soft_reset;
