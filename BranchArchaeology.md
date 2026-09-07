@@ -23,7 +23,18 @@ This ledger consolidates historical `dev/cazamor/**` work into `dev/cazamor/main
 - Recovery value: preserve the product idea, not the patch: a future hyperlink-hover experience could support pluggable/rich previews fetched asynchronously and rendered in a constrained UI surface. Any future implementation must be designed from the modern security/privacy/threading model and must not replay the hard-coded service/token or blocking HTTP sketch.
 - Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
 
+## `dev/cazamor/sui/proto/profile-nav-view`
+
+- Functional period: February–March 2021. `41c6c149ef6241844dff301b14b52e631089bf6f` introduces the prototype; `3566194502e694de89fada6740cc73ede8be1db4` only adds transparency; later tip commits are spelling maintenance.
+- Historical intent: replace the profile editor's `Pivot` tabs (`General`, `Appearance`, `Advanced`) with an inner top-mode `NavigationView`, manually switching three content regions by visibility.
+- Historical maturity: UI experiment. It comments out the existing pivot/navigation-state code and uses string tags plus manual `Visibility` toggles rather than establishing a durable navigation/view-model contract.
+- Modern reading: this inner profile `NavigationView` model was not adopted. The maintained Settings UI now presents profile/default/color-scheme navigation through Settings cards/expanders and page-level navigation, while profile editing has continued through later settings-container/rejuvenation architecture. The 2021 branch therefore represents an explored UX direction rather than product behavior that needs replay.
+- Disposition: **NO-PORT / UX prototype not adopted**.
+- Recovery value: provenance only; no unique behavioral contract or implementation should be carried forward.
+- Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
+
 ## Deletion set
 
 - `dev/cazamor/spec/settings-ui-architecture-draft`
 - `dev/cazamor/adaptive-cards-prototype`
+- `dev/cazamor/sui/proto/profile-nav-view`
