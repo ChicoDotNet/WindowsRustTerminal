@@ -56,4 +56,71 @@ After the commit that introduced this ledger is present on `dev/migrie/main`, th
 - `dev/migrie/b/1223-change-256-table`
 - `dev/migrie/b/663-paste-lf-always`
 
-Continue with the next chronological cohort, using later branches to explain and collapse earlier experiments wherever possible.
+## Cohort 002 — late-2019 / early-2020 experiments resolved by later product work
+
+### `dev/migrie/b/2011-reordered-fallthrough-strings`
+
+- Historical tip: `6a4c3248791cb8966b4869c54ab55bc5edfdc7ef`.
+- Historical intent: investigate and reshape the state-machine/output path around the VT sequence reordering reported in `microsoft/terminal#2011`.
+- Modern reading: upstream later fixed `#2011` with `microsoft/terminal#4896` (`ffd8f53529fb3ea33afb3cb0a4c8d9faa45afa8a`), flushing immediately when ConPTY encounters an unknown string. That change explicitly superseded the earlier approach in `#2665` and included tests.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond provenance; the later flush-on-unknown design is the authoritative solution.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/b/2455-try-getting-tests-working`
+
+- Historical tip: `37af3f00fe1245a3e6368a07edc9d46ad99ee19b`.
+- Historical intent: explore tests and guards around missing profiles for `microsoft/terminal#2455`.
+- The historical tip explicitly records that the attempted test approach did not work and that the investigation was stumped at that point.
+- Modern reading: upstream later closed `#2455` with `microsoft/terminal#5090` (`b3fa88eaedf3ba227a64c95ebc6b20b87a6af54b`), handling nonexistent profiles and adding working settings/UI-oriented tests.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond provenance; do not resurrect the failed 2019 test scaffolding.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/b/3088-weird-exact-wrap-resize`
+
+- Historical tip: `245c8edd7f08790e688d420ac7204659a96ce444` (tip date is polluted by later spelling maintenance).
+- Historical intent: investigate exact-width wrapping/resizing behavior associated with `microsoft/terminal#3088`.
+- Modern reading: the problem survived several generations of resize/reflow work. Upstream eventually closed `#3088` in 2023 with the reimplementation of `TextBuffer::Reflow` in `microsoft/terminal#15701` (`74748394c17c168843b511dd837268445e5dfd6c`), with unit and feature coverage and a substantially simpler Unicode-safe algorithm.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond historical context; the modern reflow implementation is materially more mature than this experiment.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/b/3490-resize-down`
+
+- Historical tip: `c091471fa4928e16d50927cad167fc607f47f63e`.
+- Historical intent: one step in the investigation of repeated-resize/reflow corruption for `microsoft/terminal#3490`; the branch notes that its version made the associated test work.
+- Modern reading: this was an intermediate algorithm, not the final architecture.
+- Disposition: **NO-PORT / superseded**.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/b/3490-a-simpler-resize`
+
+- Historical tip: `2fe6d8e6e4811618aa8ce45586303117a8c860f3`.
+- Historical intent: simplify the resize algorithm enough that most tests passed.
+- Modern reading: it remained experimental and partial. Upstream later solved `#3490` as a side effect of proper terminal-buffer reflow in `microsoft/terminal#4741` (`93b31f6e3f19ed4f4ffb55fad15be9b889b50f04`). That final change explicitly explains that the earlier heavy ConPTY approach made the problem worse and carries the large `#3490` test forward.
+- Disposition: **NO-PORT / superseded**.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/b/3490-try-another-resize-algo`
+
+- Historical tip: `41eeda1b4e6e2a0bc40f8640f3fe4c2ff7c6bca1`.
+- Historical intent: another resize algorithm attempted after problems seen in `#4354`.
+- The branch tip explicitly concludes that the attempted solution was not actually fixing the problem and says to step back and try again.
+- Modern reading: the subsequent `#4741` reflow design is the successful successor and closes `#3490` with tests.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond documenting the discarded path.
+- Branch retirement: **SAFE after this ledger commit**.
+
+## Cohort 002 deletion set
+
+Once this cohort is recorded on `dev/migrie/main`, these refs no longer carry unique implementation or contract knowledge that requires preservation as branches:
+
+- `dev/migrie/b/2011-reordered-fallthrough-strings`
+- `dev/migrie/b/2455-try-getting-tests-working`
+- `dev/migrie/b/3088-weird-exact-wrap-resize`
+- `dev/migrie/b/3490-resize-down`
+- `dev/migrie/b/3490-a-simpler-resize`
+- `dev/migrie/b/3490-try-another-resize-algo`
+
+Continue chronologically. Treat branch-name issue numbers as hints, not dates; later spelling migrations can obscure the actual age of the functional experiment.
