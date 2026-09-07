@@ -21,6 +21,7 @@ on:
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
       - "tools/rust/R09OutputCsiColumnAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecfraAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiKittyKeyboardQueryAbiProbe.hpp"
       - "tools/rust/R09OutputCsiPushSgrAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectCopyAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectEraseAbiProbe.hpp"
