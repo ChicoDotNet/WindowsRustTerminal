@@ -14,6 +14,7 @@ mod output_csi_column;
 mod output_csi_cursor;
 mod output_csi_cursor_restore;
 mod output_csi_cursor_style;
+mod output_csi_decsace;
 mod output_csi_decsca;
 mod output_csi_decfra;
 mod output_csi_device_attributes;
