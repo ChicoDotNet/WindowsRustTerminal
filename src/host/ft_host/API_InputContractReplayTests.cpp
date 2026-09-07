@@ -80,6 +80,11 @@ class InputContractReplayTests
         TEST_METHOD_PROPERTY(L"TestTimeout", L"00:00:15")
         TEST_METHOD_PROPERTY(L"IsolationLevel", L"Method")
     END_TEST_METHOD()
+
+    BEGIN_TEST_METHOD(TestCookedAliasProcessingContractReplay)
+        TEST_METHOD_PROPERTY(L"TestTimeout", L"00:00:30")
+        TEST_METHOD_PROPERTY(L"IsolationLevel", L"Method")
+    END_TEST_METHOD()
 };
 
 void InputContractReplayTests::TestCookedTextEntryContractReplay()
@@ -107,4 +112,47 @@ void InputContractReplayTests::TestCookedTextEntryContractReplay()
 
     const std::string expected{ "foo\r\n" };
     VERIFY_ARE_EQUAL(expected, actual);
+}
+
+void InputContractReplayTests::TestCookedAliasProcessingContractReplay()
+{
+    const auto input = GetStdInputHandle();
+    VERIFY_IS_NOT_NULL(input);
+
+    DWORD originalMode = 0;
+    VERIFY_WIN32_BOOL_SUCCEEDED(GetConsoleMode(input, &originalMode));
+
+    auto modulePath = wil::GetModuleFileNameW<std::wstring>(nullptr);
+    const auto exeName = std::filesystem::path{ modulePath }.filename().wstring();
+
+    wchar_t aliasSource[] = L"foo";
+    wchar_t aliasTarget[] = L"echo bar$Techo baz$Techo bam";
+    auto mutableExeName = exeName;
+
+    auto restoreInput = wil::scope_exit([&] {
+        FlushConsoleInputBuffer(input);
+        SetConsoleMode(input, originalMode);
+        AddConsoleAliasW(aliasSource, nullptr, mutableExeName.data());
+    });
+
+    VERIFY_WIN32_BOOL_SUCCEEDED(FlushConsoleInputBuffer(input));
+
+    constexpr DWORD cookedMode = ENABLE_ECHO_INPUT | ENABLE_LINE_INPUT | ENABLE_PROCESSED_INPUT;
+    VERIFY_WIN32_BOOL_SUCCEEDED(SetConsoleMode(input, cookedMode));
+
+    VERIFY_WIN32_BOOL_SUCCEEDED(AddConsoleAliasW(aliasSource, aliasTarget, mutableExeName.data()));
+    VERIFY_SUCCEEDED(_sendStringToInput(input, L"foo\r\n"));
+
+    constexpr std::array expected{
+        std::string_view{ "echo bar\r" },
+        std::string_view{ "echo baz\r" },
+        std::string_view{ "echo bam\r" },
+    };
+
+    for (const auto expectedCommand : expected)
+    {
+        std::string actual(500, '\0');
+        VERIFY_SUCCEEDED(_readConsoleAWithTimeout(input, actual));
+        VERIFY_ARE_EQUAL(std::string{ expectedCommand }, actual);
+    }
 }
