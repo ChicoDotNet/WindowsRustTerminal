@@ -28,6 +28,7 @@
 #include "terminal_parser_ffi_output_csi_displayed_extent.h"
 #include "terminal_parser_ffi_output_csi_cursor_style.h"
 #include "terminal_parser_ffi_output_csi_request_mode.h"
+#include "terminal_parser_ffi_output_csi_request_presentation_state.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1442,6 +1443,31 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_request_presentation_state_result presentationStatePlan{};
+    const auto presentationStateStatus = terminal_parser_ffi_output_csi_request_presentation_state_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &presentationStatePlan);
+    THROW_HR_IF(E_UNEXPECTED, presentationStateStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (presentationStatePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_REQUEST:
+        _dispatch->RequestPresentationStateReport(
+            static_cast<DispatchTypes::PresentationReportFormat>(presentationStatePlan.format));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (presentationStatePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1487,9 +1513,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:
         _dispatch->RequestTerminalStateReport(parameters.at(0), parameters.at(1));
         break;
-    case CsiActionCodes::DECRQPSR_RequestPresentationStateReport:
-        _dispatch->RequestPresentationStateReport(parameters.at(0));
-        break;
+
 
 
 
