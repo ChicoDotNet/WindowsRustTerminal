@@ -33,8 +33,19 @@ This ledger consolidates historical `dev/cazamor/**` work into `dev/cazamor/main
 - Recovery value: provenance only; no unique behavioral contract or implementation should be carried forward.
 - Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
 
+## `dev/cazamor/spec/tsm-actions-temp`
+
+- Functional period: March 2021. `3905c49ca764cebced478ef310aed9f78aa842f2` introduced `Actions Addendum.md`; `230cfe785b6cc4a6cd001f3d694da07206d7d6b5` incorporated spec-review feedback. The branch tip was later polluted by spelling migrations.
+- Historical intent: redesign action storage so commands and keybindings are represented by one model, make serialization/deserialization authoritative in the settings model, introduce `ActionMap` for queries/collision handling, and prepare the Settings UI to edit actions. The draft explicitly called out future Action IDs (`#6899`).
+- Definitive lineage: the local draft became official spec PR `microsoft/terminal#9428` / commit `5713cd2148b1b6e471d42e66065e511effad439d`. PR `#9621` / `22fd06e19b3e564d448d60ebf34ffd63764f8080` then introduced `ActionMap`, removed `KeyMapping`, unified action deserialization, and used action IDs internally. PR `#9926` / `ff8fdbd2431f1cfd8211833815be481dfdec4420` added action serialization; PR `#9949` / `c66910b685a8fd404afb8f7c09a230d803f7cd19` connected `ActionMap` to an editable Actions Settings UI. In 2024, PR `#17162` / `ece0c04c38b6f820476fd480a96a8b103a5ca7f2` refactored ActionMap/Command around stable ActionIDs, completing the major future consideration anticipated by the draft.
+- Modern reading: the durable architecture proposed here is represented by the maintained ActionMap/ActionID stack and its later evolution; the historical draft does not contain a missing contract that should be replayed independently.
+- Disposition: **ALREADY ABSORBED / provenance-only**.
+- Recovery value: preserve the design lineage—especially the early recognition that serialization, keybindings, command-palette commands and future stable IDs belong to one action model—not the temporary draft branch.
+- Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
+
 ## Deletion set
 
 - `dev/cazamor/spec/settings-ui-architecture-draft`
 - `dev/cazamor/adaptive-cards-prototype`
 - `dev/cazamor/sui/proto/profile-nav-view`
+- `dev/cazamor/spec/tsm-actions-temp`
