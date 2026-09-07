@@ -34,7 +34,6 @@ Microsoft upstream changes are consumed through `dev/ChicoDotNet`. Individual hi
 - `dev/lhecker/main`
 - `dev/migrie/main`
 - `dev/miniksa/main`
-- `dev/miniksa/issue-987-vt-adapter-test-coverage`
 - `rust/main`
 - `rust/r08-product-integration`
 - `rust/r09-product-integration` — head of PR #46
@@ -102,7 +101,7 @@ Notes:
 
 ### Batch 002 — `dev/miniksa/*` decision compression
 
-Status: **performance and input archaeology compressed; additional legacy refs safe to delete; two evidence branches temporarily retained**
+Status: **performance and input archaeology compressed; recovery increments integrated; two evidence branches temporarily retained**
 
 The `miniksa` namespace contains a mixture of abandoned issue work, test prototypes, and performance/compatibility laboratories. The cleanup rule for this namespace is evidence-first: keep current product contracts and useful hypotheses, not historical branch names.
 
@@ -114,6 +113,14 @@ The `miniksa` namespace contains a mixture of abandoned issue work, test prototy
 | `dev/miniksa/4254` | Delete | Historical fix is superseded by the broader upstream parameter-limit fix already present in the current lineage. |
 | `dev/miniksa/4309` | Delete | Work was merged upstream and its merge is already in the current lineage. |
 | `dev/miniksa/ci-987-adapter-contract` | Delete | Disposable CI sensor. Its job was completed after VS2026 compilation and a direct TAEF GREEN for the adapter answerback contract. |
+| `dev/miniksa/ci-input2-contract-replay` | Delete | Disposable Windows/TAEF sensor. Run `34076572747` built the real Host.FeatureTests runtime and executed the cooked `ReadConsoleA` replay GREEN; the evidence is recorded in PR #49. |
+| `dev/miniksa/issue-987-vt-adapter-test-coverage` | Delete | PR #48 was squash-merged into `dev/miniksa/main` as `9196e4503de976c0022b9b8b91e7cf356ef97b0b`; the branch no longer owns unique durable behavior. |
+| `dev/miniksa/input2-contract-replay` | Delete | PR #49 was squash-merged into `dev/miniksa/main` as `6b94c573703a4337ff4cbb6eb383d39184911713`; the cooked `ReadConsoleA` contract and provenance are now durable in the lane. |
+
+#### Integrated recovery increments
+
+- **PR #48 / microsoft/terminal#987 first contract slice** — `AdaptDispatch::EnquireAnswerback()` → `ITerminalApi::ReturnAnswerback()` is now executable evidence in `dev/miniksa/main`. This completes the first recovery slice, not the entirety of upstream issue #987. Any additional #987 work should start from a fresh temporary branch based on the updated lane.
+- **PR #49 / `input2` Contract Replay slice** — the historical cooked `ReadConsoleA` text-entry observation is now a modern Host.FeatureTests contract and has been certified under TAEF with the real `OpenConsole.exe` + `Nihilist.exe` fixture.
 
 #### Performance archaeology
 
@@ -138,7 +145,7 @@ The `miniksa` namespace contains a mixture of abandoned issue work, test prototy
 | --- | --- | --- |
 | `dev/miniksa/input` | **INCOMPLETE EXPLORATION / SUPERSEDED BY ARCHITECTURE** | Delete. Its only functional delta was a 2020 `dbcs.cpp` conversion experiment whose own commit message records that the caller still allocated an insufficient return buffer and that the problem had to be solved one layer up. The current `dbcs.cpp` no longer contains that conversion path, so the patch is neither complete nor structurally applicable. |
 | `dev/miniksa/input_tests` | **REFACTOR SUPERSEDED; CONTRACT VALUE ABSORBED OR RETAINED ELSEWHERE** | Delete. The branch replaced `_handlePostCharInputLoop` and added cooked-input/alias characterization. Current cooked input has since been substantially rewritten and still owns post-loop alias handling through `Alias::s_MatchAndCopyAlias`. Current unit tests cover alias expansion semantics extensively. The branch's still-useful end-to-end input characterization is also present in the retained `dev/miniksa/input2` evidence source, so this ref is not required as a second owner. |
-| `dev/miniksa/input2` | **UNMIGRATED CHARACTERIZATION / CONTRACT REPLAY SOURCE** | Retain temporarily. It adds roughly 873 lines of `API_InputTests.cpp` behavior discovery that are not present in the current test file. Do not cherry-pick the 2020 test file wholesale. Replay the matrix against the 2026 product, classify supported versus legacy-only behavior, then encode supported behavior as modern contracts before deleting the ref. |
+| `dev/miniksa/input2` | **UNMIGRATED CHARACTERIZATION / CONTRACT REPLAY SOURCE** | Retain temporarily. It adds roughly 873 lines of `API_InputTests.cpp` behavior discovery that are not present in the current test file. Do not cherry-pick the 2020 test file wholesale. Replay the remaining matrix against the 2026 product, classify supported versus legacy-only behavior, then encode supported behavior as modern contracts before deleting the ref. |
 
 ##### Contract Replay matrix from `input2`
 
@@ -147,7 +154,7 @@ The following tests are the durable evidence to evaluate; the branch itself is n
 | Historical test | Behavior under characterization | Replay decision |
 | --- | --- | --- |
 | `TestCookedAliasProcessing` | End-to-end `ReadConsoleA` cooked input with DOSKEY alias expansion, including `$T` multi-command expansion. | Recreate or map to a current integration contract. Alias unit semantics already exist, but the cooked-input seam is separate behavior. |
-| `TestCookedTextEntry` | Baseline cooked text entry and return shape through `ReadConsoleA`. | Verify current coverage; keep only if it closes a real seam not covered by newer tests. |
+| `TestCookedTextEntry` | Baseline cooked text entry and return shape through `ReadConsoleA`. | **Integrated.** Replayed by PR #49 and certified GREEN under TAEF with the real Host.FeatureTests runtime. |
 | `TestCookedAlphaPermutations` | Input/output CP 437/932 permutations, cooked/raw mode interactions, and font-dependent legacy behavior. | Split portable/current compatibility expectations from Console V1-only observations. |
 | `TestReadCharByChar` | Byte-at-a-time reads with DBCS lead/trail-byte carry behavior across cooked, raw, and direct reads. | Replay against supported modes; preserve observable API behavior, not old internal buffering. |
 | `TestReadLeadTrailString` | Lead/trail byte stitching when the caller buffer divides a DBCS character/string. | Replay as an encoding-boundary contract if still supported. |
@@ -164,13 +171,12 @@ The following tests are the durable evidence to evaluate; the branch itself is n
 6. Do not restore the old `dbcs.cpp` implementation merely to satisfy an old test. If a supported contract fails, repair the current owner of the behavior.
 7. Retire `dev/miniksa/input2` only when every row above is either represented by a current executable contract or explicitly classified as unsupported/legacy-only with rationale in this ledger.
 
-The product/curation branches remain protected:
+The product/curation branch remains protected:
 
 - `dev/miniksa/main`
-- `dev/miniksa/issue-987-vt-adapter-test-coverage`
 
 ## Next batches
 
-1. Run a Contract Replay pass for the seven `dev/miniksa/input2` scenarios against the current product; convert supported behavior into durable modern tests, then retire `dev/miniksa/input2`.
+1. Continue Contract Replay for the **six remaining** `dev/miniksa/input2` scenarios against the current product; convert supported behavior into durable modern tests, then retire `dev/miniksa/input2`.
 2. Establish a modern renderer hot-path performance contract/benchmark for the allocation/reinterpretation TODO; once captured, retire `dev/miniksa/perf_buffer_dig`.
 3. Continue grouping remaining inherited branches by upstream owner/namespace. For maintainers whose historical work is strategically useful, create one `dev/<maintainer>/main` lane before removing their legacy refs. Preserve only ChicoDotNet-owned work, curated maintainer lanes, and release lineage unless a specific exception is documented here.
