@@ -13,6 +13,17 @@ This ledger consolidates historical `dev/cazamor/**` work into `dev/cazamor/main
 - Recovery value: provenance only. The durable insight—that the Settings UI and other consumers need a WinRT settings model separated from TerminalApp—is represented by the supported TSM architecture and its later evolution.
 - Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
 
+## `dev/cazamor/adaptive-cards-prototype`
+
+- Functional period: January 2021 (`f72cbfb926d82de264020f7c53475651cc54915d`, `Introduce AC prototype`); later tip commits are spelling maintenance.
+- Historical intent: replace the plain hyperlink tooltip in `TermControl` with a rich preview supplied by an external service and rendered as an Adaptive Card. The prototype adds `AdaptiveCards.Rendering.Uwp`, injects the rendered card into the hyperlink tooltip, and sketches an HTTP-backed `_GetAdaptiveCardPreview` provider.
+- Historical maturity: deliberately rough spike. The implementation contains `TODO CARLOS`, a hard-coded GitHub-card JSON response and token, commented-out HTTP code, synchronous `.get()` sketches, and no upstream PR. It is evidence of a product idea, not a safe implementation.
+- Modern reading: current `main` contains no Adaptive Cards dependency or hyperlink-preview provider contract. Hyperlinks remain a maintained terminal concept, but this particular rich-preview/provider experiment was not absorbed. Repository issue search does not reveal a dedicated shipped Adaptive Cards hyperlink-preview feature; the only historical Adaptive Cards issue reference is in the separate notification/OSC777 discussion.
+- Disposition: **NO-PORT / recovery candidate**.
+- Recovery value: preserve the product idea, not the patch: a future hyperlink-hover experience could support pluggable/rich previews fetched asynchronously and rendered in a constrained UI surface. Any future implementation must be designed from the modern security/privacy/threading model and must not replay the hard-coded service/token or blocking HTTP sketch.
+- Branch retirement: **SAFE after this ledger commit reaches `dev/cazamor/main`**.
+
 ## Deletion set
 
 - `dev/cazamor/spec/settings-ui-architecture-draft`
+- `dev/cazamor/adaptive-cards-prototype`
