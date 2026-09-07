@@ -78,10 +78,10 @@ public:
         TerminalInput terminalInput;
         AdaptDispatch dispatch{ api, &renderer, renderer._renderSettings, terminalInput };
 
-        VERIFY_ARE_EQUAL(0u, api.returnAnswerbackCallCount);
+        VERIFY_ARE_EQUAL(size_t{ 0 }, api.returnAnswerbackCallCount);
 
         dispatch.EnquireAnswerback();
 
-        VERIFY_ARE_EQUAL(1u, api.returnAnswerbackCallCount);
+        VERIFY_ARE_EQUAL(size_t{ 1 }, api.returnAnswerbackCallCount);
     }
 };
