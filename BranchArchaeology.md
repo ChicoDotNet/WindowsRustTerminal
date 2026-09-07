@@ -170,4 +170,44 @@ Once this cohort is recorded on `dev/migrie/main`, these refs no longer carry un
 - `dev/migrie/f/632-elevated-profiles`
 - `dev/migrie/f/632-on-warning-dialog`
 
+## Cohort 004 — cursor layering and the early XAML theming lineage
+
+### `dev/migrie/f/3327-xaml-theming-proto`
+
+- Historical tip: `0e2f3edfa1a8d50d7256618fc7e52cdbdf5fcf4a` (2019-12-13).
+- Historical intent: prototype the core visual behavior behind `microsoft/terminal#3327`: propagate the active terminal background color through `TermControl`/`Tab` and use it to colorize the titlebar, including reacting to runtime background-color changes.
+- Historical maturity: exploratory wiring rather than a supported settings model; the branch directly exposes background-color events/property plumbing and paints the non-client titlebar from the active pane.
+- Modern reading: the official theme architecture later absorbed this product intent in `microsoft/terminal#12992` (`07d58a800c69f5d39dbdca1612d9db3955fb32b2`). That implementation explicitly says it does the bulk of `#3327`, supports `tabRow.background` values including `terminalBackground` and `accent`, handles runtime terminal-background changes, and adds dedicated theme parsing/behavior tests.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: provenance only; the modern Theme/ThemeColor model is the authoritative implementation of this behavior.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/f/1203-phase-1`
+
+- Historical tip: `90485935b3ca8df7b24090122d294bf18c680fb7`; the functional experiment is `5bbba56629f8a6e3e8254e5d3a5d6d97ebf8d62f` (2020-05-26).
+- Historical intent: explore `microsoft/terminal#1203` by drawing a filled-box cursor after the background but before text, so the glyph underneath remains visible.
+- Historical maturity: the functional commit explicitly records that performance was “horrifyingly bad”; it modified generic render-data/run construction to fake cursor-colored runs and was intentionally a stash-quality experiment rather than a product-ready algorithm.
+- Modern reading: upstream closed `#1203` days later with `microsoft/terminal#6337` (`1fcd95704d6a52cf47e35445f8b557753b37ef4f`), implementing the cursor layering in the DX renderer where glyphs are drawn, rather than paying the generic render-path cost of this prototype.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none beyond provenance; the localized renderer solution is the successful successor.
+- Branch retirement: **SAFE after this ledger commit**.
+
+### `dev/migrie/f/theming-2020`
+
+- Historical tip: `0c32ca6c78f01f698d8c6cb576a35a8f20132dd1`; functional work is from 2020-07-30/31, including `b549e43a7ab38eba7be9e2862e695a3f48dfd351`, `299d1b22b0063cbfe265a709be7063f4ed6afed9`, `1ebd181421a8b6e23c2016b03fbe79fc9a1b6cbc`, and `53102f1ae3b373784ddc1b654b0ef7550608edd4`.
+- Historical intent: turn the earlier `#3327` visual experiments into a settings-oriented theme prototype: introduce `ThemeColor`, parse literal/accent colors, support `tabRow.background` and `tab.background`, update the titlebar with the tab-row color, and react to settings changes.
+- Historical maturity: exploratory and incomplete. Early commits contain explicit TODOs and hard-coded/provisional color handling while working out how XAML resources and titlebar painting should interact.
+- Modern reading: `microsoft/terminal#12992` (`07d58a800c69f5d39dbdca1612d9db3955fb32b2`) later shipped the supported Theme/ThemeColor architecture with `tabRow.background`, `accent`, `terminalBackground`, application-theme handling, runtime updates, serialization and tests. `microsoft/terminal#13178` (`76b00e3b31d7070836b3362339f87f82d7c77a31`) then added the supported `tab.background` theme property. `#3327` intentionally remains open as the broad theming megathread, but the behaviors explored by this 2020 branch are represented by those product implementations.
+- Disposition: **NO-PORT / superseded**.
+- Recovery value: none requiring preservation of the prototype; future still-open `#3327` work should start from the modern Theme model rather than this branch.
+- Branch retirement: **SAFE after this ledger commit**.
+
+## Cohort 004 deletion set
+
+Once this cohort is recorded on `dev/migrie/main`, these historical refs no longer carry unique implementation or contract knowledge that requires preservation as branches:
+
+- `dev/migrie/f/3327-xaml-theming-proto`
+- `dev/migrie/f/1203-phase-1`
+- `dev/migrie/f/theming-2020`
+
 Continue chronologically. Treat branch-name issue numbers as hints, not dates; later spelling migrations can obscure the actual age of the functional experiment.
