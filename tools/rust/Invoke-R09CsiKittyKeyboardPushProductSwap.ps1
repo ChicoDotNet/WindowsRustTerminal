@@ -10,13 +10,18 @@ if ($actualBlob -ne $expectedBlob)
 }
 
 $text = [IO.File]::ReadAllText($source)
-if ($text -notmatch "`r`n" -or $text -match "(?<!`r)`n")
+$hasCrLf = $text.Contains("`r`n")
+$hasBareLf = [regex]::IsMatch($text, "(?<!`r)`n")
+if ($hasCrLf -and $hasBareLf)
 {
-    throw 'OutputStateMachineEngine.cpp is not canonical CRLF; refusing mechanical rewrite.'
+    throw 'OutputStateMachineEngine.cpp has mixed line endings; refusing mechanical rewrite.'
 }
 
-$includeOld = '#include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"' + "`r`n"
-$includeNew = $includeOld + '#include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"' + "`r`n"
+# Normalize the exact, hash-pinned source to LF for deterministic markers and repository output.
+$text = $text -replace "`r`n", "`n"
+
+$includeOld = '#include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"' + "`n"
+$includeNew = $includeOld + '#include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"' + "`n"
 if (-not $text.Contains($includeOld) -or $text.Contains('terminal_parser_ffi_output_csi_kitty_keyboard_push.h'))
 {
     throw 'CSI Kitty keyboard push include marker mismatch.'
@@ -31,7 +36,7 @@ $dispatchMarker = @"
     }
 
     switch (id)
-"@ -replace "`n", "`r`n"
+"@
 
 $dispatchReplacement = @"
     if (kittyKeyboardQueryPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_NONE)
@@ -65,7 +70,7 @@ $dispatchReplacement = @"
     }
 
     switch (id)
-"@ -replace "`n", "`r`n"
+"@
 
 if (-not $text.Contains($dispatchMarker))
 {
@@ -77,7 +82,7 @@ $legacyCase = @"
     case CsiActionCodes::KKP_KittyKeyboardPush:
         _dispatch->PushKittyKeyboardProtocol(parameters.at(0));
         break;
-"@ -replace "`n", "`r`n"
+"@
 
 if (-not $text.Contains($legacyCase))
 {
@@ -85,8 +90,6 @@ if (-not $text.Contains($legacyCase))
 }
 $text = $text.Replace($legacyCase, '')
 
-# Write LF intentionally so git diff --check and the promotion commit see canonical repository text.
-$text = $text -replace "`r`n", "`n"
 [IO.File]::WriteAllText($source, $text, [Text.UTF8Encoding]::new($false))
 
 if ((git diff --numstat -- $source) -notmatch '^\d+\s+\d+\s+src/terminal/parser/OutputStateMachineEngine.cpp$')
