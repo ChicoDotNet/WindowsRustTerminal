@@ -25,6 +25,7 @@ on:
       - "tools/rust/R09OutputCsiRectCopyAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectEraseAbiProbe.hpp"
       - "tools/rust/R09OutputCsiSgrAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiUserPreferenceCharsetAbiProbe.hpp"
       - "tools/rust/Test-R09ParserOwnership.ps1"
       - "tools/rust/Test-R09OutputOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiEraseCharactersOwnership.ps1"
