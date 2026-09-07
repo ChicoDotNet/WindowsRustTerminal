@@ -55,6 +55,7 @@ on:
       - "tools/rust/Test-R09OutputCsiRectEraseOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiRectCopyOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiUserPreferenceCharsetOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiKittyKeyboardQueryOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -161,6 +162,9 @@ jobs:
       - name: Validate CSI user preference charset ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiUserPreferenceCharsetOwnership.ps1
+      - name: Validate CSI Kitty keyboard query ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiKittyKeyboardQueryOwnership.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
