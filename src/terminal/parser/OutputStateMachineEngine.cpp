@@ -42,6 +42,7 @@
 #include "terminal_parser_ffi_output_csi_rect_erase.h"
 #include "terminal_parser_ffi_output_csi_rect_copy.h"
 #include "terminal_parser_ffi_output_csi_user_preference_charset.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1336,6 +1337,29 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_kitty_keyboard_query_result kittyKeyboardQueryPlan{};
+    const auto kittyKeyboardQueryStatus = terminal_parser_ffi_output_csi_kitty_keyboard_query_plan(
+        static_cast<uint64_t>(id),
+        &kittyKeyboardQueryPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardQueryStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardQueryPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_QUERY:
+        _dispatch->QueryKittyKeyboardProtocol();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardQueryPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1405,9 +1429,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         break;
     case CsiActionCodes::KKP_KittyKeyboardSet:
         _dispatch->SetKittyKeyboardProtocol(parameters.at(0), parameters.at(1));
-        break;
-    case CsiActionCodes::KKP_KittyKeyboardQuery:
-        _dispatch->QueryKittyKeyboardProtocol();
         break;
     case CsiActionCodes::KKP_KittyKeyboardPush:
         _dispatch->PushKittyKeyboardProtocol(parameters.at(0));
