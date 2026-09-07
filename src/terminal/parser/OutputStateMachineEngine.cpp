@@ -44,6 +44,7 @@
 #include "terminal_parser_ffi_output_csi_user_preference_charset.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_pop.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1385,6 +1386,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_kitty_keyboard_pop_result kittyKeyboardPopPlan{};
+    const auto kittyKeyboardPopStatus = terminal_parser_ffi_output_csi_kitty_keyboard_pop_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &kittyKeyboardPopPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardPopStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardPopPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_POP:
+        _dispatch->PopKittyKeyboardProtocol(kittyKeyboardPopPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardPopPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1456,9 +1481,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _dispatch->SetKittyKeyboardProtocol(parameters.at(0), parameters.at(1));
         break;
 
-    case CsiActionCodes::KKP_KittyKeyboardPop:
-        _dispatch->PopKittyKeyboardProtocol(parameters.at(0));
-        break;
+
     default:
         _dispatch->UnknownSequence();
         break;
