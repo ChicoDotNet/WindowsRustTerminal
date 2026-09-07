@@ -38,12 +38,22 @@ Process Model v3 then shipped through the reviewed chain beginning with #14825 a
 - `dev/migrie/oop/2/COM-ISwapChainProvider-attempt-1`
   - Technical experiment supporting cross-process rendering/swap-chain ownership. Process Model v3 removed the architectural need for a TermControl-per-content-process boundary; retain the experiment only as historical provenance through this ledger/#5000.
 
+## Early scratch OOP prototypes — safe to retire
+
+- `dev/migrie/oop-scratch-2`
+- `dev/migrie/oop-scratch-3`
+- `dev/migrie/oop-scratch-4`
+
+These are pre-production laboratories for the same OOP rendering/hosting question. Their branch histories were repeatedly rebased/updated, so the numeric suffixes are not a reliable Git ancestry chain. The authoritative design record is #5000: it explicitly calls `oop-scratch-4` the final state of the early OOP prototyping and records the useful technical result — creating a DComp surface handle, attaching it through `ISwapChainPanelNative2`, duplicating the handle to a content process, and feeding it to the renderer. That result was then refined into reviewed production work beginning with #10023 (swap-chain handle support), #10051 (projection/interactivity boundary), #10067 (sample app), and later Process Model work. Process Model 2 itself was subsequently abandoned for v3, so the ScratchWinRT/ScratchIsland implementations are no longer a recovery implementation worth maintaining.
+
+Disposition: **NO-PORT / diagnostic & architecture prototypes superseded by reviewed follow-on work and ultimately Process Model v3.**
+
 ## Retained / investigate separately
 
 - `dev/migrie/oop/3/of-the-silmarils`
-  - **Do not delete yet.** It descends directly from merged Process Model v3 heads #14825 and #14843, but diverges from the #14866 head and still carries its own post-v3 staging commits. Those commits need a separate replay against #14851/#14866/#14901/#14935 before retirement.
-- Other `dev/migrie/oop-*` scratch/RPC/broker/mixed-elevation branches are not covered automatically by this disposition. Some predate the named generations or represent separate technical hypotheses and will be handled independently.
+  - **Do not delete yet.** It descends directly from merged Process Model v3 heads #14825 and #14843, but diverges from the #14866/#14901/#14935 heads and still carries eight commits of its own. Those commits need separate replay before retirement.
+- Other `dev/migrie/oop-*` RPC/broker/mixed-elevation/refactor branches are not covered automatically by this disposition. Some predate the named generations or represent separate technical hypotheses and will be handled independently.
 
 ## Recovery guidance
 
-If historical Process Model 2 reasoning is ever needed, use microsoft/terminal#5000 and PR #12938 as the authoritative narrative rather than resurrecting these stale branches. For the shipped architecture, follow #14825 → #14843 → #14851 → #14866 and the #14957 ship tracker.
+If historical Process Model 2 reasoning is ever needed, use microsoft/terminal#5000 and PR #12938 as the authoritative narrative rather than resurrecting these stale branches. For the shipped architecture, follow #14825 → #14843 → #14851 → #14866 → #14901 → #14935 and the #14957 ship tracker.
