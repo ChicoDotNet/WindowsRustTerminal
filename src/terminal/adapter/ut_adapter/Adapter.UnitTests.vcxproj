@@ -11,6 +11,7 @@
   <Import Project="$(SolutionDir)src\common.build.pre.props" />
   <Import Project="$(SolutionDir)src\common.nugetversions.props" />
   <ItemGroup>
+    <ClCompile Include="adapterApiContractTest.cpp" />
     <ClCompile Include="adapterTest.cpp" />
     <ClCompile Include="inputTest.cpp" />
     <ClCompile Include="kittyKeyboardProtocol.cpp" />
