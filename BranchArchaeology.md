@@ -186,3 +186,78 @@ Explicitly retained/recovery candidates discovered while building this cohort:
 - `dev/duhowett/no-private-registry-keys` — **CONSERVAR / ADAPT candidate**. Its 2022 prototype replaces direct reads of private DWM accent-color registry state with the public `Windows.UI.ViewManagement::UISettings` API. Current `main` still reads `HKCU\\Software\\Microsoft\\Windows\\DWM\\AccentColor`, so this intent is not absorbed and deserves a future contract/port decision.
 - `dev/duhowett/font-64` — remains protected by still-open issue #3123.
 - Recent experimental branches such as `dev/duhowett/asan-for-all`, `dev/duhowett/hax/clogs`, and `dev/duhowett/interface-projects` are not early-cleanup candidates and remain untouched.
+
+## Cohort 005 — superseded runtime prototypes and abandoned build/release experiments
+
+### `dev/duhowett/graph`
+
+- Sole branch-specific commit: `b6fc9297f5b186818dd3ed9d93c15e923b0d9dce` (2024-04-02), `build: try out the MSBuild static graph`.
+- The entire experiment is one line: add `/graph` to the VSBuild/MSBuild invocation in `job-build-project.yml`.
+- Current `main` does not use `/graph`, and the branch is one commit ahead of its 2024 merge base while more than 900 maintained commits have moved the pipeline onward.
+- No product behavior, compatibility contract, or unique test is present.
+- Classification: **NO-PORT / abandoned build experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/fgb`
+
+- Sole branch-specific commit: `d881eaedb7f180bed884f09418c545f4a304f5e5` (2023-06-23), `swiggity swooty i'm comin for that FBGoost`.
+- Intent: propagate Terminal focus to the ConPTY child process using a provisional `ITerminalConnectionWithWindowAffinity` interface and dynamically resolved `SetAdditionalForegroundBoostProcesses`.
+- Definitive upstream successor: PR #19192 / commit `0d23624fa9d620b13155f491c8b1c5d91dbf0ba4` (2025-08-13), `Use a new API to propagate foreground state to child processes`.
+- The maintained implementation solves the same QoS/foreground contract at the Terminal window/tab/pane level with `TerminalTrySetWindowAssociatedProcesses`, handles active versus background tabs, and exposes the root process handle through the maintained connection model.
+- Classification: **NO-PORT / superseded by formal foreground-QoS architecture #19192**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/net8`
+
+- Sole branch-specific commit: `21f91b1d7aa846d73023a588fe4b1768cc84630e` (2024-10-15), `Move WPFTerminalControl and TestNetCore to NET 8`.
+- Intent: move the WPF terminal control/test projects to .NET 8.
+- Current `main` has the maintained result: `WpfTerminalControl.csproj` targets `net472;net8.0-windows`, preserving compatibility while adding the .NET 8 target. The branch changes only the two WPF C# project files.
+- Classification: **ALREADY ABSORBED / maintained dual-target implementation**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/rename-all-dlls`
+
+- Functional commits: `3564c6cb54eaebb19ab7cfac1f2cddfeb5a3666a` (`Rename TerminalConnection to Microsoft.Terminal.Connection`), `24297f99d99e25c54a122ac5de20b4c3e978ef90` (`Rename WindowsTerminalShellExt to Microsoft.Terminal.ShellExtension`), and `238d848ecc5a9d685e3b2d1fbe68977a12ae438d` (`HAX: TerminalApp->M.T.App`), February 2023.
+- Intent: mechanically rename assemblies/DLL identities and their namespace-qualified references across the Cascadia tree.
+- The branch is exactly three commits ahead of its historical merge base. Current `main` does not adopt the proposed `Microsoft.Terminal.Connection` identity, so this is an abandoned naming/refactor experiment rather than an unmerged product capability.
+- The wide diff is mechanical name propagation: manifests, project files, tests, imports, `.def` filenames, and namespace references; there is no independent runtime contract to replay.
+- Classification: **NO-PORT / abandoned mechanical assembly-renaming experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/onebranch-custom-pool`
+
+- Functional work is confined to OneBranch/Azure DevOps pipeline files; the branch is seven commits ahead of its 2024 merge base and changes only `ob-nightly.yml`, `job-build-project.yml`, and `pipeline-onebranch-full-release-build.yml`.
+- Representative branch commit `c0ec1968c6fa15f98e38e099e7ad2cd86ab436fd` (2024-08-20), `We still have to publish only one artifact tho`, forces logs into the output artifact and publishes it even on failure.
+- Current `main` deliberately retains the other policy: when `publishArtifacts` is true it publishes build/cache logs separately; otherwise it copies them into `Terminal.BinDir`.
+- This is pipeline-policy experimentation with no product/runtime contract, and the maintained pipeline chose a different design.
+- Classification: **NO-PORT / abandoned OneBranch pipeline experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+### `dev/duhowett/nuget-publication-with-aad-app-id`
+
+- Branch-specific commits: `06f212f08e68b9c95faf3c0f7db20e987a7bbc7f` (`Try to publish the PGO package using AAD...`), `c0531c542692df29503452d431eaac32be3b7567` (`NFCI: Lock to a specific build to tighten test cycle`), and `06ccfd601d78181d6d28aa6c44dde5e29203a703` (`use -apikey instead of setapikey`), April 2024.
+- The branch is exactly three commits ahead of its merge base and modifies only `build/pipelines/pgo.yml` and `build/pipelines/templates-v2/job-pgo-build-nuget-and-publish.yml`.
+- Intent: trial an AAD/API-key authentication path for publishing the internal PGO NuGet package while shortening the CI feedback loop.
+- This is credential/publication pipeline experimentation, not product behavior, and its historical test-cycle pinning/auth flow is not a recovery contract worth preserving as a live branch.
+- Classification: **NO-PORT / obsolete release-pipeline experiment**.
+- Disposition: **SAFE TO DELETE**.
+
+## Cohort 005 result
+
+Safe refs:
+
+- `dev/duhowett/graph`
+- `dev/duhowett/fgb`
+- `dev/duhowett/net8`
+- `dev/duhowett/rename-all-dlls`
+- `dev/duhowett/onebranch-custom-pool`
+- `dev/duhowett/nuget-publication-with-aad-app-id`
+
+Explicitly retained/pending after this pass:
+
+- `dev/duhowett/hax/tap_upgrade` — **CONSERVAR POR AHORA**. The historical HAX mutates the active `TermControl` connection to insert a tap and split a debug pane, while current `main` still contains a maintained `DebugTapConnection` implementation. The branch is also contaminated by a large spelling-infrastructure migration, so its exact functional lineage must be separated before deleting the ref.
+- `dev/duhowett/conpty_first_frame_blug` — **CONSERVAR POR AHORA**. It carries a concrete first-frame/background-color regression test plus a renderer fix; the old renderer state has disappeared but no definitive successor contract has yet been established.
+- `dev/duhowett/applicableactions` and `dev/duhowett/copylink` — intertwined 2024 Suggestions/selection lineage; not quick-delete candidates.
+- `dev/duhowett/compiler-compliance` — several compiler-correctness fixes; requires per-commit absorption checks.
+- `dev/duhowett/wprp` — unique WPR performance profile; diagnostic-only appearance is not enough by itself to discard potentially useful perf instrumentation.
+- `dev/duhowett/server-2025-vms` and other recent/live 2025–2026 experiments remain outside early archaeology.
