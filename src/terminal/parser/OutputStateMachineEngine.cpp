@@ -40,6 +40,7 @@
 #include "terminal_parser_ffi_output_csi_decfra.h"
 #include "terminal_parser_ffi_output_csi_column.h"
 #include "terminal_parser_ffi_output_csi_rect_erase.h"
+#include "terminal_parser_ffi_output_csi_rect_copy.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1277,6 +1278,40 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    constexpr size_t rectCopyCapacity = 32;
+    int32_t rectCopyInput[rectCopyCapacity]{};
+    size_t rectCopyInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, rectCopyInputCount >= rectCopyCapacity);
+        rectCopyInput[rectCopyInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t rectCopyOutput[rectCopyCapacity]{};
+    size_t rectCopyOutputCount = 0;
+    uint32_t rectCopyMatched = 0;
+    const auto rectCopyStatus = terminal_parser_ffi_output_csi_rect_copy_values(
+        static_cast<uint64_t>(id),
+        rectCopyInput,
+        rectCopyInputCount,
+        rectCopyOutput,
+        rectCopyCapacity,
+        &rectCopyOutputCount,
+        &rectCopyMatched);
+    THROW_HR_IF(E_UNEXPECTED, rectCopyStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (rectCopyMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, rectCopyOutputCount != rectCopyInputCount);
+        for (size_t index = 0; index < rectCopyOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, rectCopyOutput[index] != rectCopyInput[index]);
+        }
+
+        _dispatch->CopyRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.at(4), parameters.at(5), parameters.at(6), parameters.at(7));
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1318,9 +1353,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECRARA_ReverseAttributesRectangularArea:
         _dispatch->ReverseAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
         break;
-    case CsiActionCodes::DECCRA_CopyRectangularArea:
-        _dispatch->CopyRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.at(4), parameters.at(5), parameters.at(6), parameters.at(7));
-        break;
+
     case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:
         _dispatch->RequestTerminalStateReport(parameters.at(0), parameters.at(1));
         break;
