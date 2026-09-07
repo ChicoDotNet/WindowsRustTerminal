@@ -7,7 +7,6 @@ raw = path.read_bytes()
 if b"\r" in raw.replace(b"\r\n", b""):
     raise SystemExit("unexpected lone CR")
 
-has_crlf = b"\r\n" in raw
 data = raw.replace(b"\r\n", b"\n")
 
 include_anchor = b'#include "terminal_parser_ffi_output_csi_user_preference_charset.h"\n'
@@ -72,6 +71,5 @@ if b'case CsiActionCodes::KKP_KittyKeyboardQuery:' in data:
 if data.count(b'terminal_parser_ffi_output_csi_kitty_keyboard_query_plan(') != 1:
     raise SystemExit("unexpected kitty query plan call count")
 
-output = data.replace(b"\n", b"\r\n") if has_crlf else data
-path.write_bytes(output)
-print(hashlib.sha256(output).hexdigest())
+path.write_bytes(data)
+print(hashlib.sha256(data).hexdigest())
