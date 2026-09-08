@@ -113,10 +113,23 @@ $plans = @'
 
 '@
 
+$legacySwitchAnchor = @'
+    if (decinvmPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    switch (id)
+    {
+'@
+$legacySwitchAnchorPattern = [regex]::Escape($legacySwitchAnchor) -replace '\\r\\n', '\r?\n' -replace '\\n', '\r?\n'
+$legacySwitchReplacement = ($legacySwitchAnchor.Substring(0, $legacySwitchAnchor.LastIndexOf('    switch (id)'))) + $plans + "    switch (id)`r`n    {`r`n"
+
 Replace-ExactlyOnce `
-    -Description 'legacy CSI switch anchor' `
-    -Pattern '    switch \(id\)\r?\n    \{\r?\n' `
-    -Replacement ($plans + "    switch (id)`r`n    {`r`n")
+    -Description 'post-DECINVM legacy CSI switch anchor' `
+    -Pattern $legacySwitchAnchorPattern `
+    -Replacement $legacySwitchReplacement
 
 Replace-ExactlyOnce `
     -Description 'legacy DECRQTSR case' `
