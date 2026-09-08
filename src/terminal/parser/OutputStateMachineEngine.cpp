@@ -29,6 +29,7 @@
 #include "terminal_parser_ffi_output_csi_cursor_style.h"
 #include "terminal_parser_ffi_output_csi_request_mode.h"
 #include "terminal_parser_ffi_output_csi_request_presentation_state.h"
+#include "terminal_parser_ffi_output_csi_decsace.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1468,6 +1469,31 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_decsace_result decsacePlan{};
+    const auto decsaceStatus = terminal_parser_ffi_output_csi_decsace_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &decsacePlan);
+    THROW_HR_IF(E_UNEXPECTED, decsaceStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decsacePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_SELECT_ATTRIBUTE_CHANGE_EXTENT:
+        _dispatch->SelectAttributeChangeExtent(
+            static_cast<DispatchTypes::ChangeExtent>(decsacePlan.change_extent));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decsacePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1518,9 +1544,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::DECSACE_SelectAttributeChangeExtent:
-        _dispatch->SelectAttributeChangeExtent(parameters.at(0));
-        break;
+
     case CsiActionCodes::DECRQCRA_RequestChecksumRectangularArea:
         _dispatch->RequestChecksumRectangularArea(parameters.at(0).value_or(0), parameters.at(1).value_or(0), parameters.at(2), parameters.at(3), parameters.at(4).value_or(0), parameters.at(5).value_or(0));
         break;
