@@ -101,7 +101,7 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
         void ExpandCommands(const Windows::Foundation::Collections::IVectorView<Model::Profile>& profiles,
                             const Windows::Foundation::Collections::IMapView<winrt::hstring, Model::ColorScheme>& schemes);
 
-        winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Foundation::Collections::IVector<Model::Command>> FilterToSnippets(winrt::hstring currentCommandline, winrt::hstring currentWorkingDirectory);
+        winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Foundation::Collections::IVector<Model::Command>> FilterToSnippets(winrt::hstring currentCommandline, winrt::hstring currentWorkingDirectory, Model::SuggestionsNesting nesting);
 
         void ResolveMediaResourcesWithBasePath(const winrt::hstring& basePath, const Model::MediaResourceResolver& resolver);
 

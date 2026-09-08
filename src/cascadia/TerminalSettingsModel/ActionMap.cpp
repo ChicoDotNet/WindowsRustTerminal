@@ -1105,6 +1105,7 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
 #pragma region Snippets
     std::vector<Model::Command> _filterToSnippets(IMapView<hstring, Model::Command> nameMap,
                                                   winrt::hstring currentCommandline,
+                                                  Model::SuggestionsNesting nesting,
                                                   const std::vector<Model::Command>& localCommands)
     {
         std::vector<Model::Command> results{};
@@ -1157,20 +1158,29 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
             {
                 // Look for any sendInput commands nested underneath us
                 std::vector<Model::Command> empty{};
-                auto innerResults = winrt::single_threaded_vector<Model::Command>(_filterToSnippets(command.NestedCommands(), currentCommandline, empty));
+                auto innerResults = winrt::single_threaded_vector<Model::Command>(_filterToSnippets(command.NestedCommands(), currentCommandline, nesting, empty));
 
                 if (innerResults.Size() > 0)
                 {
-                    // This command did have at least one sendInput under it
+                    // This command did have at least one sendInput under it.
+                    if (nesting == Model::SuggestionsNesting::Enabled)
+                    {
+                        // Preserve the parent and its hierarchy.
+                        winrt::com_ptr<implementation::Command> cmdImpl;
+                        cmdImpl.copy_from(winrt::get_self<implementation::Command>(command));
+                        auto copy = cmdImpl->Copy();
+                        copy->NestedCommands(innerResults.GetView());
 
-                    // Create a new Command, which is a copy of this Command,
-                    // which only has SendInputs in it
-                    winrt::com_ptr<implementation::Command> cmdImpl;
-                    cmdImpl.copy_from(winrt::get_self<implementation::Command>(command));
-                    auto copy = cmdImpl->Copy();
-                    copy->NestedCommands(innerResults.GetView());
-
-                    results.push_back(*copy);
+                        results.push_back(*copy);
+                    }
+                    else if (nesting == Model::SuggestionsNesting::Disabled)
+                    {
+                        // Flatten the recursively-filtered leaves into this level.
+                        for (const auto& nested : innerResults)
+                        {
+                            results.push_back(nested);
+                        }
+                    }
                 }
             }
         };
@@ -1290,7 +1300,8 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
 
     winrt::Windows::Foundation::IAsyncOperation<IVector<Model::Command>> ActionMap::FilterToSnippets(
         winrt::hstring currentCommandline,
-        winrt::hstring currentWorkingDirectory)
+        winrt::hstring currentWorkingDirectory,
+        Model::SuggestionsNesting nesting)
     {
         // enumerate all the parent directories we want to import snippets from
         std::filesystem::path directory{ std::wstring_view{ currentWorkingDirectory } };
@@ -1331,6 +1342,7 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
                                        [](const auto& kvPair) { return kvPair.second; });
                 co_return winrt::single_threaded_vector<Model::Command>(_filterToSnippets(NameMap(),
                                                                                           currentCommandline,
+                                                                                          nesting,
                                                                                           localSnippets));
             }
         } // release the lock on the cache
@@ -1374,6 +1386,7 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
                                [](const auto& kvPair) { return kvPair.second; });
         co_return winrt::single_threaded_vector<Model::Command>(_filterToSnippets(NameMap(),
                                                                                   currentCommandline,
+                                                                                  nesting,
                                                                                   localSnippets));
     }
 #pragma endregion

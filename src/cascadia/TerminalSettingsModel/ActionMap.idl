@@ -33,7 +33,7 @@ namespace Microsoft.Terminal.Settings.Model
 
         IVector<Command> ExpandedCommands { get; };
 
-        Windows.Foundation.IAsyncOperation<IVector<Command> > FilterToSnippets(String CurrentCommandline, String CurrentWorkingDirectory);
+        Windows.Foundation.IAsyncOperation<IVector<Command> > FilterToSnippets(String CurrentCommandline, String CurrentWorkingDirectory, SuggestionsNesting nesting);
     };
 
     runtimeclass ActionMap : IActionMapView

@@ -58,7 +58,7 @@ namespace winrt::TerminalApp::implementation
         // has typed, then relies on the suggestions UI to _also_ filter with that
         // string.
 
-        const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(winrt::hstring{}, winrt::hstring{}); // IVector<Model::Command>
+        const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(winrt::hstring{}, winrt::hstring{}, SuggestionsNesting::Enabled); // IVector<Model::Command>
         co_await wil::resume_foreground(dispatcher);
 
         const auto strong = weak.get();

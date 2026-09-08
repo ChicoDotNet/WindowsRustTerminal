@@ -229,6 +229,7 @@ protected:                                                                  \
 ////////////////////////////////////////////////////////////////////////////////
 #define SUGGESTIONS_ARGS(X)                                                                    \
     X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks) \
+    X(SuggestionsNesting, Nesting, "nesting", false, ArgTypeHint::None, SuggestionsNesting::Enabled) \
     X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)
 
 ////////////////////////////////////////////////////////////////////////////////
