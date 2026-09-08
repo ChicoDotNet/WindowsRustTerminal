@@ -23,6 +23,7 @@ jobs:
       - name: Commit transformed contract and remove replay machinery
         shell: bash
         run: |
+          git config core.whitespace cr-at-eol
           git diff --check
           git rm .github/workflows/replay-disable-nesting-once.yml
           git rm .github/scripts/replay_disable_nesting.py
