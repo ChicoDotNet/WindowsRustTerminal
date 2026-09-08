@@ -29,12 +29,12 @@ Microsoft upstream changes are consumed through `dev/ChicoDotNet`. Individual hi
 
 ## Current protected working set
 
-- `dev/ChicoDotNet`
-- `dev/cazamor/main`
-- `dev/duhowett/main`
-- `dev/lhecker/main`
-- `dev/migrie/main`
-- `dev/miniksa/main`
+- [`dev/ChicoDotNet`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/ChicoDotNet)
+- [`dev/cazamor/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/cazamor/main)
+- [`dev/duhowett/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/duhowett/main)
+- [`dev/lhecker/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/lhecker/main)
+- [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main)
+- [`dev/miniksa/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/miniksa/main)
 - `dev/miniksa/issue-987-vt-adapter-test-coverage` — active recovery pilot
 - `rust/main`
 - `rust/r08-product-integration`
@@ -52,11 +52,11 @@ The consolidated lanes are created from the current `dev/ChicoDotNet` baseline:
 
 | Canonical lane | Historical namespaces absorbed | Purpose |
 | --- | --- | --- |
-| `dev/cazamor/main` | `dev/cazamor/*` | Curated Carlos Zamora / settings-accessibility work lane |
-| `dev/duhowett/main` | `dev/duhowett/*`, `dev/duhowtt/*` | Curated Dustin Howett / core-platform work lane |
-| `dev/lhecker/main` | `dev/lhecker/*` | Curated Leonard Hecker / renderer-core work lane |
-| `dev/migrie/main` | `dev/migrie/*`, `dev/mgirie/*` | Curated Michael Gries / product-integration work lane |
-| `dev/miniksa/main` | `dev/miniksa/*` | Curated Console/VT/test-infrastructure work lane associated with the original parser/console architecture |
+| [`dev/cazamor/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/cazamor/main) | `dev/cazamor/*` | Curated Carlos Zamora / settings-accessibility work lane |
+| [`dev/duhowett/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/duhowett/main) | `dev/duhowett/*`, `dev/duhowtt/*` | Curated Dustin Howett / core-platform work lane |
+| [`dev/lhecker/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/lhecker/main) | `dev/lhecker/*` | Curated Leonard Hecker / renderer-core work lane |
+| [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | `dev/migrie/*`, `dev/mgirie/*` | Curated Michael Griese / product-integration work lane |
+| [`dev/miniksa/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/miniksa/main) | `dev/miniksa/*` | Curated Console/VT/test-infrastructure work lane associated with the original parser/console architecture |
 
 ### Lane workflow
 
@@ -159,15 +159,30 @@ Notes:
 
 | Legacy / temporary branch | Lane | Knowledge disposition | Durable evidence | Delete status |
 | --- | --- | --- | --- | --- |
-| `dev/migrie/fhl-2021/more-shader-variables` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — old DxRenderer shader-variable experiment; useful shader-state contract preserved; implementation superseded by Atlas custom-shader work | `BranchArchaeology-FHL2021-Shaders.md`, commit `e462ac0` | **SAFE TO DELETE** |
-| `dev/migrie/fhl-2021/differential-pixel-shading` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — differential/full-screen shader presentation experiment; preserve partial-present/performance reasoning, not obsolete DxRenderer code | `BranchArchaeology-FHL2021-Shaders.md`, commit `e462ac0` | **SAFE TO DELETE** |
-| `dev/migrie/fhl-2021/cmdpal-select-list` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — command-palette selector fed from stdin; key durable discovery is launcher handle inheritance and stdin/remoting contract | `BranchArchaeology-FHL2021-CmdPal-SelectList.md`, commit `4f3d324` | **SAFE TO DELETE** |
-| `dev/cazamor/1.14/replace-compareInBounds` | `dev/cazamor/main` | **DOCUMENT / SUPERSEDED** — historical 1.14 backport; original comparison simplification was reverted because a bounds semantic was lost; corrected successor later shipped upstream | `BranchArchaeology-1.14-CompareInBounds.md`, commit `02d022e` | **SAFE TO DELETE** |
-| `dev/migrie/replay-disable-nesting-source` | `dev/migrie/main` | **DOCUMENT / TRANSFORM KNOWLEDGE** — one-commit source snapshot for the abandoned `showSuggestions.nesting` proposal | `BranchArchaeology-2024-Disable-Suggestions-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
-| `dev/migrie/ci-suggestions-nesting-contract-replay` | `dev/migrie/main` | **DOCUMENT / TRANSFORM KNOWLEDGE** — current-architecture translation proved how flattening would map into the modern snippets pipeline; compilation is not required for retention | `BranchArchaeology-2024-Disable-Suggestions-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
-| `dev/migrie/ci-certify-disable-nesting-ff112` | `dev/migrie/main` | **DROP AFTER DOCUMENTATION** — temporary certification harness; CI failures were harness/dependency-order noise and add no unique product knowledge | `BranchArchaeology-2024-Disable-Suggestions-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
-| upstream `dev/migrie/f/disable-nesting` / PR `microsoft/terminal#17418` | `dev/migrie/main` | **DOCUMENT / PRODUCT DECISION** — explicit `nesting: disabled` proposal was closed in favor of making hierarchy transparent when search text exists; prerequisites were snippets pane, `FilteredTask` extraction, and filtering literal input | `BranchArchaeology-2024-Disable-Suggestions-Nesting.md`, commit `2be592b` | Upstream reference only; local replay refs above are disposable |
-| `dev/migrie/f/settings-getters-only` | `dev/migrie/main` | **DOCUMENT / IDEA SURVIVED** — 2020 experiment made `ICoreSettings` and `IControlSettings` getter-only; branch said “doesn't work yet”, but the architectural boundary survived and current interfaces are read-oriented | `BranchArchaeology-2020-ReadOnly-Control-Settings.md`, commit `fb51274` | **SAFE TO DELETE** |
+| `dev/migrie/fhl-2021/more-shader-variables` | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / NO-PORT** — old DxRenderer shader-variable experiment; useful shader-state contract preserved; implementation superseded by Atlas custom-shader work | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-FHL2021-Shaders.md), [commit `e462ac0`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/e462ac00fec47f56b625c219099860d532c9ab3e) | **ABSENT FROM FORK — previously safe** |
+| `dev/migrie/fhl-2021/differential-pixel-shading` | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / NO-PORT** — differential/full-screen shader presentation experiment; preserve partial-present/performance reasoning, not obsolete DxRenderer code | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-FHL2021-Shaders.md), [commit `e462ac0`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/e462ac00fec47f56b625c219099860d532c9ab3e) | **ABSENT FROM FORK — previously safe** |
+| [`dev/migrie/fhl-2021/cmdpal-select-list`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/fhl-2021/cmdpal-select-list) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / NO-PORT** — command-palette selector fed from stdin; key durable discovery is launcher handle inheritance and stdin/remoting contract | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-FHL2021-CmdPal-SelectList.md), [commit `4f3d324`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/4f3d324b3227c9a6dfee0ebff1a5668511b974d0) | **SAFE TO DELETE — VERIFIED PRESENT** |
+| [`dev/cazamor/1.14/replace-compareInBounds`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/cazamor/1.14/replace-compareInBounds) | [`dev/cazamor/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/cazamor/main) | **DOCUMENT / SUPERSEDED** — historical 1.14 backport; original comparison simplification was reverted because a bounds semantic was lost; corrected successor later shipped upstream | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/cazamor/main/BranchArchaeology-1.14-CompareInBounds.md), [commit `02d022e`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/02d022e1e1416760a1b3774b5ce02d66f4f7ecb0) | **SAFE TO DELETE — VERIFIED PRESENT** |
+| [`dev/migrie/replay-disable-nesting-source`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/replay-disable-nesting-source) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / TRANSFORM KNOWLEDGE** — one-commit source snapshot for the abandoned `showSuggestions.nesting` proposal | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md), [commit `2be592b`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/2be592bb9c255139503566f9e08511aaf4273fbc), [PR #52 archived](https://github.com/ChicoDotNet/WindowsRustTerminal/pull/52) | **SAFE TO DELETE — VERIFIED PRESENT** |
+| [`dev/migrie/ci-suggestions-nesting-contract-replay`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/ci-suggestions-nesting-contract-replay) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / TRANSFORM KNOWLEDGE** — current-architecture translation proved how flattening would map into the modern snippets pipeline; compilation is not required for retention | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md), [commit `2be592b`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/2be592bb9c255139503566f9e08511aaf4273fbc), [PR #51 archived](https://github.com/ChicoDotNet/WindowsRustTerminal/pull/51) | **SAFE TO DELETE — VERIFIED PRESENT** |
+| [`dev/migrie/ci-certify-disable-nesting-ff112`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/ci-certify-disable-nesting-ff112) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DROP AFTER DOCUMENTATION** — temporary certification harness; CI failures were harness/dependency-order noise and add no unique product knowledge | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md), [commit `2be592b`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/2be592bb9c255139503566f9e08511aaf4273fbc) | **SAFE TO DELETE — VERIFIED PRESENT** |
+| upstream `dev/migrie/f/disable-nesting` / [PR `microsoft/terminal#17418`](https://github.com/microsoft/terminal/pull/17418) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / PRODUCT DECISION** — explicit `nesting: disabled` proposal was closed in favor of making hierarchy transparent when search text exists; prerequisites were snippets pane, `FilteredTask` extraction, and filtering literal input | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md), [commit `2be592b`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/2be592bb9c255139503566f9e08511aaf4273fbc) | Upstream reference only; local replay refs above are disposable |
+| [`dev/migrie/f/settings-getters-only`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/f/settings-getters-only) | [`dev/migrie/main`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/main) | **DOCUMENT / IDEA SURVIVED** — 2020 experiment made `ICoreSettings` and `IControlSettings` getter-only; branch said “doesn't work yet”, but the architectural boundary survived and current interfaces are read-oriented | [Archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2020-ReadOnly-Control-Settings.md), [commit `fb51274`](https://github.com/ChicoDotNet/WindowsRustTerminal/commit/fb5127428af967488bec3fb901d1994f45690d7c) | **SAFE TO DELETE — VERIFIED PRESENT** |
+
+## Quick delete queue — verified present
+
+This table is intentionally operational: every branch below was re-checked in the fork after its knowledge was consolidated. The branch links open the exact ref for deletion/navigation; the evidence links explain why it is disposable.
+
+| Branch to delete | Durable evidence | Notes |
+| --- | --- | --- |
+| [`dev/migrie/fhl-2021/cmdpal-select-list`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/fhl-2021/cmdpal-select-list) | [CmdPal archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-FHL2021-CmdPal-SelectList.md) | Knowledge preserved in `dev/migrie/main` |
+| [`dev/cazamor/1.14/replace-compareInBounds`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/cazamor/1.14/replace-compareInBounds) | [CompareInBounds archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/cazamor/main/BranchArchaeology-1.14-CompareInBounds.md) | Superseded/reverted historical backport |
+| [`dev/migrie/replay-disable-nesting-source`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/replay-disable-nesting-source) | [Disable-nesting archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md) · [PR #52 closed](https://github.com/ChicoDotNet/WindowsRustTerminal/pull/52) | Mechanical replay branch; PR no longer blocks deletion |
+| [`dev/migrie/ci-suggestions-nesting-contract-replay`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/ci-suggestions-nesting-contract-replay) | [Disable-nesting archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md) · [PR #51 closed](https://github.com/ChicoDotNet/WindowsRustTerminal/pull/51) | Contract-replay branch; PR no longer blocks deletion |
+| [`dev/migrie/ci-certify-disable-nesting-ff112`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/ci-certify-disable-nesting-ff112) | [Disable-nesting archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2024-Disable-Suggestions-Nesting.md) | Temporary CI sensor only |
+| [`dev/migrie/f/settings-getters-only`](https://github.com/ChicoDotNet/WindowsRustTerminal/tree/dev/migrie/f/settings-getters-only) | [Read-only settings archaeology](https://github.com/ChicoDotNet/WindowsRustTerminal/blob/dev/migrie/main/BranchArchaeology-2020-ReadOnly-Control-Settings.md) | Architectural idea survived in modern interfaces |
+
+Verified absent from the fork and therefore omitted from the deletion queue: `dev/migrie/fhl-2021/more-shader-variables` and `dev/migrie/fhl-2021/differential-pixel-shading`.
 
 ### Operating rule for subsequent increments
 
