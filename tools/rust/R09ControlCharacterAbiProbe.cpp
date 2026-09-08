@@ -8,6 +8,7 @@
 #include "R09OutputCsiCursorStyleAbiProbe.hpp"
 #include "R09OutputCsiDecfraAbiProbe.hpp"
 #include "R09OutputCsiDecsaceAbiProbe.hpp"
+#include "R09OutputCsiDecinvmAbiProbe.hpp"
 #include "R09OutputCsiDecscaAbiProbe.hpp"
 #include "R09OutputCsiDeviceAttributesAbiProbe.hpp"
 #include "R09OutputCsiDeviceStatusReportAbiProbe.hpp"
@@ -207,6 +208,7 @@ int main()
     const bool outputCsiCursorStyleOk = r09::output_csi_cursor_style_replay();
     const bool outputCsiDecfraOk = r09::output_csi_decfra_replay();
     const bool outputCsiDecsaceOk = r09::output_csi_decsace_replay();
+    const bool outputCsiDecinvmOk = r09::output_csi_decinvm_replay();
     const bool outputCsiDecscaOk = r09::output_csi_decsca_replay();
     const bool outputCsiDeviceAttributesOk = r09::output_csi_device_attributes_replay();
     const bool outputCsiDeviceStatusReportOk = r09::output_csi_device_status_report_replay();
@@ -237,7 +239,7 @@ int main()
     const bool outputCsiUserPreferenceCharsetOk = r09::output_csi_user_preference_charset_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecinvmOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
