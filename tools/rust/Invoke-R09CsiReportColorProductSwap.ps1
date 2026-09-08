@@ -39,10 +39,17 @@ function Replace-ExactlyOnce
         [System.Text.RegularExpressions.RegexOptions]::Multiline)
 }
 
+$includeReplacement = @'
+#include "terminal_parser_ffi_output_csi_decinvm.h"
+#include "terminal_parser_ffi_output_csi_decrqtsr.h"
+#include "terminal_parser_ffi_output_csi_decac.h"
+'@ -replace "`n", "`r`n"
+$includeReplacement += "`r`n"
+
 Replace-ExactlyOnce `
     -Description 'DECINVM include anchor' `
     -Pattern '#include "terminal_parser_ffi_output_csi_decinvm\.h"\r?\n' `
-    -Replacement "#include \"terminal_parser_ffi_output_csi_decinvm.h\"`r`n#include \"terminal_parser_ffi_output_csi_decrqtsr.h\"`r`n#include \"terminal_parser_ffi_output_csi_decac.h\"`r`n"
+    -Replacement $includeReplacement
 
 $plans = @'
     const auto decrqtsrReportFormatParameter = parameters.at(1);
