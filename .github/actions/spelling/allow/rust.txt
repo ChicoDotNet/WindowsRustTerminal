@@ -21,6 +21,7 @@ dececm
 decera
 decinvm
 DECMAC
+DECRQTSR
 decsca
 decscusr
 decsace
