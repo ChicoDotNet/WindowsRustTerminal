@@ -19,7 +19,7 @@ concurrency:
 jobs:
   promote:
     name: Route DECRQTSR and DECAC through Rust
-    runs-on: windows-2025
+    runs-on: windows-2025-vs2026
     steps:
       - name: Checkout candidate base
         uses: actions/checkout@v5
@@ -28,7 +28,7 @@ jobs:
           submodules: recursive
 
       - name: Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup show
 
       - name: Verify remote branch has not moved
         shell: pwsh
@@ -80,10 +80,18 @@ jobs:
 
       - name: Canonical product build
         shell: pwsh
-        run: |
-          Import-Module .\tools\OpenConsole.psm1
-          Set-MsBuildDevEnvironment
-          Invoke-OpenConsoleBuild -Platform x64 -Configuration Debug -Targets 'Terminal\CascadiaPackage'
+        run: .\tools\rust\Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
+
+      - name: Preserve product build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-report-color-promotion-diagnostics
+          path: |
+            artifacts/r09-product-build.log
+            artifacts/r09-product-build.binlog
+          if-no-files-found: warn
+          retention-days: 7
 
       - name: Verify remote branch still has not moved
         shell: pwsh
