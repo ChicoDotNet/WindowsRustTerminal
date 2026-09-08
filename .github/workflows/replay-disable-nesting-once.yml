@@ -1,0 +1,221 @@
+name: Replay disable-nesting once
+
+on:
+  push:
+    branches:
+      - dev/migrie/ci-suggestions-nesting-contract-replay
+
+permissions:
+  contents: write
+
+jobs:
+  replay:
+    if: ${{ !contains(github.event.head_commit.message, '[disable-nesting-replay-applied]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: dev/migrie/ci-suggestions-nesting-contract-replay
+          fetch-depth: 0
+
+      - name: Apply historical contract to current architecture
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one occurrence, found {count}: {old[:80]!r}')
+              p.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          def replace_count(path, old, new, expected):
+              p = Path(path)
+              text = p.read_text(encoding='utf-8')
+              count = text.count(old)
+              if count != expected:
+                  raise SystemExit(f'{path}: expected {expected} occurrences, found {count}: {old[:80]!r}')
+              p.write_text(text.replace(old, new), encoding='utf-8')
+
+          # ActionArgs.idl: recover the user-facing nesting option.
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/ActionArgs.idl',
+              '    interface INewContentArgs {',
+              '    enum SuggestionsNesting\n'
+              '    {\n'
+              '        Disabled,\n'
+              '        Enabled,\n'
+              '    };\n\n'
+              '    interface INewContentArgs {')
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/ActionArgs.idl',
+              '        SuggestionsArgs(SuggestionsSource source, Boolean useCommandline);\n'
+              '        SuggestionsSource Source { get; };\n'
+              '        Boolean UseCommandline { get; };',
+              '        SuggestionsArgs(SuggestionsSource source, SuggestionsNesting nesting, Boolean useCommandline);\n'
+              '        SuggestionsSource Source { get; };\n'
+              '        SuggestionsNesting Nesting { get; };\n'
+              '        Boolean UseCommandline { get; };')
+
+          # ActionArgs.h: preserve historical default (enabled) and JSON key `nesting`.
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/ActionArgs.h',
+              '#define SUGGESTIONS_ARGS(X)                                                                    \\\n'
+              '    X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks) \\\n'
+              '    X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)',
+              '#define SUGGESTIONS_ARGS(X)                                                                          \\\n'
+              '    X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks)          \\\n'
+              '    X(SuggestionsNesting, Nesting, "nesting", false, ArgTypeHint::None, SuggestionsNesting::Enabled) \\\n'
+              '    X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)')
+
+          # WinRT ActionMap contract: nesting is explicit at the query boundary.
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/ActionMap.h',
+              '        winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Foundation::Collections::IVector<Model::Command>> FilterToSnippets(winrt::hstring currentCommandline, winrt::hstring currentWorkingDirectory);',
+              '        winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Foundation::Collections::IVector<Model::Command>> FilterToSnippets(winrt::hstring currentCommandline, winrt::hstring currentWorkingDirectory, Model::SuggestionsNesting nesting);')
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/ActionMap.idl',
+              '        Windows.Foundation.IAsyncOperation<IVector<Command> > FilterToSnippets(String CurrentCommandline, String CurrentWorkingDirectory);',
+              '        Windows.Foundation.IAsyncOperation<IVector<Command> > FilterToSnippets(String CurrentCommandline, String CurrentWorkingDirectory, SuggestionsNesting nesting);')
+
+          # JSON enum mapping used by showSuggestions action deserialization.
+          replace_once(
+              'src/cascadia/TerminalSettingsModel/TerminalSettingsSerializationHelpers.h',
+              'JSON_ENUM_MAPPER(::winrt::Microsoft::Terminal::Settings::Model::WindowingMode)',
+              'JSON_ENUM_MAPPER(::winrt::Microsoft::Terminal::Settings::Model::SuggestionsNesting)\n'
+              '{\n'
+              '    JSON_MAPPINGS(2) = {\n'
+              '        pair_type{ "enabled", ValueType::Enabled },\n'
+              '        pair_type{ "disabled", ValueType::Disabled },\n'
+              '    };\n'
+              '};\n\n'
+              'JSON_ENUM_MAPPER(::winrt::Microsoft::Terminal::Settings::Model::WindowingMode)')
+
+          action_map = Path('src/cascadia/TerminalSettingsModel/ActionMap.cpp')
+          text = action_map.read_text(encoding='utf-8')
+
+          old = '''    std::vector<Model::Command> _filterToSnippets(IMapView<hstring, Model::Command> nameMap,
+                                                  winrt::hstring currentCommandline,
+                                                  const std::vector<Model::Command>& localCommands)
+'''
+          new = '''    std::vector<Model::Command> _filterToSnippets(IMapView<hstring, Model::Command> nameMap,
+                                                  winrt::hstring currentCommandline,
+                                                  Model::SuggestionsNesting nesting,
+                                                  const std::vector<Model::Command>& localCommands)
+'''
+          if text.count(old) != 1:
+              raise SystemExit('ActionMap.cpp: helper signature drifted')
+          text = text.replace(old, new, 1)
+
+          old = '''                auto innerResults = winrt::single_threaded_vector<Model::Command>(_filterToSnippets(command.NestedCommands(), currentCommandline, empty));
+
+                if (innerResults.Size() > 0)
+                {
+                    // This command did have at least one sendInput under it
+
+                    // Create a new Command, which is a copy of this Command,
+                    // which only has SendInputs in it
+                    winrt::com_ptr<implementation::Command> cmdImpl;
+                    cmdImpl.copy_from(winrt::get_self<implementation::Command>(command));
+                    auto copy = cmdImpl->Copy();
+                    copy->NestedCommands(innerResults.GetView());
+
+                    results.push_back(*copy);
+                }
+'''
+          new = '''                auto innerResults = winrt::single_threaded_vector<Model::Command>(_filterToSnippets(command.NestedCommands(), currentCommandline, nesting, empty));
+
+                if (innerResults.Size() > 0)
+                {
+                    // This command did have at least one sendInput under it.
+                    if (nesting == Model::SuggestionsNesting::Enabled)
+                    {
+                        // Preserve the parent and its hierarchy.
+                        winrt::com_ptr<implementation::Command> cmdImpl;
+                        cmdImpl.copy_from(winrt::get_self<implementation::Command>(command));
+                        auto copy = cmdImpl->Copy();
+                        copy->NestedCommands(innerResults.GetView());
+
+                        results.push_back(*copy);
+                    }
+                    else if (nesting == Model::SuggestionsNesting::Disabled)
+                    {
+                        // Flatten the recursively-filtered leaves into this level.
+                        for (const auto& nested : innerResults)
+                        {
+                            results.push_back(nested);
+                        }
+                    }
+                }
+'''
+          if text.count(old) != 1:
+              raise SystemExit('ActionMap.cpp: nested-command block drifted')
+          text = text.replace(old, new, 1)
+
+          old = '''    winrt::Windows::Foundation::IAsyncOperation<IVector<Model::Command>> ActionMap::FilterToSnippets(
+        winrt::hstring currentCommandline,
+        winrt::hstring currentWorkingDirectory)
+'''
+          new = '''    winrt::Windows::Foundation::IAsyncOperation<IVector<Model::Command>> ActionMap::FilterToSnippets(
+        winrt::hstring currentCommandline,
+        winrt::hstring currentWorkingDirectory,
+        Model::SuggestionsNesting nesting)
+'''
+          if text.count(old) != 1:
+              raise SystemExit('ActionMap.cpp: public signature drifted')
+          text = text.replace(old, new, 1)
+
+          old = '''_filterToSnippets(NameMap(),
+                                                                                          currentCommandline,
+                                                                                          localSnippets)'''
+          new = '''_filterToSnippets(NameMap(),
+                                                                                          currentCommandline,
+                                                                                          nesting,
+                                                                                          localSnippets)'''
+          if text.count(old) != 1:
+              raise SystemExit(f'ActionMap.cpp: cached call count was {text.count(old)}, expected 1')
+          text = text.replace(old, new, 1)
+
+          old = '''_filterToSnippets(NameMap(),
+                                                                                  currentCommandline,
+                                                                                  localSnippets)'''
+          new = '''_filterToSnippets(NameMap(),
+                                                                                  currentCommandline,
+                                                                                  nesting,
+                                                                                  localSnippets)'''
+          if text.count(old) != 1:
+              raise SystemExit(f'ActionMap.cpp: uncached call count was {text.count(old)}, expected 1')
+          text = text.replace(old, new, 1)
+          action_map.write_text(text, encoding='utf-8')
+
+          # Wire showSuggestions through the recovered argument.
+          replace_once(
+              'src/cascadia/TerminalApp/AppActionHandlers.cpp',
+              '            const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(currentCommandline, currentWorkingDirectory);',
+              '            const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(currentCommandline, currentWorkingDirectory, realArgs.Nesting());')
+
+          # The dedicated snippets pane intentionally keeps its hierarchical tree.
+          replace_once(
+              'src/cascadia/TerminalApp/SnippetsPaneContent.cpp',
+              '        const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(winrt::hstring{}, winrt::hstring{}); // IVector<Model::Command>',
+              '        const auto tasks = co_await _settings.GlobalSettings().ActionMap().FilterToSnippets(winrt::hstring{}, winrt::hstring{}, SuggestionsNesting::Enabled); // IVector<Model::Command>')
+          PY
+
+          git diff --check
+          git rm .github/workflows/replay-disable-nesting-once.yml
+          git config user.name "WindowsRustTerminal Contract Replay"
+          git config user.email "actions@users.noreply.github.com"
+          git add src/cascadia/TerminalSettingsModel/ActionArgs.idl \
+                  src/cascadia/TerminalSettingsModel/ActionArgs.h \
+                  src/cascadia/TerminalSettingsModel/ActionMap.h \
+                  src/cascadia/TerminalSettingsModel/ActionMap.idl \
+                  src/cascadia/TerminalSettingsModel/TerminalSettingsSerializationHelpers.h \
+                  src/cascadia/TerminalSettingsModel/ActionMap.cpp \
+                  src/cascadia/TerminalApp/AppActionHandlers.cpp \
+                  src/cascadia/TerminalApp/SnippetsPaneContent.cpp \
+                  .github/workflows/replay-disable-nesting-once.yml
+          git commit -m "[disable-nesting-replay-applied] TRANSFORM historical suggestions nesting contract"
+          git push origin HEAD:dev/migrie/ci-suggestions-nesting-contract-replay
