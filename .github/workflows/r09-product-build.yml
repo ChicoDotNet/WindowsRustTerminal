@@ -23,6 +23,8 @@ on:
       - "tools/rust/R09OutputCsiDecfraAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecsaceAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecinvmAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiDecacAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiDecrqtsrAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardQueryAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPushAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPopAbiProbe.hpp"
@@ -68,6 +70,8 @@ on:
       - "tools/rust/Test-R09OutputCsiRequestPresentationStateOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecsaceOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecinvmOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiDecacOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiDecrqtsrOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -195,6 +199,12 @@ jobs:
       - name: Validate CSI DECINVM ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiDecinvmOwnership.ps1
+      - name: Validate CSI DECAC ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiDecacOwnership.ps1
+      - name: Validate CSI DECRQTSR ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiDecrqtsrOwnership.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
