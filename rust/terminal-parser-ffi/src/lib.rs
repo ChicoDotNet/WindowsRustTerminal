@@ -17,6 +17,7 @@ mod output_csi_cursor_style;
 mod output_csi_decsace;
 mod output_csi_decsca;
 mod output_csi_decfra;
+mod output_csi_decinvm;
 mod output_csi_device_attributes;
 mod output_csi_device_status_report;
 mod output_csi_displayed_extent;
