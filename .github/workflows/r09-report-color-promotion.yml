@@ -52,7 +52,8 @@ jobs:
           $engine = Get-Content -Raw 'src\terminal\parser\OutputStateMachineEngine.cpp'
           foreach ($required in @(
             'terminal_parser_ffi_output_csi_decrqtsr_plan(',
-            'decrqtsrPlan.format_option == -1',
+            'decrqtsrReportFormatParameter);',
+            'static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format)',
             'terminal_parser_ffi_output_csi_decac_plan(',
             'static_cast<DispatchTypes::ColorItem>(decacPlan.item)'
           )) {
