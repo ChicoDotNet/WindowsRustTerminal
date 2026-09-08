@@ -65,26 +65,26 @@ $plans = Normalize-Newlines -Value @'
     const auto decrqtsrStatus = terminal_parser_ffi_output_csi_decrqtsr_plan(
         static_cast<uint64_t>(id),
         static_cast<int32_t>(parameters.at(0).value_or(0)),
-        decrqtsrReportFormatParameter.has_value() ? static_cast<int32_t>(decrqtsrReportFormatParameter.value_or(0)) : TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REPORT_FORMAT_OMITTED,
+        decrqtsrReportFormatParameter.has_value() ? static_cast<int32_t>(decrqtsrReportFormatParameter.value_or(0)) : -1,
         &decrqtsrPlan);
     THROW_HR_IF(E_UNEXPECTED, decrqtsrStatus != TERMINAL_PARSER_FFI_OK);
 
     switch (decrqtsrPlan.kind)
     {
-    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_KIND_REQUEST_TERMINAL_STATE_REPORT:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REQUEST_TERMINAL_STATE:
         _dispatch->RequestTerminalStateReport(
             decrqtsrPlan.format,
-            decrqtsrPlan.report_format == TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REPORT_FORMAT_OMITTED ?
+            decrqtsrPlan.format_option == -1 ?
                 std::optional<VTInt>{} :
-                std::optional<VTInt>{ decrqtsrPlan.report_format });
+                std::optional<VTInt>{ decrqtsrPlan.format_option });
         break;
-    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_KIND_NONE:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE:
         break;
     default:
         THROW_HR(E_UNEXPECTED);
     }
 
-    if (decrqtsrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_KIND_NONE)
+    if (decrqtsrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE)
     {
         _ClearLastChar();
         return true;
@@ -101,19 +101,19 @@ $plans = Normalize-Newlines -Value @'
 
     switch (decacPlan.kind)
     {
-    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_KIND_ASSIGN_COLOR:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_ASSIGN_COLOR:
         _dispatch->AssignColor(
             static_cast<DispatchTypes::ColorItem>(decacPlan.item),
             decacPlan.foreground_index,
             decacPlan.background_index);
         break;
-    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_KIND_NONE:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE:
         break;
     default:
         THROW_HR(E_UNEXPECTED);
     }
 
-    if (decacPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_KIND_NONE)
+    if (decacPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE)
     {
         _ClearLastChar();
         return true;
@@ -155,7 +155,7 @@ $updated = [System.IO.File]::ReadAllText($enginePath)
 foreach ($required in @(
     'terminal_parser_ffi_output_csi_decrqtsr.h',
     'terminal_parser_ffi_output_csi_decrqtsr_plan(',
-    'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REPORT_FORMAT_OMITTED',
+    'decrqtsrPlan.format_option == -1',
     'terminal_parser_ffi_output_csi_decac.h',
     'terminal_parser_ffi_output_csi_decac_plan(',
     'static_cast<DispatchTypes::ColorItem>(decacPlan.item)'
