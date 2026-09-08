@@ -197,7 +197,7 @@ int main()
         expect_output_execute_plan(0x0a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
         expect_output_execute_plan(0x0b, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
         expect_output_execute_plan(0x0c, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
-        expect_output_execute_plan(0x0f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 0, 0) &&
+        expect_output_execute_plan(0x0f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 0) &&
         expect_output_execute_plan(0x0e, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 1) &&
         expect_output_execute_plan(0x1a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x2426) &&
         expect_output_execute_plan(0x7f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x7f) &&
