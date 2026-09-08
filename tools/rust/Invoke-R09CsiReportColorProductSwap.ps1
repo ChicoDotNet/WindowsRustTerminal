@@ -73,7 +73,7 @@ $plans = Normalize-Newlines -Value @'
     {
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REQUEST_TERMINAL_STATE:
         _dispatch->RequestTerminalStateReport(
-            decrqtsrPlan.format,
+            static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format),
             decrqtsrPlan.format_option == -1 ?
                 std::optional<VTInt>{} :
                 std::optional<VTInt>{ decrqtsrPlan.format_option });
@@ -156,6 +156,7 @@ foreach ($required in @(
     'terminal_parser_ffi_output_csi_decrqtsr.h',
     'terminal_parser_ffi_output_csi_decrqtsr_plan(',
     'decrqtsrPlan.format_option == -1',
+    'static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format)',
     'terminal_parser_ffi_output_csi_decac.h',
     'terminal_parser_ffi_output_csi_decac_plan(',
     'static_cast<DispatchTypes::ColorItem>(decacPlan.item)'
