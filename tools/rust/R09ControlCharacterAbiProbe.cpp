@@ -29,6 +29,7 @@
 #include "R09OutputCsiPagePositionAbiProbe.hpp"
 #include "R09OutputCsiPopSgrAbiProbe.hpp"
 #include "R09OutputCsiPushSgrAbiProbe.hpp"
+#include "R09OutputCsiRectAttributesAbiProbe.hpp"
 #include "R09OutputCsiRectEraseAbiProbe.hpp"
 #include "R09OutputCsiRequestModeAbiProbe.hpp"
 #include "R09OutputCsiRequestPresentationStateAbiProbe.hpp"
@@ -196,7 +197,7 @@ int main()
         expect_output_execute_plan(0x0a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
         expect_output_execute_plan(0x0b, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
         expect_output_execute_plan(0x0c, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE, 0) &&
-        expect_output_execute_plan(0x0f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 0) &&
+        expect_output_execute_plan(0x0f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 0, 0) &&
         expect_output_execute_plan(0x0e, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT, 1) &&
         expect_output_execute_plan(0x1a, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x2426) &&
         expect_output_execute_plan(0x7f, TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT, 0x7f) &&
@@ -231,6 +232,7 @@ int main()
     const bool outputCsiPagePositionOk = r09::output_csi_page_position_replay();
     const bool outputCsiPopSgrOk = r09::output_csi_pop_sgr_replay();
     const bool outputCsiPushSgrOk = r09::output_csi_push_sgr_replay();
+    const bool outputCsiRectAttributesOk = r09::output_csi_rect_attributes_replay();
     const bool outputCsiRectEraseOk = r09::output_csi_rect_erase_replay();
     const bool outputCsiRequestModeOk = r09::output_csi_request_mode_replay();
     const bool outputCsiRequestPresentationStateOk = r09::output_csi_request_presentation_state_replay();
@@ -243,7 +245,7 @@ int main()
     const bool outputCsiUserPreferenceCharsetOk = r09::output_csi_user_preference_charset_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecacOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecinvmOk || !outputCsiDecrqtsrOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecacOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecinvmOk || !outputCsiDecrqtsrOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectAttributesOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
