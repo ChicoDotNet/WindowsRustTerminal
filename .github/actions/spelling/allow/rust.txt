@@ -19,6 +19,7 @@ decac
 deccolm
 dececm
 decera
+decinvm
 DECMAC
 decsca
 decscusr
