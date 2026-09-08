@@ -22,9 +22,10 @@ Microsoft upstream changes are consumed through `dev/ChicoDotNet`. Individual hi
 3. Never delete the head branch of an open ChicoDotNet pull request.
 4. Preserve release branches and version-line branches.
 5. Prefer deleting inherited developer refs by namespace instead of evaluating hundreds of branches one by one when the namespace is clearly upstream-owned.
-6. Record every cleanup batch here before or together with deletion.
+6. Record every retired branch or cleanup batch here before or together with deletion. `Issues.md` is the canonical cleanup ledger; detailed `BranchArchaeology-*.md` files are supporting evidence.
 7. Do not merge every historical branch into a maintainer lane. The lanes are fresh baselines for curated recovery work, not archives of every abandoned experiment.
 8. Do not select recovery work by age alone. Prefer issues that combine stale ownership, reproducible behavior, architectural value, tractable scope, and useful overlap with the Rust migration.
+9. For legacy cleanup, preservation of intent, architectural decisions, traps, rejected approaches, and known successors is more important than proving that historical code still builds. Compile or test only when needed to understand the knowledge being preserved.
 
 ## Current protected working set
 
@@ -151,6 +152,34 @@ Notes:
 - `dev/ChicoDotNet` is intentionally excluded even though it shares the `dev/` prefix.
 - A developer branch whose name contains the word `release` (for example `dev/migrie/release-1.12-rejuv-attempt-2`) is still a developer work branch and is not part of the preserved top-level release lineage.
 - The fork currently has only one open pull request, PR #46, and it is ours; there are no open Microsoft legacy PRs in this fork to close. The cleanup target is therefore inherited branch refs.
+
+## Knowledge consolidation and retirement ledger
+
+`Issues.md` is the authoritative answer to “can this branch be deleted?”. Detailed archaeology documents in the maintainer lanes explain *why*. A branch moves to **SAFE TO DELETE** once its unique intent/decision/lesson has been preserved somewhere durable, even when no historical code was ported or compiled.
+
+| Legacy / temporary branch | Lane | Knowledge disposition | Durable evidence | Delete status |
+| --- | --- | --- | --- | --- |
+| `dev/migrie/fhl-2021/more-shader-variables` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — old DxRenderer shader-variable experiment; useful shader-state contract preserved; implementation superseded by Atlas custom-shader work | `BranchArchaeology-FHL2021-Shaders.md`, commit `e462ac0` | **SAFE TO DELETE** |
+| `dev/migrie/fhl-2021/differential-pixel-shading` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — differential/full-screen shader presentation experiment; preserve partial-present/performance reasoning, not obsolete DxRenderer code | `BranchArchaeology-FHL2021-Shaders.md`, commit `e462ac0` | **SAFE TO DELETE** |
+| `dev/migrie/fhl-2021/cmdpal-select-list` | `dev/migrie/main` | **DOCUMENT / NO-PORT** — command-palette selector fed from stdin; key durable discovery is launcher handle inheritance and stdin/remoting contract | `BranchArchaeology-FHL2021-CmdPal-SelectList.md`, commit `4f3d324` | **SAFE TO DELETE** |
+| `dev/cazamor/1.14/replace-compareInBounds` | `dev/cazamor/main` | **DOCUMENT / SUPERSEDED** — historical 1.14 backport; original comparison simplification was reverted because a bounds semantic was lost; corrected successor later shipped upstream | `BranchArchaeology-CompareInBounds.md`, commit `02d022e` | **SAFE TO DELETE** |
+| `dev/migrie/replay-disable-nesting-source` | `dev/migrie/main` | **DOCUMENT / TRANSFORM KNOWLEDGE** — one-commit source snapshot for the abandoned `showSuggestions.nesting` proposal | `BranchArchaeology-Disable-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
+| `dev/migrie/ci-suggestions-nesting-contract-replay` | `dev/migrie/main` | **DOCUMENT / TRANSFORM KNOWLEDGE** — current-architecture translation proved how flattening would map into the modern snippets pipeline; compilation is not required for retention | `BranchArchaeology-Disable-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
+| `dev/migrie/ci-certify-disable-nesting-ff112` | `dev/migrie/main` | **DROP AFTER DOCUMENTATION** — temporary certification harness; CI failures were harness/dependency-order noise and add no unique product knowledge | `BranchArchaeology-Disable-Nesting.md`, commit `2be592b` | **SAFE TO DELETE** |
+| upstream `dev/migrie/f/disable-nesting` / PR `microsoft/terminal#17418` | `dev/migrie/main` | **DOCUMENT / PRODUCT DECISION** — explicit `nesting: disabled` proposal was closed in favor of making hierarchy transparent when search text exists; prerequisites were snippets pane, `FilteredTask` extraction, and filtering literal input | `BranchArchaeology-Disable-Nesting.md`, commit `2be592b` | Upstream reference only; local replay refs above are disposable |
+| `dev/migrie/f/settings-getters-only` | `dev/migrie/main` | **DOCUMENT / IDEA SURVIVED** — 2020 experiment made `ICoreSettings` and `IControlSettings` getter-only; branch said “doesn't work yet”, but the architectural boundary survived and current interfaces are read-oriented | `BranchArchaeology-2020-Settings-Getters-Only.md`, commit `fb51274` | **SAFE TO DELETE** |
+
+### Operating rule for subsequent increments
+
+For every legacy branch processed from now on:
+
+1. Inspect the branch tip/history and its divergence only far enough to identify intent.
+2. Locate associated upstream PR/issue/successor when readily discoverable.
+3. Classify the knowledge as `COPY`, `TRANSFORM`, `DOCUMENT`, or `DROP`.
+4. Preserve unique knowledge in `dev/<maintainer>/main` — code is optional; documentation alone is a valid consolidation result.
+5. Add or update the row in this ledger in the same increment.
+6. Mark **SAFE TO DELETE** immediately when the branch no longer contains unique unrecorded knowledge.
+7. Do not spend CI/build time unless it resolves a material ambiguity in the knowledge being preserved.
 
 ## Next batches
 
