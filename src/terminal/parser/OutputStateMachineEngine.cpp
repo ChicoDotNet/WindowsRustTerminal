@@ -30,6 +30,7 @@
 #include "terminal_parser_ffi_output_csi_request_mode.h"
 #include "terminal_parser_ffi_output_csi_request_presentation_state.h"
 #include "terminal_parser_ffi_output_csi_decsace.h"
+#include "terminal_parser_ffi_output_csi_decinvm.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1494,6 +1495,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    terminal_parser_ffi_output_csi_decinvm_result decinvmPlan{};
+    const auto decinvmStatus = terminal_parser_ffi_output_csi_decinvm_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &decinvmPlan);
+    THROW_HR_IF(E_UNEXPECTED, decinvmStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decinvmPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_INVOKE_MACRO:
+        _dispatch->InvokeMacro(decinvmPlan.macro_id);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decinvmPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
     switch (id)
     {
 
@@ -1548,9 +1573,7 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
     case CsiActionCodes::DECRQCRA_RequestChecksumRectangularArea:
         _dispatch->RequestChecksumRectangularArea(parameters.at(0).value_or(0), parameters.at(1).value_or(0), parameters.at(2), parameters.at(3), parameters.at(4).value_or(0), parameters.at(5).value_or(0));
         break;
-    case CsiActionCodes::DECINVM_InvokeMacro:
-        _dispatch->InvokeMacro(parameters.at(0).value_or(0));
-        break;
+
     case CsiActionCodes::DECAC_AssignColor:
         _dispatch->AssignColor(parameters.at(0), parameters.at(1).value_or(0), parameters.at(2).value_or(0));
         break;
