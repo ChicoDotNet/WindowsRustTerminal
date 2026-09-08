@@ -22,7 +22,6 @@ $newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
 function Normalize-Newlines
 {
     param([Parameter(Mandatory = $true)][string]$Value)
-
     return [regex]::Replace($Value, "\r\n|\r|\n", $script:newline)
 }
 
@@ -33,18 +32,9 @@ function Replace-ExactlyOnce
         [Parameter(Mandatory = $true)][AllowEmptyString()][string]$Replacement,
         [Parameter(Mandatory = $true)][string]$Description
     )
-
     $matches = [regex]::Matches($script:text, $Pattern, [System.Text.RegularExpressions.RegexOptions]::Multiline)
-    if ($matches.Count -ne 1)
-    {
-        throw "Expected exactly one $Description match, found $($matches.Count)."
-    }
-
-    $script:text = [regex]::Replace(
-        $script:text,
-        $Pattern,
-        $Replacement,
-        [System.Text.RegularExpressions.RegexOptions]::Multiline)
+    if ($matches.Count -ne 1) { throw "Expected exactly one $Description match, found $($matches.Count)." }
+    $script:text = [regex]::Replace($script:text, $Pattern, $Replacement, [System.Text.RegularExpressions.RegexOptions]::Multiline)
 }
 
 $includeReplacement = Normalize-Newlines -Value @'
@@ -53,11 +43,7 @@ $includeReplacement = Normalize-Newlines -Value @'
 #include "terminal_parser_ffi_output_csi_decac.h"
 '@
 $includeReplacement += $newline
-
-Replace-ExactlyOnce `
-    -Description 'DECINVM include anchor' `
-    -Pattern '#include "terminal_parser_ffi_output_csi_decinvm\.h"\r?\n' `
-    -Replacement $includeReplacement
+Replace-ExactlyOnce -Description 'DECINVM include anchor' -Pattern '#include "terminal_parser_ffi_output_csi_decinvm\.h"\r?\n' -Replacement $includeReplacement
 
 $plans = Normalize-Newlines -Value @'
     const auto decrqtsrReportFormatParameter = parameters.at(1);
@@ -74,9 +60,7 @@ $plans = Normalize-Newlines -Value @'
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REQUEST_TERMINAL_STATE:
         _dispatch->RequestTerminalStateReport(
             static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format),
-            decrqtsrPlan.format_option == -1 ?
-                std::optional<VTInt>{} :
-                std::optional<VTInt>{ decrqtsrPlan.format_option });
+            decrqtsrReportFormatParameter);
         break;
     case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE:
         break;
@@ -133,50 +117,27 @@ $legacySwitchAnchor = Normalize-Newlines -Value @'
 '@
 $legacySwitchAnchorPattern = [regex]::Escape($legacySwitchAnchor)
 $legacySwitchReplacement = ($legacySwitchAnchor.Substring(0, $legacySwitchAnchor.LastIndexOf('    switch (id)'))) + $plans + "    switch (id)$newline    {$newline"
+Replace-ExactlyOnce -Description 'post-DECINVM legacy CSI switch anchor' -Pattern $legacySwitchAnchorPattern -Replacement $legacySwitchReplacement
 
-Replace-ExactlyOnce `
-    -Description 'post-DECINVM legacy CSI switch anchor' `
-    -Pattern $legacySwitchAnchorPattern `
-    -Replacement $legacySwitchReplacement
-
-Replace-ExactlyOnce `
-    -Description 'legacy DECRQTSR case' `
-    -Pattern '    case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:\r?\n        _dispatch->RequestTerminalStateReport\(parameters\.at\(0\), parameters\.at\(1\)\);\r?\n        break;\r?\n' `
-    -Replacement ''
-
-Replace-ExactlyOnce `
-    -Description 'legacy DECAC case' `
-    -Pattern '    case CsiActionCodes::DECAC_AssignColor:\r?\n        _dispatch->AssignColor\(parameters\.at\(0\), parameters\.at\(1\)\.value_or\(0\), parameters\.at\(2\)\.value_or\(0\)\);\r?\n        break;\r?\n' `
-    -Replacement ''
+Replace-ExactlyOnce -Description 'legacy DECRQTSR case' -Pattern '    case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:\r?\n        _dispatch->RequestTerminalStateReport\(parameters\.at\(0\), parameters\.at\(1\)\);\r?\n        break;\r?\n' -Replacement ''
+Replace-ExactlyOnce -Description 'legacy DECAC case' -Pattern '    case CsiActionCodes::DECAC_AssignColor:\r?\n        _dispatch->AssignColor\(parameters\.at\(0\), parameters\.at\(1\)\.value_or\(0\), parameters\.at\(2\)\.value_or\(0\)\);\r?\n        break;\r?\n' -Replacement ''
 
 [System.IO.File]::WriteAllText($enginePath, $text, [System.Text.UTF8Encoding]::new($false))
-
 $updated = [System.IO.File]::ReadAllText($enginePath)
 foreach ($required in @(
     'terminal_parser_ffi_output_csi_decrqtsr.h',
     'terminal_parser_ffi_output_csi_decrqtsr_plan(',
-    'decrqtsrPlan.format_option == -1',
+    'decrqtsrReportFormatParameter);',
     'static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format)',
     'terminal_parser_ffi_output_csi_decac.h',
     'terminal_parser_ffi_output_csi_decac_plan(',
     'static_cast<DispatchTypes::ColorItem>(decacPlan.item)'
 ))
 {
-    if (-not $updated.Contains($required))
-    {
-        throw "R09 report/color candidate is missing required marker: $required"
-    }
+    if (-not $updated.Contains($required)) { throw "R09 report/color candidate is missing required marker: $required" }
 }
-
-foreach ($legacy in @(
-    'case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:',
-    'case CsiActionCodes::DECAC_AssignColor:'
-))
+foreach ($legacy in @('case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:', 'case CsiActionCodes::DECAC_AssignColor:'))
 {
-    if ($updated.Contains($legacy))
-    {
-        throw "R09 report/color candidate still contains legacy ownership: $legacy"
-    }
+    if ($updated.Contains($legacy)) { throw "R09 report/color candidate still contains legacy ownership: $legacy" }
 }
-
 Write-Host 'Prepared fail-closed DECRQTSR + DECAC Rust ownership candidate.'
