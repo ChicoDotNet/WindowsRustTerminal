@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   replay:
-    if: ${{ !contains(github.event.head_commit.message, '[disable-nesting-replay-applied]') }}
+    if: "${{ !contains(github.event.head_commit.message, '[disable-nesting-replay-applied]') }}"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -32,14 +32,6 @@ jobs:
                   raise SystemExit(f'{path}: expected exactly one occurrence, found {count}: {old[:80]!r}')
               p.write_text(text.replace(old, new, 1), encoding='utf-8')
 
-          def replace_count(path, old, new, expected):
-              p = Path(path)
-              text = p.read_text(encoding='utf-8')
-              count = text.count(old)
-              if count != expected:
-                  raise SystemExit(f'{path}: expected {expected} occurrences, found {count}: {old[:80]!r}')
-              p.write_text(text.replace(old, new), encoding='utf-8')
-
           # ActionArgs.idl: recover the user-facing nesting option.
           replace_once(
               'src/cascadia/TerminalSettingsModel/ActionArgs.idl',
@@ -60,16 +52,21 @@ jobs:
               '        SuggestionsNesting Nesting { get; };\n'
               '        Boolean UseCommandline { get; };')
 
-          # ActionArgs.h: preserve historical default (enabled) and JSON key `nesting`.
-          replace_once(
-              'src/cascadia/TerminalSettingsModel/ActionArgs.h',
-              '#define SUGGESTIONS_ARGS(X)                                                                    \\\n'
-              '    X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks) \\\n'
-              '    X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)',
-              '#define SUGGESTIONS_ARGS(X)                                                                          \\\n'
-              '    X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks)          \\\n'
-              '    X(SuggestionsNesting, Nesting, "nesting", false, ArgTypeHint::None, SuggestionsNesting::Enabled) \\\n'
-              '    X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)')
+          # ActionArgs.h: insert one x-macro row without embedding backslash-newline strings.
+          args_h = Path('src/cascadia/TerminalSettingsModel/ActionArgs.h')
+          lines = args_h.read_text(encoding='utf-8').splitlines(keepends=True)
+          source_marker = '    X(SuggestionsSource, Source, "source", false, ArgTypeHint::None, SuggestionsSource::Tasks)'
+          bool_marker = '    X(bool, UseCommandline, "useCommandline", false, ArgTypeHint::None, false)'
+          matches = [i for i, line in enumerate(lines) if source_marker in line]
+          if len(matches) != 1:
+              raise SystemExit(f'ActionArgs.h: expected one SuggestionsSource row, found {len(matches)}')
+          i = matches[0]
+          if i + 1 >= len(lines) or bool_marker not in lines[i + 1]:
+              raise SystemExit('ActionArgs.h: Suggestions macro layout drifted')
+          newline = '\r\n' if lines[i].endswith('\r\n') else '\n'
+          indent = '    '
+          lines.insert(i + 1, indent + 'X(SuggestionsNesting, Nesting, "nesting", false, ArgTypeHint::None, SuggestionsNesting::Enabled) \\' + newline)
+          args_h.write_text(''.join(lines), encoding='utf-8')
 
           # WinRT ActionMap contract: nesting is explicit at the query boundary.
           replace_once(
