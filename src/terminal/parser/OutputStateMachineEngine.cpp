@@ -31,6 +31,8 @@
 #include "terminal_parser_ffi_output_csi_request_presentation_state.h"
 #include "terminal_parser_ffi_output_csi_decsace.h"
 #include "terminal_parser_ffi_output_csi_decinvm.h"
+#include "terminal_parser_ffi_output_csi_decrqtsr.h"
+#include "terminal_parser_ffi_output_csi_decac.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1519,8 +1521,65 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
+    const auto decrqtsrReportFormatParameter = parameters.at(1);
+    terminal_parser_ffi_output_csi_decrqtsr_result decrqtsrPlan{};
+    const auto decrqtsrStatus = terminal_parser_ffi_output_csi_decrqtsr_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        decrqtsrReportFormatParameter.has_value() ? static_cast<int32_t>(decrqtsrReportFormatParameter.value_or(0)) : -1,
+        &decrqtsrPlan);
+    THROW_HR_IF(E_UNEXPECTED, decrqtsrStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decrqtsrPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REQUEST_TERMINAL_STATE:
+        _dispatch->RequestTerminalStateReport(
+            static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format),
+            decrqtsrReportFormatParameter);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decrqtsrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decac_result decacPlan{};
+    const auto decacStatus = terminal_parser_ffi_output_csi_decac_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        &decacPlan);
+    THROW_HR_IF(E_UNEXPECTED, decacStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decacPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_ASSIGN_COLOR:
+        _dispatch->AssignColor(
+            static_cast<DispatchTypes::ColorItem>(decacPlan.item),
+            decacPlan.foreground_index,
+            decacPlan.background_index);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decacPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
     switch (id)
     {
+
 
 
 
@@ -1561,9 +1620,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _dispatch->ReverseAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
         break;
 
-    case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:
-        _dispatch->RequestTerminalStateReport(parameters.at(0), parameters.at(1));
-        break;
 
 
 
@@ -1574,9 +1630,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _dispatch->RequestChecksumRectangularArea(parameters.at(0).value_or(0), parameters.at(1).value_or(0), parameters.at(2), parameters.at(3), parameters.at(4).value_or(0), parameters.at(5).value_or(0));
         break;
 
-    case CsiActionCodes::DECAC_AssignColor:
-        _dispatch->AssignColor(parameters.at(0), parameters.at(1).value_or(0), parameters.at(2).value_or(0));
-        break;
     case CsiActionCodes::DECPS_PlaySound:
         _dispatch->PlaySounds(parameters);
         break;
