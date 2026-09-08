@@ -17,6 +17,14 @@ if ($LASTEXITCODE -ne 0 -or $actualBlob -ne $expectedBlob)
 }
 
 $text = [System.IO.File]::ReadAllText($enginePath)
+$newline = if ($text.Contains("`r`n")) { "`r`n" } else { "`n" }
+
+function Normalize-Newlines
+{
+    param([Parameter(Mandatory = $true)][string]$Value)
+
+    return [regex]::Replace($Value, "\r\n|\r|\n", $script:newline)
+}
 
 function Replace-ExactlyOnce
 {
@@ -39,19 +47,19 @@ function Replace-ExactlyOnce
         [System.Text.RegularExpressions.RegexOptions]::Multiline)
 }
 
-$includeReplacement = @'
+$includeReplacement = Normalize-Newlines -Value @'
 #include "terminal_parser_ffi_output_csi_decinvm.h"
 #include "terminal_parser_ffi_output_csi_decrqtsr.h"
 #include "terminal_parser_ffi_output_csi_decac.h"
-'@ -replace "`n", "`r`n"
-$includeReplacement += "`r`n"
+'@
+$includeReplacement += $newline
 
 Replace-ExactlyOnce `
     -Description 'DECINVM include anchor' `
     -Pattern '#include "terminal_parser_ffi_output_csi_decinvm\.h"\r?\n' `
     -Replacement $includeReplacement
 
-$plans = @'
+$plans = Normalize-Newlines -Value @'
     const auto decrqtsrReportFormatParameter = parameters.at(1);
     terminal_parser_ffi_output_csi_decrqtsr_result decrqtsrPlan{};
     const auto decrqtsrStatus = terminal_parser_ffi_output_csi_decrqtsr_plan(
@@ -113,7 +121,7 @@ $plans = @'
 
 '@
 
-$legacySwitchAnchor = @'
+$legacySwitchAnchor = Normalize-Newlines -Value @'
     if (decinvmPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE)
     {
         _ClearLastChar();
@@ -123,8 +131,8 @@ $legacySwitchAnchor = @'
     switch (id)
     {
 '@
-$legacySwitchAnchorPattern = [regex]::Escape($legacySwitchAnchor) -replace '\\r\\n', '\r?\n' -replace '\\n', '\r?\n'
-$legacySwitchReplacement = ($legacySwitchAnchor.Substring(0, $legacySwitchAnchor.LastIndexOf('    switch (id)'))) + $plans + "    switch (id)`r`n    {`r`n"
+$legacySwitchAnchorPattern = [regex]::Escape($legacySwitchAnchor)
+$legacySwitchReplacement = ($legacySwitchAnchor.Substring(0, $legacySwitchAnchor.LastIndexOf('    switch (id)'))) + $plans + "    switch (id)$newline    {$newline"
 
 Replace-ExactlyOnce `
     -Description 'post-DECINVM legacy CSI switch anchor' `
