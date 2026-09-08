@@ -20,8 +20,8 @@ deccolm
 dececm
 decera
 decinvm
-DECMAC
-DECRQTSR
+decmac
+decrqtsr
 decsca
 decscusr
 decsace
