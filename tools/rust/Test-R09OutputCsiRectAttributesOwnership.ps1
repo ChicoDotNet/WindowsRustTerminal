@@ -5,7 +5,7 @@ $source = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'src/terminal/parse
 $ffi = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi_rect_attributes.rs')
 $probe = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'tools/rust/R09OutputCsiRectAttributesAbiProbe.hpp')
 
-if (-not $source.Contains('#include "rust_ffi/output_csi_rect_attributes.c.h"')) { throw 'R09 CSI rectangular attributes ownership gate: native product no longer includes the Rust ABI contract.' }
+if (-not $source.Contains('#include "terminal_parser_ffi_output_csi_rect_attributes.h"')) { throw 'R09 CSI rectangular attributes ownership gate: native product no longer includes the Rust ABI contract.' }
 if (-not $source.Contains('terminal_parser_ffi_output_csi_rect_attributes_plan')) { throw 'R09 CSI rectangular attributes ownership gate: product no longer delegates DECCARA/DECRARA classification to Rust.' }
 if (-not $source.Contains('case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_CHANGE:')) { throw 'R09 CSI rectangular attributes ownership gate: Rust DECCARA plan no longer materializes native dispatch.' }
 if (-not $source.Contains('case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_REVERSE:')) { throw 'R09 CSI rectangular attributes ownership gate: Rust DECRARA plan no longer materializes native dispatch.' }
