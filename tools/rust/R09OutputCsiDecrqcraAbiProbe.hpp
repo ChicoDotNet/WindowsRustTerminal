@@ -1,6 +1,7 @@
 #pragma once
 
 #include "terminal_parser_ffi_output_csi_decrqcra.h"
+#include "R09OutputCsiRepAbiProbe.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -89,6 +90,7 @@ namespace r09
                 TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_NONE,
                 0, 0, 0, 0) &&
             invalidIdentifierStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
-            nullPlanStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            nullPlanStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            output_csi_rep_replay();
     }
 }
