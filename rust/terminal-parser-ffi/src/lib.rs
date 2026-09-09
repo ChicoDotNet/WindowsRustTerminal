@@ -41,6 +41,7 @@ mod output_csi_push_sgr;
 mod output_csi_rect_attributes;
 mod output_csi_rect_copy;
 mod output_csi_rect_erase;
+mod output_csi_rep;
 mod output_csi_request_mode;
 mod output_csi_request_presentation_state;
 mod output_csi_scroll;
@@ -161,7 +162,7 @@ pub extern "C" fn terminal_parser_ffi_base64_decode_utf16(
         let required = decoded_utf16.len();
 
         // SAFETY: `out_len` was checked non-null above and the ABI requires it
-        // to reference one writable `usize` for the duration of the call.
+        // to reference one writable `usize` for the duration of this call.
         unsafe { ptr::write(out_len, required) };
 
         if output_capacity < required {
