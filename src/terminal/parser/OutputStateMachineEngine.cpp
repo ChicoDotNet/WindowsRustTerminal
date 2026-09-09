@@ -33,6 +33,7 @@
 #include "terminal_parser_ffi_output_csi_decinvm.h"
 #include "terminal_parser_ffi_output_csi_decrqtsr.h"
 #include "terminal_parser_ffi_output_csi_decac.h"
+#include "terminal_parser_ffi_output_csi_rect_attributes.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1577,8 +1578,46 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _ClearLastChar();
         return true;
     }
+    terminal_parser_ffi_output_csi_rect_attributes_result rectAttributesPlan{};
+    const auto rectAttributesStatus = terminal_parser_ffi_output_csi_rect_attributes_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        static_cast<int32_t>(parameters.at(3).value_or(0)),
+        &rectAttributesPlan);
+    THROW_HR_IF(E_UNEXPECTED, rectAttributesStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (rectAttributesPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_CHANGE:
+        _dispatch->ChangeAttributesRectangularArea(
+            parameters.at(0),
+            parameters.at(1),
+            rectAttributesPlan.bottom,
+            rectAttributesPlan.right,
+            parameters.subspan(4));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_REVERSE:
+        _dispatch->ReverseAttributesRectangularArea(
+            parameters.at(0),
+            parameters.at(1),
+            rectAttributesPlan.bottom,
+            rectAttributesPlan.right,
+            parameters.subspan(4));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (rectAttributesPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
     switch (id)
     {
+
 
 
 
@@ -1613,12 +1652,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::DECCARA_ChangeAttributesRectangularArea:
-        _dispatch->ChangeAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
-        break;
-    case CsiActionCodes::DECRARA_ReverseAttributesRectangularArea:
-        _dispatch->ReverseAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
-        break;
 
 
 
