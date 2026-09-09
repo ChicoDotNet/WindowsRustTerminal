@@ -51,7 +51,7 @@ jobs:
           git diff --check
           if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
           $changed = @(git diff --name-only)
-          $expected = @('.github/workflows/r09-product-build.yml', 'src/terminal/parser/OutputStateMachineEngine.cpp')
+          $expected = @('src/terminal/parser/OutputStateMachineEngine.cpp')
           if (($changed.Count -ne $expected.Count) -or (@(Compare-Object ($changed | Sort-Object) ($expected | Sort-Object)).Count -ne 0)) {
             throw "Promotion candidate changed unexpected files: $($changed -join ', ')"
           }
@@ -61,7 +61,7 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add -- 'src/terminal/parser/OutputStateMachineEngine.cpp' '.github/workflows/r09-product-build.yml'
+          git add -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
           git commit -m 'Route DECRQCRA through Rust ownership'
 
       - name: Canonical product build
