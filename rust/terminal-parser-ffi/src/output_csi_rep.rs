@@ -10,6 +10,7 @@ use super::{FfiStatus, ffi_guard};
 pub enum OutputCsiRepKind {
     None = 0,
     Repeat = 1,
+    HandledNoop = 2,
 }
 
 #[repr(C)]
@@ -22,10 +23,12 @@ pub struct OutputCsiRepPlan {
 #[derive(Default)]
 struct PlanDispatch {
     plan: OutputCsiRepPlan,
+    emitted_action: bool,
 }
 
 impl TermDispatch for PlanDispatch {
     fn dispatch(&mut self, action: OutputAction) {
+        self.emitted_action = true;
         if let OutputAction::PrintString(text) = action {
             if !text.is_empty() {
                 self.plan = OutputCsiRepPlan {
@@ -80,11 +83,17 @@ pub extern "C" fn terminal_parser_ffi_output_csi_rep_plan(
         }
         let parameters = Parameters::from_values(vec![Some(parameter0)]);
         let _ = engine.action_csi_dispatch(id, &parameters);
-        let plan = engine.into_dispatch().plan;
+        let mut dispatch = engine.into_dispatch();
+        if !dispatch.emitted_action {
+            dispatch.plan = OutputCsiRepPlan {
+                kind: OutputCsiRepKind::HandledNoop as u32,
+                count: 0,
+            };
+        }
 
         // SAFETY: `out_plan` was checked non-null above and the ABI requires
         // one writable plan value for the duration of this call.
-        unsafe { ptr::write(out_plan, plan) };
+        unsafe { ptr::write(out_plan, dispatch.plan) };
         FfiStatus::Ok
     })
 }
@@ -125,7 +134,13 @@ mod tests {
                 count: 4,
             }
         );
-        assert_eq!(plan("b", 7, 0), OutputCsiRepPlan::default());
+        assert_eq!(
+            plan("b", 7, 0),
+            OutputCsiRepPlan {
+                kind: OutputCsiRepKind::HandledNoop as u32,
+                count: 0,
+            }
+        );
         assert_eq!(plan("X", 4, u16::from(b'Z')), OutputCsiRepPlan::default());
     }
 

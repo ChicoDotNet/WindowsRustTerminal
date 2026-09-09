@@ -10,6 +10,7 @@ typedef enum terminal_parser_ffi_output_csi_rep_kind
 {
     TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE = 0,
     TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_REPEAT = 1,
+    TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_HANDLED_NOOP = 2,
 } terminal_parser_ffi_output_csi_rep_kind;
 
 typedef struct terminal_parser_ffi_output_csi_rep_result

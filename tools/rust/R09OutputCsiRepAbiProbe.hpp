@@ -66,7 +66,7 @@ namespace r09
                 TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_REPEAT, 4) &&
             expect_output_csi_rep_plan(
                 'b', 7, 0,
-                TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE, 0) &&
+                TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_HANDLED_NOOP, 0) &&
             expect_output_csi_rep_plan(
                 'X', 4, static_cast<uint16_t>('Z'),
                 TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE, 0) &&
