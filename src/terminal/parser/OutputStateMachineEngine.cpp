@@ -34,6 +34,7 @@
 #include "terminal_parser_ffi_output_csi_decrqtsr.h"
 #include "terminal_parser_ffi_output_csi_decac.h"
 #include "terminal_parser_ffi_output_csi_rect_attributes.h"
+#include "terminal_parser_ffi_output_csi_decrqcra.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1615,6 +1616,39 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _ClearLastChar();
         return true;
     }
+
+    terminal_parser_ffi_output_csi_decrqcra_result decrqcraPlan{};
+    const auto decrqcraStatus = terminal_parser_ffi_output_csi_decrqcra_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(4).value_or(0)),
+        static_cast<int32_t>(parameters.at(5).value_or(0)),
+        &decrqcraPlan);
+    THROW_HR_IF(E_UNEXPECTED, decrqcraStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decrqcraPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_REQUEST_CHECKSUM_RECTANGULAR_AREA:
+        _dispatch->RequestChecksumRectangularArea(
+            decrqcraPlan.request_id,
+            decrqcraPlan.page,
+            parameters.at(2),
+            parameters.at(3),
+            decrqcraPlan.bottom,
+            decrqcraPlan.right);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decrqcraPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
     switch (id)
     {
 
@@ -1659,9 +1693,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::DECRQCRA_RequestChecksumRectangularArea:
-        _dispatch->RequestChecksumRectangularArea(parameters.at(0).value_or(0), parameters.at(1).value_or(0), parameters.at(2), parameters.at(3), parameters.at(4).value_or(0), parameters.at(5).value_or(0));
-        break;
 
     case CsiActionCodes::DECPS_PlaySound:
         _dispatch->PlaySounds(parameters);
