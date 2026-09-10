@@ -5,6 +5,7 @@ $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/output_csi_de
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_output_csi_decps.h'
 $owner = Get-Content -Raw -LiteralPath 'rust/terminal-parser/src/output_csi_decps.rs'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09OutputCsiDecpsAbiProbe.hpp'
+$runner = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
 
 $requiredEngine = @(
     '#include "terminal_parser_ffi_output_csi_decps.h"',
@@ -52,6 +53,15 @@ if (-not $probe.Contains("expect_output_csi_decps_plan(`n                ',', '~
 }
 if (-not ($probe.Contains("',', '|'") -and $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE'))) {
     throw 'DECPS native neighbor witness missing.'
+}
+if (-not $runner.Contains('#include "R09OutputCsiDecpsAbiProbe.hpp"')) {
+    throw 'DECPS aggregate native replay no longer includes the DECPS witness directly.'
+}
+if (-not $runner.Contains('const bool outputCsiDecpsOk = r09::output_csi_decps_replay();')) {
+    throw 'DECPS aggregate native replay no longer executes the DECPS witness directly.'
+}
+if (-not $runner.Contains('!outputCsiDecpsOk')) {
+    throw 'DECPS aggregate native replay no longer fails closed on the DECPS witness.'
 }
 
 Write-Host 'DECPS ownership gate passed.'
