@@ -10,6 +10,7 @@
 #include "R09OutputCsiDecfraAbiProbe.hpp"
 #include "R09OutputCsiDecsaceAbiProbe.hpp"
 #include "R09OutputCsiDecinvmAbiProbe.hpp"
+#include "R09OutputCsiDecpsAbiProbe.hpp"
 #include "R09OutputCsiDecrqcraAbiProbe.hpp"
 #include "R09OutputCsiDecrqtsrAbiProbe.hpp"
 #include "R09OutputCsiDecscaAbiProbe.hpp"
@@ -32,6 +33,7 @@
 #include "R09OutputCsiPushSgrAbiProbe.hpp"
 #include "R09OutputCsiRectAttributesAbiProbe.hpp"
 #include "R09OutputCsiRectEraseAbiProbe.hpp"
+#include "R09OutputCsiRepAbiProbe.hpp"
 #include "R09OutputCsiRequestModeAbiProbe.hpp"
 #include "R09OutputCsiRequestPresentationStateAbiProbe.hpp"
 #include "R09OutputCsiScrollAbiProbe.hpp"
@@ -214,6 +216,7 @@ int main()
     const bool outputCsiDecfraOk = r09::output_csi_decfra_replay();
     const bool outputCsiDecsaceOk = r09::output_csi_decsace_replay();
     const bool outputCsiDecinvmOk = r09::output_csi_decinvm_replay();
+    const bool outputCsiDecpsOk = r09::output_csi_decps_replay();
     const bool outputCsiDecrqcraOk = r09::output_csi_decrqcra_replay();
     const bool outputCsiDecrqtsrOk = r09::output_csi_decrqtsr_replay();
     const bool outputCsiDecscaOk = r09::output_csi_decsca_replay();
@@ -236,6 +239,7 @@ int main()
     const bool outputCsiPushSgrOk = r09::output_csi_push_sgr_replay();
     const bool outputCsiRectAttributesOk = r09::output_csi_rect_attributes_replay();
     const bool outputCsiRectEraseOk = r09::output_csi_rect_erase_replay();
+    const bool outputCsiRepOk = r09::output_csi_rep_replay();
     const bool outputCsiRequestModeOk = r09::output_csi_request_mode_replay();
     const bool outputCsiRequestPresentationStateOk = r09::output_csi_request_presentation_state_replay();
     const bool outputCsiScrollOk = r09::output_csi_scroll_replay();
@@ -247,7 +251,7 @@ int main()
     const bool outputCsiUserPreferenceCharsetOk = r09::output_csi_user_preference_charset_replay();
     const bool outputCsiWindowManipulationOk = r09::output_csi_window_manipulation_replay();
 
-    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecacOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecinvmOk || !outputCsiDecrqcraOk || !outputCsiDecrqtsrOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectAttributesOk || !outputCsiRectEraseOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
+    if (!controlOk || !mouseOk || !outputExecuteOk || !outputEscOk || !outputVt52Ok || !outputCsiColumnOk || !outputCsiCursorOk || !outputCsiCursorRestoreOk || !outputCsiCursorStyleOk || !outputCsiDecacOk || !outputCsiDecfraOk || !outputCsiDecsaceOk || !outputCsiDecinvmOk || !outputCsiDecpsOk || !outputCsiDecrqcraOk || !outputCsiDecrqtsrOk || !outputCsiDecscaOk || !outputCsiDeviceAttributesOk || !outputCsiDeviceStatusReportOk || !outputCsiDisplayedExtentOk || !outputCsiMarginsOk || !outputCsiEditOk || !outputCsiEraseOk || !outputCsiEraseCharactersOk || !outputCsiKittyKeyboardPopOk || !outputCsiKittyKeyboardPushOk || !outputCsiKittyKeyboardQueryOk || !outputCsiKittyKeyboardSetOk || !outputCsiLineEditOk || !outputCsiModeOk || !outputCsiPageOk || !outputCsiPagePositionOk || !outputCsiPopSgrOk || !outputCsiPushSgrOk || !outputCsiRectAttributesOk || !outputCsiRectEraseOk || !outputCsiRepOk || !outputCsiRequestModeOk || !outputCsiRequestPresentationStateOk || !outputCsiScrollOk || !outputCsiSgrOk || !outputCsiSoftResetOk || !outputCsiTabOk || !outputCsiTabControlOk || !outputCsiTerminalParametersOk || !outputCsiUserPreferenceCharsetOk || !outputCsiWindowManipulationOk)
     {
         return 1;
     }
