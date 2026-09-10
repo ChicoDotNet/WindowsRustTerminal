@@ -21,6 +21,7 @@ jobs:
   promote:
     name: Route DECPS through Rust
     runs-on: windows-2025-vs2026
+    timeout-minutes: 120
     steps:
       - name: Checkout candidate base
         uses: actions/checkout@v5
