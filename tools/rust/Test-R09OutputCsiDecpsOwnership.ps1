@@ -20,7 +20,7 @@ if ($engine.Contains('case CsiActionCodes::DECPS_PlaySound:')) {
     throw 'Legacy C++ DECPS classification still owns the product route.'
 }
 
-$requiredOwner = @('DecpsAction', 'PlaySounds', 'VTID(",~")')
+$requiredOwner = @('DecpsAction', 'PlaySounds', 'VtId::from_ascii(",~")')
 foreach ($needle in $requiredOwner) {
     if (-not $owner.Contains($needle)) { throw "DECPS Rust owner evidence missing: $needle" }
 }
