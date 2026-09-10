@@ -36,6 +36,7 @@
 #include "terminal_parser_ffi_output_csi_rect_attributes.h"
 #include "terminal_parser_ffi_output_csi_decrqcra.h"
 #include "terminal_parser_ffi_output_csi_rep.h"
+#include "terminal_parser_ffi_output_csi_decps.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1679,48 +1680,30 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _ClearLastChar();
         return true;
     }
-    switch (id)
+
+    terminal_parser_ffi_output_csi_decps_result decpsPlan{};
+    const auto decpsStatus = terminal_parser_ffi_output_csi_decps_plan(
+        static_cast<uint64_t>(id),
+        &decpsPlan);
+    THROW_HR_IF(E_UNEXPECTED, decpsStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decpsPlan.kind)
     {
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    case CsiActionCodes::DECPS_PlaySound:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS:
         _dispatch->PlaySounds(parameters);
         break;
-
-
-
-    default:
-        _dispatch->UnknownSequence();
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE:
         break;
+    default:
+        THROW_HR(E_UNEXPECTED);
     }
+
+    if (decpsPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+    _dispatch->UnknownSequence();
 
     _ClearLastChar();
 
