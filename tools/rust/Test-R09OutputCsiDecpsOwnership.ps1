@@ -11,13 +11,17 @@ $requiredEngine = @(
     'terminal_parser_ffi_output_csi_decps_plan(',
     'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS',
     '_dispatch->PlaySounds(parameters);',
-    'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE'
+    'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE',
+    '_dispatch->UnknownSequence();'
 )
 foreach ($needle in $requiredEngine) {
     if (-not $engine.Contains($needle)) { throw "DECPS product route missing: $needle" }
 }
 if ($engine.Contains('case CsiActionCodes::DECPS_PlaySound:')) {
     throw 'Legacy C++ DECPS classification still owns the product route.'
+}
+if ($engine.Contains('switch (id)')) {
+    throw 'Default-only legacy CSI switch shell remains after DECPS ownership transfer.'
 }
 
 $requiredOwner = @('DecpsAction', 'PlaySounds', 'VtId::from_ascii(",~")')
