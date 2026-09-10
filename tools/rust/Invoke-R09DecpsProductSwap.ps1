@@ -76,18 +76,21 @@ $legacy = @"
 "@ -replace "`n", $nl
 $engine = Replace-Once $engine $legacy '' 'legacy DECPS case'
 
-$switchStartAnchor = "    switch (id)$nl    {$nl"
-$switchStart = $engine.IndexOf($switchStartAnchor, [System.StringComparison]::Ordinal)
-if ($switchStart -lt 0 -or $engine.IndexOf($switchStartAnchor, $switchStart + $switchStartAnchor.Length, [System.StringComparison]::Ordinal) -ge 0) {
-    throw 'Expected exactly one residual CSI switch after DECPS removal.'
+$decpsMarker = 'terminal_parser_ffi_output_csi_decps_result decpsPlan{};'
+$decpsStart = $engine.IndexOf($decpsMarker, [System.StringComparison]::Ordinal)
+if ($decpsStart -lt 0 -or $engine.IndexOf($decpsMarker, $decpsStart + $decpsMarker.Length, [System.StringComparison]::Ordinal) -ge 0) {
+    throw 'Expected exactly one DECPS route marker.'
 }
+$switchStartAnchor = "    switch (id)$nl    {$nl"
+$switchStart = $engine.IndexOf($switchStartAnchor, $decpsStart, [System.StringComparison]::Ordinal)
+if ($switchStart -lt 0) { throw 'Residual CSI switch after DECPS route missing.' }
 $defaultBlock = "    default:$nl        _dispatch->UnknownSequence();$nl        break;$nl    }$nl"
 $defaultStart = $engine.IndexOf($defaultBlock, $switchStart + $switchStartAnchor.Length, [System.StringComparison]::Ordinal)
 if ($defaultStart -lt 0) { throw 'Residual CSI switch default block missing.' }
 $residualBody = $engine.Substring($switchStart + $switchStartAnchor.Length, $defaultStart - ($switchStart + $switchStartAnchor.Length))
 if (-not [string]::IsNullOrWhiteSpace($residualBody)) { throw 'Residual CSI switch still contains product-owned cases.' }
 $emptySwitch = $engine.Substring($switchStart, ($defaultStart + $defaultBlock.Length) - $switchStart)
-$engine = Replace-Once $engine $emptySwitch ("    _dispatch->UnknownSequence();$nl") 'default-only residual CSI switch'
+$engine = $engine.Substring(0, $switchStart) + "    _dispatch->UnknownSequence();$nl" + $engine.Substring($defaultStart + $defaultBlock.Length)
 
 [System.IO.File]::WriteAllText($enginePath, $engine, [System.Text.UTF8Encoding]::new($false))
 

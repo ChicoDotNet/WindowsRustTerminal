@@ -20,7 +20,16 @@ foreach ($needle in $requiredEngine) {
 if ($engine.Contains('case CsiActionCodes::DECPS_PlaySound:')) {
     throw 'Legacy C++ DECPS classification still owns the product route.'
 }
-if ($engine.Contains('switch (id)')) {
+$decpsMarker = 'terminal_parser_ffi_output_csi_decps_result decpsPlan{};'
+$decpsStart = $engine.IndexOf($decpsMarker, [System.StringComparison]::Ordinal)
+if ($decpsStart -lt 0 -or $engine.IndexOf($decpsMarker, $decpsStart + $decpsMarker.Length, [System.StringComparison]::Ordinal) -ge 0) {
+    throw 'Expected exactly one DECPS product route marker.'
+}
+$unknown = '_dispatch->UnknownSequence();'
+$unknownStart = $engine.IndexOf($unknown, $decpsStart, [System.StringComparison]::Ordinal)
+if ($unknownStart -lt 0) { throw 'DECPS product route lost the unknown-sequence fallback.' }
+$decpsTail = $engine.Substring($decpsStart, ($unknownStart + $unknown.Length) - $decpsStart)
+if ($decpsTail.Contains('switch (id)')) {
     throw 'Default-only legacy CSI switch shell remains after DECPS ownership transfer.'
 }
 
