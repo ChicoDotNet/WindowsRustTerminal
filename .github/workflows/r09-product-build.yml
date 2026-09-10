@@ -27,6 +27,7 @@ on:
       - "tools/rust/R09OutputCsiDecrqtsrAbiProbe.hpp"
       - "tools/rust/R09OutputCsiRectAttributesAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecrqcraAbiProbe.hpp"
+      - "tools/rust/R09OutputCsiRepAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardQueryAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPushAbiProbe.hpp"
       - "tools/rust/R09OutputCsiKittyKeyboardPopAbiProbe.hpp"
@@ -76,6 +77,7 @@ on:
       - "tools/rust/Test-R09OutputCsiDecrqtsrOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiRectAttributesOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecrqcraOwnership.ps1"
+      - "tools/rust/Test-R09OutputCsiRepOwnership.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -215,6 +217,9 @@ jobs:
       - name: Validate CSI DECRQCRA ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiDecrqcraOwnership.ps1
+      - name: Validate CSI REP ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputCsiRepOwnership.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
