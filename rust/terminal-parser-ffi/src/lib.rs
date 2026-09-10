@@ -56,6 +56,7 @@ mod output_csi_window_manipulation;
 mod output_esc;
 mod output_execute;
 mod output_vt52;
+mod pty_signal;
 
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
