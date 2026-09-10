@@ -35,6 +35,7 @@
 #include "terminal_parser_ffi_output_csi_decac.h"
 #include "terminal_parser_ffi_output_csi_rect_attributes.h"
 #include "terminal_parser_ffi_output_csi_decrqcra.h"
+#include "terminal_parser_ffi_output_csi_rep.h"
 #include "terminal_parser_ffi_output_csi_device_status_report.h"
 #include "terminal_parser_ffi_output_csi_mode.h"
 #include "terminal_parser_ffi_output_csi_erase.h"
@@ -1649,6 +1650,35 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         _ClearLastChar();
         return true;
     }
+
+    terminal_parser_ffi_output_csi_rep_result repPlan{};
+    const auto repStatus = terminal_parser_ffi_output_csi_rep_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<uint16_t>(_lastPrintedChar),
+        &repPlan);
+    THROW_HR_IF(E_UNEXPECTED, repStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (repPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_REPEAT:
+    {
+        const std::wstring repeated(static_cast<size_t>(repPlan.count), _lastPrintedChar);
+        _dispatch->PrintString(repeated);
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_HANDLED_NOOP:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (repPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
     switch (id)
     {
 
@@ -1667,19 +1697,6 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
 
 
 
-    case CsiActionCodes::REP_RepeatCharacter:
-        // Handled w/o the dispatch. This function is unique in that way
-        // If this were in the ITerminalDispatch, then each
-        // implementation would effectively be the same, calling only
-        // functions that are already part of the interface.
-        // Print the last graphical character a number of times.
-        if (_lastPrintedChar != AsciiChars::NUL)
-        {
-            const size_t repeatCount = parameters.at(0);
-            std::wstring wstr(repeatCount, _lastPrintedChar);
-            _dispatch->PrintString(wstr);
-        }
-        break;
 
 
 
