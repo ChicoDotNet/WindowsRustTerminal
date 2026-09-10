@@ -1,7 +1,6 @@
 #pragma once
 
 #include "terminal_parser_ffi_output_csi_rep.h"
-#include "R09OutputCsiDecpsAbiProbe.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -72,7 +71,6 @@ namespace r09
                 'X', 4, static_cast<uint16_t>('Z'),
                 TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE, 0) &&
             invalidIdentifierStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
-            nullPlanStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
-            output_csi_decps_replay();
+            nullPlanStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
     }
 }
