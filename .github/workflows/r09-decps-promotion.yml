@@ -1,0 +1,89 @@
+name: R09 Promote DECPS
+
+on:
+  push:
+    branches:
+      - rust/r09-product-integration
+    paths:
+      - tools/rust/Invoke-R09DecpsProductSwap.ps1
+      - tools/rust/Test-R09OutputCsiDecpsOwnership.ps1
+      - .github/workflows/r09-decps-promotion.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: r09-decps-promotion
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Route DECPS through Rust
+    runs-on: windows-2025-vs2026
+    steps:
+      - name: Checkout candidate base
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: Rust toolchain
+        run: rustup show
+
+      - name: Verify remote branch has not moved
+        shell: pwsh
+        run: |
+          $expected = '${{ github.sha }}'
+          $remote = (git ls-remote origin 'refs/heads/rust/r09-product-integration').Split("`t")[0]
+          if ($remote -ne $expected) { throw "Remote branch moved before DECPS promotion. Expected $expected, found $remote." }
+
+      - name: Prepare Rust ownership candidate
+        shell: pwsh
+        run: .\tools\rust\Invoke-R09DecpsProductSwap.ps1
+
+      - name: Validate ownership candidate
+        shell: pwsh
+        run: |
+          .\tools\rust\Test-R09OutputCsiDecpsOwnership.ps1
+          git diff --check
+          if ($LASTEXITCODE -ne 0) { throw 'git diff --check failed.' }
+          $changed = @(git diff --name-only)
+          $expected = @('src/terminal/parser/OutputStateMachineEngine.cpp')
+          if (($changed.Count -ne $expected.Count) -or (@(Compare-Object ($changed | Sort-Object) ($expected | Sort-Object)).Count -ne 0)) {
+            throw "Promotion candidate changed unexpected files: $($changed -join ', ')"
+          }
+
+      - name: Commit ownership route locally
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- 'src/terminal/parser/OutputStateMachineEngine.cpp'
+          git commit -m 'Route DECPS through Rust ownership'
+
+      - name: Canonical product build
+        shell: pwsh
+        run: .\tools\rust\Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
+
+      - name: Preserve product build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-decps-promotion-diagnostics
+          path: |
+            artifacts/r09-product-build.log
+            artifacts/r09-product-build.binlog
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Verify remote branch still has not moved
+        shell: pwsh
+        run: |
+          $expected = '${{ github.sha }}'
+          $remote = (git ls-remote origin 'refs/heads/rust/r09-product-integration').Split("`t")[0]
+          if ($remote -ne $expected) { throw "Remote branch moved during DECPS certification. Expected $expected, found $remote." }
+
+      - name: Publish certified ownership route
+        shell: pwsh
+        run: git push origin HEAD:rust/r09-product-integration
