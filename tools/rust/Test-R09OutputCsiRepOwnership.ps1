@@ -4,6 +4,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $source = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'src/terminal/parser/OutputStateMachineEngine.cpp')
 $ffi = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_csi_rep.rs')
 $probe = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'tools/rust/R09OutputCsiRepAbiProbe.hpp')
+$runner = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'tools/rust/R09ControlCharacterAbiProbe.cpp')
 
 if (-not $source.Contains('#include "terminal_parser_ffi_output_csi_rep.h"')) { throw 'R09 CSI REP ownership gate: native product no longer includes the Rust ABI contract.' }
 if (-not $source.Contains('terminal_parser_ffi_output_csi_rep_plan')) { throw 'R09 CSI REP ownership gate: product no longer delegates REP classification to Rust.' }
@@ -29,5 +30,9 @@ if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_HANDLED_NOOP')) { t
 if (-not $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE')) { throw 'R09 CSI REP ownership gate: native negative replay witness is missing.' }
 if (-not $probe.Contains('invalidIdentifierStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT')) { throw 'R09 CSI REP ownership gate: native invalid-identifier witness is missing.' }
 if (-not $probe.Contains('nullPlanStatus == TERMINAL_PARSER_FFI_INVALID_ARGUMENT')) { throw 'R09 CSI REP ownership gate: native null-output validation witness is missing.' }
+if ($probe.Contains('R09OutputCsiDecpsAbiProbe.hpp') -or $probe.Contains('output_csi_decps_replay')) { throw 'R09 CSI REP ownership gate: REP replay is coupled to the DECPS witness.' }
+if (-not $runner.Contains('#include "R09OutputCsiRepAbiProbe.hpp"')) { throw 'R09 CSI REP ownership gate: aggregate native replay no longer includes REP directly.' }
+if (-not $runner.Contains('const bool outputCsiRepOk = r09::output_csi_rep_replay();')) { throw 'R09 CSI REP ownership gate: aggregate native replay no longer executes REP directly.' }
+if (-not $runner.Contains('!outputCsiRepOk')) { throw 'R09 CSI REP ownership gate: aggregate native replay no longer fails closed on REP.' }
 
 Write-Host 'R09 CSI REP ownership gate passed: Rust owns CSI b recognition, count normalization, and handled-noop semantics; C++ retains last-character storage and PrintString materialization.'
