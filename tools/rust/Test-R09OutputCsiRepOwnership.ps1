@@ -16,7 +16,9 @@ if (-not $source.Contains('if (repPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_RE
 if ($source.Contains('case CsiActionCodes::REP_RepeatCharacter:')) { throw 'R09 CSI REP ownership gate: duplicate C++ REP classification returned.' }
 
 if (-not $ffi.Contains('terminal_parser_ffi_output_csi_rep_plan')) { throw 'R09 CSI REP ownership gate: terminal-parser-ffi no longer exports the replay seam.' }
-if (-not $ffi.Contains('id == VtId::from_ascii("b")')) { throw 'R09 CSI REP ownership gate: Rust REP identifier classification is missing.' }
+if (-not $ffi.Contains('engine.action_csi_dispatch(id, &parameters)')) { throw 'R09 CSI REP ownership gate: REP classification no longer replays through the real Rust output engine.' }
+if (-not $ffi.Contains('OutputAction::PrintString(text)')) { throw 'R09 CSI REP ownership gate: Rust replay no longer observes the owner PrintString action.' }
+if (-not $ffi.Contains('plan("b", 0')) { throw 'R09 CSI REP ownership gate: Rust REP identifier/default witness is missing.' }
 if (-not $ffi.Contains('OutputCsiRepKind::Repeat')) { throw 'R09 CSI REP ownership gate: Rust repeat classification is missing.' }
 if (-not $ffi.Contains('OutputCsiRepKind::HandledNoop')) { throw 'R09 CSI REP ownership gate: Rust handled-noop classification is missing.' }
 if (-not $ffi.Contains('FfiStatus::InvalidArgument')) { throw 'R09 CSI REP ownership gate: Rust invalid-argument contract is missing.' }
