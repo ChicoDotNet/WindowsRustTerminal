@@ -76,6 +76,7 @@ version = "0.0.0"
 name = "terminal-parser-ffi"
 version = "0.0.0"
 dependencies = [
+ "terminal-host",
  "terminal-parser",
 ]
 
