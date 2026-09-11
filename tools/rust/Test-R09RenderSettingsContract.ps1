@@ -5,6 +5,9 @@ $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/render_settin
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_render_settings.h'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09RenderSettingsAbiProbe.hpp'
 $aggregate = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
+$productHeader = Get-Content -Raw -LiteralPath 'src/renderer/inc/RenderSettings.hpp'
+$product = Get-Content -Raw -LiteralPath 'src/renderer/base/RenderSettings.cpp'
+$buildTargets = Get-Content -Raw -LiteralPath 'Directory.Build.targets'
 
 $requiredOwner = @(
     'pub enum RenderMode',
@@ -76,4 +79,43 @@ foreach ($needle in $requiredAggregate) {
     if (-not $aggregate.Contains($needle)) { throw "Render settings aggregate replay evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, C ABI, and native replay contract are wired.'
+$requiredProductHeader = @(
+    'terminal_parser_ffi_render_settings_state _renderSettingsPolicy{};'
+)
+foreach ($needle in $requiredProductHeader) {
+    if (-not $productHeader.Contains($needle)) { throw "Render settings product state route missing: $needle" }
+}
+
+$forbiddenProductHeader = @(
+    'til::enumset<Mode> _renderMode',
+    'bool _blinkShouldBeFaint'
+)
+foreach ($needle in $forbiddenProductHeader) {
+    if ($productHeader.Contains($needle)) { throw "Legacy C++ render settings ownership returned: $needle" }
+}
+
+$requiredProduct = @(
+    'terminal_parser_ffi_render_settings_default(&_renderSettingsPolicy)',
+    'terminal_parser_ffi_render_settings_set_mode(',
+    'terminal_parser_ffi_render_settings_get_mode(',
+    'terminal_parser_ffi_render_settings_restore_programmable_defaults(&_renderSettingsPolicy)',
+    'terminal_parser_ffi_render_settings_toggle_blink(&_renderSettingsPolicy)',
+    'TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS',
+    'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT'
+)
+foreach ($needle in $requiredProduct) {
+    if (-not $product.Contains($needle)) { throw "Render settings product route missing: $needle" }
+}
+
+$requiredBuild = @(
+    "'`$(MSBuildProjectName)' == 'base'",
+    '<_RustRendererFfiLib>',
+    'terminal_parser_ffi.lib',
+    'BuildRustRendererFfi',
+    'cargo build --locked -p terminal-parser-ffi'
+)
+foreach ($needle in $requiredBuild) {
+    if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
+}
+
+Write-Host 'Render settings Rust owner, native replay, RendererBase route, and legacy ownership removal are guarded.'
