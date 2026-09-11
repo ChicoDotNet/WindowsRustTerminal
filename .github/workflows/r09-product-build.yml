@@ -10,6 +10,7 @@ on:
       - "rust-toolchain.toml"
       - "rust/terminal-parser/**"
       - "rust/terminal-parser-ffi/**"
+      - "rust/terminal-host/**"
       - "rust/terminal-app/**"
       - "rust/terminal-app-ffi/**"
       - "src/terminal/parser/**"
@@ -19,6 +20,7 @@ on:
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
+      - "tools/rust/R09PtySignalAbiProbe.hpp"
       - "tools/rust/R09OutputCsiColumnAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecfraAbiProbe.hpp"
       - "tools/rust/R09OutputCsiDecsaceAbiProbe.hpp"
@@ -80,6 +82,7 @@ on:
       - "tools/rust/Test-R09OutputCsiDecrqcraOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiRepOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecpsOwnership.ps1"
+      - "tools/rust/Test-R09PtySignalReadPlanContract.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
@@ -225,6 +228,9 @@ jobs:
       - name: Validate CSI DECPS ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiDecpsOwnership.ps1
+      - name: Validate PTY signal read-plan contract
+        shell: pwsh
+        run: ./tools/rust/Test-R09PtySignalReadPlanContract.ps1
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
