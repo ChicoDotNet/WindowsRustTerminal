@@ -1,6 +1,7 @@
 #pragma once
 
 #include "terminal_parser_ffi_render_settings.h"
+#include "R09RenderAttributeColorsAbiProbe.hpp"
 
 #include <cstdint>
 #include <cstdio>
@@ -91,6 +92,7 @@ namespace r09
                 TERMINAL_PARSER_FFI_RENDER_MODE_SCREEN_REVERSED,
                 2) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_settings_toggle_blink(&invalidState) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
-            terminal_parser_ffi_render_settings_default(nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            terminal_parser_ffi_render_settings_default(nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            render_attribute_colors_replay();
     }
 }
