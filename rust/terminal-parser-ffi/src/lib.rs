@@ -57,6 +57,7 @@ mod output_esc;
 mod output_execute;
 mod output_vt52;
 mod pty_signal;
+mod render_attribute_colors;
 mod render_settings;
 
 use std::{
