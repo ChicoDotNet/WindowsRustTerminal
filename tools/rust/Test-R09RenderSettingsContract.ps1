@@ -4,6 +4,7 @@ $owner = Get-Content -Raw -LiteralPath 'rust/terminal-renderer/src/render_settin
 $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/render_settings.rs'
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_render_settings.h'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09RenderSettingsAbiProbe.hpp'
+$aggregate = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
 
 $requiredOwner = @(
     'pub enum RenderMode',
@@ -66,4 +67,13 @@ foreach ($needle in $requiredWitness) {
     if (-not $probe.Contains($needle)) { throw "Render settings native contract witness missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, C ABI, and native replay contract are prepared.'
+$requiredAggregate = @(
+    '#include "R09RenderSettingsAbiProbe.hpp"',
+    'const bool renderSettingsPolicyOk = r09::render_settings_policy_replay();',
+    '!renderSettingsPolicyOk'
+)
+foreach ($needle in $requiredAggregate) {
+    if (-not $aggregate.Contains($needle)) { throw "Render settings aggregate replay evidence missing: $needle" }
+}
+
+Write-Host 'Render settings Rust owner, C ABI, and native replay contract are wired.'
