@@ -4,6 +4,8 @@ $owner = Get-Content -Raw -LiteralPath 'rust/terminal-renderer/src/render_settin
 $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/render_settings.rs'
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_render_settings.h'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09RenderSettingsAbiProbe.hpp'
+$attributeHeader = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_render_attribute_colors.h'
+$attributeProbe = Get-Content -Raw -LiteralPath 'tools/rust/R09RenderAttributeColorsAbiProbe.hpp'
 $aggregate = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
 $productHeader = Get-Content -Raw -LiteralPath 'src/renderer/inc/RenderSettings.hpp'
 $product = Get-Content -Raw -LiteralPath 'src/renderer/base/RenderSettings.cpp'
@@ -64,10 +66,35 @@ $requiredWitness = @(
     'state.blink_should_be_faint != 1',
     'terminal_parser_ffi_render_settings_set_mode(&state, 0, 1)',
     'terminal_parser_ffi_render_settings_set_mode(&state, 7, 1)',
-    'terminal_parser_ffi_render_settings_default(nullptr)'
+    'terminal_parser_ffi_render_settings_default(nullptr)',
+    'render_attribute_colors_replay()'
 )
 foreach ($needle in $requiredWitness) {
     if (-not $probe.Contains($needle)) { throw "Render settings native contract witness missing: $needle" }
+}
+
+$requiredAttributeAbi = @(
+    'terminal_parser_ffi_render_attribute_colors',
+    'terminal_parser_ffi_render_attribute_effects(',
+    'terminal_parser_ffi_render_attribute_alpha(',
+    'static_assert(sizeof(terminal_parser_ffi_render_attribute_colors) == 8);'
+)
+foreach ($needle in $requiredAttributeAbi) {
+    if (-not $attributeHeader.Contains($needle)) { throw "Render attribute color C ABI evidence missing: $needle" }
+}
+
+$requiredAttributeWitness = @(
+    'render_attribute_colors_replay()',
+    'terminal_parser_ffi_render_attribute_effects(',
+    'colors.foreground != 0x00302010',
+    'colors.background != 0x00302010',
+    'terminal_parser_ffi_render_attribute_alpha(',
+    'colors.foreground != 0xFF112233',
+    'TERMINAL_PARSER_FFI_INVALID_ARGUMENT',
+    'nullptr'
+)
+foreach ($needle in $requiredAttributeWitness) {
+    if (-not $attributeProbe.Contains($needle)) { throw "Render attribute color native replay evidence missing: $needle" }
 }
 
 $requiredAggregate = @(
@@ -118,4 +145,4 @@ foreach ($needle in $requiredBuild) {
     if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, native replay, RendererBase route, and legacy ownership removal are guarded.'
+Write-Host 'Render settings Rust owner, attribute-color replay, RendererBase route, and legacy ownership removal are guarded.'
