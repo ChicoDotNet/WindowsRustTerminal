@@ -5,6 +5,8 @@ $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/pty_signal.rs
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_pty_signal.h'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09PtySignalAbiProbe.hpp'
 $aggregate = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
+$product = Get-Content -Raw -LiteralPath 'src/host/PtySignalInputThread.cpp'
+$buildTargets = Get-Content -Raw -LiteralPath 'Directory.Build.targets'
 
 $requiredOwner = @(
     'ShowHideWindow = 1',
@@ -66,4 +68,37 @@ foreach ($needle in $requiredAggregate) {
     if (-not $aggregate.Contains($needle)) { throw "PTY aggregate replay wiring missing: $needle" }
 }
 
-Write-Host 'PTY read-plan contract gate passed.'
+$requiredProductRoute = @(
+    '#include "terminal_parser_ffi_pty_signal.h"',
+    'terminal_parser_ffi_pty_signal_read_plan(static_cast<uint16_t>(signalId), &plan)',
+    'switch (plan.kind)',
+    'plan.payload_len != sizeof(msg)',
+    'plan.payload_len != sizeof(resizeMsg)',
+    'plan.payload_len != sizeof(reparentMessage)'
+)
+foreach ($needle in $requiredProductRoute) {
+    if (-not $product.Contains($needle)) { throw "PTY product route evidence missing: $needle" }
+}
+
+$forbiddenProductOwnership = @(
+    'switch (signalId)',
+    'case PtySignal::ShowHideWindow',
+    'case PtySignal::ClearBuffer',
+    'case PtySignal::ResizeWindow',
+    'case PtySignal::SetParent'
+)
+foreach ($needle in $forbiddenProductOwnership) {
+    if ($product.Contains($needle)) { throw "PTY legacy classification returned to C++ product code: $needle" }
+}
+
+$requiredHostLink = @(
+    "'$(MSBuildProjectName)' == 'Host'",
+    'rust\terminal-parser-ffi\include',
+    'terminal_parser_ffi.lib',
+    'cargo build --locked -p terminal-parser-ffi'
+)
+foreach ($needle in $requiredHostLink) {
+    if (-not $buildTargets.Contains($needle)) { throw "PTY Host/Rust link evidence missing: $needle" }
+}
+
+Write-Host 'PTY read-plan contract and product ownership gate passed.'
