@@ -71,4 +71,31 @@
     <Exec WorkingDirectory="$(SolutionDir)" Command="rustup target add $(_RustHostTargetTriple)" />
     <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-parser-ffi --target $(_RustHostTargetTriple) $(_RustHostCargoReleaseArg)" />
   </Target>
+
+  <!-- R09 renderer settings integration: native rendering/color ownership remains
+       in RendererBase while Rust owns deterministic render-mode and blink policy. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'base'">
+    <_RustRendererTargetTriple Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_RustRendererTargetTriple>
+    <_RustRendererTargetTriple Condition="'$(Platform)' == 'Win32'">i686-pc-windows-msvc</_RustRendererTargetTriple>
+    <_RustRendererTargetTriple Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</_RustRendererTargetTriple>
+    <_RustRendererCargoProfile Condition="'$(Configuration)' == 'Debug'">debug</_RustRendererCargoProfile>
+    <_RustRendererCargoProfile Condition="'$(Configuration)' != 'Debug'">release</_RustRendererCargoProfile>
+    <_RustRendererCargoReleaseArg Condition="'$(Configuration)' != 'Debug'">--release</_RustRendererCargoReleaseArg>
+    <_RustRendererFfiLib>$(SolutionDir)artifacts\cargo-target\$(_RustRendererTargetTriple)\$(_RustRendererCargoProfile)\terminal_parser_ffi.lib</_RustRendererFfiLib>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'base'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)rust\terminal-parser-ffi\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>$(_RustRendererFfiLib);%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+
+  <Target Name="BuildRustRendererFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'base'">
+    <Error Condition="'$(_RustRendererTargetTriple)' == ''" Text="R09 Renderer Rust integration does not support MSBuild platform '$(Platform)'." />
+    <Exec WorkingDirectory="$(SolutionDir)" Command="rustup target add $(_RustRendererTargetTriple)" />
+    <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-parser-ffi --target $(_RustRendererTargetTriple) $(_RustRendererCargoReleaseArg)" />
+  </Target>
 </Project>
