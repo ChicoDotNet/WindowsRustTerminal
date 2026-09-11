@@ -8,11 +8,47 @@
 #include "../../types/inc/ColorFix.hpp"
 #include "../../types/inc/colorTable.hpp"
 
+#include <exception>
+
 using namespace Microsoft::Console::Render;
 using Microsoft::Console::Utils::InitializeColorTable;
 
+namespace
+{
+    constexpr uint32_t _toRustRenderMode(const RenderSettings::Mode mode) noexcept
+    {
+        switch (mode)
+        {
+        case RenderSettings::Mode::IndexedDistinguishableColors:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS;
+        case RenderSettings::Mode::AlwaysDistinguishableColors:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_ALWAYS_DISTINGUISHABLE_COLORS;
+        case RenderSettings::Mode::IntenseIsBold:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_INTENSE_IS_BOLD;
+        case RenderSettings::Mode::IntenseIsBright:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_INTENSE_IS_BRIGHT;
+        case RenderSettings::Mode::ScreenReversed:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_SCREEN_REVERSED;
+        case RenderSettings::Mode::SynchronizedOutput:
+            return TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT;
+        }
+
+        return 0;
+    }
+
+    void _failFastOnRustPolicyFailure(const terminal_parser_ffi_status status) noexcept
+    {
+        if (status != TERMINAL_PARSER_FFI_OK)
+        {
+            std::terminate();
+        }
+    }
+}
+
 RenderSettings::RenderSettings() noexcept
 {
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_default(&_renderSettingsPolicy));
+
     InitializeColorTable(_colorTable);
 
     SetColorTableEntry(TextColor::DEFAULT_FOREGROUND, INVALID_COLOR);
@@ -48,7 +84,7 @@ void RenderSettings::RestoreDefaultSettings() noexcept
     _colorAliasIndices = _defaultColorAliasIndices;
     // DECSCNM and Synchronized Output are the only render mode we need to reset.
     // The others are all user preferences that can't be changed programmatically.
-    _renderMode.reset(Mode::ScreenReversed, Mode::SynchronizedOutput);
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_restore_programmable_defaults(&_renderSettingsPolicy));
 }
 
 // Routine Description:
@@ -58,7 +94,10 @@ void RenderSettings::RestoreDefaultSettings() noexcept
 // - enabled - Set to true to enable the mode, false to disable it.
 void RenderSettings::SetRenderMode(const Mode mode, const bool enabled) noexcept
 {
-    _renderMode.set(mode, enabled);
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_set_mode(
+        &_renderSettingsPolicy,
+        _toRustRenderMode(mode),
+        enabled ? 1u : 0u));
 }
 
 // Routine Description:
@@ -69,7 +108,12 @@ void RenderSettings::SetRenderMode(const Mode mode, const bool enabled) noexcept
 // - True if the mode is enabled. False if disabled.
 bool RenderSettings::GetRenderMode(const Mode mode) const noexcept
 {
-    return _renderMode.test(mode);
+    uint32_t enabled{};
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_get_mode(
+        &_renderSettingsPolicy,
+        _toRustRenderMode(mode),
+        &enabled));
+    return enabled != 0;
 }
 
 // Routine Description:
@@ -189,7 +233,7 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColors(const TextAttri
     const auto defaultBgIndex = GetColorAliasIndex(ColorAlias::DefaultBackground);
 
     const auto brightenFg = attr.IsIntense() && GetRenderMode(Mode::IntenseIsBright);
-    const auto dimFg = attr.IsFaint() || (_blinkShouldBeFaint && attr.IsBlinking());
+    const auto dimFg = attr.IsFaint() || (_renderSettingsPolicy.blink_should_be_faint != 0 && attr.IsBlinking());
     const auto swapFgAndBg = attr.IsReverseVideo() ^ GetRenderMode(Mode::ScreenReversed);
 
     auto fg = fgTextColor.GetColor(_colorTable, defaultFgIndex, brightenFg);
@@ -213,10 +257,12 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColors(const TextAttri
     // don't adjust the foreground.
     if constexpr (Feature_AdjustIndistinguishableText::IsEnabled())
     {
+        const auto indexedDistinguishableColors = GetRenderMode(Mode::IndexedDistinguishableColors);
+        const auto alwaysDistinguishableColors = GetRenderMode(Mode::AlwaysDistinguishableColors);
         if (
-            _renderMode.any(Mode::IndexedDistinguishableColors, Mode::AlwaysDistinguishableColors) &&
+            (indexedDistinguishableColors || alwaysDistinguishableColors) &&
             fg != bg &&
-            (_renderMode.test(Mode::AlwaysDistinguishableColors) || (fgTextColor.IsDefaultOrLegacy() && bgTextColor.IsDefaultOrLegacy())))
+            (alwaysDistinguishableColors || (fgTextColor.IsDefaultOrLegacy() && bgTextColor.IsDefaultOrLegacy())))
         {
             fg = ColorFix::GetPerceivableColor(fg, bg, 0.5f * 0.5f);
         }
@@ -277,10 +323,12 @@ COLORREF RenderSettings::GetAttributeUnderlineColor(const TextAttribute& attr) c
     // don't adjust the underline color.
     if constexpr (Feature_AdjustIndistinguishableText::IsEnabled())
     {
+        const auto alwaysDistinguishableColors = GetRenderMode(Mode::AlwaysDistinguishableColors);
+        const auto indexedDistinguishableColors = GetRenderMode(Mode::IndexedDistinguishableColors);
         if (
             ul != bg &&
-            (_renderMode.test(Mode::AlwaysDistinguishableColors) ||
-             (_renderMode.test(Mode::IndexedDistinguishableColors) && ulTextColor.IsDefaultOrLegacy() && attr.GetBackground().IsDefaultOrLegacy())))
+            (alwaysDistinguishableColors ||
+             (indexedDistinguishableColors && ulTextColor.IsDefaultOrLegacy() && attr.GetBackground().IsDefaultOrLegacy())))
         {
             ul = ColorFix::GetPerceivableColor(ul, bg, 0.5f * 0.5f);
         }
@@ -291,5 +339,5 @@ COLORREF RenderSettings::GetAttributeUnderlineColor(const TextAttribute& attr) c
 
 void RenderSettings::ToggleBlinkRendition() noexcept
 {
-    _blinkShouldBeFaint = !_blinkShouldBeFaint;
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_toggle_blink(&_renderSettingsPolicy));
 }
