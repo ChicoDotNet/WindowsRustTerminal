@@ -7,6 +7,7 @@
 #include "../base/renderer.hpp"
 #include "../../types/inc/ColorFix.hpp"
 #include "../../types/inc/colorTable.hpp"
+#include "../../../rust/terminal-parser-ffi/include/terminal_parser_ffi_render_attribute_colors.h"
 
 #include <exception>
 
@@ -234,23 +235,22 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColors(const TextAttri
 
     const auto brightenFg = attr.IsIntense() && GetRenderMode(Mode::IntenseIsBright);
     const auto dimFg = attr.IsFaint() || (_renderSettingsPolicy.blink_should_be_faint != 0 && attr.IsBlinking());
-    const auto swapFgAndBg = attr.IsReverseVideo() ^ GetRenderMode(Mode::ScreenReversed);
+    const auto screenReversed = GetRenderMode(Mode::ScreenReversed);
 
     auto fg = fgTextColor.GetColor(_colorTable, defaultFgIndex, brightenFg);
     auto bg = bgTextColor.GetColor(_colorTable, defaultBgIndex);
 
-    if (dimFg)
-    {
-        fg = (fg >> 1) & 0x7F7F7F; // Divide foreground color components by two.
-    }
-    if (swapFgAndBg)
-    {
-        std::swap(fg, bg);
-    }
-    if (attr.IsInvisible())
-    {
-        fg = bg;
-    }
+    terminal_parser_ffi_render_attribute_colors colors{};
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_attribute_effects(
+        static_cast<uint32_t>(fg),
+        static_cast<uint32_t>(bg),
+        dimFg ? 1u : 0u,
+        attr.IsReverseVideo() ? 1u : 0u,
+        screenReversed ? 1u : 0u,
+        attr.IsInvisible() ? 1u : 0u,
+        &colors));
+    fg = static_cast<COLORREF>(colors.foreground);
+    bg = static_cast<COLORREF>(colors.background);
 
     // We intentionally aren't _only_ checking for attr.IsInvisible here, because we also want to
     // catch the cases where the fg was intentionally set to be the same as the bg. In either case,
@@ -283,15 +283,22 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColorsWithAlpha(const 
 {
     auto [fg, bg] = GetAttributeColors(attr);
 
-    fg |= 0xff000000;
-    // We only care about alpha for the default BG (which enables acrylic)
-    // If the bg isn't the default bg color, or reverse video is enabled, make it fully opaque.
-    if (!attr.BackgroundIsDefault() || (attr.IsReverseVideo() ^ GetRenderMode(Mode::ScreenReversed)) || attr.IsInvisible())
-    {
-        bg |= 0xff000000;
-    }
+    terminal_parser_ffi_render_attribute_colors colors{
+        static_cast<uint32_t>(fg),
+        static_cast<uint32_t>(bg),
+    };
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_attribute_alpha(
+        colors,
+        attr.BackgroundIsDefault() ? 1u : 0u,
+        attr.IsReverseVideo() ? 1u : 0u,
+        GetRenderMode(Mode::ScreenReversed) ? 1u : 0u,
+        attr.IsInvisible() ? 1u : 0u,
+        &colors));
 
-    return { fg, bg };
+    return {
+        static_cast<COLORREF>(colors.foreground),
+        static_cast<COLORREF>(colors.background),
+    };
 }
 
 // Routine Description:
