@@ -158,7 +158,7 @@
     },
     {
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
-      "sourceBlob": "292f86faf6a05b7502ba3bb65bcb5ad8b63fb2b3",
+      "sourceBlob": "30c947c6da9164243b4497bbaae16d89e95f8ab4",
       "ownership": "split",
       "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline color and live renderer integration; Rust owns mode/reset/blink state plus deterministic dim/reverse/invisible/alpha post-processing.",
       "sourcePatterns": [
