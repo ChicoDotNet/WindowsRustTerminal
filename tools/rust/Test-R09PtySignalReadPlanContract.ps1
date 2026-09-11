@@ -4,6 +4,7 @@ $owner = Get-Content -Raw -LiteralPath 'rust/terminal-host/src/pty_signal.rs'
 $ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/pty_signal.rs'
 $header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_pty_signal.h'
 $probe = Get-Content -Raw -LiteralPath 'tools/rust/R09PtySignalAbiProbe.hpp'
+$aggregate = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
 
 $requiredOwner = @(
     'ShowHideWindow = 1',
@@ -54,6 +55,15 @@ $requiredWitness = @(
 )
 foreach ($needle in $requiredWitness) {
     if (-not $probe.Contains($needle)) { throw "PTY native contract witness missing: $needle" }
+}
+
+$requiredAggregate = @(
+    '#include "R09PtySignalAbiProbe.hpp"',
+    'const bool ptySignalReadPlanOk = r09::pty_signal_read_plan_replay();',
+    '!ptySignalReadPlanOk'
+)
+foreach ($needle in $requiredAggregate) {
+    if (-not $aggregate.Contains($needle)) { throw "PTY aggregate replay wiring missing: $needle" }
 }
 
 Write-Host 'PTY read-plan contract gate passed.'
