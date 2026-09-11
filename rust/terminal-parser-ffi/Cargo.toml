@@ -12,6 +12,7 @@ crate-type = ["rlib", "staticlib"]
 [dependencies]
 terminal-host = { path = "../terminal-host" }
 terminal-parser = { path = "../terminal-parser" }
+terminal-renderer = { path = "../terminal-renderer" }
 
 [lints]
 workspace = true
