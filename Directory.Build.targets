@@ -47,7 +47,7 @@
 
   <!-- R09 PTY signal integration: Host keeps Win32/thread/pipe ownership while
        Rust owns deterministic signal classification and payload sizing. -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Host'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'hostlib'">
     <_RustHostTargetTriple Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_RustHostTargetTriple>
     <_RustHostTargetTriple Condition="'$(Platform)' == 'Win32'">i686-pc-windows-msvc</_RustHostTargetTriple>
     <_RustHostTargetTriple Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</_RustHostTargetTriple>
@@ -57,7 +57,7 @@
     <_RustHostFfiLib>$(SolutionDir)artifacts\cargo-target\$(_RustHostTargetTriple)\$(_RustHostCargoProfile)\terminal_parser_ffi.lib</_RustHostFfiLib>
   </PropertyGroup>
 
-  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'Host'">
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'hostlib'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)rust\terminal-parser-ffi\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -66,7 +66,7 @@
     </Lib>
   </ItemDefinitionGroup>
 
-  <Target Name="BuildRustHostFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'Host'">
+  <Target Name="BuildRustHostFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'hostlib'">
     <Error Condition="'$(_RustHostTargetTriple)' == ''" Text="R09 Host Rust integration does not support MSBuild platform '$(Platform)'." />
     <Exec WorkingDirectory="$(SolutionDir)" Command="rustup target add $(_RustHostTargetTriple)" />
     <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-parser-ffi --target $(_RustHostTargetTriple) $(_RustHostCargoReleaseArg)" />
