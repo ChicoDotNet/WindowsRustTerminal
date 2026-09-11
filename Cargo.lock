@@ -78,6 +78,7 @@ version = "0.0.0"
 dependencies = [
  "terminal-host",
  "terminal-parser",
+ "terminal-renderer",
 ]
 
 [[package]]
