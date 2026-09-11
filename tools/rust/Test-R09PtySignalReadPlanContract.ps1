@@ -92,7 +92,7 @@ foreach ($needle in $forbiddenProductOwnership) {
 }
 
 $requiredHostLink = @(
-    "'$(MSBuildProjectName)' == 'Host'",
+    '''$(MSBuildProjectName)'' == ''Host''',
     'rust\terminal-parser-ffi\include',
     'terminal_parser_ffi.lib',
     'cargo build --locked -p terminal-parser-ffi'
