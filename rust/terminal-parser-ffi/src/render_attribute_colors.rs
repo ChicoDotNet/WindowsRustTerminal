@@ -2,6 +2,7 @@ use std::ptr;
 
 use terminal_renderer::{
     AttributeColorFlags, AttributeColors, apply_attribute_alpha, apply_attribute_effects,
+    apply_underline_invisibility,
 };
 
 use super::{FfiStatus, ffi_guard};
@@ -174,12 +175,37 @@ pub extern "C" fn terminal_parser_ffi_render_attribute_alpha(
     })
 }
 
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_render_underline_invisibility(
+    underline: u32,
+    background: u32,
+    invisible: u32,
+    out_underline: *mut u32,
+) -> FfiStatus {
+    ffi_guard(|| {
+        if out_underline.is_null() {
+            return FfiStatus::InvalidArgument;
+        }
+        let Some(invisible) = bool_from_abi(invisible) else {
+            return FfiStatus::InvalidArgument;
+        };
+
+        let underline = apply_underline_invisibility(underline, background, invisible);
+
+        // SAFETY: `out_underline` was checked non-null and the ABI requires one
+        // writable result value for the duration of this call.
+        unsafe { ptr::write(out_underline, underline) };
+        FfiStatus::Ok
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
         FfiStatus, RenderAttributeColors, terminal_parser_ffi_render_attribute_alpha,
         terminal_parser_ffi_render_attribute_effects,
         terminal_parser_ffi_render_attribute_effects_from_rendition,
+        terminal_parser_ffi_render_underline_invisibility,
     };
 
     #[test]
@@ -268,6 +294,32 @@ mod tests {
     }
 
     #[test]
+    fn ffi_replays_underline_invisibility() {
+        let mut underline = 0;
+        assert_eq!(
+            terminal_parser_ffi_render_underline_invisibility(
+                0x0011_2233,
+                0x0044_5566,
+                1,
+                &mut underline,
+            ),
+            FfiStatus::Ok
+        );
+        assert_eq!(underline, 0x0044_5566);
+
+        assert_eq!(
+            terminal_parser_ffi_render_underline_invisibility(
+                0x0011_2233,
+                0x0044_5566,
+                0,
+                &mut underline,
+            ),
+            FfiStatus::Ok
+        );
+        assert_eq!(underline, 0x0011_2233);
+    }
+
+    #[test]
     fn ffi_rejects_invalid_booleans_and_pointers() {
         let mut colors = RenderAttributeColors::default();
         assert_eq!(
@@ -304,6 +356,16 @@ mod tests {
         );
         assert_eq!(
             terminal_parser_ffi_render_attribute_alpha(colors, 0, 0, 0, 0, std::ptr::null_mut()),
+            FfiStatus::InvalidArgument
+        );
+
+        let mut underline = 0;
+        assert_eq!(
+            terminal_parser_ffi_render_underline_invisibility(0, 0, 2, &mut underline),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_parser_ffi_render_underline_invisibility(0, 0, 0, std::ptr::null_mut()),
             FfiStatus::InvalidArgument
         );
     }
