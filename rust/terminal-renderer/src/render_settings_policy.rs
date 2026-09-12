@@ -100,6 +100,15 @@ mod tests {
 
         assert!(settings.mode(RenderMode::IntenseIsBold));
         assert!(!settings.mode(RenderMode::IntenseIsBright));
+
+        assert!(!settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, true, true));
+        settings.set_mode(RenderMode::IndexedDistinguishableColors, true);
+        assert!(settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, true, true));
+        assert!(!settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, false, true));
+        assert!(!settings.should_adjust_contrast(0x0044_5566, 0x0044_5566, true, true));
+        settings.set_mode(RenderMode::AlwaysDistinguishableColors, true);
+        assert!(settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, false, false));
+        assert!(!settings.should_adjust_contrast(0x0044_5566, 0x0044_5566, false, false));
     }
 
     #[test]
@@ -125,21 +134,5 @@ mod tests {
         assert!(settings.blink_should_be_faint());
         settings.toggle_blink_rendition();
         assert!(!settings.blink_should_be_faint());
-    }
-
-    #[test]
-    fn contrast_adjustment_replays_distinguishable_color_modes() {
-        let mut settings = RenderSettingsPolicy::default();
-
-        assert!(!settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, true, true));
-
-        settings.set_mode(RenderMode::IndexedDistinguishableColors, true);
-        assert!(settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, true, true));
-        assert!(!settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, false, true));
-        assert!(!settings.should_adjust_contrast(0x0044_5566, 0x0044_5566, true, true));
-
-        settings.set_mode(RenderMode::AlwaysDistinguishableColors, true);
-        assert!(settings.should_adjust_contrast(0x0011_2233, 0x0044_5566, false, false));
-        assert!(!settings.should_adjust_contrast(0x0044_5566, 0x0044_5566, false, false));
     }
 }
