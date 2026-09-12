@@ -337,10 +337,14 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
         return inserted;
     }
 
-    bool ApplicationState::BadgeDismissed(const hstring& badgeId) const noexcept
+    bool ApplicationState::BadgeDismissed(const hstring& badgeId) const
     {
         const auto state = _state.lock_shared();
-        return state->DismissedBadges && state->DismissedBadges->contains(badgeId);
+        if (state->DismissedBadges)
+        {
+            return state->DismissedBadges->contains(badgeId);
+        }
+        return false;
     }
 
     void ApplicationState::SaveWorkspace(const hstring& name, const Model::WindowLayout& layout)
