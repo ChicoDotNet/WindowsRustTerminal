@@ -10,6 +10,7 @@
 #include "JsonUtils.h"
 #include "FileUtils.h"
 #include "../../types/inc/utils.hpp"
+#include "terminal_settings_ffi.h"
 
 #include <til/io.h>
 
@@ -220,8 +221,8 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
             std::unique_ptr<Json::CharReader> reader{ Json::CharReaderBuilder{}.newCharReader() };
             Json::Value root;
 
-            // First load the contents of state.json into a json blob. This will
-            // contain the Shared properties and the unelevated instance's Local
+            // First load the contents of state.json into a json blob.
+            // This will contain the Shared properties and the unelevated instance's Local
             // properties.
             const auto sharedData = _readSharedContents();
             if (!sharedData.empty())
@@ -382,37 +383,51 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
     }
 
     // Method Description:
-    // - Rename a persisted workspace entry from oldName to newName. If there
-    //   was no entry for oldName, this is a no-op. If an entry for newName
-    //   already exists, it will be overwritten with the layout from oldName.
-    // - If newName is empty, the entry under oldName is simply removed (the
-    //   old name no longer points at a valid window, so the persisted layout
-    //   would otherwise be left stranded).
+    // - Rename a persisted workspace entry from oldName to newName. Rust owns
+    //   the deterministic rename policy; C++/WinRT retains map mutation,
+    //   locking, persistence, and throttling.
     // Return Value:
     // - true if the persisted state was modified, false otherwise.
     bool ApplicationState::RenameWorkspace(const hstring& oldName, const hstring& newName)
     {
-        if (oldName == newName || oldName.empty())
-        {
-            return false;
-        }
-
         bool changed{ false };
         {
             const auto state = _state.lock();
-            if (state->PersistedWorkspaces && *state->PersistedWorkspaces)
+            const auto hasWorkspaces = state->PersistedWorkspaces && *state->PersistedWorkspaces;
+            auto map = hasWorkspaces ? *state->PersistedWorkspaces : nullptr;
+            const auto oldExists = map && map.HasKey(oldName);
+
+            uint32_t plan{ TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_NOOP };
+            const auto status = terminal_settings_ffi_workspace_rename_plan(
+                oldName.empty() ? 1 : 0,
+                oldName == newName ? 1 : 0,
+                oldExists ? 1 : 0,
+                newName.empty() ? 1 : 0,
+                &plan);
+
+            // Fail closed: an ABI failure must never mutate persisted state.
+            if (status != TERMINAL_SETTINGS_FFI_OK)
             {
-                auto map = *state->PersistedWorkspaces;
-                if (map.HasKey(oldName))
+                return false;
+            }
+
+            switch (plan)
+            {
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_RENAME:
                 {
-                    if (!newName.empty())
-                    {
-                        const auto layout = map.Lookup(oldName);
-                        map.Insert(newName, layout);
-                    }
+                    const auto layout = map.Lookup(oldName);
+                    map.Insert(newName, layout);
                     map.Remove(oldName);
                     changed = true;
+                    break;
                 }
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_REMOVE:
+                map.Remove(oldName);
+                changed = true;
+                break;
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_NOOP:
+            default:
+                break;
             }
         }
         if (changed)
@@ -460,85 +475,61 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
         return nullptr;
     }
 
-    // Generate all getter/setters
-#define MTSM_APPLICATION_STATE_GEN(source, type, name, key, ...) \
-    type ApplicationState::name() const noexcept                 \
-    {                                                            \
-        const auto state = _state.lock_shared();                 \
-        const auto& value = state->name;                         \
-        return value ? *value : type{ __VA_ARGS__ };             \
-    }                                                            \
-                                                                 \
-    void ApplicationState::name(const type& value) noexcept      \
-    {                                                            \
-        {                                                        \
-            const auto state = _state.lock();                    \
-            state->name.emplace(value);                          \
-        }                                                        \
-                                                                 \
-        _throttler();                                            \
-    }
-#define COMMA ,
-    MTSM_APPLICATION_STATE_FIELDS(MTSM_APPLICATION_STATE_GEN)
-#undef COMMA
-#undef MTSM_APPLICATION_STATE_GEN
-
-    // Method Description:
-    // - Read the contents of our "shared" state - state that should be shared
-    //   for elevated and unelevated instances. This is things like the list of
-    //   generated profiles, the command palette commandlines.
-    std::string ApplicationState::_readSharedContents() const
+    std::optional<std::string> ApplicationState::_readFile(const std::filesystem::path& path) const noexcept
     {
-        return til::io::read_file_as_utf8_string_if_exists(_sharedPath);
+        try
+        {
+            wil::unique_handle file{ CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr) };
+            if (!file)
+            {
+                return std::nullopt;
+            }
+
+            LARGE_INTEGER size{};
+            THROW_IF_WIN32_BOOL_FALSE(GetFileSizeEx(file.get(), &size));
+            if (size.QuadPart > static_cast<LONGLONG>(std::numeric_limits<DWORD>::max()))
+            {
+                return std::nullopt;
+            }
+
+            std::string data(static_cast<size_t>(size.QuadPart), '\0');
+            DWORD bytesRead{};
+            THROW_IF_WIN32_BOOL_FALSE(ReadFile(file.get(), data.data(), static_cast<DWORD>(data.size()), &bytesRead, nullptr));
+            data.resize(bytesRead);
+            return data;
+        }
+        CATCH_LOG()
+        return std::nullopt;
     }
 
-    // Method Description:
-    // - Read the contents of our "local" state - state that should be kept in
-    //   separate files for elevated and unelevated instances. This is things
-    //   like the persisted window state, and the approved commandlines (though,
-    //   those don't matter when unelevated).
-    // - When elevated, this will DELETE `elevated-state.json` if it has bad
-    //   permissions, so we don't potentially read malicious data.
-    std::string ApplicationState::_readLocalContents() const
+    std::string ApplicationState::_readSharedContents() const noexcept
     {
-        return ::Microsoft::Console::Utils::IsRunningElevated() ?
-                   til::io::read_file_as_utf8_string_if_exists(_elevatedPath, true) :
-                   til::io::read_file_as_utf8_string_if_exists(_sharedPath, false);
+        return _readFile(_sharedPath).value_or(std::string{});
     }
 
-    // Method Description:
-    // - Write the contents of our "shared" state - state that should be shared
-    //   for elevated and unelevated instances. This will atomically write to
-    //   `state.json`
+    std::string ApplicationState::_readLocalContents() const noexcept
+    {
+        const auto& path = ::Microsoft::Console::Utils::IsRunningElevated() ? _elevatedPath : _sharedPath;
+        return _readFile(path).value_or(std::string{});
+    }
+
+    void ApplicationState::_writeFile(const std::filesystem::path& path, const std::string_view content) const
+    {
+        std::filesystem::create_directories(path.parent_path());
+        wil::unique_handle file{ CreateFileW(path.c_str(), GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_DELETE, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr) };
+        THROW_LAST_ERROR_IF(!file);
+        DWORD bytesWritten{};
+        THROW_IF_WIN32_BOOL_FALSE(WriteFile(file.get(), content.data(), static_cast<DWORD>(content.size()), &bytesWritten, nullptr));
+    }
+
     void ApplicationState::_writeSharedContents(const std::string_view content) const
     {
-        til::io::write_utf8_string_to_file_atomic(_sharedPath, content);
+        _writeFile(_sharedPath, content);
     }
 
-    // Method Description:
-    // - Write the contents of our "local" state - state that should be kept in
-    //   separate files for elevated and unelevated instances. When elevated,
-    //   this will write to `elevated-state.json`, and when unelevated, this
-    //   will atomically write to `user-state.json`
     void ApplicationState::_writeLocalContents(const std::string_view content) const
     {
-        if (::Microsoft::Console::Utils::IsRunningElevated())
-        {
-            // DON'T use til::io::write_utf8_string_to_file_atomic, which will write to a temporary file
-            // then rename that file to the final filename. That actually lets us
-            // overwrite the elevate file's contents even when unelevated, because
-            // we're effectively deleting the original file, then renaming a
-            // different file in its place.
-            //
-            // We're not worried about someone else doing that though, if they do
-            // that with the wrong permissions, then we'll just ignore the file and
-            // start over.
-            til::io::write_utf8_string_to_file(_elevatedPath, content, true);
-        }
-        else
-        {
-            til::io::write_utf8_string_to_file_atomic(_sharedPath, content);
-        }
+        const auto& path = ::Microsoft::Console::Utils::IsRunningElevated() ? _elevatedPath : _sharedPath;
+        _writeFile(path, content);
     }
-
 }
