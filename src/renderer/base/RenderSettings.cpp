@@ -258,12 +258,15 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColors(const TextAttri
     // don't adjust the foreground.
     if constexpr (Feature_AdjustIndistinguishableText::IsEnabled())
     {
-        const auto indexedDistinguishableColors = GetRenderMode(Mode::IndexedDistinguishableColors);
-        const auto alwaysDistinguishableColors = GetRenderMode(Mode::AlwaysDistinguishableColors);
-        if (
-            (indexedDistinguishableColors || alwaysDistinguishableColors) &&
-            fg != bg &&
-            (alwaysDistinguishableColors || (fgTextColor.IsDefaultOrLegacy() && bgTextColor.IsDefaultOrLegacy())))
+        uint32_t shouldAdjustContrast{};
+        _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_should_adjust_contrast(
+            &_renderSettingsPolicy,
+            static_cast<uint32_t>(fg),
+            static_cast<uint32_t>(bg),
+            fgTextColor.IsDefaultOrLegacy() ? 1u : 0u,
+            bgTextColor.IsDefaultOrLegacy() ? 1u : 0u,
+            &shouldAdjustContrast));
+        if (shouldAdjustContrast != 0)
         {
             fg = ColorFix::GetPerceivableColor(fg, bg, 0.5f * 0.5f);
         }
@@ -334,12 +337,15 @@ COLORREF RenderSettings::GetAttributeUnderlineColor(const TextAttribute& attr) c
     // don't adjust the underline color.
     if constexpr (Feature_AdjustIndistinguishableText::IsEnabled())
     {
-        const auto alwaysDistinguishableColors = GetRenderMode(Mode::AlwaysDistinguishableColors);
-        const auto indexedDistinguishableColors = GetRenderMode(Mode::IndexedDistinguishableColors);
-        if (
-            ul != bg &&
-            (alwaysDistinguishableColors ||
-             (indexedDistinguishableColors && ulTextColor.IsDefaultOrLegacy() && attr.GetBackground().IsDefaultOrLegacy())))
+        uint32_t shouldAdjustContrast{};
+        _failFastOnRustPolicyFailure(terminal_parser_ffi_render_settings_should_adjust_contrast(
+            &_renderSettingsPolicy,
+            static_cast<uint32_t>(ul),
+            static_cast<uint32_t>(bg),
+            ulTextColor.IsDefaultOrLegacy() ? 1u : 0u,
+            attr.GetBackground().IsDefaultOrLegacy() ? 1u : 0u,
+            &shouldAdjustContrast));
+        if (shouldAdjustContrast != 0)
         {
             ul = ColorFix::GetPerceivableColor(ul, bg, 0.5f * 0.5f);
         }

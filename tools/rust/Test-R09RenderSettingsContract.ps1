@@ -143,6 +143,7 @@ $requiredProduct = @(
     'terminal_parser_ffi_render_settings_default(&_renderSettingsPolicy)',
     'terminal_parser_ffi_render_settings_set_mode(',
     'terminal_parser_ffi_render_settings_get_mode(',
+    'terminal_parser_ffi_render_settings_should_adjust_contrast(',
     'terminal_parser_ffi_render_settings_restore_programmable_defaults(&_renderSettingsPolicy)',
     'terminal_parser_ffi_render_settings_toggle_blink(&_renderSettingsPolicy)',
     'TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS',
@@ -154,10 +155,20 @@ $requiredProduct = @(
     'attr.IsBlinking() ? 1u : 0u',
     '_renderSettingsPolicy.blink_should_be_faint',
     'screenReversed ? 1u : 0u',
+    'fgTextColor.IsDefaultOrLegacy() ? 1u : 0u',
+    'bgTextColor.IsDefaultOrLegacy() ? 1u : 0u',
+    'ulTextColor.IsDefaultOrLegacy() ? 1u : 0u',
+    'attr.GetBackground().IsDefaultOrLegacy() ? 1u : 0u',
+    '&shouldAdjustContrast',
     '&underline'
 )
 foreach ($needle in $requiredProduct) {
     if (-not $product.Contains($needle)) { throw "Render settings product route missing: $needle" }
+}
+
+$contrastRouteCount = [regex]::Matches($product, [regex]::Escape('terminal_parser_ffi_render_settings_should_adjust_contrast(')).Count
+if ($contrastRouteCount -ne 2) {
+    throw "Render settings contrast policy must have exactly two product routes; found $contrastRouteCount"
 }
 
 $forbiddenProduct = @(
@@ -168,7 +179,12 @@ $forbiddenProduct = @(
     'std::swap(fg, bg);',
     'fg |= 0xff000000;',
     'bg |= 0xff000000;',
-    'ul = bg;'
+    'ul = bg;',
+    'const auto indexedDistinguishableColors =',
+    'const auto alwaysDistinguishableColors =',
+    '(indexedDistinguishableColors || alwaysDistinguishableColors)',
+    '(alwaysDistinguishableColors || (fgTextColor.IsDefaultOrLegacy()',
+    '(indexedDistinguishableColors && ulTextColor.IsDefaultOrLegacy()'
 )
 foreach ($needle in $forbiddenProduct) {
     if ($product.Contains($needle)) { throw "Legacy C++ render attribute color ownership returned: $needle" }
@@ -185,4 +201,4 @@ foreach ($needle in $requiredBuild) {
     if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, contrast/attribute-color/underline replay, product route, RendererBase route, and legacy ownership removal are guarded.'
+Write-Host 'Render settings Rust owner, contrast/attribute-color/underline replay and product routes, RendererBase route, and legacy ownership removal are guarded.'

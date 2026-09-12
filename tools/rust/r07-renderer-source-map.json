@@ -158,9 +158,9 @@
     },
     {
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
-      "sourceBlob": "53ecbfa414a2a994e673bc591652a647b00fae26",
+      "sourceBlob": "dbd4867d8d65890d9af5437ee31ff92b777267d9",
       "ownership": "split",
-      "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline lookup/default fallback and live renderer integration; Rust owns mode/reset/blink state, deterministic faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
+      "nativeBoundary": "C++ retains color-table lookup, ColorFix execution, underline lookup/default fallback and live renderer integration; Rust owns mode/reset/blink state, deterministic contrast-adjustment eligibility, faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
       "sourcePatterns": [
         "RenderSettings::SetRenderMode",
         "RenderSettings::GetRenderMode",
@@ -189,7 +189,7 @@
         {
           "sourcePattern": "RenderSettings::GetAttributeColors",
           "coverage": "Partial",
-          "notes": "Rust owns faint/blink dim selection plus deterministic dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix remain native."
+          "notes": "Rust owns contrast-adjustment eligibility, faint/blink dim selection plus deterministic dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix execution remain native."
         },
         {
           "sourcePattern": "RenderSettings::GetAttributeColorsWithAlpha",
@@ -199,7 +199,7 @@
         {
           "sourcePattern": "RenderSettings::GetAttributeUnderlineColor",
           "coverage": "Partial",
-          "notes": "Rust represents the deterministic rule that invisible text replaces an explicit underline with the resolved background; default-underline fallback, TextColor lookup and ColorFix remain native."
+          "notes": "Rust owns contrast-adjustment eligibility and the deterministic rule that invisible text replaces an explicit underline with the resolved background; default-underline fallback, TextColor lookup and ColorFix execution remain native."
         },
         {
           "sourcePattern": "RenderSettings::ToggleBlinkRendition",
