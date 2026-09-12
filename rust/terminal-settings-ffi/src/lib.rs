@@ -11,7 +11,7 @@ use std::{
     ptr,
 };
 
-use terminal_settings::{WorkspaceRenamePlan, workspace_rename_plan};
+use terminal_settings::application_state::{WorkspaceRenamePlan, workspace_rename_plan};
 
 /// Stable status values returned across the C ABI.
 #[repr(i32)]
