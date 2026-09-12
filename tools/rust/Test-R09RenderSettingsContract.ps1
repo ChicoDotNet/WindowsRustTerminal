@@ -128,10 +128,25 @@ $requiredProduct = @(
     'terminal_parser_ffi_render_settings_restore_programmable_defaults(&_renderSettingsPolicy)',
     'terminal_parser_ffi_render_settings_toggle_blink(&_renderSettingsPolicy)',
     'TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS',
-    'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT'
+    'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT',
+    'terminal_parser_ffi_render_attribute_effects(',
+    'terminal_parser_ffi_render_attribute_alpha(',
+    'dimFg ? 1u : 0u',
+    'screenReversed ? 1u : 0u'
 )
 foreach ($needle in $requiredProduct) {
     if (-not $product.Contains($needle)) { throw "Render settings product route missing: $needle" }
+}
+
+$forbiddenProduct = @(
+    'const auto swapFgAndBg = attr.IsReverseVideo() ^ GetRenderMode(Mode::ScreenReversed);',
+    'fg = (fg >> 1) & 0x7F7F7F;',
+    'std::swap(fg, bg);',
+    'fg |= 0xff000000;',
+    'bg |= 0xff000000;'
+)
+foreach ($needle in $forbiddenProduct) {
+    if ($product.Contains($needle)) { throw "Legacy C++ render attribute color ownership returned: $needle" }
 }
 
 $requiredBuild = @(
@@ -145,4 +160,4 @@ foreach ($needle in $requiredBuild) {
     if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, attribute-color replay, RendererBase route, and legacy ownership removal are guarded.'
+Write-Host 'Render settings Rust owner, attribute-color replay/product route, RendererBase route, and legacy ownership removal are guarded.'
