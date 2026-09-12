@@ -72,6 +72,33 @@
     <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-parser-ffi --target $(_RustHostTargetTriple) $(_RustHostCargoReleaseArg)" />
   </Target>
 
+  <!-- R09 settings integration: C++/WinRT keeps state storage and persistence while
+       Rust owns deterministic workspace-rename policy. -->
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+    <_RustSettingsTargetTriple Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_RustSettingsTargetTriple>
+    <_RustSettingsTargetTriple Condition="'$(Platform)' == 'Win32'">i686-pc-windows-msvc</_RustSettingsTargetTriple>
+    <_RustSettingsTargetTriple Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</_RustSettingsTargetTriple>
+    <_RustSettingsCargoProfile Condition="'$(Configuration)' == 'Debug'">debug</_RustSettingsCargoProfile>
+    <_RustSettingsCargoProfile Condition="'$(Configuration)' != 'Debug'">release</_RustSettingsCargoProfile>
+    <_RustSettingsCargoReleaseArg Condition="'$(Configuration)' != 'Debug'">--release</_RustSettingsCargoReleaseArg>
+    <_RustSettingsFfiLib>$(SolutionDir)artifacts\cargo-target\$(_RustSettingsTargetTriple)\$(_RustSettingsCargoProfile)\terminal_settings_ffi.lib</_RustSettingsFfiLib>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)rust\terminal-settings-ffi\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+    </ClCompile>
+    <Lib>
+      <AdditionalDependencies>$(_RustSettingsFfiLib);%(AdditionalDependencies)</AdditionalDependencies>
+    </Lib>
+  </ItemDefinitionGroup>
+
+  <Target Name="BuildRustSettingsFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+    <Error Condition="'$(_RustSettingsTargetTriple)' == ''" Text="R09 Settings Rust integration does not support MSBuild platform '$(Platform)'." />
+    <Exec WorkingDirectory="$(SolutionDir)" Command="rustup target add $(_RustSettingsTargetTriple)" />
+    <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-settings-ffi --target $(_RustSettingsTargetTriple) $(_RustSettingsCargoReleaseArg)" />
+  </Target>
+
   <!-- R09 renderer settings integration: native rendering/color ownership remains
        in RendererBase while Rust owns deterministic render-mode and blink policy. -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'base'">
