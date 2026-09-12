@@ -158,7 +158,7 @@
     },
     {
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
-      "sourceBlob": "473254e736d1c5dae35f32f98e8bad088d808c80",
+      "sourceBlob": "53ecbfa414a2a994e673bc591652a647b00fae26",
       "ownership": "split",
       "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline lookup/default fallback and live renderer integration; Rust owns mode/reset/blink state, deterministic faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
       "sourcePatterns": [
