@@ -72,8 +72,8 @@
     <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-parser-ffi --target $(_RustHostTargetTriple) $(_RustHostCargoReleaseArg)" />
   </Target>
 
-  <!-- R09 settings integration: C++/WinRT keeps state storage, map mutation and
-       persistence while Rust owns and routes deterministic workspace-rename policy. -->
+  <!-- R09 settings integration: C++/WinRT keeps state storage and persistence while
+       Rust owns deterministic workspace-rename policy. -->
   <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
     <_RustSettingsTargetTriple Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_RustSettingsTargetTriple>
     <_RustSettingsTargetTriple Condition="'$(Platform)' == 'Win32'">i686-pc-windows-msvc</_RustSettingsTargetTriple>
