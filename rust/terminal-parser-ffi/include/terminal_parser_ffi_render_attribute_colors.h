@@ -40,6 +40,12 @@ terminal_parser_ffi_status terminal_parser_ffi_render_attribute_alpha(
     uint32_t invisible,
     terminal_parser_ffi_render_attribute_colors* out_colors);
 
+terminal_parser_ffi_status terminal_parser_ffi_render_underline_invisibility(
+    uint32_t underline,
+    uint32_t background,
+    uint32_t invisible,
+    uint32_t* out_underline);
+
 #ifdef __cplusplus
 }
 
