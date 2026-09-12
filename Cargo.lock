@@ -96,6 +96,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "terminal-settings-ffi"
+version = "0.0.0"
+dependencies = [
+ "terminal-settings",
+]
+
+[[package]]
 name = "unicode-segmentation"
 version = "1.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
