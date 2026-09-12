@@ -32,6 +32,13 @@ terminal_parser_ffi_status terminal_parser_ffi_render_settings_get_mode(
     const terminal_parser_ffi_render_settings_state* state,
     uint32_t mode,
     uint32_t* out_enabled);
+terminal_parser_ffi_status terminal_parser_ffi_render_settings_should_adjust_contrast(
+    const terminal_parser_ffi_render_settings_state* state,
+    uint32_t candidate,
+    uint32_t background,
+    uint32_t candidate_is_default_or_legacy,
+    uint32_t background_is_default_or_legacy,
+    uint32_t* out_should_adjust);
 terminal_parser_ffi_status terminal_parser_ffi_render_settings_restore_programmable_defaults(
     terminal_parser_ffi_render_settings_state* state);
 terminal_parser_ffi_status terminal_parser_ffi_render_settings_toggle_blink(

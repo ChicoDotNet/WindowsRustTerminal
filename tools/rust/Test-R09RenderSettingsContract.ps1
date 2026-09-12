@@ -21,7 +21,11 @@ $requiredOwner = @(
     'pub fn set_mode(&mut self, mode: RenderMode, enabled: bool)',
     'pub const fn mode(self, mode: RenderMode) -> bool',
     'pub fn restore_programmable_defaults(&mut self)',
-    'pub const fn toggle_blink_rendition(&mut self)'
+    'pub const fn toggle_blink_rendition(&mut self)',
+    'pub const fn should_adjust_contrast(',
+    'candidate != background',
+    'RenderMode::AlwaysDistinguishableColors',
+    'RenderMode::IndexedDistinguishableColors'
 )
 foreach ($needle in $requiredOwner) {
     if (-not $owner.Contains($needle)) { throw "Render settings Rust owner evidence missing: $needle" }
@@ -31,9 +35,11 @@ $requiredFfi = @(
     'terminal_parser_ffi_render_settings_default',
     'terminal_parser_ffi_render_settings_set_mode',
     'terminal_parser_ffi_render_settings_get_mode',
+    'terminal_parser_ffi_render_settings_should_adjust_contrast',
     'terminal_parser_ffi_render_settings_restore_programmable_defaults',
     'terminal_parser_ffi_render_settings_toggle_blink',
     'RenderSettingsPolicy::default()',
+    'policy.should_adjust_contrast(',
     'policy.restore_programmable_defaults()',
     'policy.toggle_blink_rendition()',
     'return FfiStatus::InvalidArgument'
@@ -51,6 +57,8 @@ $requiredAbi = @(
     'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT = 6',
     'uint32_t modes;',
     'uint32_t blink_should_be_faint;',
+    'terminal_parser_ffi_render_settings_should_adjust_contrast(',
+    'uint32_t* out_should_adjust',
     'static_assert(sizeof(terminal_parser_ffi_render_settings_state) == 8);'
 )
 foreach ($needle in $requiredAbi) {
@@ -61,9 +69,12 @@ $requiredWitness = @(
     'render_settings_policy_replay()',
     'TERMINAL_PARSER_FFI_RENDER_MODE_INTENSE_IS_BRIGHT, true',
     'TERMINAL_PARSER_FFI_RENDER_MODE_ALWAYS_DISTINGUISHABLE_COLORS, true',
+    'TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS',
     'TERMINAL_PARSER_FFI_RENDER_MODE_SCREEN_REVERSED, false',
     'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT, false',
     'state.blink_should_be_faint != 1',
+    'expect_contrast_adjustment(',
+    'terminal_parser_ffi_render_settings_should_adjust_contrast(',
     'terminal_parser_ffi_render_settings_set_mode(&state, 0, 1)',
     'terminal_parser_ffi_render_settings_set_mode(&state, 7, 1)',
     'terminal_parser_ffi_render_settings_default(nullptr)',
@@ -174,4 +185,4 @@ foreach ($needle in $requiredBuild) {
     if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, attribute-color/underline replay, product route, RendererBase route, and legacy ownership removal are guarded.'
+Write-Host 'Render settings Rust owner, contrast/attribute-color/underline replay, product route, RendererBase route, and legacy ownership removal are guarded.'
