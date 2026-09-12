@@ -79,6 +79,27 @@ namespace r09
             return false;
         }
 
+        uint32_t underline = 0;
+        if (terminal_parser_ffi_render_underline_invisibility(
+                0x00112233,
+                0x00445566,
+                1,
+                &underline) != TERMINAL_PARSER_FFI_OK ||
+            underline != 0x00445566)
+        {
+            return false;
+        }
+
+        if (terminal_parser_ffi_render_underline_invisibility(
+                0x00112233,
+                0x00445566,
+                0,
+                &underline) != TERMINAL_PARSER_FFI_OK ||
+            underline != 0x00112233)
+        {
+            return false;
+        }
+
         return
             terminal_parser_ffi_render_attribute_effects(0, 0, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_effects(0, 0, 0, 2, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
@@ -86,6 +107,8 @@ namespace r09
             terminal_parser_ffi_render_attribute_effects_from_rendition(0, 0, 0, 0, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_effects_from_rendition(0, 0, 0, 0, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_alpha(colors, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
-            terminal_parser_ffi_render_attribute_alpha(colors, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            terminal_parser_ffi_render_attribute_alpha(colors, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            terminal_parser_ffi_render_underline_invisibility(0, 0, 2, &underline) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            terminal_parser_ffi_render_underline_invisibility(0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
     }
 }
