@@ -23,6 +23,40 @@ namespace r09
             return false;
         }
 
+        colors = {};
+        if (terminal_parser_ffi_render_attribute_effects_from_rendition(
+                0x00604020,
+                0x00112233,
+                0,
+                1,
+                1,
+                0,
+                0,
+                0,
+                &colors) != TERMINAL_PARSER_FFI_OK ||
+            colors.foreground != 0x00302010 ||
+            colors.background != 0x00112233)
+        {
+            return false;
+        }
+
+        colors = {};
+        if (terminal_parser_ffi_render_attribute_effects_from_rendition(
+                0x00604020,
+                0x00112233,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                &colors) != TERMINAL_PARSER_FFI_OK ||
+            colors.foreground != 0x00604020 ||
+            colors.background != 0x00112233)
+        {
+            return false;
+        }
+
         colors = { 0x00112233, 0x00445566 };
         if (terminal_parser_ffi_render_attribute_effects(
                 colors.foreground,
@@ -49,6 +83,8 @@ namespace r09
             terminal_parser_ffi_render_attribute_effects(0, 0, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_effects(0, 0, 0, 2, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_effects(0, 0, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            terminal_parser_ffi_render_attribute_effects_from_rendition(0, 0, 0, 0, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
+            terminal_parser_ffi_render_attribute_effects_from_rendition(0, 0, 0, 0, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_alpha(colors, 2, 0, 0, 0, &colors) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT &&
             terminal_parser_ffi_render_attribute_alpha(colors, 0, 0, 0, 0, nullptr) == TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
     }

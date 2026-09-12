@@ -21,6 +21,17 @@ terminal_parser_ffi_status terminal_parser_ffi_render_attribute_effects(
     uint32_t invisible,
     terminal_parser_ffi_render_attribute_colors* out_colors);
 
+terminal_parser_ffi_status terminal_parser_ffi_render_attribute_effects_from_rendition(
+    uint32_t foreground,
+    uint32_t background,
+    uint32_t faint,
+    uint32_t blinking,
+    uint32_t blink_should_be_faint,
+    uint32_t reverse_video,
+    uint32_t screen_reversed,
+    uint32_t invisible,
+    terminal_parser_ffi_render_attribute_colors* out_colors);
+
 terminal_parser_ffi_status terminal_parser_ffi_render_attribute_alpha(
     terminal_parser_ffi_render_attribute_colors colors,
     uint32_t background_default,

@@ -67,6 +67,64 @@ pub extern "C" fn terminal_parser_ffi_render_attribute_effects(
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_render_attribute_effects_from_rendition(
+    foreground: u32,
+    background: u32,
+    faint: u32,
+    blinking: u32,
+    blink_should_be_faint: u32,
+    reverse_video: u32,
+    screen_reversed: u32,
+    invisible: u32,
+    out_colors: *mut RenderAttributeColors,
+) -> FfiStatus {
+    ffi_guard(|| {
+        if out_colors.is_null() {
+            return FfiStatus::InvalidArgument;
+        }
+        let (
+            Some(faint),
+            Some(blinking),
+            Some(blink_should_be_faint),
+            Some(reverse_video),
+            Some(screen_reversed),
+            Some(invisible),
+        ) = (
+            bool_from_abi(faint),
+            bool_from_abi(blinking),
+            bool_from_abi(blink_should_be_faint),
+            bool_from_abi(reverse_video),
+            bool_from_abi(screen_reversed),
+            bool_from_abi(invisible),
+        )
+        else {
+            return FfiStatus::InvalidArgument;
+        };
+
+        let dim_foreground = faint || (blink_should_be_faint && blinking);
+        let flags = AttributeColorFlags::default()
+            .with_dim_foreground(dim_foreground)
+            .with_reverse_video(reverse_video)
+            .with_screen_reversed(screen_reversed)
+            .with_invisible(invisible);
+        let colors = apply_attribute_effects(foreground, background, flags);
+
+        // SAFETY: `out_colors` was checked non-null and the ABI requires one
+        // writable result value for the duration of this call.
+        unsafe {
+            ptr::write(
+                out_colors,
+                RenderAttributeColors {
+                    foreground: colors.foreground,
+                    background: colors.background,
+                },
+            )
+        };
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_render_attribute_alpha(
     colors: RenderAttributeColors,
     background_default: u32,
@@ -121,6 +179,7 @@ mod tests {
     use super::{
         FfiStatus, RenderAttributeColors, terminal_parser_ffi_render_attribute_alpha,
         terminal_parser_ffi_render_attribute_effects,
+        terminal_parser_ffi_render_attribute_effects_from_rendition,
     };
 
     #[test]
@@ -145,6 +204,36 @@ mod tests {
                 background: 0x0030_2010,
             }
         );
+    }
+
+    #[test]
+    fn ffi_derives_dim_from_faint_and_blink_rendition() {
+        let cases = [
+            (1, 0, 0, 0x0030_2010),
+            (0, 1, 1, 0x0030_2010),
+            (0, 1, 0, 0x0060_4020),
+            (0, 0, 1, 0x0060_4020),
+        ];
+
+        for (faint, blinking, blink_should_be_faint, expected_foreground) in cases {
+            let mut colors = RenderAttributeColors::default();
+            assert_eq!(
+                terminal_parser_ffi_render_attribute_effects_from_rendition(
+                    0x0060_4020,
+                    0x0011_2233,
+                    faint,
+                    blinking,
+                    blink_should_be_faint,
+                    0,
+                    0,
+                    0,
+                    &mut colors,
+                ),
+                FfiStatus::Ok
+            );
+            assert_eq!(colors.foreground, expected_foreground);
+            assert_eq!(colors.background, 0x0011_2233);
+        }
     }
 
     #[test]
@@ -183,6 +272,34 @@ mod tests {
         let mut colors = RenderAttributeColors::default();
         assert_eq!(
             terminal_parser_ffi_render_attribute_effects(0, 0, 2, 0, 0, 0, &mut colors),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_parser_ffi_render_attribute_effects_from_rendition(
+                0,
+                0,
+                0,
+                0,
+                2,
+                0,
+                0,
+                0,
+                &mut colors,
+            ),
+            FfiStatus::InvalidArgument
+        );
+        assert_eq!(
+            terminal_parser_ffi_render_attribute_effects_from_rendition(
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                0,
+                std::ptr::null_mut(),
+            ),
             FfiStatus::InvalidArgument
         );
         assert_eq!(
