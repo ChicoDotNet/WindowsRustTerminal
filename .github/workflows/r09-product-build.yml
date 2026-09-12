@@ -13,11 +13,14 @@ on:
       - "rust/terminal-host/**"
       - "rust/terminal-app/**"
       - "rust/terminal-app-ffi/**"
+      - "rust/terminal-settings/**"
+      - "rust/terminal-settings-ffi/**"
       - "src/terminal/parser/**"
       - "src/host/**"
       - "src/cascadia/fzf/**"
       - "src/cascadia/TerminalApp/**"
       - "src/cascadia/TerminalSettingsEditor/**"
+      - "src/cascadia/TerminalSettingsModel/**"
       - "Directory.Build.targets"
       - "tools/rust/Invoke-R09ProductBuild.ps1"
       - "tools/rust/R09ControlCharacterAbiProbe.cpp"
@@ -85,6 +88,7 @@ on:
       - "tools/rust/Test-R09OutputCsiDecpsOwnership.ps1"
       - "tools/rust/Test-R09PtySignalReadPlanContract.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
+      - "tools/rust/Test-R09WorkspaceRenameOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
 
@@ -235,6 +239,9 @@ jobs:
       - name: Validate FZF ownership
         shell: pwsh
         run: ./tools/rust/Test-R09FzfOwnership.ps1
+      - name: Validate workspace rename ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09WorkspaceRenameOwnership.ps1
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
