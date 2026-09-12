@@ -138,10 +138,12 @@ $requiredProduct = @(
     'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT',
     'terminal_parser_ffi_render_attribute_effects_from_rendition(',
     'terminal_parser_ffi_render_attribute_alpha(',
+    'terminal_parser_ffi_render_underline_invisibility(',
     'attr.IsFaint() ? 1u : 0u',
     'attr.IsBlinking() ? 1u : 0u',
     '_renderSettingsPolicy.blink_should_be_faint',
-    'screenReversed ? 1u : 0u'
+    'screenReversed ? 1u : 0u',
+    '&underline'
 )
 foreach ($needle in $requiredProduct) {
     if (-not $product.Contains($needle)) { throw "Render settings product route missing: $needle" }
@@ -154,7 +156,8 @@ $forbiddenProduct = @(
     'fg = (fg >> 1) & 0x7F7F7F;',
     'std::swap(fg, bg);',
     'fg |= 0xff000000;',
-    'bg |= 0xff000000;'
+    'bg |= 0xff000000;',
+    'ul = bg;'
 )
 foreach ($needle in $forbiddenProduct) {
     if ($product.Contains($needle)) { throw "Legacy C++ render attribute color ownership returned: $needle" }
