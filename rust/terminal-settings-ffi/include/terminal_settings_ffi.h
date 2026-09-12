@@ -13,12 +13,12 @@ typedef enum terminal_settings_ffi_status
     TERMINAL_SETTINGS_FFI_PANIC = 255,
 } terminal_settings_ffi_status;
 
-typedef enum terminal_settings_ffi_workspace_rename_plan
+typedef enum terminal_settings_ffi_workspace_rename_plan_value
 {
     TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_NOOP = 0,
     TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_REMOVE = 1,
     TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_RENAME = 2,
-} terminal_settings_ffi_workspace_rename_plan;
+} terminal_settings_ffi_workspace_rename_plan_value;
 
 uint32_t terminal_settings_ffi_abi_version(void);
 
