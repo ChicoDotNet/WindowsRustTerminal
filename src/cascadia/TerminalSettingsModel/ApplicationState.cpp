@@ -10,6 +10,7 @@
 #include "JsonUtils.h"
 #include "FileUtils.h"
 #include "../../types/inc/utils.hpp"
+#include "terminal_settings_ffi.h"
 
 #include <til/io.h>
 
@@ -336,14 +337,10 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
         return inserted;
     }
 
-    bool ApplicationState::BadgeDismissed(const hstring& badgeId) const
+    bool ApplicationState::BadgeDismissed(const hstring& badgeId) const noexcept
     {
         const auto state = _state.lock_shared();
-        if (state->DismissedBadges)
-        {
-            return state->DismissedBadges->contains(badgeId);
-        }
-        return false;
+        return state->DismissedBadges && state->DismissedBadges->contains(badgeId);
     }
 
     void ApplicationState::SaveWorkspace(const hstring& name, const Model::WindowLayout& layout)
@@ -392,28 +389,48 @@ namespace winrt::Microsoft::Terminal::Settings::Model::implementation
     // - true if the persisted state was modified, false otherwise.
     bool ApplicationState::RenameWorkspace(const hstring& oldName, const hstring& newName)
     {
-        if (oldName == newName || oldName.empty())
-        {
-            return false;
-        }
-
         bool changed{ false };
         {
             const auto state = _state.lock();
-            if (state->PersistedWorkspaces && *state->PersistedWorkspaces)
+            const auto hasPersistedWorkspaces = state->PersistedWorkspaces && *state->PersistedWorkspaces;
+            const auto oldExists = hasPersistedWorkspaces && (*state->PersistedWorkspaces).HasKey(oldName);
+
+            uint32_t plan{};
+            const auto status = terminal_settings_ffi_workspace_rename_plan(
+                static_cast<uint8_t>(oldName.empty()),
+                static_cast<uint8_t>(oldName == newName),
+                static_cast<uint8_t>(oldExists),
+                static_cast<uint8_t>(newName.empty()),
+                &plan);
+            if (status != TERMINAL_SETTINGS_FFI_OK)
             {
-                auto map = *state->PersistedWorkspaces;
-                if (map.HasKey(oldName))
-                {
-                    if (!newName.empty())
-                    {
-                        const auto layout = map.Lookup(oldName);
-                        map.Insert(newName, layout);
-                    }
-                    map.Remove(oldName);
-                    changed = true;
-                }
+                return false;
             }
+
+            switch (plan)
+            {
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_NOOP:
+                return false;
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_REMOVE:
+            case TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_RENAME:
+                break;
+            default:
+                return false;
+            }
+
+            if (!hasPersistedWorkspaces)
+            {
+                return false;
+            }
+
+            auto map = *state->PersistedWorkspaces;
+            if (plan == TERMINAL_SETTINGS_FFI_WORKSPACE_RENAME_RENAME)
+            {
+                const auto layout = map.Lookup(oldName);
+                map.Insert(newName, layout);
+            }
+            map.Remove(oldName);
+            changed = true;
         }
         if (changed)
         {
