@@ -78,6 +78,8 @@ $requiredAttributeAbi = @(
     'terminal_parser_ffi_render_attribute_effects(',
     'terminal_parser_ffi_render_attribute_effects_from_rendition(',
     'terminal_parser_ffi_render_attribute_alpha(',
+    'terminal_parser_ffi_render_underline_invisibility(',
+    'uint32_t* out_underline',
     'static_assert(sizeof(terminal_parser_ffi_render_attribute_colors) == 8);'
 )
 foreach ($needle in $requiredAttributeAbi) {
@@ -92,6 +94,9 @@ $requiredAttributeWitness = @(
     'colors.background != 0x00302010',
     'terminal_parser_ffi_render_attribute_alpha(',
     'colors.foreground != 0xFF112233',
+    'terminal_parser_ffi_render_underline_invisibility(',
+    'underline != 0x00445566',
+    'underline != 0x00112233',
     'TERMINAL_PARSER_FFI_INVALID_ARGUMENT',
     'nullptr'
 )
@@ -166,4 +171,4 @@ foreach ($needle in $requiredBuild) {
     if (-not $buildTargets.Contains($needle)) { throw "RendererBase Rust link evidence missing: $needle" }
 }
 
-Write-Host 'Render settings Rust owner, attribute-color replay/product route, RendererBase route, and legacy ownership removal are guarded.'
+Write-Host 'Render settings Rust owner, attribute-color/underline replay, product route, RendererBase route, and legacy ownership removal are guarded.'
