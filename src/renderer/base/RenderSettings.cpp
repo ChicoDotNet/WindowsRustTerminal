@@ -170,7 +170,7 @@ void RenderSettings::RestoreDefaultColorTableEntry(const size_t tableIndex)
 // - Sets the position in the color table for the given color alias and updates the color.
 // Arguments:
 // - alias - The color alias to update.
-// - tableIndex - The new position of the alias in the color table.
+// - tableIndex - The new position of the alias.
 // - color - The new COLORREF to assign to that alias.
 void RenderSettings::SetColorAlias(const ColorAlias alias, const size_t tableIndex, const COLORREF color)
 {
@@ -193,7 +193,7 @@ COLORREF RenderSettings::GetColorAlias(const ColorAlias alias) const
 // - Sets the position in the color table for the given color alias.
 // Arguments:
 // - alias - The color alias to update.
-// - tableIndex - The new position of the alias in the color table.
+// - tableIndex - The new position of the alias.
 void RenderSettings::SetColorAliasIndex(const ColorAlias alias, const size_t tableIndex) noexcept
 {
     if (tableIndex < TextColor::TABLE_SIZE)
@@ -321,10 +321,13 @@ COLORREF RenderSettings::GetAttributeUnderlineColor(const TextAttribute& attr) c
 
     const auto defaultUlIndex = GetColorAliasIndex(ColorAlias::DefaultForeground);
     auto ul = ulTextColor.GetColor(_colorTable, defaultUlIndex, true);
-    if (attr.IsInvisible())
-    {
-        ul = bg;
-    }
+    uint32_t underline{};
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_underline_invisibility(
+        static_cast<uint32_t>(ul),
+        static_cast<uint32_t>(bg),
+        attr.IsInvisible() ? 1u : 0u,
+        &underline));
+    ul = static_cast<COLORREF>(underline);
 
     // We intentionally aren't _only_ checking for attr.IsInvisible here, because we also want to
     // catch the cases where the ul was intentionally set to be the same as the bg. In either case,
