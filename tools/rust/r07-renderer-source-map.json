@@ -158,9 +158,9 @@
     },
     {
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
-      "sourceBlob": "b92463d69526db1b44a11c483a5e2eed4e409dce",
+      "sourceBlob": "473254e736d1c5dae35f32f98e8bad088d808c80",
       "ownership": "split",
-      "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline color and live renderer integration; Rust owns mode/reset/blink state plus deterministic dim/reverse/invisible/alpha post-processing.",
+      "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline color and live renderer integration; Rust owns mode/reset/blink state plus deterministic faint/blink dim selection and dim/reverse/invisible/alpha post-processing.",
       "sourcePatterns": [
         "RenderSettings::SetRenderMode",
         "RenderSettings::GetRenderMode",
@@ -188,7 +188,7 @@
         {
           "sourcePattern": "RenderSettings::GetAttributeColors",
           "coverage": "Partial",
-          "notes": "Rust owns dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix remain native."
+          "notes": "Rust owns faint/blink dim selection plus deterministic dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix remain native."
         },
         {
           "sourcePattern": "RenderSettings::GetAttributeColorsWithAlpha",

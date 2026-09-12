@@ -76,6 +76,7 @@ foreach ($needle in $requiredWitness) {
 $requiredAttributeAbi = @(
     'terminal_parser_ffi_render_attribute_colors',
     'terminal_parser_ffi_render_attribute_effects(',
+    'terminal_parser_ffi_render_attribute_effects_from_rendition(',
     'terminal_parser_ffi_render_attribute_alpha(',
     'static_assert(sizeof(terminal_parser_ffi_render_attribute_colors) == 8);'
 )
@@ -86,6 +87,7 @@ foreach ($needle in $requiredAttributeAbi) {
 $requiredAttributeWitness = @(
     'render_attribute_colors_replay()',
     'terminal_parser_ffi_render_attribute_effects(',
+    'terminal_parser_ffi_render_attribute_effects_from_rendition(',
     'colors.foreground != 0x00302010',
     'colors.background != 0x00302010',
     'terminal_parser_ffi_render_attribute_alpha(',
@@ -129,9 +131,11 @@ $requiredProduct = @(
     'terminal_parser_ffi_render_settings_toggle_blink(&_renderSettingsPolicy)',
     'TERMINAL_PARSER_FFI_RENDER_MODE_INDEXED_DISTINGUISHABLE_COLORS',
     'TERMINAL_PARSER_FFI_RENDER_MODE_SYNCHRONIZED_OUTPUT',
-    'terminal_parser_ffi_render_attribute_effects(',
+    'terminal_parser_ffi_render_attribute_effects_from_rendition(',
     'terminal_parser_ffi_render_attribute_alpha(',
-    'dimFg ? 1u : 0u',
+    'attr.IsFaint() ? 1u : 0u',
+    'attr.IsBlinking() ? 1u : 0u',
+    '_renderSettingsPolicy.blink_should_be_faint',
     'screenReversed ? 1u : 0u'
 )
 foreach ($needle in $requiredProduct) {
@@ -139,6 +143,8 @@ foreach ($needle in $requiredProduct) {
 }
 
 $forbiddenProduct = @(
+    'const auto dimFg =',
+    'terminal_parser_ffi_render_attribute_effects(',
     'const auto swapFgAndBg = attr.IsReverseVideo() ^ GetRenderMode(Mode::ScreenReversed);',
     'fg = (fg >> 1) & 0x7F7F7F;',
     'std::swap(fg, bg);',

@@ -234,17 +234,18 @@ std::pair<COLORREF, COLORREF> RenderSettings::GetAttributeColors(const TextAttri
     const auto defaultBgIndex = GetColorAliasIndex(ColorAlias::DefaultBackground);
 
     const auto brightenFg = attr.IsIntense() && GetRenderMode(Mode::IntenseIsBright);
-    const auto dimFg = attr.IsFaint() || (_renderSettingsPolicy.blink_should_be_faint != 0 && attr.IsBlinking());
     const auto screenReversed = GetRenderMode(Mode::ScreenReversed);
 
     auto fg = fgTextColor.GetColor(_colorTable, defaultFgIndex, brightenFg);
     auto bg = bgTextColor.GetColor(_colorTable, defaultBgIndex);
 
     terminal_parser_ffi_render_attribute_colors colors{};
-    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_attribute_effects(
+    _failFastOnRustPolicyFailure(terminal_parser_ffi_render_attribute_effects_from_rendition(
         static_cast<uint32_t>(fg),
         static_cast<uint32_t>(bg),
-        dimFg ? 1u : 0u,
+        attr.IsFaint() ? 1u : 0u,
+        attr.IsBlinking() ? 1u : 0u,
+        _renderSettingsPolicy.blink_should_be_faint,
         attr.IsReverseVideo() ? 1u : 0u,
         screenReversed ? 1u : 0u,
         attr.IsInvisible() ? 1u : 0u,
