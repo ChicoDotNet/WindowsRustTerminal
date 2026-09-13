@@ -125,6 +125,7 @@ jobs:
           path.write_bytes(data)
           PY
           pwsh -File ./tools/rust/Test-R09CommandlineFixupOwnership.ps1
+          git config core.whitespace cr-at-eol
           git diff --check
           git add src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp
           test -n "$(git diff --cached --name-only)"
