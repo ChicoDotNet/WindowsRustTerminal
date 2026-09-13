@@ -1,3 +1,4 @@
+# R09 one-shot mechanical helper; remove after successful route.
 name: R09 Commandline Route Materializer
 
 on:
