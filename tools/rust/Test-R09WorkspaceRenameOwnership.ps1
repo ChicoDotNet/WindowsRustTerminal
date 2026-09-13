@@ -56,6 +56,8 @@ Assert-NotContains $renameBody 'if (!newName.empty())' 'R09 workspace rename own
 
 Assert-Contains $targets 'cargo build --locked -p terminal-settings-ffi' 'R09 workspace rename ownership: terminal-settings-ffi must remain in the canonical MSBuild graph.'
 Assert-Contains $targets 'terminal_settings_ffi.lib' 'R09 workspace rename ownership: Settings.Model must remain linked to the Rust static library.'
+Assert-Contains $targets "'`$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.ModelLib'" 'R09 workspace rename ownership: settings FFI MSBuild integration must match the actual Settings.ModelLib project filename.'
+Assert-NotContains $targets "'`$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'" 'R09 workspace rename ownership: do not match the logical ProjectName when MSBuildProjectName is the project filename stem.'
 Assert-Contains $ffiHeader 'terminal_settings_ffi_workspace_rename_plan(' 'R09 workspace rename ownership: settings FFI header no longer exposes the rename owner.'
 
 Write-Host 'R09 workspace rename ownership guard passed.'
