@@ -1,0 +1,187 @@
+name: R09 Commandline Route Materializer
+
+on:
+  push:
+    branches:
+      - rust/r09-product-integration
+    paths:
+      - .github/workflows/r09-commandline-route-materializer.yml
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify exact branch head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin rust/r09-product-integration
+          test "$(git rev-parse origin/rust/r09-product-integration)" = "$GITHUB_SHA"
+
+      - name: Apply byte-preserving commandline route
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp")
+          data = path.read_bytes()
+          if b"\r\n" not in data or b"\n" in data.replace(b"\r\n", b""):
+              raise SystemExit("expected CRLF-only source before route")
+
+          include_old = '''#include "WtExeUtils.h"
+
+using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n").encode()
+          include_new = '''#include "WtExeUtils.h"
+#include "terminal_settings_ffi.h"
+
+using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n").encode()
+
+          policy_old = '''bool SettingsLoader::FixupUserSettings()
+{
+    struct CommandlinePatch
+    {
+        winrt::guid guid{};
+        std::wstring_view before;
+        std::wstring_view after;
+    };
+
+    static constexpr std::array commandlinePatches{
+        CommandlinePatch{ DEFAULT_COMMAND_PROMPT_GUID, L"cmd.exe", L"%SystemRoot%\\\\System32\\\\cmd.exe" },
+        CommandlinePatch{ DEFAULT_WINDOWS_POWERSHELL_GUID, L"powershell.exe", L"%SystemRoot%\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe" },
+    };
+
+    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''.replace("\n", "\r\n").encode()
+          policy_new = '''bool SettingsLoader::FixupUserSettings()
+{
+    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''.replace("\n", "\r\n").encode()
+
+          route_old = '''        if (profile->HasCommandline())
+        {
+            for (const auto& patch : commandlinePatches)
+            {
+                if (profile->Guid() == patch.guid && til::equals_insensitive_ascii(profile->Commandline(), patch.before))
+                {
+                    profile->ClearCommandline();
+
+                    // GH#12842:
+                    // With the commandline field on the user profile gone, it's actually unknown what
+                    // commandline it'll inherit, since a user profile can have multiple parents. We have to
+                    // make sure we restore the correct commandline in case we don't inherit the expected one.
+                    if (profile->Commandline() != patch.after)
+                    {
+                        profile->Commandline(winrt::hstring{ patch.after });
+                    }
+
+                    fixedUp = true;
+                    break;
+                }
+            }
+        }'''.replace("\n", "\r\n").encode()
+
+          route_new = '''        if (profile->HasCommandline())
+        {
+            const auto guid = profile->Guid();
+            const auto guidString = winrt::to_hstring(guid);
+            const auto explicitCommandline = profile->Commandline();
+            const auto guidUtf16 = reinterpret_cast<const uint16_t*>(guidString.c_str());
+            const auto explicitUtf16 = reinterpret_cast<const uint16_t*>(explicitCommandline.c_str());
+
+            uint8_t candidate{};
+            const auto candidateStatus = terminal_settings_ffi_commandline_fixup_candidate(
+                guidUtf16,
+                guidString.size(),
+                explicitUtf16,
+                explicitCommandline.size(),
+                &candidate);
+            if (candidateStatus == TERMINAL_SETTINGS_FFI_OK && candidate == 1)
+            {
+                profile->ClearCommandline();
+                const auto inheritedCommandline = profile->Commandline();
+                const auto inheritedUtf16 = reinterpret_cast<const uint16_t*>(inheritedCommandline.c_str());
+
+                uint32_t plan{};
+                const auto planStatus = terminal_settings_ffi_commandline_fixup_plan(
+                    guidUtf16,
+                    guidString.size(),
+                    explicitUtf16,
+                    explicitCommandline.size(),
+                    inheritedUtf16,
+                    inheritedCommandline.size(),
+                    &plan);
+                if (planStatus != TERMINAL_SETTINGS_FFI_OK)
+                {
+                    profile->Commandline(explicitCommandline);
+                }
+                else
+                {
+                    switch (plan)
+                    {
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_CLEAR_OVERRIDE:
+                        fixedUp = true;
+                        break;
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_RESTORE_CMD_FULL_PATH:
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_RESTORE_POWERSHELL_FULL_PATH:
+                        if (const auto inboxProfile = inboxSettings.profilesByGuid.find(guid);
+                            inboxProfile != inboxSettings.profilesByGuid.end() && inboxProfile->second->HasCommandline())
+                        {
+                            profile->Commandline(inboxProfile->second->Commandline());
+                            fixedUp = true;
+                        }
+                        else
+                        {
+                            profile->Commandline(explicitCommandline);
+                        }
+                        break;
+                    default:
+                        profile->Commandline(explicitCommandline);
+                        break;
+                    }
+                }
+            }
+        }'''.replace("\n", "\r\n").encode()
+
+          replacements = [
+              (include_old, include_new, "FFI include"),
+              (policy_old, policy_new, "legacy policy table"),
+              (route_old, route_new, "product route"),
+          ]
+          for old, new, label in replacements:
+              count = data.count(old)
+              if count != 1:
+                  raise SystemExit(f"{label}: expected exactly one match, found {count}")
+              data = data.replace(old, new, 1)
+
+          if b"struct CommandlinePatch" in data or b"commandlinePatches" in data:
+              raise SystemExit("legacy commandline policy remains")
+          if b"til::equals_insensitive_ascii(profile->Commandline()" in data:
+              raise SystemExit("legacy native commandline matching remains")
+          if b"\n" in data.replace(b"\r\n", b""):
+              raise SystemExit("route introduced non-CRLF newlines")
+
+          path.write_bytes(data)
+
+      - name: Verify ownership gate
+        shell: pwsh
+        run: ./tools/rust/Test-R09CommandlineFixupOwnership.ps1
+
+      - name: Commit route without force
+        shell: bash
+        run: |
+          set -euo pipefail
+          git diff --check
+          git diff -- src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp
+          git add src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp
+          test -n "$(git diff --cached --name-only)"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Route commandline fixup through Rust"
+          git fetch origin rust/r09-product-integration
+          test "$(git rev-parse origin/rust/r09-product-integration)" = "$GITHUB_SHA"
+          git push origin HEAD:rust/r09-product-integration
