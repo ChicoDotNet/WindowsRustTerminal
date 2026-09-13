@@ -31,6 +31,13 @@ name = "terminal-app"
 version = "0.0.0"
 
 [[package]]
+name = "terminal-app-ffi"
+version = "0.0.0"
+dependencies = [
+ "terminal-app",
+]
+
+[[package]]
 name = "terminal-buffer"
 version = "0.0.0"
 dependencies = [
@@ -69,7 +76,9 @@ version = "0.0.0"
 name = "terminal-parser-ffi"
 version = "0.0.0"
 dependencies = [
+ "terminal-host",
  "terminal-parser",
+ "terminal-renderer",
 ]
 
 [[package]]
@@ -84,6 +93,13 @@ name = "terminal-settings"
 version = "0.1.0"
 dependencies = [
  "terminal-foundation",
+]
+
+[[package]]
+name = "terminal-settings-ffi"
+version = "0.0.0"
+dependencies = [
+ "terminal-settings",
 ]
 
 [[package]]

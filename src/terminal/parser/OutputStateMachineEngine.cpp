@@ -9,6 +9,52 @@
 #include "ascii.hpp"
 #include "base64.hpp"
 #include "stateMachine.hpp"
+#include "terminal_parser_ffi.h"
+#include "terminal_parser_ffi_output_esc.h"
+#include "terminal_parser_ffi_output_vt52.h"
+#include "terminal_parser_ffi_output_csi_cursor.h"
+#include "terminal_parser_ffi_output_csi_margins.h"
+#include "terminal_parser_ffi_output_csi_edit.h"
+#include "terminal_parser_ffi_output_csi_line_edit.h"
+#include "terminal_parser_ffi_output_csi_erase_characters.h"
+#include "terminal_parser_ffi_output_csi_scroll.h"
+#include "terminal_parser_ffi_output_csi_page.h"
+#include "terminal_parser_ffi_output_csi_page_position.h"
+#include "terminal_parser_ffi_output_csi_tab.h"
+#include "terminal_parser_ffi_output_csi_terminal_parameters.h"
+#include "terminal_parser_ffi_output_csi_device_attributes.h"
+#include "terminal_parser_ffi_output_csi_cursor_restore.h"
+#include "terminal_parser_ffi_output_csi_soft_reset.h"
+#include "terminal_parser_ffi_output_csi_displayed_extent.h"
+#include "terminal_parser_ffi_output_csi_cursor_style.h"
+#include "terminal_parser_ffi_output_csi_request_mode.h"
+#include "terminal_parser_ffi_output_csi_request_presentation_state.h"
+#include "terminal_parser_ffi_output_csi_decsace.h"
+#include "terminal_parser_ffi_output_csi_decinvm.h"
+#include "terminal_parser_ffi_output_csi_decrqtsr.h"
+#include "terminal_parser_ffi_output_csi_decac.h"
+#include "terminal_parser_ffi_output_csi_rect_attributes.h"
+#include "terminal_parser_ffi_output_csi_decrqcra.h"
+#include "terminal_parser_ffi_output_csi_rep.h"
+#include "terminal_parser_ffi_output_csi_decps.h"
+#include "terminal_parser_ffi_output_csi_device_status_report.h"
+#include "terminal_parser_ffi_output_csi_mode.h"
+#include "terminal_parser_ffi_output_csi_erase.h"
+#include "terminal_parser_ffi_output_csi_tab_control.h"
+#include "terminal_parser_ffi_output_csi_window_manipulation.h"
+#include "terminal_parser_ffi_output_csi_pop_sgr.h"
+#include "terminal_parser_ffi_output_csi_decsca.h"
+#include "terminal_parser_ffi_output_csi_push_sgr.h"
+#include "terminal_parser_ffi_output_csi_sgr.h"
+#include "terminal_parser_ffi_output_csi_decfra.h"
+#include "terminal_parser_ffi_output_csi_column.h"
+#include "terminal_parser_ffi_output_csi_rect_erase.h"
+#include "terminal_parser_ffi_output_csi_rect_copy.h"
+#include "terminal_parser_ffi_output_csi_user_preference_charset.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_query.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_pop.h"
+#include "terminal_parser_ffi_output_csi_kitty_keyboard_set.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -53,52 +99,38 @@ ITermDispatch& OutputStateMachineEngine::Dispatch() noexcept
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
 {
-    switch (wch)
+    terminal_parser_ffi_output_execute_result plan{};
+    const auto status = terminal_parser_ffi_output_execute_plan(gsl::narrow_cast<uint16_t>(wch), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case AsciiChars::ENQ:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_ENQUIRE_ANSWERBACK:
         _dispatch->EnquireAnswerback();
         break;
-    case AsciiChars::BEL:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_WARNING_BELL:
         _dispatch->WarningBell();
         break;
-    case AsciiChars::BS:
-        _dispatch->CursorBackward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CURSOR_BACKWARD:
+        _dispatch->CursorBackward(plan.argument);
         break;
-    case AsciiChars::TAB:
-        _dispatch->ForwardTab(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_FORWARD_TAB:
+        _dispatch->ForwardTab(plan.argument);
         break;
-    case AsciiChars::CR:
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_CARRIAGE_RETURN:
         _dispatch->CarriageReturn();
         break;
-    case AsciiChars::LF:
-    case AsciiChars::FF:
-    case AsciiChars::VT:
-        // LF, FF, and VT are identical in function.
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LINE_FEED_DEPENDS_ON_MODE:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::DependsOnMode);
         break;
-    case AsciiChars::SI:
-        _dispatch->LockingShift(0);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_LOCKING_SHIFT:
+        _dispatch->LockingShift(plan.argument);
         break;
-    case AsciiChars::SO:
-        _dispatch->LockingShift(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_PRINT:
+        _dispatch->Print(gsl::narrow_cast<wchar_t>(plan.argument));
         break;
-    case AsciiChars::SUB:
-        // The SUB control is used to cancel a control sequence in the same
-        // way as CAN, but unlike CAN it also displays an error character,
-        // typically a reverse question mark (Unicode substitute form two).
-        _dispatch->Print(L'\u2426');
-        break;
-    case AsciiChars::DEL:
-        // The DEL control can sometimes be translated into a printable glyph
-        // if a 96-character set is designated, so we need to pass it through
-        // to the Print method. If not translated, it will be filtered out
-        // there.
-        _dispatch->Print(wch);
-        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_EXECUTE_NONE:
     default:
-        // GH#1825, GH#10786: VT applications expect to be able to write other
-        // control characters and have _nothing_ happen. We filter out these
-        // characters here, so they don't fill the buffer.
         break;
     }
 
@@ -106,7 +138,6 @@ bool OutputStateMachineEngine::ActionExecute(const wchar_t wch)
 
     return true;
 }
-
 // Routine Description:
 // - Triggers the Execute action to indicate that the listener should
 //      immediately respond to a C0 control character.
@@ -196,133 +227,97 @@ bool OutputStateMachineEngine::ActionPassThroughString(const std::wstring_view /
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionEscDispatch(const VTID id)
 {
-    switch (id)
+    terminal_parser_ffi_output_esc_result plan{};
+    const auto status = terminal_parser_ffi_output_esc_plan(static_cast<uint64_t>(id), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case EscActionCodes::ST_StringTerminator:
-        // This is the 7-bit string terminator, which is essentially a no-op.
-        break;
-    case EscActionCodes::DECBI_BackIndex:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_BACK_INDEX:
         _dispatch->BackIndex();
         break;
-    case EscActionCodes::DECSC_CursorSave:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_CURSOR_SAVE_STATE:
         _dispatch->CursorSaveState();
         break;
-    case EscActionCodes::DECRC_CursorRestore:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_CURSOR_RESTORE_STATE:
         _dispatch->CursorRestoreState();
         break;
-    case EscActionCodes::DECFI_ForwardIndex:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_FORWARD_INDEX:
         _dispatch->ForwardIndex();
         break;
-    case EscActionCodes::DECKPAM_KeypadApplicationMode:
-        _dispatch->SetKeypadMode(true);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SET_KEYPAD_MODE:
+        _dispatch->SetKeypadMode(plan.argument != 0);
         break;
-    case EscActionCodes::DECKPNM_KeypadNumericMode:
-        _dispatch->SetKeypadMode(false);
-        break;
-    case EscActionCodes::NEL_NextLine:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LINE_FEED_WITH_RETURN:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::WithReturn);
         break;
-    case EscActionCodes::IND_Index:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LINE_FEED_WITHOUT_RETURN:
         _dispatch->LineFeed(DispatchTypes::LineFeedType::WithoutReturn);
         break;
-    case EscActionCodes::RI_ReverseLineFeed:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_REVERSE_LINE_FEED:
         _dispatch->ReverseLineFeed();
         break;
-    case EscActionCodes::HTS_HorizontalTabSet:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_HORIZONTAL_TAB_SET:
         _dispatch->HorizontalTabSet();
         break;
-    case EscActionCodes::DECID_IdentifyDevice:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DEVICE_ATTRIBUTES_PRIMARY:
         _dispatch->DeviceAttributes();
         break;
-    case EscActionCodes::RIS_ResetToInitialState:
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_HARD_RESET:
         _dispatch->HardReset(true);
         break;
-    case EscActionCodes::SS2_SingleShift:
-        _dispatch->SingleShift(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SINGLE_SHIFT:
+        _dispatch->SingleShift(plan.argument);
         break;
-    case EscActionCodes::SS3_SingleShift:
-        _dispatch->SingleShift(3);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LOCKING_SHIFT:
+        _dispatch->LockingShift(plan.argument);
         break;
-    case EscActionCodes::LS2_LockingShift:
-        _dispatch->LockingShift(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_LOCKING_SHIFT_RIGHT:
+        _dispatch->LockingShiftRight(plan.argument);
         break;
-    case EscActionCodes::LS3_LockingShift:
-        _dispatch->LockingShift(3);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_ACCEPT_C1_CONTROLS:
+        _dispatch->AcceptC1Controls(plan.argument != 0);
         break;
-    case EscActionCodes::LS1R_LockingShift:
-        _dispatch->LockingShiftRight(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SEND_C1_CONTROLS:
+        _dispatch->SendC1Controls(plan.argument != 0);
         break;
-    case EscActionCodes::LS2R_LockingShift:
-        _dispatch->LockingShiftRight(2);
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_ANNOUNCE_CODE_STRUCTURE:
+        _dispatch->AnnounceCodeStructure(plan.argument);
         break;
-    case EscActionCodes::LS3R_LockingShift:
-        _dispatch->LockingShiftRight(3);
-        break;
-    case EscActionCodes::DECAC1_AcceptC1Controls:
-        _dispatch->AcceptC1Controls(true);
-        break;
-    case EscActionCodes::S7C1T_Send7bitC1Controls:
-        _dispatch->SendC1Controls(false);
-        break;
-    case EscActionCodes::S8C1T_Send8bitC1Controls:
-        _dispatch->SendC1Controls(true);
-        break;
-    case EscActionCodes::ACS_AnsiLevel1:
-        _dispatch->AnnounceCodeStructure(1);
-        break;
-    case EscActionCodes::ACS_AnsiLevel2:
-        _dispatch->AnnounceCodeStructure(2);
-        break;
-    case EscActionCodes::ACS_AnsiLevel3:
-        _dispatch->AnnounceCodeStructure(3);
-        break;
-    case EscActionCodes::DECDHL_DoubleHeightLineTop:
-        _dispatch->SetLineRendition(LineRendition::DoubleHeightTop);
-        break;
-    case EscActionCodes::DECDHL_DoubleHeightLineBottom:
-        _dispatch->SetLineRendition(LineRendition::DoubleHeightBottom);
-        break;
-    case EscActionCodes::DECSWL_SingleWidthLine:
-        _dispatch->SetLineRendition(LineRendition::SingleWidth);
-        break;
-    case EscActionCodes::DECDWL_DoubleWidthLine:
-        _dispatch->SetLineRendition(LineRendition::DoubleWidth);
-        break;
-    case EscActionCodes::DECALN_ScreenAlignmentPattern:
-        _dispatch->ScreenAlignmentPattern();
-        break;
-    default:
-        const auto commandChar = id[0];
-        const auto commandParameter = id.SubSequence(1);
-        switch (commandChar)
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SET_LINE_RENDITION:
+        switch (plan.argument)
         {
-        case '%':
-            _dispatch->DesignateCodingSystem(commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_SINGLE_WIDTH:
+            _dispatch->SetLineRendition(LineRendition::SingleWidth);
             break;
-        case '(':
-            _dispatch->Designate94Charset(0, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_WIDTH:
+            _dispatch->SetLineRendition(LineRendition::DoubleWidth);
             break;
-        case ')':
-            _dispatch->Designate94Charset(1, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_HEIGHT_TOP:
+            _dispatch->SetLineRendition(LineRendition::DoubleHeightTop);
             break;
-        case '*':
-            _dispatch->Designate94Charset(2, commandParameter);
-            break;
-        case '+':
-            _dispatch->Designate94Charset(3, commandParameter);
-            break;
-        case '-':
-            _dispatch->Designate96Charset(1, commandParameter);
-            break;
-        case '.':
-            _dispatch->Designate96Charset(2, commandParameter);
-            break;
-        case '/':
-            _dispatch->Designate96Charset(3, commandParameter);
+        case TERMINAL_PARSER_FFI_OUTPUT_ESC_DOUBLE_HEIGHT_BOTTOM:
+            _dispatch->SetLineRendition(LineRendition::DoubleHeightBottom);
             break;
         default:
-            break;
+            THROW_HR(E_UNEXPECTED);
         }
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_SCREEN_ALIGNMENT_PATTERN:
+        _dispatch->ScreenAlignmentPattern();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_CODING_SYSTEM:
+        _dispatch->DesignateCodingSystem(VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_94_CHARSET:
+        _dispatch->Designate94Charset(plan.argument, VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_DESIGNATE_96_CHARSET:
+        _dispatch->Designate96Charset(plan.argument, VTID{ plan.payload });
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_ESC_NONE:
+    default:
+        break;
     }
 
     _ClearLastChar();
@@ -341,55 +336,53 @@ bool OutputStateMachineEngine::ActionEscDispatch(const VTID id)
 // - true iff we successfully dispatched the sequence.
 bool OutputStateMachineEngine::ActionVt52EscDispatch(const VTID id, const VTParameters parameters)
 {
-    switch (id)
+    terminal_parser_ffi_output_vt52_result plan{};
+    const auto status = terminal_parser_ffi_output_vt52_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case Vt52ActionCodes::CursorUp:
-        _dispatch->CursorUp(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_UP:
+        _dispatch->CursorUp(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorDown:
-        _dispatch->CursorDown(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_DOWN:
+        _dispatch->CursorDown(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorRight:
-        _dispatch->CursorForward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_FORWARD:
+        _dispatch->CursorForward(plan.argument1);
         break;
-    case Vt52ActionCodes::CursorLeft:
-        _dispatch->CursorBackward(1);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_BACKWARD:
+        _dispatch->CursorBackward(plan.argument1);
         break;
-    case Vt52ActionCodes::EnterGraphicsMode:
-        _dispatch->Designate94Charset(0, DispatchTypes::CharacterSets::DecSpecialGraphics);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_DESIGNATE_94_CHARSET:
+        _dispatch->Designate94Charset(plan.argument1, VTID{ plan.payload });
         break;
-    case Vt52ActionCodes::ExitGraphicsMode:
-        _dispatch->Designate94Charset(0, DispatchTypes::CharacterSets::ASCII);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_CURSOR_POSITION:
+        _dispatch->CursorPosition(plan.argument1, plan.argument2);
         break;
-    case Vt52ActionCodes::CursorToHome:
-        _dispatch->CursorPosition(1, 1);
-        break;
-    case Vt52ActionCodes::ReverseLineFeed:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_REVERSE_LINE_FEED:
         _dispatch->ReverseLineFeed();
         break;
-    case Vt52ActionCodes::EraseToEndOfScreen:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_ERASE_IN_DISPLAY:
         _dispatch->EraseInDisplay(DispatchTypes::EraseType::ToEnd);
         break;
-    case Vt52ActionCodes::EraseToEndOfLine:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_ERASE_IN_LINE:
         _dispatch->EraseInLine(DispatchTypes::EraseType::ToEnd);
         break;
-    case Vt52ActionCodes::DirectCursorAddress:
-        // VT52 cursor addresses are provided as ASCII characters, with
-        // the lowest value being a space, representing an address of 1.
-        _dispatch->CursorPosition(parameters.at(0).value() - ' ' + 1, parameters.at(1).value() - ' ' + 1);
-        break;
-    case Vt52ActionCodes::Identify:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_DEVICE_ATTRIBUTES:
         _dispatch->Vt52DeviceAttributes();
         break;
-    case Vt52ActionCodes::EnterAlternateKeypadMode:
-        _dispatch->SetKeypadMode(true);
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_SET_KEYPAD_MODE:
+        _dispatch->SetKeypadMode(plan.argument1 != 0);
         break;
-    case Vt52ActionCodes::ExitAlternateKeypadMode:
-        _dispatch->SetKeypadMode(false);
-        break;
-    case Vt52ActionCodes::ExitVt52Mode:
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_SET_ANSI_MODE:
         _dispatch->SetMode(DispatchTypes::ModeParams::DECANM_AnsiMode);
         break;
+    case TERMINAL_PARSER_FFI_OUTPUT_VT52_NONE:
     default:
         break;
     }
@@ -416,281 +409,1301 @@ bool OutputStateMachineEngine::ActionCsiDispatch(const VTID id, const VTParamete
         return true;
     }
 
-    switch (id)
+    terminal_parser_ffi_output_csi_cursor_result cursorPlan{};
+    const auto cursorStatus = terminal_parser_ffi_output_csi_cursor_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &cursorPlan);
+    THROW_HR_IF(E_UNEXPECTED, cursorStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (cursorPlan.kind)
     {
-    case CsiActionCodes::CUU_CursorUp:
-        _dispatch->CursorUp(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_UP:
+        _dispatch->CursorUp(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CUD_CursorDown:
-        _dispatch->CursorDown(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_DOWN:
+        _dispatch->CursorDown(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CUF_CursorForward:
-        _dispatch->CursorForward(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_FORWARD:
+        _dispatch->CursorForward(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CUB_CursorBackward:
-        _dispatch->CursorBackward(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_BACKWARD:
+        _dispatch->CursorBackward(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CNL_CursorNextLine:
-        _dispatch->CursorNextLine(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_NEXT_LINE:
+        _dispatch->CursorNextLine(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CPL_CursorPrevLine:
-        _dispatch->CursorPrevLine(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_PREVIOUS_LINE:
+        _dispatch->CursorPrevLine(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CHA_CursorHorizontalAbsolute:
-    case CsiActionCodes::HPA_HorizontalPositionAbsolute:
-        _dispatch->CursorHorizontalPositionAbsolute(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_HORIZONTAL_ABSOLUTE:
+        _dispatch->CursorHorizontalPositionAbsolute(cursorPlan.argument1);
         break;
-    case CsiActionCodes::VPA_VerticalLinePositionAbsolute:
-        _dispatch->VerticalLinePositionAbsolute(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_VERTICAL_ABSOLUTE:
+        _dispatch->VerticalLinePositionAbsolute(cursorPlan.argument1);
         break;
-    case CsiActionCodes::HPR_HorizontalPositionRelative:
-        _dispatch->HorizontalPositionRelative(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_HORIZONTAL_RELATIVE:
+        _dispatch->HorizontalPositionRelative(cursorPlan.argument1);
         break;
-    case CsiActionCodes::VPR_VerticalPositionRelative:
-        _dispatch->VerticalPositionRelative(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_VERTICAL_RELATIVE:
+        _dispatch->VerticalPositionRelative(cursorPlan.argument1);
         break;
-    case CsiActionCodes::CUP_CursorPosition:
-    case CsiActionCodes::HVP_HorizontalVerticalPosition:
-        _dispatch->CursorPosition(parameters.at(0), parameters.at(1));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_POSITION:
+        _dispatch->CursorPosition(cursorPlan.argument1, cursorPlan.argument2);
         break;
-    case CsiActionCodes::DECSTBM_SetTopBottomMargins:
-        _dispatch->SetTopBottomScrollingMargins(parameters.at(0).value_or(0), parameters.at(1).value_or(0));
-        break;
-    case CsiActionCodes::DECSLRM_SetLeftRightMargins:
-        // Note that this can also be ANSISYSSC, depending on the state of DECLRMM.
-        _dispatch->SetLeftRightScrollingMargins(parameters.at(0).value_or(0), parameters.at(1).value_or(0));
-        break;
-    case CsiActionCodes::ICH_InsertCharacter:
-        _dispatch->InsertCharacter(parameters.at(0));
-        break;
-    case CsiActionCodes::DCH_DeleteCharacter:
-        _dispatch->DeleteCharacter(parameters.at(0));
-        break;
-    case CsiActionCodes::ED_EraseDisplay:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->EraseInDisplay(eraseType);
-        });
-        break;
-    case CsiActionCodes::DECSED_SelectiveEraseDisplay:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->SelectiveEraseInDisplay(eraseType);
-        });
-        break;
-    case CsiActionCodes::EL_EraseLine:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->EraseInLine(eraseType);
-        });
-        break;
-    case CsiActionCodes::DECSEL_SelectiveEraseLine:
-        parameters.for_each([&](const auto eraseType) {
-            _dispatch->SelectiveEraseInLine(eraseType);
-        });
-        break;
-    case CsiActionCodes::SM_SetMode:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->SetMode(DispatchTypes::ANSIStandardMode(mode));
-        });
-        break;
-    case CsiActionCodes::DECSET_PrivateModeSet:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->SetMode(DispatchTypes::DECPrivateMode(mode));
-        });
-        break;
-    case CsiActionCodes::RM_ResetMode:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->ResetMode(DispatchTypes::ANSIStandardMode(mode));
-        });
-        break;
-    case CsiActionCodes::DECRST_PrivateModeReset:
-        parameters.for_each([&](const auto mode) {
-            _dispatch->ResetMode(DispatchTypes::DECPrivateMode(mode));
-        });
-        break;
-    case CsiActionCodes::SGR_SetGraphicsRendition:
-        _dispatch->SetGraphicsRendition(parameters);
-        break;
-    case CsiActionCodes::DSR_DeviceStatusReport:
-        _dispatch->DeviceStatusReport(DispatchTypes::ANSIStandardStatus(parameters.at(0)), parameters.at(1));
-        break;
-    case CsiActionCodes::DSR_PrivateDeviceStatusReport:
-        _dispatch->DeviceStatusReport(DispatchTypes::DECPrivateStatus(parameters.at(0)), parameters.at(1));
-        break;
-    case CsiActionCodes::DA_DeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->DeviceAttributes();
-        }
-        break;
-    case CsiActionCodes::DA2_SecondaryDeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->SecondaryDeviceAttributes();
-        }
-        break;
-    case CsiActionCodes::DA3_TertiaryDeviceAttributes:
-        if (parameters.at(0).value_or(0) == 0)
-        {
-            _dispatch->TertiaryDeviceAttributes();
-        }
-        break;
-    case CsiActionCodes::DECREQTPARM_RequestTerminalParameters:
-        _dispatch->RequestTerminalParameters(parameters.at(0));
-        break;
-    case CsiActionCodes::SU_ScrollUp:
-        _dispatch->ScrollUp(parameters.at(0));
-        break;
-    case CsiActionCodes::SD_ScrollDown:
-        _dispatch->ScrollDown(parameters.at(0));
-        break;
-    case CsiActionCodes::NP_NextPage:
-        _dispatch->NextPage(parameters.at(0));
-        break;
-    case CsiActionCodes::PP_PrecedingPage:
-        _dispatch->PrecedingPage(parameters.at(0));
-        break;
-    case CsiActionCodes::ANSISYSRC_CursorRestore:
-        _dispatch->CursorRestoreState();
-        break;
-    case CsiActionCodes::IL_InsertLine:
-        _dispatch->InsertLine(parameters.at(0));
-        break;
-    case CsiActionCodes::DL_DeleteLine:
-        _dispatch->DeleteLine(parameters.at(0));
-        break;
-    case CsiActionCodes::CHT_CursorForwardTab:
-        _dispatch->ForwardTab(parameters.at(0));
-        break;
-    case CsiActionCodes::CBT_CursorBackTab:
-        _dispatch->BackwardsTab(parameters.at(0));
-        break;
-    case CsiActionCodes::TBC_TabClear:
-        parameters.for_each([&](const auto clearType) {
-            _dispatch->TabClear(clearType);
-        });
-        break;
-    case CsiActionCodes::DECST8C_SetTabEvery8Columns:
-        parameters.for_each([&](const auto setType) {
-            _dispatch->TabSet(setType);
-        });
-        break;
-    case CsiActionCodes::ECH_EraseCharacters:
-        _dispatch->EraseCharacters(parameters.at(0));
-        break;
-    case CsiActionCodes::DTTERM_WindowManipulation:
-        _dispatch->WindowManipulation(parameters.at(0), parameters.at(1), parameters.at(2));
-        break;
-    case CsiActionCodes::REP_RepeatCharacter:
-        // Handled w/o the dispatch. This function is unique in that way
-        // If this were in the ITerminalDispatch, then each
-        // implementation would effectively be the same, calling only
-        // functions that are already part of the interface.
-        // Print the last graphical character a number of times.
-        if (_lastPrintedChar != AsciiChars::NUL)
-        {
-            const size_t repeatCount = parameters.at(0);
-            std::wstring wstr(repeatCount, _lastPrintedChar);
-            _dispatch->PrintString(wstr);
-        }
-        break;
-    case CsiActionCodes::PPA_PagePositionAbsolute:
-        _dispatch->PagePositionAbsolute(parameters.at(0));
-        break;
-    case CsiActionCodes::PPR_PagePositionRelative:
-        _dispatch->PagePositionRelative(parameters.at(0));
-        break;
-    case CsiActionCodes::PPB_PagePositionBack:
-        _dispatch->PagePositionBack(parameters.at(0));
-        break;
-    case CsiActionCodes::DECSCUSR_SetCursorStyle:
-        _dispatch->SetCursorStyle(parameters.at(0));
-        break;
-    case CsiActionCodes::DECSTR_SoftReset:
-        _dispatch->SoftReset();
-        break;
-    case CsiActionCodes::DECSCA_SetCharacterProtectionAttribute:
-        _dispatch->SetCharacterProtectionAttribute(parameters);
-        break;
-    case CsiActionCodes::DECRQDE_RequestDisplayedExtent:
-        _dispatch->RequestDisplayedExtent();
-        break;
-    case CsiActionCodes::XT_PushSgr:
-    case CsiActionCodes::XT_PushSgrAlias:
-        _dispatch->PushGraphicsRendition(parameters);
-        break;
-    case CsiActionCodes::XT_PopSgr:
-    case CsiActionCodes::XT_PopSgrAlias:
-        _dispatch->PopGraphicsRendition();
-        break;
-    case CsiActionCodes::DECRQM_RequestMode:
-        _dispatch->RequestMode(DispatchTypes::ANSIStandardMode(parameters.at(0)));
-        break;
-    case CsiActionCodes::DECRQM_PrivateRequestMode:
-        _dispatch->RequestMode(DispatchTypes::DECPrivateMode(parameters.at(0)));
-        break;
-    case CsiActionCodes::DECCARA_ChangeAttributesRectangularArea:
-        _dispatch->ChangeAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
-        break;
-    case CsiActionCodes::DECRARA_ReverseAttributesRectangularArea:
-        _dispatch->ReverseAttributesRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.subspan(4));
-        break;
-    case CsiActionCodes::DECCRA_CopyRectangularArea:
-        _dispatch->CopyRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.at(4), parameters.at(5), parameters.at(6), parameters.at(7));
-        break;
-    case CsiActionCodes::DECRQTSR_RequestTerminalStateReport:
-        _dispatch->RequestTerminalStateReport(parameters.at(0), parameters.at(1));
-        break;
-    case CsiActionCodes::DECRQPSR_RequestPresentationStateReport:
-        _dispatch->RequestPresentationStateReport(parameters.at(0));
-        break;
-    case CsiActionCodes::DECFRA_FillRectangularArea:
-        _dispatch->FillRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2), parameters.at(3).value_or(0), parameters.at(4).value_or(0));
-        break;
-    case CsiActionCodes::DECERA_EraseRectangularArea:
-        _dispatch->EraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
-        break;
-    case CsiActionCodes::DECSERA_SelectiveEraseRectangularArea:
-        _dispatch->SelectiveEraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
-        break;
-    case CsiActionCodes::DECRQUPSS_RequestUserPreferenceSupplementalSet:
-        _dispatch->RequestUserPreferenceCharset();
-        break;
-    case CsiActionCodes::DECIC_InsertColumn:
-        _dispatch->InsertColumn(parameters.at(0));
-        break;
-    case CsiActionCodes::DECDC_DeleteColumn:
-        _dispatch->DeleteColumn(parameters.at(0));
-        break;
-    case CsiActionCodes::DECSACE_SelectAttributeChangeExtent:
-        _dispatch->SelectAttributeChangeExtent(parameters.at(0));
-        break;
-    case CsiActionCodes::DECRQCRA_RequestChecksumRectangularArea:
-        _dispatch->RequestChecksumRectangularArea(parameters.at(0).value_or(0), parameters.at(1).value_or(0), parameters.at(2), parameters.at(3), parameters.at(4).value_or(0), parameters.at(5).value_or(0));
-        break;
-    case CsiActionCodes::DECINVM_InvokeMacro:
-        _dispatch->InvokeMacro(parameters.at(0).value_or(0));
-        break;
-    case CsiActionCodes::DECAC_AssignColor:
-        _dispatch->AssignColor(parameters.at(0), parameters.at(1).value_or(0), parameters.at(2).value_or(0));
-        break;
-    case CsiActionCodes::DECPS_PlaySound:
-        _dispatch->PlaySounds(parameters);
-        break;
-    case CsiActionCodes::KKP_KittyKeyboardSet:
-        _dispatch->SetKittyKeyboardProtocol(parameters.at(0), parameters.at(1));
-        break;
-    case CsiActionCodes::KKP_KittyKeyboardQuery:
-        _dispatch->QueryKittyKeyboardProtocol();
-        break;
-    case CsiActionCodes::KKP_KittyKeyboardPush:
-        _dispatch->PushKittyKeyboardProtocol(parameters.at(0));
-        break;
-    case CsiActionCodes::KKP_KittyKeyboardPop:
-        _dispatch->PopKittyKeyboardProtocol(parameters.at(0));
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_NONE:
         break;
     default:
-        _dispatch->UnknownSequence();
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (cursorPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_margins_result marginsPlan{};
+    const auto marginsStatus = terminal_parser_ffi_output_csi_margins_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &marginsPlan);
+    THROW_HR_IF(E_UNEXPECTED, marginsStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (marginsPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_TOP_BOTTOM:
+        _dispatch->SetTopBottomScrollingMargins(marginsPlan.first, marginsPlan.second);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_LEFT_RIGHT:
+        _dispatch->SetLeftRightScrollingMargins(marginsPlan.first, marginsPlan.second);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (marginsPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_MARGINS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_edit_result editPlan{};
+    const auto editStatus = terminal_parser_ffi_output_csi_edit_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &editPlan);
+    THROW_HR_IF(E_UNEXPECTED, editStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (editPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_INSERT_CHARACTER:
+        _dispatch->InsertCharacter(editPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_DELETE_CHARACTER:
+        _dispatch->DeleteCharacter(editPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (editPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_EDIT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_line_edit_result lineEditPlan{};
+    const auto lineEditStatus = terminal_parser_ffi_output_csi_line_edit_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &lineEditPlan);
+    THROW_HR_IF(E_UNEXPECTED, lineEditStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (lineEditPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_INSERT_LINE:
+        _dispatch->InsertLine(lineEditPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_DELETE_LINE:
+        _dispatch->DeleteLine(lineEditPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (lineEditPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_LINE_EDIT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_erase_characters_result eraseCharactersPlan{};
+    const auto eraseCharactersStatus = terminal_parser_ffi_output_csi_erase_characters_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &eraseCharactersPlan);
+    THROW_HR_IF(E_UNEXPECTED, eraseCharactersStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (eraseCharactersPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_ERASE_CHARACTERS:
+        _dispatch->EraseCharacters(eraseCharactersPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (eraseCharactersPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_CHARACTERS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_scroll_result scrollPlan{};
+    const auto scrollStatus = terminal_parser_ffi_output_csi_scroll_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &scrollPlan);
+    THROW_HR_IF(E_UNEXPECTED, scrollStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (scrollPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_UP:
+        _dispatch->ScrollUp(scrollPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_DOWN:
+        _dispatch->ScrollDown(scrollPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (scrollPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_SCROLL_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_page_result pagePlan{};
+    const auto pageStatus = terminal_parser_ffi_output_csi_page_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &pagePlan);
+    THROW_HR_IF(E_UNEXPECTED, pageStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (pagePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NEXT:
+        _dispatch->NextPage(pagePlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_PRECEDING:
+        _dispatch->PrecedingPage(pagePlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (pagePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_page_position_result pagePositionPlan{};
+    const auto pagePositionStatus = terminal_parser_ffi_output_csi_page_position_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &pagePositionPlan);
+    THROW_HR_IF(E_UNEXPECTED, pagePositionStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (pagePositionPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_ABSOLUTE:
+        _dispatch->PagePositionAbsolute(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_RELATIVE:
+        _dispatch->PagePositionRelative(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_BACK:
+        _dispatch->PagePositionBack(pagePositionPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (pagePositionPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_PAGE_POSITION_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_tab_result tabPlan{};
+    const auto tabStatus = terminal_parser_ffi_output_csi_tab_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &tabPlan);
+    THROW_HR_IF(E_UNEXPECTED, tabStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (tabPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_FORWARD:
+        _dispatch->ForwardTab(tabPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_BACKWARD:
+        _dispatch->BackwardsTab(tabPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (tabPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_terminal_parameters_result terminalParametersPlan{};
+    const auto terminalParametersStatus = terminal_parser_ffi_output_csi_terminal_parameters_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &terminalParametersPlan);
+    THROW_HR_IF(E_UNEXPECTED, terminalParametersStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (terminalParametersPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_REQUEST:
+        _dispatch->RequestTerminalParameters(static_cast<DispatchTypes::ReportingPermission>(terminalParametersPlan.parameter));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (terminalParametersPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_TERMINAL_PARAMETERS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_device_attributes_result deviceAttributesPlan{};
+    const auto deviceAttributesStatus = terminal_parser_ffi_output_csi_device_attributes_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &deviceAttributesPlan);
+    THROW_HR_IF(E_UNEXPECTED, deviceAttributesStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (deviceAttributesPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_PRIMARY:
+        _dispatch->DeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_SECONDARY:
+        _dispatch->SecondaryDeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_TERTIARY:
+        _dispatch->TertiaryDeviceAttributes();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (deviceAttributesPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_ATTRIBUTES_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_cursor_restore_result cursorRestorePlan{};
+    const auto cursorRestoreStatus = terminal_parser_ffi_output_csi_cursor_restore_plan(
+        static_cast<uint64_t>(id),
+        &cursorRestorePlan);
+    THROW_HR_IF(E_UNEXPECTED, cursorRestoreStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (cursorRestorePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_RESTORE:
+        _dispatch->CursorRestoreState();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (cursorRestorePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_RESTORE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_soft_reset_result softResetPlan{};
+    const auto softResetStatus = terminal_parser_ffi_output_csi_soft_reset_plan(
+        static_cast<uint64_t>(id),
+        &softResetPlan);
+    THROW_HR_IF(E_UNEXPECTED, softResetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (softResetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_SOFT_RESET:
+        _dispatch->SoftReset();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (softResetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_SOFT_RESET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_displayed_extent_result displayedExtentPlan{};
+    const auto displayedExtentStatus = terminal_parser_ffi_output_csi_displayed_extent_plan(
+        static_cast<uint64_t>(id),
+        &displayedExtentPlan);
+    THROW_HR_IF(E_UNEXPECTED, displayedExtentStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (displayedExtentPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_REQUEST:
+        _dispatch->RequestDisplayedExtent();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (displayedExtentPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DISPLAYED_EXTENT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_cursor_style_result cursorStylePlan{};
+    const auto cursorStyleStatus = terminal_parser_ffi_output_csi_cursor_style_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &cursorStylePlan);
+    THROW_HR_IF(E_UNEXPECTED, cursorStyleStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (cursorStylePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_SET_CURSOR_STYLE:
+        _dispatch->SetCursorStyle(static_cast<DispatchTypes::CursorStyle>(cursorStylePlan.style));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (cursorStylePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_CURSOR_STYLE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_request_mode_result requestModePlan{};
+    const auto requestModeStatus = terminal_parser_ffi_output_csi_request_mode_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &requestModePlan);
+    THROW_HR_IF(E_UNEXPECTED, requestModeStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (requestModePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_REQUEST_MODE:
+        if (requestModePlan.private_mode != 0)
+        {
+            _dispatch->RequestMode(static_cast<DispatchTypes::DECPrivateMode>(requestModePlan.mode));
+        }
+        else
+        {
+            _dispatch->RequestMode(static_cast<DispatchTypes::ANSIStandardMode>(requestModePlan.mode));
+        }
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (requestModePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_MODE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_device_status_report_result deviceStatusReportPlan{};
+    const auto deviceStatusReportStatus = terminal_parser_ffi_output_csi_device_status_report_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        parameters.at(1).has_value() ? 1u : 0u,
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        &deviceStatusReportPlan);
+    THROW_HR_IF(E_UNEXPECTED, deviceStatusReportStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (deviceStatusReportPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_REPORT:
+    {
+        const auto reportId = deviceStatusReportPlan.has_id != 0 ? VTParameter{ deviceStatusReportPlan.id } : VTParameter{};
+        if (deviceStatusReportPlan.private_mode != 0)
+        {
+            _dispatch->DeviceStatusReport(DispatchTypes::DECPrivateStatus(deviceStatusReportPlan.status), reportId);
+        }
+        else
+        {
+            _dispatch->DeviceStatusReport(DispatchTypes::ANSIStandardStatus(deviceStatusReportPlan.status), reportId);
+        }
         break;
     }
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (deviceStatusReportPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DEVICE_STATUS_REPORT_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t modePlanCapacity = 32;
+    int32_t modeParameters[modePlanCapacity]{};
+    size_t modeParameterCount = 0;
+    parameters.for_each([&](const auto mode) {
+        THROW_HR_IF(E_UNEXPECTED, modeParameterCount >= modePlanCapacity);
+        modeParameters[modeParameterCount++] = static_cast<int32_t>(mode);
+    });
+
+    terminal_parser_ffi_output_csi_mode_result modePlans[modePlanCapacity]{};
+    size_t modePlanCount = 0;
+    const auto modeStatus = terminal_parser_ffi_output_csi_mode_plans(
+        static_cast<uint64_t>(id),
+        modeParameters,
+        modeParameterCount,
+        modePlans,
+        modePlanCapacity,
+        &modePlanCount);
+    THROW_HR_IF(E_UNEXPECTED, modeStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < modePlanCount; ++index)
+    {
+        const auto& modePlan = modePlans[index];
+        THROW_HR_IF(E_UNEXPECTED, modePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_MODE_MODE);
+
+        if (modePlan.private_mode != 0)
+        {
+            if (modePlan.enabled != 0)
+            {
+                _dispatch->SetMode(static_cast<DispatchTypes::DECPrivateMode>(modePlan.mode));
+            }
+            else
+            {
+                _dispatch->ResetMode(static_cast<DispatchTypes::DECPrivateMode>(modePlan.mode));
+            }
+        }
+        else if (modePlan.enabled != 0)
+        {
+            _dispatch->SetMode(static_cast<DispatchTypes::ANSIStandardMode>(modePlan.mode));
+        }
+        else
+        {
+            _dispatch->ResetMode(static_cast<DispatchTypes::ANSIStandardMode>(modePlan.mode));
+        }
+    }
+
+    if (modePlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t erasePlanCapacity = 32;
+    int32_t eraseParameters[erasePlanCapacity]{};
+    size_t eraseParameterCount = 0;
+    parameters.for_each([&](const auto eraseType) {
+        THROW_HR_IF(E_UNEXPECTED, eraseParameterCount >= erasePlanCapacity);
+        eraseParameters[eraseParameterCount++] = static_cast<int32_t>(eraseType);
+    });
+
+    terminal_parser_ffi_output_csi_erase_result erasePlans[erasePlanCapacity]{};
+    size_t erasePlanCount = 0;
+    const auto eraseStatus = terminal_parser_ffi_output_csi_erase_plans(
+        static_cast<uint64_t>(id),
+        eraseParameters,
+        eraseParameterCount,
+        erasePlans,
+        erasePlanCapacity,
+        &erasePlanCount);
+    THROW_HR_IF(E_UNEXPECTED, eraseStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < erasePlanCount; ++index)
+    {
+        const auto& erasePlan = erasePlans[index];
+        const auto eraseType = static_cast<DispatchTypes::EraseType>(erasePlan.value);
+
+        switch (erasePlan.kind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_DISPLAY:
+            _dispatch->EraseInDisplay(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_SELECTIVE_DISPLAY:
+            _dispatch->SelectiveEraseInDisplay(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_LINE:
+            _dispatch->EraseInLine(eraseType);
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_ERASE_SELECTIVE_LINE:
+            _dispatch->SelectiveEraseInLine(eraseType);
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+    }
+
+    if (erasePlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t tabControlPlanCapacity = 32;
+    int32_t tabControlParameters[tabControlPlanCapacity]{};
+    size_t tabControlParameterCount = 0;
+    parameters.for_each([&](const auto tabControlType) {
+        THROW_HR_IF(E_UNEXPECTED, tabControlParameterCount >= tabControlPlanCapacity);
+        tabControlParameters[tabControlParameterCount++] = static_cast<int32_t>(tabControlType);
+    });
+
+    terminal_parser_ffi_output_csi_tab_control_result tabControlPlans[tabControlPlanCapacity]{};
+    size_t tabControlPlanCount = 0;
+    const auto tabControlStatus = terminal_parser_ffi_output_csi_tab_control_plans(
+        static_cast<uint64_t>(id),
+        tabControlParameters,
+        tabControlParameterCount,
+        tabControlPlans,
+        tabControlPlanCapacity,
+        &tabControlPlanCount);
+    THROW_HR_IF(E_UNEXPECTED, tabControlStatus != TERMINAL_PARSER_FFI_OK);
+
+    for (size_t index = 0; index < tabControlPlanCount; ++index)
+    {
+        const auto& tabControlPlan = tabControlPlans[index];
+
+        switch (tabControlPlan.kind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_CLEAR:
+            _dispatch->TabClear(static_cast<DispatchTypes::TabClearType>(tabControlPlan.value));
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_TAB_CONTROL_SET:
+            _dispatch->TabSet(tabControlPlan.value);
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+    }
+
+    if (tabControlPlanCount != 0)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_window_manipulation_result windowManipulationPlan{};
+    const auto windowManipulationStatus = terminal_parser_ffi_output_csi_window_manipulation_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        &windowManipulationPlan);
+    THROW_HR_IF(E_UNEXPECTED, windowManipulationStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (windowManipulationPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION:
+        _dispatch->WindowManipulation(static_cast<DispatchTypes::WindowManipulationType>(windowManipulationPlan.function), windowManipulationPlan.parameter1, windowManipulationPlan.parameter2);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (windowManipulationPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_WINDOW_MANIPULATION_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_pop_sgr_result popSgrPlan{};
+    const auto popSgrStatus = terminal_parser_ffi_output_csi_pop_sgr_plan(
+        static_cast<uint64_t>(id),
+        &popSgrPlan);
+    THROW_HR_IF(E_UNEXPECTED, popSgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (popSgrPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_POP:
+        _dispatch->PopGraphicsRendition();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (popSgrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_POP_SGR_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t decscaCapacity = 32;
+    int32_t decscaInput[decscaCapacity]{};
+    size_t decscaInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, decscaInputCount >= decscaCapacity);
+        decscaInput[decscaInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t decscaOutput[decscaCapacity]{};
+    size_t decscaOutputCount = 0;
+    const auto decscaStatus = terminal_parser_ffi_output_csi_decsca_values(
+        static_cast<uint64_t>(id),
+        decscaInput,
+        decscaInputCount,
+        decscaOutput,
+        decscaCapacity,
+        &decscaOutputCount);
+    THROW_HR_IF(E_UNEXPECTED, decscaStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (decscaOutputCount != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, decscaOutputCount != decscaInputCount);
+        for (size_t index = 0; index < decscaOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, decscaOutput[index] != decscaInput[index]);
+        }
+
+        _dispatch->SetCharacterProtectionAttribute(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t pushSgrCapacity = 32;
+    int32_t pushSgrInput[pushSgrCapacity]{};
+    size_t pushSgrInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, pushSgrInputCount >= pushSgrCapacity);
+        pushSgrInput[pushSgrInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t pushSgrOutput[pushSgrCapacity]{};
+    size_t pushSgrOutputCount = 0;
+    uint32_t pushSgrMatched = 0;
+    const auto pushSgrStatus = terminal_parser_ffi_output_csi_push_sgr_values(
+        static_cast<uint64_t>(id),
+        pushSgrInput,
+        pushSgrInputCount,
+        pushSgrOutput,
+        pushSgrCapacity,
+        &pushSgrOutputCount,
+        &pushSgrMatched);
+    THROW_HR_IF(E_UNEXPECTED, pushSgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (pushSgrMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, pushSgrOutputCount != pushSgrInputCount);
+        for (size_t index = 0; index < pushSgrOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, pushSgrOutput[index] != pushSgrInput[index]);
+        }
+
+        _dispatch->PushGraphicsRendition(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t sgrCapacity = 32;
+    int32_t sgrInput[sgrCapacity]{};
+    size_t sgrInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, sgrInputCount >= sgrCapacity);
+        sgrInput[sgrInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t sgrOutput[sgrCapacity]{};
+    size_t sgrOutputCount = 0;
+    uint32_t sgrMatched = 0;
+    const auto sgrStatus = terminal_parser_ffi_output_csi_sgr_values(
+        static_cast<uint64_t>(id),
+        sgrInput,
+        sgrInputCount,
+        sgrOutput,
+        sgrCapacity,
+        &sgrOutputCount,
+        &sgrMatched);
+    THROW_HR_IF(E_UNEXPECTED, sgrStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (sgrMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, sgrOutputCount != sgrInputCount);
+        for (size_t index = 0; index < sgrOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, sgrOutput[index] != sgrInput[index]);
+        }
+
+        _dispatch->SetGraphicsRendition(parameters);
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t decfraCapacity = 32;
+    int32_t decfraInput[decfraCapacity]{};
+    size_t decfraInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, decfraInputCount >= decfraCapacity);
+        decfraInput[decfraInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t decfraOutput[decfraCapacity]{};
+    size_t decfraOutputCount = 0;
+    uint32_t decfraMatched = 0;
+    const auto decfraStatus = terminal_parser_ffi_output_csi_decfra_values(
+        static_cast<uint64_t>(id),
+        decfraInput,
+        decfraInputCount,
+        decfraOutput,
+        decfraCapacity,
+        &decfraOutputCount,
+        &decfraMatched);
+    THROW_HR_IF(E_UNEXPECTED, decfraStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (decfraMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, decfraOutputCount != decfraInputCount);
+        for (size_t index = 0; index < decfraOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, decfraOutput[index] != decfraInput[index]);
+        }
+
+        _dispatch->FillRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2), parameters.at(3).value_or(0), parameters.at(4).value_or(0));
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_column_plan_result columnPlan{};
+    const auto columnStatus = terminal_parser_ffi_output_csi_column_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &columnPlan);
+    THROW_HR_IF(E_UNEXPECTED, columnStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (columnPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_INSERT:
+        _dispatch->InsertColumn(columnPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_DELETE:
+        _dispatch->DeleteColumn(columnPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (columnPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_COLUMN_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t rectEraseCapacity = 32;
+    int32_t rectEraseInput[rectEraseCapacity]{};
+    size_t rectEraseInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, rectEraseInputCount >= rectEraseCapacity);
+        rectEraseInput[rectEraseInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t rectEraseOutput[rectEraseCapacity]{};
+    size_t rectEraseOutputCount = 0;
+    uint32_t rectEraseKind = TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE_NONE;
+    const auto rectEraseStatus = terminal_parser_ffi_output_csi_rect_erase_values(
+        static_cast<uint64_t>(id),
+        rectEraseInput,
+        rectEraseInputCount,
+        rectEraseOutput,
+        rectEraseCapacity,
+        &rectEraseOutputCount,
+        &rectEraseKind);
+    THROW_HR_IF(E_UNEXPECTED, rectEraseStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (rectEraseKind != TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE_NONE)
+    {
+        THROW_HR_IF(E_UNEXPECTED, rectEraseOutputCount != rectEraseInputCount);
+        for (size_t index = 0; index < rectEraseOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, rectEraseOutput[index] != rectEraseInput[index]);
+        }
+
+        switch (rectEraseKind)
+        {
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ERASE:
+            _dispatch->EraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
+            break;
+        case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_SELECTIVE_ERASE:
+            _dispatch->SelectiveEraseRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0));
+            break;
+        default:
+            THROW_HR(E_UNEXPECTED);
+        }
+
+        _ClearLastChar();
+        return true;
+    }
+
+    constexpr size_t rectCopyCapacity = 32;
+    int32_t rectCopyInput[rectCopyCapacity]{};
+    size_t rectCopyInputCount = 0;
+    parameters.for_each([&](const auto value) {
+        THROW_HR_IF(E_UNEXPECTED, rectCopyInputCount >= rectCopyCapacity);
+        rectCopyInput[rectCopyInputCount++] = static_cast<int32_t>(value);
+    });
+
+    int32_t rectCopyOutput[rectCopyCapacity]{};
+    size_t rectCopyOutputCount = 0;
+    uint32_t rectCopyMatched = 0;
+    const auto rectCopyStatus = terminal_parser_ffi_output_csi_rect_copy_values(
+        static_cast<uint64_t>(id),
+        rectCopyInput,
+        rectCopyInputCount,
+        rectCopyOutput,
+        rectCopyCapacity,
+        &rectCopyOutputCount,
+        &rectCopyMatched);
+    THROW_HR_IF(E_UNEXPECTED, rectCopyStatus != TERMINAL_PARSER_FFI_OK);
+
+    if (rectCopyMatched != 0)
+    {
+        THROW_HR_IF(E_UNEXPECTED, rectCopyOutputCount != rectCopyInputCount);
+        for (size_t index = 0; index < rectCopyOutputCount; ++index)
+        {
+            THROW_HR_IF(E_UNEXPECTED, rectCopyOutput[index] != rectCopyInput[index]);
+        }
+
+        _dispatch->CopyRectangularArea(parameters.at(0), parameters.at(1), parameters.at(2).value_or(0), parameters.at(3).value_or(0), parameters.at(4), parameters.at(5), parameters.at(6), parameters.at(7));
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_user_preference_charset_result userPreferenceCharsetPlan{};
+    const auto userPreferenceCharsetStatus = terminal_parser_ffi_output_csi_user_preference_charset_plan(
+        static_cast<uint64_t>(id),
+        &userPreferenceCharsetPlan);
+    THROW_HR_IF(E_UNEXPECTED, userPreferenceCharsetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (userPreferenceCharsetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_REQUEST:
+        _dispatch->RequestUserPreferenceCharset();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (userPreferenceCharsetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_USER_PREFERENCE_CHARSET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_kitty_keyboard_query_result kittyKeyboardQueryPlan{};
+    const auto kittyKeyboardQueryStatus = terminal_parser_ffi_output_csi_kitty_keyboard_query_plan(
+        static_cast<uint64_t>(id),
+        &kittyKeyboardQueryPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardQueryStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardQueryPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_QUERY:
+        _dispatch->QueryKittyKeyboardProtocol();
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardQueryPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_QUERY_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_kitty_keyboard_push_result kittyKeyboardPushPlan{};
+    const auto kittyKeyboardPushStatus = terminal_parser_ffi_output_csi_kitty_keyboard_push_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &kittyKeyboardPushPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardPushStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardPushPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_PUSH_PUSH:
+        _dispatch->PushKittyKeyboardProtocol(kittyKeyboardPushPlan.flags);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_PUSH_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardPushPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_PUSH_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_kitty_keyboard_pop_result kittyKeyboardPopPlan{};
+    const auto kittyKeyboardPopStatus = terminal_parser_ffi_output_csi_kitty_keyboard_pop_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &kittyKeyboardPopPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardPopStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardPopPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_POP:
+        _dispatch->PopKittyKeyboardProtocol(kittyKeyboardPopPlan.count);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardPopPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_POP_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    const auto kittyKeyboardFlagsParameter = parameters.at(0);
+    const auto kittyKeyboardModeParameter = parameters.at(1);
+    terminal_parser_ffi_output_csi_kitty_keyboard_set_result kittyKeyboardSetPlan{};
+    const auto kittyKeyboardSetStatus = terminal_parser_ffi_output_csi_kitty_keyboard_set_plan(
+        static_cast<uint64_t>(id),
+        kittyKeyboardFlagsParameter.has_value() ? 1u : 0u,
+        static_cast<int32_t>(kittyKeyboardFlagsParameter.value_or(0)),
+        kittyKeyboardModeParameter.has_value() ? 1u : 0u,
+        static_cast<int32_t>(kittyKeyboardModeParameter.value_or(0)),
+        &kittyKeyboardSetPlan);
+    THROW_HR_IF(E_UNEXPECTED, kittyKeyboardSetStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (kittyKeyboardSetPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_SET:
+        _dispatch->SetKittyKeyboardProtocol(
+            kittyKeyboardSetPlan.has_flags != 0 ? VTParameter{ kittyKeyboardSetPlan.flags } : VTParameter{},
+            kittyKeyboardSetPlan.has_mode != 0 ? VTParameter{ kittyKeyboardSetPlan.mode } : VTParameter{});
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (kittyKeyboardSetPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_KITTY_KEYBOARD_SET_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_request_presentation_state_result presentationStatePlan{};
+    const auto presentationStateStatus = terminal_parser_ffi_output_csi_request_presentation_state_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &presentationStatePlan);
+    THROW_HR_IF(E_UNEXPECTED, presentationStateStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (presentationStatePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_REQUEST:
+        _dispatch->RequestPresentationStateReport(
+            static_cast<DispatchTypes::PresentationReportFormat>(presentationStatePlan.format));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (presentationStatePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REQUEST_PRESENTATION_STATE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decsace_result decsacePlan{};
+    const auto decsaceStatus = terminal_parser_ffi_output_csi_decsace_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &decsacePlan);
+    THROW_HR_IF(E_UNEXPECTED, decsaceStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decsacePlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_SELECT_ATTRIBUTE_CHANGE_EXTENT:
+        _dispatch->SelectAttributeChangeExtent(
+            static_cast<DispatchTypes::ChangeExtent>(decsacePlan.change_extent));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decsacePlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECSACE_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decinvm_result decinvmPlan{};
+    const auto decinvmStatus = terminal_parser_ffi_output_csi_decinvm_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        &decinvmPlan);
+    THROW_HR_IF(E_UNEXPECTED, decinvmStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decinvmPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_INVOKE_MACRO:
+        _dispatch->InvokeMacro(decinvmPlan.macro_id);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decinvmPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECINVM_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    const auto decrqtsrReportFormatParameter = parameters.at(1);
+    terminal_parser_ffi_output_csi_decrqtsr_result decrqtsrPlan{};
+    const auto decrqtsrStatus = terminal_parser_ffi_output_csi_decrqtsr_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        decrqtsrReportFormatParameter.has_value() ? static_cast<int32_t>(decrqtsrReportFormatParameter.value_or(0)) : -1,
+        &decrqtsrPlan);
+    THROW_HR_IF(E_UNEXPECTED, decrqtsrStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decrqtsrPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_REQUEST_TERMINAL_STATE:
+        _dispatch->RequestTerminalStateReport(
+            static_cast<DispatchTypes::ReportFormat>(decrqtsrPlan.format),
+            decrqtsrReportFormatParameter);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decrqtsrPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQTSR_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decac_result decacPlan{};
+    const auto decacStatus = terminal_parser_ffi_output_csi_decac_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        &decacPlan);
+    THROW_HR_IF(E_UNEXPECTED, decacStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decacPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_ASSIGN_COLOR:
+        _dispatch->AssignColor(
+            static_cast<DispatchTypes::ColorItem>(decacPlan.item),
+            decacPlan.foreground_index,
+            decacPlan.background_index);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decacPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECAC_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+    terminal_parser_ffi_output_csi_rect_attributes_result rectAttributesPlan{};
+    const auto rectAttributesStatus = terminal_parser_ffi_output_csi_rect_attributes_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(2).value_or(0)),
+        static_cast<int32_t>(parameters.at(3).value_or(0)),
+        &rectAttributesPlan);
+    THROW_HR_IF(E_UNEXPECTED, rectAttributesStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (rectAttributesPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_CHANGE:
+        _dispatch->ChangeAttributesRectangularArea(
+            parameters.at(0),
+            parameters.at(1),
+            rectAttributesPlan.bottom,
+            rectAttributesPlan.right,
+            parameters.subspan(4));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_REVERSE:
+        _dispatch->ReverseAttributesRectangularArea(
+            parameters.at(0),
+            parameters.at(1),
+            rectAttributesPlan.bottom,
+            rectAttributesPlan.right,
+            parameters.subspan(4));
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (rectAttributesPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_RECT_ATTRIBUTES_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decrqcra_result decrqcraPlan{};
+    const auto decrqcraStatus = terminal_parser_ffi_output_csi_decrqcra_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<int32_t>(parameters.at(1).value_or(0)),
+        static_cast<int32_t>(parameters.at(4).value_or(0)),
+        static_cast<int32_t>(parameters.at(5).value_or(0)),
+        &decrqcraPlan);
+    THROW_HR_IF(E_UNEXPECTED, decrqcraStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decrqcraPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_REQUEST_CHECKSUM_RECTANGULAR_AREA:
+        _dispatch->RequestChecksumRectangularArea(
+            decrqcraPlan.request_id,
+            decrqcraPlan.page,
+            parameters.at(2),
+            parameters.at(3),
+            decrqcraPlan.bottom,
+            decrqcraPlan.right);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decrqcraPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECRQCRA_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_rep_result repPlan{};
+    const auto repStatus = terminal_parser_ffi_output_csi_rep_plan(
+        static_cast<uint64_t>(id),
+        static_cast<int32_t>(parameters.at(0).value_or(0)),
+        static_cast<uint16_t>(_lastPrintedChar),
+        &repPlan);
+    THROW_HR_IF(E_UNEXPECTED, repStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (repPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_REPEAT:
+    {
+        const std::wstring repeated(static_cast<size_t>(repPlan.count), _lastPrintedChar);
+        _dispatch->PrintString(repeated);
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_HANDLED_NOOP:
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (repPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_REP_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+
+    terminal_parser_ffi_output_csi_decps_result decpsPlan{};
+    const auto decpsStatus = terminal_parser_ffi_output_csi_decps_plan(
+        static_cast<uint64_t>(id),
+        &decpsPlan);
+    THROW_HR_IF(E_UNEXPECTED, decpsStatus != TERMINAL_PARSER_FFI_OK);
+
+    switch (decpsPlan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS:
+        _dispatch->PlaySounds(parameters);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE:
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    if (decpsPlan.kind != TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE)
+    {
+        _ClearLastChar();
+        return true;
+    }
+    _dispatch->UnknownSequence();
 
     _ClearLastChar();
 
