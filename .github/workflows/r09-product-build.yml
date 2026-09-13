@@ -89,6 +89,7 @@ on:
       - "tools/rust/Test-R09PtySignalReadPlanContract.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - "tools/rust/Test-R09WorkspaceRenameOwnership.ps1"
+      - "tools/rust/Test-R09CommandlineFixupOwnership.ps1"
       - ".github/workflows/r09-product-build.yml"
   workflow_dispatch:
 
@@ -242,6 +243,9 @@ jobs:
       - name: Validate workspace rename ownership
         shell: pwsh
         run: ./tools/rust/Test-R09WorkspaceRenameOwnership.ps1
+      - name: Validate commandline fixup ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09CommandlineFixupOwnership.ps1
       - name: Canonical product build
         shell: pwsh
         run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
