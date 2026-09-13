@@ -62,6 +62,19 @@ pub fn commandline_fixup_plan(
     }
 }
 
+/// Returns the Rust-owned full-path value for a restore decision.
+///
+/// Keeping this mapping beside [`commandline_fixup_plan`] prevents serialization
+/// and native seams from independently duplicating the canonical shell paths.
+#[must_use]
+pub const fn commandline_fixup_restore_value(plan: CommandlineFixupPlan) -> Option<&'static str> {
+    match plan {
+        CommandlineFixupPlan::RestoreCmdFullPath => Some(CMD_FULL_PATH),
+        CommandlineFixupPlan::RestorePowershellFullPath => Some(POWERSHELL_FULL_PATH),
+        CommandlineFixupPlan::None | CommandlineFixupPlan::ClearOverride => None,
+    }
+}
+
 /// Applies the portable profile-commandline patching portion of Microsoft's
 /// `SettingsLoader::FixupUserSettings`.
 ///
@@ -133,12 +146,9 @@ fn collect_commandline_patches(
             continue;
         };
 
-        if guid.eq_ignore_ascii_case(CMD_GUID) && commandline.eq_ignore_ascii_case("cmd.exe") {
-            patches.push((index, CMD_FULL_PATH));
-        } else if guid.eq_ignore_ascii_case(POWERSHELL_GUID)
-            && commandline.eq_ignore_ascii_case("powershell.exe")
-        {
-            patches.push((index, POWERSHELL_FULL_PATH));
+        let plan = commandline_fixup_plan(guid, Some(commandline), None);
+        if let Some(value) = commandline_fixup_restore_value(plan) {
+            patches.push((index, value));
         }
     }
 
