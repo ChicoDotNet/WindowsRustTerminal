@@ -74,7 +74,7 @@
 
   <!-- R09 settings integration: C++/WinRT keeps state storage and persistence while
        Rust owns deterministic workspace-rename policy. -->
-  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+  <PropertyGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.ModelLib'">
     <_RustSettingsTargetTriple Condition="'$(Platform)' == 'x64'">x86_64-pc-windows-msvc</_RustSettingsTargetTriple>
     <_RustSettingsTargetTriple Condition="'$(Platform)' == 'Win32'">i686-pc-windows-msvc</_RustSettingsTargetTriple>
     <_RustSettingsTargetTriple Condition="'$(Platform)' == 'ARM64'">aarch64-pc-windows-msvc</_RustSettingsTargetTriple>
@@ -84,7 +84,7 @@
     <_RustSettingsFfiLib>$(SolutionDir)artifacts\cargo-target\$(_RustSettingsTargetTriple)\$(_RustSettingsCargoProfile)\terminal_settings_ffi.lib</_RustSettingsFfiLib>
   </PropertyGroup>
 
-  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+  <ItemDefinitionGroup Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.ModelLib'">
     <ClCompile>
       <AdditionalIncludeDirectories>$(MSBuildThisFileDirectory)rust\terminal-settings-ffi\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
@@ -93,7 +93,7 @@
     </Lib>
   </ItemDefinitionGroup>
 
-  <Target Name="BuildRustSettingsFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.Model.Lib'">
+  <Target Name="BuildRustSettingsFfi" BeforeTargets="ClCompile" Condition="'$(MSBuildProjectName)' == 'Microsoft.Terminal.Settings.ModelLib'">
     <Error Condition="'$(_RustSettingsTargetTriple)' == ''" Text="R09 Settings Rust integration does not support MSBuild platform '$(Platform)'." />
     <Exec WorkingDirectory="$(SolutionDir)" Command="rustup target add $(_RustSettingsTargetTriple)" />
     <Exec WorkingDirectory="$(SolutionDir)" Command="cargo build --locked -p terminal-settings-ffi --target $(_RustSettingsTargetTriple) $(_RustSettingsCargoReleaseArg)" />
