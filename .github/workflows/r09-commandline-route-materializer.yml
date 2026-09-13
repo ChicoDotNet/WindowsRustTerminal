@@ -1,12 +1,8 @@
-# R09 one-shot mechanical helper; remove after successful route.
 name: R09 Commandline Route Materializer
 
 on:
   push:
-    branches:
-      - rust/r09-product-integration
-    paths:
-      - .github/workflows/r09-commandline-route-materializer.yml
+    branches: [rust/r09-product-integration]
 
 permissions:
   contents: write
@@ -18,33 +14,28 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Verify exact branch head
+      - name: Materialize guarded route
         shell: bash
         run: |
           set -euo pipefail
           git fetch origin rust/r09-product-integration
           test "$(git rev-parse origin/rust/r09-product-integration)" = "$GITHUB_SHA"
-
-      - name: Apply byte-preserving commandline route
-        shell: python
-        run: |
+          python - <<'PY'
           from pathlib import Path
-
           path = Path("src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp")
           data = path.read_bytes()
           if b"\r\n" not in data or b"\n" in data.replace(b"\r\n", b""):
               raise SystemExit("expected CRLF-only source before route")
+          def crlf(text):
+              return text.replace("\n", "\r\n").encode()
+          replacements = [
+              (crlf('''#include "WtExeUtils.h"
 
-          include_old = '''#include "WtExeUtils.h"
-
-using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n").encode()
-          include_new = '''#include "WtExeUtils.h"
+using namespace winrt::Windows::Foundation::Collections;'''), crlf('''#include "WtExeUtils.h"
 #include "terminal_settings_ffi.h"
 
-using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n").encode()
-
-          policy_old = '''bool SettingsLoader::FixupUserSettings()
+using namespace winrt::Windows::Foundation::Collections;'''), "FFI include"),
+              (crlf('''bool SettingsLoader::FixupUserSettings()
 {
     struct CommandlinePatch
     {
@@ -58,12 +49,10 @@ using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n"
         CommandlinePatch{ DEFAULT_WINDOWS_POWERSHELL_GUID, L"powershell.exe", L"%SystemRoot%\\\\System32\\\\WindowsPowerShell\\\\v1.0\\\\powershell.exe" },
     };
 
-    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''.replace("\n", "\r\n").encode()
-          policy_new = '''bool SettingsLoader::FixupUserSettings()
+    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''), crlf('''bool SettingsLoader::FixupUserSettings()
 {
-    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''.replace("\n", "\r\n").encode()
-
-          route_old = '''        if (profile->HasCommandline())
+    static constexpr std::array iconsToClearFromVisualStudioProfiles{'''), "legacy policy table"),
+              (crlf('''        if (profile->HasCommandline())
         {
             for (const auto& patch : commandlinePatches)
             {
@@ -84,9 +73,7 @@ using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n"
                     break;
                 }
             }
-        }'''.replace("\n", "\r\n").encode()
-
-          route_new = '''        if (profile->HasCommandline())
+        }'''), crlf('''        if (profile->HasCommandline())
         {
             const auto guid = profile->Guid();
             const auto guidString = winrt::to_hstring(guid);
@@ -146,38 +133,23 @@ using namespace winrt::Windows::Foundation::Collections;'''.replace("\n", "\r\n"
                     }
                 }
             }
-        }'''.replace("\n", "\r\n").encode()
-
-          replacements = [
-              (include_old, include_new, "FFI include"),
-              (policy_old, policy_new, "legacy policy table"),
-              (route_old, route_new, "product route"),
+        }'''), "product route"),
           ]
           for old, new, label in replacements:
               count = data.count(old)
               if count != 1:
                   raise SystemExit(f"{label}: expected exactly one match, found {count}")
               data = data.replace(old, new, 1)
-
           if b"struct CommandlinePatch" in data or b"commandlinePatches" in data:
               raise SystemExit("legacy commandline policy remains")
           if b"til::equals_insensitive_ascii(profile->Commandline()" in data:
               raise SystemExit("legacy native commandline matching remains")
           if b"\n" in data.replace(b"\r\n", b""):
               raise SystemExit("route introduced non-CRLF newlines")
-
           path.write_bytes(data)
-
-      - name: Verify ownership gate
-        shell: pwsh
-        run: ./tools/rust/Test-R09CommandlineFixupOwnership.ps1
-
-      - name: Commit route without force
-        shell: bash
-        run: |
-          set -euo pipefail
+          PY
+          pwsh -File ./tools/rust/Test-R09CommandlineFixupOwnership.ps1
           git diff --check
-          git diff -- src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp
           git add src/cascadia/TerminalSettingsModel/CascadiaSettingsSerialization.cpp
           test -n "$(git diff --cached --name-only)"
           git config user.name "github-actions[bot]"
