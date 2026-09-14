@@ -88,13 +88,20 @@ fn representative_text(parameter: i32) -> Vec<u16> {
 /// remain outside this narrow classification seam.
 #[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_output_osc_plan(
-    parameter: i32,
+    parameter: u64,
     out_plan: *mut OutputOscPlan,
 ) -> FfiStatus {
     ffi_guard(|| {
         if out_plan.is_null() {
             return FfiStatus::InvalidArgument;
         }
+
+        let Ok(parameter) = i32::try_from(parameter) else {
+            // SAFETY: `out_plan` was checked non-null above and the ABI requires it
+            // to reference one writable `OutputOscPlan` for this call.
+            unsafe { ptr::write(out_plan, OutputOscPlan::default()) };
+            return FfiStatus::Ok;
+        };
 
         let text = representative_text(parameter);
         let mut engine = OutputStateMachineEngine::new(PlanDispatch::default());
@@ -113,7 +120,7 @@ mod tests {
     use super::{OutputOscKind, OutputOscPlan, terminal_parser_ffi_output_osc_plan};
     use crate::FfiStatus;
 
-    fn expect(parameter: i32, kind: OutputOscKind) {
+    fn expect(parameter: u64, kind: OutputOscKind) {
         let mut result = OutputOscPlan::default();
         assert_eq!(
             terminal_parser_ffi_output_osc_plan(parameter, &mut result),
@@ -145,6 +152,12 @@ mod tests {
         expect(1337, OutputOscKind::ITerm2Action);
         expect(9001, OutputOscKind::WtAction);
         expect(999, OutputOscKind::None);
+    }
+
+    #[test]
+    fn output_osc_ffi_rejects_narrowing_aliases() {
+        expect(u64::MAX, OutputOscKind::None);
+        expect((i32::MAX as u64) + 1, OutputOscKind::None);
     }
 
     #[test]
