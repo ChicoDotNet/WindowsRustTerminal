@@ -106,4 +106,6 @@ if (-not $csiLineEditFfi.Contains('terminal_parser_ffi_output_csi_line_edit_plan
 if (-not $csiLineEditFfi.Contains('engine.action_csi_dispatch')) { throw 'R09 Output ownership gate: CSI line-edit FFI no longer delegates to the Rust output engine.' }
 if (-not $csiLineEditProbe.Contains('terminal_parser_ffi_output_csi_line_edit_plan')) { throw 'R09 Output ownership gate: native replay no longer exercises the CSI line-edit planning seam.' }
 
-Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, VT52, CSI cursor/navigation, CSI scrolling margins, CSI character editing, and CSI line editing; native dispatch sequencing remains at the Windows seam.'
+& (Join-Path $PSScriptRoot 'Test-R09OutputOscOwnership.ps1')
+
+Write-Host 'R09 Output ownership gate passed: Rust owns C0, ESC, VT52, CSI cursor/navigation, CSI scrolling margins, CSI character editing, CSI line editing, and OSC classification; native dispatch sequencing remains at the Windows seam.'
