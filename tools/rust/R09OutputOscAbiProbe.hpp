@@ -4,10 +4,11 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 
 namespace r09
 {
-    inline bool expect_output_osc_plan(const int32_t parameter, const uint32_t expectedKind)
+    inline bool expect_output_osc_plan(const uint64_t parameter, const uint32_t expectedKind)
     {
         terminal_parser_ffi_output_osc_plan_result plan{};
         const auto status = terminal_parser_ffi_output_osc_plan(parameter, &plan);
@@ -15,8 +16,8 @@ namespace r09
         {
             std::fprintf(
                 stderr,
-                "output OSC mismatch: parameter=%d status=%u kind=%u expectedKind=%u\n",
-                parameter,
+                "output OSC mismatch: parameter=%llu status=%u kind=%u expectedKind=%u\n",
+                static_cast<unsigned long long>(parameter),
                 static_cast<unsigned>(status),
                 plan.kind,
                 expectedKind);
@@ -29,7 +30,7 @@ namespace r09
     {
         const struct
         {
-            int32_t parameter;
+            uint64_t parameter;
             uint32_t kind;
         } cases[] = {
             { 0, TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_WINDOW_TITLE },
@@ -56,6 +57,8 @@ namespace r09
             { 1337, TERMINAL_PARSER_FFI_OUTPUT_OSC_ITERM2_ACTION },
             { 9001, TERMINAL_PARSER_FFI_OUTPUT_OSC_WT_ACTION },
             { 999, TERMINAL_PARSER_FFI_OUTPUT_OSC_NONE },
+            { static_cast<uint64_t>(std::numeric_limits<int32_t>::max()) + 1, TERMINAL_PARSER_FFI_OUTPUT_OSC_NONE },
+            { std::numeric_limits<uint64_t>::max(), TERMINAL_PARSER_FFI_OUTPUT_OSC_NONE },
         };
 
         for (const auto& item : cases)
