@@ -55,6 +55,7 @@
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_push.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_pop.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_set.h"
+#include "terminal_parser_ffi_output_dcs.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1723,14 +1724,18 @@ IStateMachineEngine::StringHandler OutputStateMachineEngine::ActionDcsDispatch(c
 {
     StringHandler handler = nullptr;
 
-    switch (id)
+    terminal_parser_ffi_output_dcs_plan_result plan{};
+    const auto status = terminal_parser_ffi_output_dcs_plan(static_cast<uint64_t>(id), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case DcsActionCodes::SIXEL_DefineImage:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_DEFINE_SIXEL_IMAGE:
         handler = _dispatch->DefineSixelImage(parameters.at(0),
                                               parameters.at(1),
                                               parameters.at(2));
         break;
-    case DcsActionCodes::DECDLD_DownloadDRCS:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_DOWNLOAD_DRCS:
         handler = _dispatch->DownloadDRCS(parameters.at(0),
                                           parameters.at(1),
                                           parameters.at(2),
@@ -1740,24 +1745,26 @@ IStateMachineEngine::StringHandler OutputStateMachineEngine::ActionDcsDispatch(c
                                           parameters.at(6),
                                           parameters.at(7));
         break;
-    case DcsActionCodes::DECAUPSS_AssignUserPreferenceSupplementalSet:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_ASSIGN_USER_PREFERENCE_CHARSET:
         handler = _dispatch->AssignUserPreferenceCharset(parameters.at(0));
         break;
-    case DcsActionCodes::DECDMAC_DefineMacro:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_DEFINE_MACRO:
         handler = _dispatch->DefineMacro(parameters.at(0).value_or(0), parameters.at(1), parameters.at(2));
         break;
-    case DcsActionCodes::DECRSTS_RestoreTerminalState:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_RESTORE_TERMINAL_STATE:
         handler = _dispatch->RestoreTerminalState(parameters.at(0));
         break;
-    case DcsActionCodes::DECRQSS_RequestSetting:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_REQUEST_SETTING:
         handler = _dispatch->RequestSetting();
         break;
-    case DcsActionCodes::DECRSPS_RestorePresentationState:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_RESTORE_PRESENTATION_STATE:
         handler = _dispatch->RestorePresentationState(parameters.at(0));
         break;
-    default:
+    case TERMINAL_PARSER_FFI_OUTPUT_DCS_NONE:
         _dispatch->UnknownSequence();
         break;
+    default:
+        THROW_HR(E_UNEXPECTED);
     }
 
     _ClearLastChar();
@@ -2069,7 +2076,7 @@ bool OutputStateMachineEngine::_ParseHyperlink(const std::wstring_view string,
 //
 // Arguments:
 // - string - the Osc String to parse
-// - rgbs - receives the colors that we parsed in the format: 0x00BBGGRR
+// - rgbs - receives the colors we parsed in the format: 0x00BBGGRR
 // Return Value:
 // - True if at least one color was parsed successfully. False otherwise.
 bool OutputStateMachineEngine::_GetOscSetColor(const std::wstring_view string,
