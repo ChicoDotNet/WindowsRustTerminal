@@ -4,6 +4,7 @@ $repoRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $source = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'src/terminal/parser/OutputStateMachineEngine.cpp')
 $ffi = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'rust/terminal-parser-ffi/src/output_dcs.rs')
 $header = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'rust/terminal-parser-ffi/include/terminal_parser_ffi_output_dcs.h')
+$probe = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'tools/rust/R09OutputDcsAbiProbe.hpp')
 
 if (-not $source.Contains('#include "terminal_parser_ffi_output_dcs.h"')) { throw 'R09 DCS ownership gate: native product no longer includes the Rust DCS ABI contract.' }
 if (-not $source.Contains('terminal_parser_ffi_output_dcs_plan')) { throw 'R09 DCS ownership gate: product no longer delegates DCS classification to Rust.' }
@@ -62,7 +63,10 @@ $abiKinds = @(
 )
 foreach ($abiKind in $abiKinds) {
     if (-not $header.Contains($abiKind)) { throw "R09 DCS ownership gate: ABI kind is missing: $abiKind" }
+    if (-not $probe.Contains($abiKind)) { throw "R09 DCS ownership gate: native ABI replay witness is missing: $abiKind" }
 }
-if (-not $header.Contains('static_assert(sizeof(terminal_parser_ffi_output_dcs_plan) == 4)')) { throw 'R09 DCS ownership gate: DCS plan ABI size assertion is missing.' }
+if (-not $header.Contains('terminal_parser_ffi_output_dcs_plan_result')) { throw 'R09 DCS ownership gate: DCS result type is missing.' }
+if (-not $header.Contains('static_assert(sizeof(terminal_parser_ffi_output_dcs_plan_result) == 4)')) { throw 'R09 DCS ownership gate: DCS plan ABI size assertion is missing.' }
+if (-not $probe.Contains('TERMINAL_PARSER_FFI_INVALID_ARGUMENT')) { throw 'R09 DCS ownership gate: native invalid-argument witness is missing.' }
 
 Write-Host 'R09 DCS ownership gate passed: Rust owns DCS identifier classification; C++ retains parameters, StringHandler, native dispatch materialization, UnknownSequence, and last-character lifecycle.'

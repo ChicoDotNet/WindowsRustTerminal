@@ -18,18 +18,18 @@ typedef enum terminal_parser_ffi_output_dcs_kind
     TERMINAL_PARSER_FFI_OUTPUT_DCS_RESTORE_PRESENTATION_STATE = 7,
 } terminal_parser_ffi_output_dcs_kind;
 
-typedef struct terminal_parser_ffi_output_dcs_plan
+typedef struct terminal_parser_ffi_output_dcs_plan_result
 {
     uint32_t kind;
-} terminal_parser_ffi_output_dcs_plan;
+} terminal_parser_ffi_output_dcs_plan_result;
 
 terminal_parser_ffi_status terminal_parser_ffi_output_dcs_plan(
     uint64_t identifier,
-    terminal_parser_ffi_output_dcs_plan* out_plan);
+    terminal_parser_ffi_output_dcs_plan_result* out_plan);
 
 #ifdef __cplusplus
 }
 
-static_assert(sizeof(terminal_parser_ffi_output_dcs_plan) == 4);
-static_assert(offsetof(terminal_parser_ffi_output_dcs_plan, kind) == 0);
+static_assert(sizeof(terminal_parser_ffi_output_dcs_plan_result) == 4);
+static_assert(offsetof(terminal_parser_ffi_output_dcs_plan_result, kind) == 0);
 #endif
