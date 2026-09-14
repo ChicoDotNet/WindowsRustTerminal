@@ -3,7 +3,7 @@ name: R09 OSC route staging
 on:
   pull_request:
     branches:
-      - rust/r09-product-integration
+      - agent/r09-osc-route-20260914-1524
 
 permissions:
   contents: write
