@@ -56,6 +56,7 @@ mod output_csi_window_manipulation;
 mod output_dcs;
 mod output_esc;
 mod output_execute;
+mod output_osc;
 mod output_vt52;
 mod pty_signal;
 mod render_attribute_colors;
