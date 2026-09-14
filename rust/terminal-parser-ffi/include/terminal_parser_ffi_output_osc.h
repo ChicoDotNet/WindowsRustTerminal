@@ -31,7 +31,7 @@ typedef struct terminal_parser_ffi_output_osc_plan_result
 } terminal_parser_ffi_output_osc_plan_result;
 
 terminal_parser_ffi_status terminal_parser_ffi_output_osc_plan(
-    int32_t parameter,
+    uint64_t parameter,
     terminal_parser_ffi_output_osc_plan_result* out_plan);
 
 #ifdef __cplusplus
