@@ -1,9 +1,9 @@
 name: R09 OSC route staging
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/r09-osc-route-20260914-1524
+      - rust/r09-product-integration
 
 permissions:
   contents: write
@@ -15,6 +15,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
+          ref: agent/r09-osc-route-20260914-1524
           fetch-depth: 1
       - name: Route OSC classification through Rust
         shell: python
