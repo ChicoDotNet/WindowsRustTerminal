@@ -1,0 +1,265 @@
+name: R09 OSC route staging
+
+on:
+  push:
+    branches:
+      - agent/r09-osc-route-20260914-1524
+
+permissions:
+  contents: write
+
+jobs:
+  transform:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 1
+      - name: Route OSC classification through Rust
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path('src/terminal/parser/OutputStateMachineEngine.cpp')
+          source = path.read_text(encoding='utf-8')
+
+          dcs_include = '#include "terminal_parser_ffi_output_dcs.h"\n'
+          osc_include = '#include "terminal_parser_ffi_output_osc.h"\n'
+          if source.count(dcs_include) != 1:
+              raise SystemExit('unexpected DCS include count')
+          if osc_include in source:
+              raise SystemExit('OSC include already present')
+          source = source.replace(dcs_include, dcs_include + osc_include, 1)
+
+          start_marker = 'bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const std::wstring_view string)\n{\n'
+          end_marker = '\n// Routine Description:\n// - Triggers the Ss3Dispatch action'
+          start = source.find(start_marker)
+          if start < 0:
+              raise SystemExit('OSC function start not found')
+          end = source.find(end_marker, start)
+          if end < 0:
+              raise SystemExit('OSC function end not found')
+          if source.find(start_marker, start + 1) >= 0:
+              raise SystemExit('duplicate OSC function start')
+
+          legacy = source[start:end]
+          required_legacy = [
+              'switch (parameter)',
+              'case OscActionCodes::SetIconAndWindowTitle:',
+              'case OscActionCodes::SetColor:',
+              'case OscActionCodes::SetForegroundColor:',
+              'case OscActionCodes::SetClipboard:',
+              'case OscActionCodes::ResetColor:',
+              'case OscActionCodes::ResetForegroundColor:',
+              'case OscActionCodes::CurrentWorkingDirectory:',
+              'case OscActionCodes::Hyperlink:',
+              'case OscActionCodes::ConEmuAction:',
+              'case OscActionCodes::FinalTermAction:',
+              'case OscActionCodes::VsCodeAction:',
+              'case OscActionCodes::UrxvtAction:',
+              'case OscActionCodes::ITerm2Action:',
+              'case OscActionCodes::WTAction:',
+              '_dispatch->UnknownSequence();',
+              '_ClearLastChar();',
+          ]
+          for needle in required_legacy:
+              if needle not in legacy:
+                  raise SystemExit(f'legacy OSC contract changed: {needle}')
+
+          replacement = r'''bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const std::wstring_view string)
+{
+    terminal_parser_ffi_output_osc_plan_result plan{};
+    const auto status = terminal_parser_ffi_output_osc_plan(static_cast<uint64_t>(parameter), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
+    {
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_WINDOW_TITLE:
+        _dispatch->SetWindowTitle(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_COLOR_TABLE:
+    {
+        std::vector<size_t> tableIndexes;
+        std::vector<DWORD> colors;
+        if (_GetOscSetColorTable(string, tableIndexes, colors))
+        {
+            for (size_t i = 0; i < tableIndexes.size(); i++)
+            {
+                const auto tableIndex = til::at(tableIndexes, i);
+                const auto rgb = til::at(colors, i);
+                if (rgb == COLOR_INQUIRY_COLOR)
+                {
+                    _dispatch->RequestColorTableEntry(tableIndex);
+                }
+                else
+                {
+                    _dispatch->SetColorTableEntry(tableIndex, rgb);
+                }
+            }
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_DYNAMIC_COLOR:
+    {
+        std::vector<DWORD> colors;
+        if (_GetOscSetColor(string, colors))
+        {
+            auto resource = parameter;
+            for (auto&& color : colors)
+            {
+                if (color == COLOR_INQUIRY_COLOR)
+                {
+                    _dispatch->RequestXtermColorResource(resource);
+                }
+                else if (color != INVALID_COLOR)
+                {
+                    _dispatch->SetXtermColorResource(resource, color);
+                }
+                resource++;
+            }
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_CLIPBOARD:
+    {
+        std::wstring setClipboardContent;
+        auto queryClipboard = false;
+        if (_GetOscSetClipboard(string, setClipboardContent, queryClipboard) && !queryClipboard)
+        {
+            _dispatch->SetClipboard(setClipboardContent);
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_RESET_COLOR_TABLE:
+    {
+        if (string.empty())
+        {
+            _dispatch->ResetColorTable();
+        }
+        else
+        {
+            for (auto&& c : til::split_iterator{ string, L';' })
+            {
+                if (const auto index{ til::parse_unsigned<size_t>(c, 10) }; index)
+                {
+                    _dispatch->ResetColorTableEntry(*index);
+                }
+                else
+                {
+                    // NOTE: xterm stops at the first unparseable index whereas VTE keeps going.
+                    break;
+                }
+            }
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_RESET_DYNAMIC_COLOR:
+    {
+        // NOTE: xterm ignores the request if there's any parameters whereas VTE resets the provided index and ignores the rest
+        if (string.empty())
+        {
+            // The reset codes for xterm dynamic resources are the set codes + 100
+            _dispatch->ResetXtermColorResource(parameter - 100u);
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_CURRENT_WORKING_DIRECTORY:
+        _dispatch->SetCurrentWorkingDirectory(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_HYPERLINK:
+    {
+        std::wstring params;
+        std::wstring uri;
+        if (_ParseHyperlink(string, params, uri))
+        {
+            if (uri.empty())
+            {
+                _dispatch->EndHyperlink();
+            }
+            else
+            {
+                _dispatch->AddHyperlink(uri, params);
+            }
+        }
+        break;
+    }
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_CONEMU_ACTION:
+        _dispatch->DoConEmuAction(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_FINALTERM_ACTION:
+        _dispatch->DoFinalTermAction(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_VSCODE_ACTION:
+        _dispatch->DoVsCodeAction(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_URXVT_ACTION:
+        _dispatch->DoUrxvtAction(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_ITERM2_ACTION:
+        _dispatch->DoITerm2Action(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_WT_ACTION:
+        _dispatch->DoWTAction(string);
+        break;
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_NONE:
+        _dispatch->UnknownSequence();
+        break;
+    default:
+        THROW_HR(E_UNEXPECTED);
+    }
+
+    _ClearLastChar();
+
+    return true;
+}
+'''
+
+          source = source[:start] + replacement + source[end:]
+
+          forbidden = [
+              'case OscActionCodes::SetIconAndWindowTitle:',
+              'case OscActionCodes::SetWindowIcon:',
+              'case OscActionCodes::SetWindowTitle:',
+              'case OscActionCodes::DECSWT_SetWindowTitle:',
+              'case OscActionCodes::SetColor:',
+              'case OscActionCodes::SetForegroundColor:',
+              'case OscActionCodes::SetBackgroundColor:',
+              'case OscActionCodes::SetCursorColor:',
+              'case OscActionCodes::SetHighlightColor:',
+              'case OscActionCodes::SetClipboard:',
+              'case OscActionCodes::ResetColor:',
+              'case OscActionCodes::ResetForegroundColor:',
+              'case OscActionCodes::ResetBackgroundColor:',
+              'case OscActionCodes::ResetCursorColor:',
+              'case OscActionCodes::ResetHighlightColor:',
+              'case OscActionCodes::CurrentWorkingDirectory:',
+              'case OscActionCodes::Hyperlink:',
+              'case OscActionCodes::ConEmuAction:',
+              'case OscActionCodes::FinalTermAction:',
+              'case OscActionCodes::VsCodeAction:',
+              'case OscActionCodes::UrxvtAction:',
+              'case OscActionCodes::ITerm2Action:',
+              'case OscActionCodes::WTAction:',
+          ]
+          for needle in forbidden:
+              if needle in source:
+                  raise SystemExit(f'duplicate C++ OSC classification remains: {needle}')
+          if source.count('terminal_parser_ffi_output_osc_plan(static_cast<uint64_t>(parameter), &plan)') != 1:
+              raise SystemExit('OSC Rust route count mismatch')
+          if source.count(osc_include) != 1:
+              raise SystemExit('OSC include count mismatch')
+
+          path.write_text(source, encoding='utf-8', newline='')
+      - name: Remove staging workflow and commit transformed source
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm .github/workflows/r09-osc-route-temp.yml
+          git diff --check
+          git diff -- src/terminal/parser/OutputStateMachineEngine.cpp
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/terminal/parser/OutputStateMachineEngine.cpp .github/workflows/r09-osc-route-temp.yml
+          git commit -m "Route OSC classification through Rust"
+          git push origin HEAD:agent/r09-osc-route-20260914-1524
