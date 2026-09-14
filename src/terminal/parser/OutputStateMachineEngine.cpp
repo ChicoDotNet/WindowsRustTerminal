@@ -56,6 +56,7 @@
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_pop.h"
 #include "terminal_parser_ffi_output_csi_kitty_keyboard_set.h"
 #include "terminal_parser_ffi_output_dcs.h"
+#include "terminal_parser_ffi_output_osc.h"
 #include "../../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -1782,17 +1783,18 @@ IStateMachineEngine::StringHandler OutputStateMachineEngine::ActionDcsDispatch(c
 // - true if we handled the dispatch.
 bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const std::wstring_view string)
 {
-    switch (parameter)
+    terminal_parser_ffi_output_osc_plan_result plan{};
+    const auto status = terminal_parser_ffi_output_osc_plan(static_cast<uint64_t>(parameter), &plan);
+    THROW_HR_IF(E_UNEXPECTED, status != TERMINAL_PARSER_FFI_OK);
+
+    switch (plan.kind)
     {
-    case OscActionCodes::SetIconAndWindowTitle:
-    case OscActionCodes::SetWindowIcon:
-    case OscActionCodes::SetWindowTitle:
-    case OscActionCodes::DECSWT_SetWindowTitle:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_WINDOW_TITLE:
     {
         _dispatch->SetWindowTitle(string);
         break;
     }
-    case OscActionCodes::SetColor:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_COLOR_TABLE:
     {
         std::vector<size_t> tableIndexes;
         std::vector<DWORD> colors;
@@ -1814,10 +1816,7 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::SetForegroundColor:
-    case OscActionCodes::SetBackgroundColor:
-    case OscActionCodes::SetCursorColor:
-    case OscActionCodes::SetHighlightColor:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_DYNAMIC_COLOR:
     {
         std::vector<DWORD> colors;
         if (_GetOscSetColor(string, colors))
@@ -1838,7 +1837,7 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::SetClipboard:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_CLIPBOARD:
     {
         std::wstring setClipboardContent;
         auto queryClipboard = false;
@@ -1848,7 +1847,7 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::ResetColor:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_RESET_COLOR_TABLE:
     {
         if (string.empty())
         {
@@ -1871,10 +1870,7 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::ResetForegroundColor:
-    case OscActionCodes::ResetBackgroundColor:
-    case OscActionCodes::ResetCursorColor:
-    case OscActionCodes::ResetHighlightColor:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_RESET_DYNAMIC_COLOR:
     {
         // NOTE: xterm ignores the request if there's any parameters whereas VTE resets the provided index and ignores the rest
         if (string.empty())
@@ -1884,10 +1880,10 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::CurrentWorkingDirectory:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_SET_CURRENT_WORKING_DIRECTORY:
         _dispatch->SetCurrentWorkingDirectory(string);
         break;
-    case OscActionCodes::Hyperlink:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_HYPERLINK:
     {
         std::wstring params;
         std::wstring uri;
@@ -1904,37 +1900,39 @@ bool OutputStateMachineEngine::ActionOscDispatch(const size_t parameter, const s
         }
         break;
     }
-    case OscActionCodes::ConEmuAction:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_CONEMU_ACTION:
     {
         _dispatch->DoConEmuAction(string);
         break;
     }
-    case OscActionCodes::ITerm2Action:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_ITERM2_ACTION:
     {
         _dispatch->DoITerm2Action(string);
         break;
     }
-    case OscActionCodes::FinalTermAction:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_FINALTERM_ACTION:
     {
         _dispatch->DoFinalTermAction(string);
         break;
     }
-    case OscActionCodes::VsCodeAction:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_VSCODE_ACTION:
     {
         _dispatch->DoVsCodeAction(string);
         break;
     }
-    case OscActionCodes::WTAction:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_WT_ACTION:
     {
         _dispatch->DoWTAction(string);
         break;
     }
-    case OscActionCodes::UrxvtAction:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_URXVT_ACTION:
         _dispatch->DoUrxvtAction(string);
         break;
-    default:
+    case TERMINAL_PARSER_FFI_OUTPUT_OSC_NONE:
         _dispatch->UnknownSequence();
         break;
+    default:
+        THROW_HR(E_UNEXPECTED);
     }
 
     _ClearLastChar();
