@@ -86,6 +86,7 @@ on:
       - "tools/rust/Test-R09OutputCsiDecrqcraOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiRepOwnership.ps1"
       - "tools/rust/Test-R09OutputCsiDecpsOwnership.ps1"
+      - "tools/rust/Test-R09OutputDcsOwnership.ps1"
       - "tools/rust/Test-R09PtySignalReadPlanContract.ps1"
       - "tools/rust/Test-R09FzfOwnership.ps1"
       - "tools/rust/Test-R09WorkspaceRenameOwnership.ps1"
@@ -234,6 +235,9 @@ jobs:
       - name: Validate CSI DECPS ownership
         shell: pwsh
         run: ./tools/rust/Test-R09OutputCsiDecpsOwnership.ps1
+      - name: Validate DCS ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09OutputDcsOwnership.ps1
       - name: Validate PTY signal read-plan contract
         shell: pwsh
         run: ./tools/rust/Test-R09PtySignalReadPlanContract.ps1
@@ -258,4 +262,3 @@ jobs:
             artifacts/r09-product-build.log
             artifacts/r09-product-build.binlog
           if-no-files-found: warn
-          retention-days: 7
