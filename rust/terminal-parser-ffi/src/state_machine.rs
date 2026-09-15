@@ -16,6 +16,7 @@ pub type PrintCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
 pub type PrintStringCallback = unsafe extern "C" fn(*mut c_void, *const u16, usize) -> bool;
 pub type EscCallback = unsafe extern "C" fn(*mut c_void, u64) -> bool;
 pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
+pub type OscCallback = unsafe extern "C" fn(*mut c_void, i32, *const u16, usize) -> bool;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -26,6 +27,7 @@ pub struct StateMachineCallbacks {
     pub print_string: Option<PrintStringCallback>,
     pub esc: Option<EscCallback>,
     pub csi: Option<CsiCallback>,
+    pub osc: Option<OscCallback>,
 }
 
 struct CallbackEngine {
@@ -63,6 +65,11 @@ impl StateMachineEngine for CallbackEngine {
             present.push(u8::from(value.is_some()));
         }
         unsafe { callback(self.callbacks.user_data, id.value(), raw_values.as_ptr(), present.as_ptr(), raw_values.len()) }
+    }
+
+    fn action_osc_dispatch(&mut self, parameter: i32, text: &[u16]) -> bool {
+        let Some(callback) = self.callbacks.osc else { return false; };
+        unsafe { callback(self.callbacks.user_data, parameter, text.as_ptr(), text.len()) }
     }
 }
 
@@ -110,6 +117,7 @@ mod tests {
         executed: Vec<u16>,
         esc: Vec<u64>,
         csi: Vec<(u64, Vec<Option<i32>>)>,
+        osc: Vec<(i32, Vec<u16>)>,
     }
 
     unsafe extern "C" fn execute(context: *mut c_void, code_unit: u16) -> bool {
@@ -136,6 +144,12 @@ mod tests {
         true
     }
 
+    unsafe extern "C" fn osc(context: *mut c_void, parameter: i32, text: *const u16, len: usize) -> bool {
+        let text = unsafe { slice::from_raw_parts(text, len) };
+        unsafe { &mut *context.cast::<Witness>() }.osc.push((parameter, text.to_vec()));
+        true
+    }
+
     fn callbacks(witness: &mut Witness) -> StateMachineCallbacks {
         StateMachineCallbacks {
             user_data: (witness as *mut Witness).cast(),
@@ -144,6 +158,7 @@ mod tests {
             print_string: Some(print_string),
             esc: Some(esc),
             csi: Some(csi),
+            osc: Some(osc),
         }
     }
 
@@ -171,6 +186,22 @@ mod tests {
         let units = "\u{1b}7".encode_utf16().collect::<Vec<_>>();
         assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, units.as_ptr(), units.len()), FfiStatus::Ok);
         assert_eq!(witness.esc, vec![u64::from(b'7')]);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_routes_osc_dispatch_across_fragmented_writes() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+        for fragment in ["\u{1b}]", "2;window ", "title", "\u{7}"] {
+            let units = fragment.encode_utf16().collect::<Vec<_>>();
+            assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, units.as_ptr(), units.len()), FfiStatus::Ok);
+        }
+        assert_eq!(witness.osc.len(), 1);
+        assert_eq!(witness.osc[0].0, 2);
+        assert_eq!(String::from_utf16(&witness.osc[0].1).unwrap(), "window title");
         assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
     }
 
