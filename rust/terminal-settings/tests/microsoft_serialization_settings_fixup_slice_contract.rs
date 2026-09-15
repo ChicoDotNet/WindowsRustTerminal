@@ -1,6 +1,9 @@
 use terminal_settings::{
     serialization::SettingsDocument,
-    settings_fixup::{effective_profile_commandline, fixup_user_settings},
+    settings_fixup::{
+        CommandlineFixupPlan, commandline_fixup_plan, effective_profile_commandline,
+        fixup_user_settings,
+    },
 };
 
 #[test]
@@ -130,5 +133,60 @@ fn microsoft_serialization_fixup_commandline_patching_contract() {
             .expect("custom profile is valid")
             .as_deref(),
         Some("cmd.exe")
+    );
+}
+
+#[test]
+fn microsoft_commandline_fixup_plan_replays_clear_then_restore_contract() {
+    const CMD_GUID: &str = "{0caa0dad-35be-5f56-a8ff-afceeeaa6101}";
+    const POWERSHELL_GUID: &str = "{61c54bbd-c2c6-5271-96e7-009a87ff44bf}";
+    const CMD_FULL_PATH: &str = "%SystemRoot%\\System32\\cmd.exe";
+    const POWERSHELL_FULL_PATH: &str =
+        "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
+
+    assert_eq!(
+        commandline_fixup_plan(CMD_GUID, Some("cmd.exe"), Some(CMD_FULL_PATH)),
+        CommandlineFixupPlan::ClearOverride
+    );
+    assert_eq!(
+        commandline_fixup_plan(CMD_GUID, Some("CMD.EXE"), None),
+        CommandlineFixupPlan::RestoreCmdFullPath
+    );
+    assert_eq!(
+        commandline_fixup_plan(
+            POWERSHELL_GUID,
+            Some("PoWeRsHeLl.ExE"),
+            Some(POWERSHELL_FULL_PATH),
+        ),
+        CommandlineFixupPlan::ClearOverride
+    );
+    assert_eq!(
+        commandline_fixup_plan(POWERSHELL_GUID, Some("powershell.exe"), Some("pwsh.exe")),
+        CommandlineFixupPlan::RestorePowershellFullPath
+    );
+
+    // Microsoft only enters this fixup when the user explicitly supplied the
+    // legacy short commandline on the corresponding built-in profile.
+    assert_eq!(
+        commandline_fixup_plan(CMD_GUID, None, Some(CMD_FULL_PATH)),
+        CommandlineFixupPlan::None
+    );
+    assert_eq!(
+        commandline_fixup_plan(CMD_GUID, Some(CMD_FULL_PATH), Some(CMD_FULL_PATH)),
+        CommandlineFixupPlan::None
+    );
+    assert_eq!(
+        commandline_fixup_plan(
+            "{6239a42c-0000-49a3-80bd-e8fdd045185c}",
+            Some("cmd.exe"),
+            None,
+        ),
+        CommandlineFixupPlan::None
+    );
+
+    // The post-clear comparison in C++ is exact, not ASCII-insensitive.
+    assert_eq!(
+        commandline_fixup_plan(CMD_GUID, Some("cmd.exe"), Some("%SYSTEMROOT%\\System32\\cmd.exe")),
+        CommandlineFixupPlan::RestoreCmdFullPath
     );
 }

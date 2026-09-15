@@ -1,17 +1,17 @@
 {
   "schemaVersion": 2,
   "stage": "R07",
-  "description": "H08 machine-checks renderer ownership, method-level contract completeness, and source-content drift. Renderer has no standalone Microsoft TAEF suite, so this map binds all 50 Rust tests to audited C++ source families while preserving native paint-engine boundaries.",
+  "description": "H08 machine-checks renderer ownership, method-level contract completeness, and source-content drift. Renderer has no standalone Microsoft TAEF suite, so this map binds all 52 Rust tests to audited C++ source families while preserving native paint-engine boundaries.",
   "expected": {
     "split": 7,
     "native": 3,
-    "rustOwners": 12,
-    "rustWitnesses": 50,
+    "rustOwners": 13,
+    "rustWitnesses": 52,
     "sourceBlobs": 10,
     "contracts": {
       "Exact": 14,
       "Stronger": 1,
-      "Partial": 10
+      "Partial": 11
     }
   },
   "entries": [
@@ -158,15 +158,16 @@
     },
     {
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
-      "sourceBlob": "292f86faf6a05b7502ba3bb65bcb5ad8b63fb2b3",
+      "sourceBlob": "dbd4867d8d65890d9af5437ee31ff92b777267d9",
       "ownership": "split",
-      "nativeBoundary": "C++ retains color-table lookup, ColorFix adjustment, underline color and live renderer integration; Rust owns mode/reset/blink state plus deterministic dim/reverse/invisible/alpha post-processing.",
+      "nativeBoundary": "C++ retains color-table lookup, ColorFix execution, underline lookup/default fallback and live renderer integration; Rust owns mode/reset/blink state, deterministic contrast-adjustment eligibility, faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
       "sourcePatterns": [
         "RenderSettings::SetRenderMode",
         "RenderSettings::GetRenderMode",
         "RenderSettings::RestoreDefaultSettings",
         "RenderSettings::GetAttributeColors",
         "RenderSettings::GetAttributeColorsWithAlpha",
+        "RenderSettings::GetAttributeUnderlineColor",
         "RenderSettings::ToggleBlinkRendition"
       ],
       "contracts": [
@@ -188,12 +189,17 @@
         {
           "sourcePattern": "RenderSettings::GetAttributeColors",
           "coverage": "Partial",
-          "notes": "Rust owns dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix remain native."
+          "notes": "Rust owns contrast-adjustment eligibility, faint/blink dim selection plus deterministic dim/reverse/invisible post-processing; TextColor lookup, intense brightening and ColorFix execution remain native."
         },
         {
           "sourcePattern": "RenderSettings::GetAttributeColorsWithAlpha",
           "coverage": "Partial",
           "notes": "Rust owns deterministic alpha post-processing after color resolution; the underlying native color lookup remains C++."
+        },
+        {
+          "sourcePattern": "RenderSettings::GetAttributeUnderlineColor",
+          "coverage": "Partial",
+          "notes": "Rust owns contrast-adjustment eligibility and the deterministic rule that invisible text replaces an explicit underline with the resolved background; default-underline fallback, TextColor lookup and ColorFix execution remain native."
         },
         {
           "sourcePattern": "RenderSettings::ToggleBlinkRendition",
@@ -220,6 +226,13 @@
             "invisible_text_uses_the_final_background_as_foreground",
             "default_background_keeps_transparency_when_not_reversed_or_invisible",
             "custom_reversed_and_invisible_backgrounds_are_opaque"
+          ]
+        },
+        {
+          "rustPath": "rust/terminal-renderer/src/underline_color_policy.rs",
+          "rustWitnesses": [
+            "invisible_text_uses_background_for_explicit_underline",
+            "visible_text_preserves_explicit_underline"
           ]
         }
       ]

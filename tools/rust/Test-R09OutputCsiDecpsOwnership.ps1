@@ -1,0 +1,67 @@
+$ErrorActionPreference = 'Stop'
+
+$engine = Get-Content -Raw -LiteralPath 'src/terminal/parser/OutputStateMachineEngine.cpp'
+$ffi = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/src/output_csi_decps.rs'
+$header = Get-Content -Raw -LiteralPath 'rust/terminal-parser-ffi/include/terminal_parser_ffi_output_csi_decps.h'
+$owner = Get-Content -Raw -LiteralPath 'rust/terminal-parser/src/output_csi_decps.rs'
+$probe = Get-Content -Raw -LiteralPath 'tools/rust/R09OutputCsiDecpsAbiProbe.hpp'
+$runner = Get-Content -Raw -LiteralPath 'tools/rust/R09ControlCharacterAbiProbe.cpp'
+
+$requiredEngine = @(
+    '#include "terminal_parser_ffi_output_csi_decps.h"',
+    'terminal_parser_ffi_output_csi_decps_plan(',
+    'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS',
+    '_dispatch->PlaySounds(parameters);',
+    'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE',
+    '_dispatch->UnknownSequence();'
+)
+foreach ($needle in $requiredEngine) {
+    if (-not $engine.Contains($needle)) { throw "DECPS product route missing: $needle" }
+}
+if ($engine.Contains('case CsiActionCodes::DECPS_PlaySound:')) {
+    throw 'Legacy C++ DECPS classification still owns the product route.'
+}
+$decpsMarker = 'terminal_parser_ffi_output_csi_decps_result decpsPlan{};'
+$decpsStart = $engine.IndexOf($decpsMarker, [System.StringComparison]::Ordinal)
+if ($decpsStart -lt 0 -or $engine.IndexOf($decpsMarker, $decpsStart + $decpsMarker.Length, [System.StringComparison]::Ordinal) -ge 0) {
+    throw 'Expected exactly one DECPS product route marker.'
+}
+$unknown = '_dispatch->UnknownSequence();'
+$unknownStart = $engine.IndexOf($unknown, $decpsStart, [System.StringComparison]::Ordinal)
+if ($unknownStart -lt 0) { throw 'DECPS product route lost the unknown-sequence fallback.' }
+$decpsTail = $engine.Substring($decpsStart, ($unknownStart + $unknown.Length) - $decpsStart)
+if ($decpsTail.Contains('switch (id)')) {
+    throw 'Default-only legacy CSI switch shell remains after DECPS ownership transfer.'
+}
+
+$requiredOwner = @('DecpsAction', 'PlaySounds', 'VtId::from_ascii(",~")')
+foreach ($needle in $requiredOwner) {
+    if (-not $owner.Contains($needle)) { throw "DECPS Rust owner evidence missing: $needle" }
+}
+$requiredFfi = @('plan_decps', 'OutputCsiDecpsKind::PlaySounds', 'OutputCsiDecpsKind::None', 'InvalidArgument')
+foreach ($needle in $requiredFfi) {
+    if (-not $ffi.Contains($needle)) { throw "DECPS FFI evidence missing: $needle" }
+}
+$requiredAbi = @('TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE = 0', 'TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS = 1')
+foreach ($needle in $requiredAbi) {
+    if (-not $header.Contains($needle)) { throw "DECPS ABI evidence missing: $needle" }
+}
+if (-not $probe.Contains("expect_output_csi_decps_plan(`n                ',', '~', TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS)")) {
+    if (-not ($probe.Contains("',', '~'") -and $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_PLAY_SOUNDS'))) {
+        throw 'DECPS native positive witness missing.'
+    }
+}
+if (-not ($probe.Contains("',', '|'") -and $probe.Contains('TERMINAL_PARSER_FFI_OUTPUT_CSI_DECPS_NONE'))) {
+    throw 'DECPS native neighbor witness missing.'
+}
+if (-not $runner.Contains('#include "R09OutputCsiDecpsAbiProbe.hpp"')) {
+    throw 'DECPS aggregate native replay no longer includes the DECPS witness directly.'
+}
+if (-not $runner.Contains('const bool outputCsiDecpsOk = r09::output_csi_decps_replay();')) {
+    throw 'DECPS aggregate native replay no longer executes the DECPS witness directly.'
+}
+if (-not $runner.Contains('!outputCsiDecpsOk')) {
+    throw 'DECPS aggregate native replay no longer fails closed on the DECPS witness.'
+}
+
+Write-Host 'DECPS ownership gate passed.'

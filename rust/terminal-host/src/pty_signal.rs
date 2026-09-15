@@ -38,6 +38,30 @@ impl PtySignal {
     }
 }
 
+/// The deterministic read contract for one PTY signal frame.
+///
+/// Native code may own the pipe and the exact `ReadFile` calls, while this
+/// plan keeps the signal discriminator and required payload size under one
+/// Rust owner. That prevents an eventual C ABI seam from duplicating the wire
+/// table in C++.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PtySignalPlan {
+    pub signal: PtySignal,
+    pub payload_len: usize,
+}
+
+/// Classifies a PTY signal discriminator and returns its exact payload size.
+///
+/// # Errors
+/// Returns [`PtySignalError::UnknownSignal`] for unsupported signal values.
+pub fn plan_signal(bytes: [u8; 2]) -> Result<PtySignalPlan, PtySignalError> {
+    let signal = PtySignal::decode(bytes)?;
+    Ok(PtySignalPlan {
+        signal,
+        payload_len: signal.payload_len(),
+    })
+}
+
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct ResizeWindowData {
     pub columns: u16,
@@ -137,6 +161,39 @@ mod tests {
             PtySignal::decode([4, 0]),
             Err(PtySignalError::UnknownSignal(4))
         );
+    }
+
+    #[test]
+    fn signal_plan_owns_discriminator_and_payload_size() {
+        assert_eq!(
+            plan_signal([1, 0]),
+            Ok(PtySignalPlan {
+                signal: PtySignal::ShowHideWindow,
+                payload_len: 2,
+            })
+        );
+        assert_eq!(
+            plan_signal([2, 0]),
+            Ok(PtySignalPlan {
+                signal: PtySignal::ClearBuffer,
+                payload_len: 2,
+            })
+        );
+        assert_eq!(
+            plan_signal([3, 0]),
+            Ok(PtySignalPlan {
+                signal: PtySignal::SetParent,
+                payload_len: 8,
+            })
+        );
+        assert_eq!(
+            plan_signal([8, 0]),
+            Ok(PtySignalPlan {
+                signal: PtySignal::ResizeWindow,
+                payload_len: 4,
+            })
+        );
+        assert_eq!(plan_signal([4, 0]), Err(PtySignalError::UnknownSignal(4)));
     }
 
     #[test]

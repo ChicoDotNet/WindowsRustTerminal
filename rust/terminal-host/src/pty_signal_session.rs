@@ -5,7 +5,7 @@
 //! including clean EOF, truncated reads, and unexpected signal IDs. This module
 //! models that sequencing without owning a pipe, a thread, or any Win32 state.
 
-use crate::pty_signal::{PtySignal, PtySignalError, decode_payload};
+use crate::pty_signal::{PtySignal, PtySignalError, decode_payload, plan_signal};
 use crate::pty_signal_state::{PtySignalAction, PtySignalState};
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
@@ -52,8 +52,8 @@ pub fn process_transcript(state: &mut PtySignalState, mut bytes: &[u8]) -> PtySi
         }
 
         let raw = u16::from_le_bytes([bytes[0], bytes[1]]);
-        let signal = match PtySignal::decode([bytes[0], bytes[1]]) {
-            Ok(signal) => signal,
+        let plan = match plan_signal([bytes[0], bytes[1]]) {
+            Ok(plan) => plan,
             Err(PtySignalError::UnknownSignal(value)) => {
                 return result(actions, PtySignalSessionEnd::UnexpectedSignal(value));
             }
@@ -61,10 +61,11 @@ pub fn process_transcript(state: &mut PtySignalState, mut bytes: &[u8]) -> PtySi
                 return result(actions, PtySignalSessionEnd::UnexpectedSignal(raw));
             }
         };
-        debug_assert_eq!(raw, signal as u16);
+        debug_assert_eq!(raw, plan.signal as u16);
         bytes = &bytes[2..];
 
-        let expected = signal.payload_len();
+        let signal = plan.signal;
+        let expected = plan.payload_len;
         if bytes.len() < expected {
             return result(
                 actions,
