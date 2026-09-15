@@ -78,12 +78,8 @@ typedef struct terminal_parser_ffi_state_machine_handle terminal_parser_ffi_stat
 typedef bool (*terminal_parser_ffi_state_machine_execute_callback)(void* user_data, uint16_t code_unit);
 typedef bool (*terminal_parser_ffi_state_machine_print_callback)(void* user_data, uint16_t code_unit);
 typedef bool (*terminal_parser_ffi_state_machine_print_string_callback)(void* user_data, const uint16_t* text, size_t text_len);
-typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(
-    void* user_data,
-    uint64_t id,
-    const int32_t* values,
-    const uint8_t* present,
-    size_t parameter_count);
+typedef bool (*terminal_parser_ffi_state_machine_esc_callback)(void* user_data, uint64_t id);
+typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
 
 typedef struct terminal_parser_ffi_state_machine_callbacks
 {
@@ -91,17 +87,13 @@ typedef struct terminal_parser_ffi_state_machine_callbacks
     terminal_parser_ffi_state_machine_execute_callback execute;
     terminal_parser_ffi_state_machine_print_callback print;
     terminal_parser_ffi_state_machine_print_string_callback print_string;
+    terminal_parser_ffi_state_machine_esc_callback esc;
     terminal_parser_ffi_state_machine_csi_callback csi;
 } terminal_parser_ffi_state_machine_callbacks;
 
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
-terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(
-    const uint16_t* input,
-    size_t input_len,
-    uint16_t* output,
-    size_t output_capacity,
-    size_t* out_len);
+terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(const uint16_t* input, size_t input_len, uint16_t* output, size_t output_capacity, size_t* out_len);
 
 uint16_t terminal_parser_ffi_input_cursor_vkey(uint16_t final_character);
 uint16_t terminal_parser_ffi_input_generic_vkey(int32_t identifier);
@@ -110,36 +102,13 @@ uint32_t terminal_parser_ffi_input_vt_modifier_state(uint32_t modifier_parameter
 uint32_t terminal_parser_ffi_input_cursor_modifier_state(uint16_t final_character, uint32_t modifier_parameter);
 uint32_t terminal_parser_ffi_input_generic_modifier_state(int32_t identifier, uint32_t modifier_parameter);
 uint32_t terminal_parser_ffi_input_sgr_mouse_modifier_state(uint32_t encoding);
-terminal_parser_ffi_status terminal_parser_ffi_input_control_character_plan(
-    uint16_t code_unit,
-    uint32_t write_alt,
-    terminal_parser_ffi_control_character_plan* out_plan);
-terminal_parser_ffi_status terminal_parser_ffi_input_sgr_mouse_plan(
-    uint32_t previous_button_state,
-    uint32_t encoding,
-    uint32_t button_down,
-    terminal_parser_ffi_sgr_mouse_plan* out_plan);
-terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
-    uint32_t present_mask,
-    int32_t virtual_key,
-    int32_t scan_code,
-    int32_t unicode_char,
-    int32_t key_down,
-    int32_t control_key_state,
-    int32_t repeat_count,
-    terminal_parser_ffi_key_event* out_key);
-terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(
-    uint16_t code_unit,
-    terminal_parser_ffi_output_execute_result* out_plan);
-terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(
-    const terminal_parser_ffi_state_machine_callbacks* callbacks,
-    terminal_parser_ffi_state_machine_handle** out_handle);
-terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(
-    terminal_parser_ffi_state_machine_handle* handle,
-    const uint16_t* text,
-    size_t text_len);
-terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(
-    terminal_parser_ffi_state_machine_handle* handle);
+terminal_parser_ffi_status terminal_parser_ffi_input_control_character_plan(uint16_t code_unit, uint32_t write_alt, terminal_parser_ffi_control_character_plan* out_plan);
+terminal_parser_ffi_status terminal_parser_ffi_input_sgr_mouse_plan(uint32_t previous_button_state, uint32_t encoding, uint32_t button_down, terminal_parser_ffi_sgr_mouse_plan* out_plan);
+terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(uint32_t present_mask, int32_t virtual_key, int32_t scan_code, int32_t unicode_char, int32_t key_down, int32_t control_key_state, int32_t repeat_count, terminal_parser_ffi_key_event* out_key);
+terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(uint16_t code_unit, terminal_parser_ffi_output_execute_result* out_plan);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(terminal_parser_ffi_state_machine_handle* handle, const uint16_t* text, size_t text_len);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(terminal_parser_ffi_state_machine_handle* handle);
 
 #ifdef __cplusplus
 }
