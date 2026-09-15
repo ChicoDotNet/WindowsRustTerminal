@@ -81,6 +81,8 @@ typedef bool (*terminal_parser_ffi_state_machine_print_string_callback)(void* us
 typedef bool (*terminal_parser_ffi_state_machine_esc_callback)(void* user_data, uint64_t id);
 typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_osc_callback)(void* user_data, int32_t parameter, const uint16_t* text, size_t text_len);
+typedef bool (*terminal_parser_ffi_state_machine_dcs_dispatch_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
+typedef bool (*terminal_parser_ffi_state_machine_dcs_put_callback)(void* user_data, uint16_t code_unit);
 
 typedef struct terminal_parser_ffi_state_machine_callbacks
 {
@@ -91,6 +93,8 @@ typedef struct terminal_parser_ffi_state_machine_callbacks
     terminal_parser_ffi_state_machine_esc_callback esc;
     terminal_parser_ffi_state_machine_csi_callback csi;
     terminal_parser_ffi_state_machine_osc_callback osc;
+    terminal_parser_ffi_state_machine_dcs_dispatch_callback dcs_dispatch;
+    terminal_parser_ffi_state_machine_dcs_put_callback dcs_put;
 } terminal_parser_ffi_state_machine_callbacks;
 
 uint32_t terminal_parser_ffi_abi_version(void);
