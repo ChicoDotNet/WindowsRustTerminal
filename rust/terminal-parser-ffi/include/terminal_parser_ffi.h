@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -73,6 +74,26 @@ typedef struct terminal_parser_ffi_output_execute_result
     uint32_t argument;
 } terminal_parser_ffi_output_execute_result;
 
+typedef struct terminal_parser_ffi_state_machine_handle terminal_parser_ffi_state_machine_handle;
+typedef bool (*terminal_parser_ffi_state_machine_execute_callback)(void* user_data, uint16_t code_unit);
+typedef bool (*terminal_parser_ffi_state_machine_print_callback)(void* user_data, uint16_t code_unit);
+typedef bool (*terminal_parser_ffi_state_machine_print_string_callback)(void* user_data, const uint16_t* text, size_t text_len);
+typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(
+    void* user_data,
+    uint64_t id,
+    const int32_t* values,
+    const uint8_t* present,
+    size_t parameter_count);
+
+typedef struct terminal_parser_ffi_state_machine_callbacks
+{
+    void* user_data;
+    terminal_parser_ffi_state_machine_execute_callback execute;
+    terminal_parser_ffi_state_machine_print_callback print;
+    terminal_parser_ffi_state_machine_print_string_callback print_string;
+    terminal_parser_ffi_state_machine_csi_callback csi;
+} terminal_parser_ffi_state_machine_callbacks;
+
 uint32_t terminal_parser_ffi_abi_version(void);
 terminal_parser_ffi_status terminal_parser_ffi_status_probe(void);
 terminal_parser_ffi_status terminal_parser_ffi_base64_decode_utf16(
@@ -110,6 +131,15 @@ terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(
 terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(
     uint16_t code_unit,
     terminal_parser_ffi_output_execute_result* out_plan);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(
+    const terminal_parser_ffi_state_machine_callbacks* callbacks,
+    terminal_parser_ffi_state_machine_handle** out_handle);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(
+    terminal_parser_ffi_state_machine_handle* handle,
+    const uint16_t* text,
+    size_t text_len);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(
+    terminal_parser_ffi_state_machine_handle* handle);
 
 #ifdef __cplusplus
 }
