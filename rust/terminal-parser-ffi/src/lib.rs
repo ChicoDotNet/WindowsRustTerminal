@@ -61,6 +61,7 @@ mod output_vt52;
 mod pty_signal;
 mod render_attribute_colors;
 mod render_settings;
+mod state_machine;
 
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
