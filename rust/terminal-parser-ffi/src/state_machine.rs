@@ -17,6 +17,8 @@ pub type PrintStringCallback = unsafe extern "C" fn(*mut c_void, *const u16, usi
 pub type EscCallback = unsafe extern "C" fn(*mut c_void, u64) -> bool;
 pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
 pub type OscCallback = unsafe extern "C" fn(*mut c_void, i32, *const u16, usize) -> bool;
+pub type DcsDispatchCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
+pub type DcsPutCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -28,6 +30,19 @@ pub struct StateMachineCallbacks {
     pub esc: Option<EscCallback>,
     pub csi: Option<CsiCallback>,
     pub osc: Option<OscCallback>,
+    pub dcs_dispatch: Option<DcsDispatchCallback>,
+    pub dcs_put: Option<DcsPutCallback>,
+}
+
+fn raw_parameters(parameters: &Parameters) -> (Vec<i32>, Vec<u8>) {
+    let values = parameters.values();
+    let mut raw_values = Vec::with_capacity(values.len());
+    let mut present = Vec::with_capacity(values.len());
+    for value in values {
+        raw_values.push(value.unwrap_or_default());
+        present.push(u8::from(value.is_some()));
+    }
+    (raw_values, present)
 }
 
 struct CallbackEngine {
@@ -57,19 +72,24 @@ impl StateMachineEngine for CallbackEngine {
 
     fn action_csi_dispatch(&mut self, id: VtId, parameters: &Parameters) -> bool {
         let Some(callback) = self.callbacks.csi else { return false; };
-        let values = parameters.values();
-        let mut raw_values = Vec::with_capacity(values.len());
-        let mut present = Vec::with_capacity(values.len());
-        for value in values {
-            raw_values.push(value.unwrap_or_default());
-            present.push(u8::from(value.is_some()));
-        }
+        let (raw_values, present) = raw_parameters(parameters);
         unsafe { callback(self.callbacks.user_data, id.value(), raw_values.as_ptr(), present.as_ptr(), raw_values.len()) }
     }
 
     fn action_osc_dispatch(&mut self, parameter: i32, text: &[u16]) -> bool {
         let Some(callback) = self.callbacks.osc else { return false; };
         unsafe { callback(self.callbacks.user_data, parameter, text.as_ptr(), text.len()) }
+    }
+
+    fn action_dcs_dispatch(&mut self, id: VtId, parameters: &Parameters) -> bool {
+        let Some(callback) = self.callbacks.dcs_dispatch else { return false; };
+        let (raw_values, present) = raw_parameters(parameters);
+        unsafe { callback(self.callbacks.user_data, id.value(), raw_values.as_ptr(), present.as_ptr(), raw_values.len()) }
+    }
+
+    fn action_dcs_put(&mut self, code_unit: u16) -> bool {
+        let Some(callback) = self.callbacks.dcs_put else { return false; };
+        unsafe { callback(self.callbacks.user_data, code_unit) }
     }
 }
 
@@ -118,6 +138,9 @@ mod tests {
         esc: Vec<u64>,
         csi: Vec<(u64, Vec<Option<i32>>)>,
         osc: Vec<(i32, Vec<u16>)>,
+        dcs: Vec<(u64, Vec<Option<i32>>)>,
+        dcs_data: Vec<u16>,
+        accept_dcs: bool,
     }
 
     unsafe extern "C" fn execute(context: *mut c_void, code_unit: u16) -> bool {
@@ -136,10 +159,14 @@ mod tests {
         true
     }
 
-    unsafe extern "C" fn csi(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool {
+    unsafe fn decode_parameters(values: *const i32, present: *const u8, len: usize) -> Vec<Option<i32>> {
         let values = unsafe { slice::from_raw_parts(values, len) };
         let present = unsafe { slice::from_raw_parts(present, len) };
-        let parameters = values.iter().zip(present).map(|(&value, &is_present)| (is_present != 0).then_some(value)).collect();
+        values.iter().zip(present).map(|(&value, &is_present)| (is_present != 0).then_some(value)).collect()
+    }
+
+    unsafe extern "C" fn csi(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool {
+        let parameters = unsafe { decode_parameters(values, present, len) };
         unsafe { &mut *context.cast::<Witness>() }.csi.push((id, parameters));
         true
     }
@@ -147,6 +174,18 @@ mod tests {
     unsafe extern "C" fn osc(context: *mut c_void, parameter: i32, text: *const u16, len: usize) -> bool {
         let text = unsafe { slice::from_raw_parts(text, len) };
         unsafe { &mut *context.cast::<Witness>() }.osc.push((parameter, text.to_vec()));
+        true
+    }
+
+    unsafe extern "C" fn dcs_dispatch(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool {
+        let parameters = unsafe { decode_parameters(values, present, len) };
+        let witness = unsafe { &mut *context.cast::<Witness>() };
+        witness.dcs.push((id, parameters));
+        witness.accept_dcs
+    }
+
+    unsafe extern "C" fn dcs_put(context: *mut c_void, code_unit: u16) -> bool {
+        unsafe { &mut *context.cast::<Witness>() }.dcs_data.push(code_unit);
         true
     }
 
@@ -159,6 +198,8 @@ mod tests {
             esc: Some(esc),
             csi: Some(csi),
             osc: Some(osc),
+            dcs_dispatch: Some(dcs_dispatch),
+            dcs_put: Some(dcs_put),
         }
     }
 
@@ -203,6 +244,27 @@ mod tests {
         assert_eq!(witness.osc[0].0, 2);
         assert_eq!(String::from_utf16(&witness.osc[0].1).unwrap(), "window title");
         assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_routes_dcs_put_only_when_dispatch_accepts_handler() {
+        for accept_dcs in [false, true] {
+            let mut witness = Witness { accept_dcs, ..Witness::default() };
+            let callbacks = callbacks(&mut witness);
+            let mut handle = ptr::null_mut();
+            assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+            for fragment in ["\u{1b}P1;", "2qpay", "load", "\u{1b}\\"] {
+                let units = fragment.encode_utf16().collect::<Vec<_>>();
+                assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, units.as_ptr(), units.len()), FfiStatus::Ok);
+            }
+            assert_eq!(witness.dcs, vec![(u64::from(b'q'), vec![Some(1), Some(2)])]);
+            if accept_dcs {
+                assert_eq!(String::from_utf16(&witness.dcs_data).unwrap(), "payload");
+            } else {
+                assert!(witness.dcs_data.is_empty());
+            }
+            assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+        }
     }
 
     #[test]
