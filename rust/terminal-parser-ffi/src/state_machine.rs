@@ -7,7 +7,7 @@
 
 use std::{ffi::c_void, ptr, slice};
 
-use terminal_parser::state_machine::{Parameters, StateMachine, StateMachineEngine, VtId};
+use terminal_parser::state_machine::{Parameters, ParserMode, StateMachine, StateMachineEngine, VtId};
 
 use crate::{FfiStatus, ffi_guard};
 
@@ -19,6 +19,17 @@ pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const
 pub type OscCallback = unsafe extern "C" fn(*mut c_void, i32, *const u16, usize) -> bool;
 pub type DcsDispatchCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
 pub type DcsPutCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
+
+const PARSER_MODE_ACCEPT_C1: u32 = 0;
+const PARSER_MODE_ANSI: u32 = 1;
+
+fn parser_mode(mode: u32) -> Option<ParserMode> {
+    match mode {
+        PARSER_MODE_ACCEPT_C1 => Some(ParserMode::AcceptC1),
+        PARSER_MODE_ANSI => Some(ParserMode::Ansi),
+        _ => None,
+    }
+}
 
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -109,6 +120,16 @@ pub extern "C" fn terminal_parser_ffi_state_machine_create(callbacks: *const Sta
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_parser_mode(handle: *mut StateMachineHandle, mode: u32, enabled: u32) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() || enabled > 1 { return FfiStatus::InvalidArgument; }
+        let Some(mode) = parser_mode(mode) else { return FfiStatus::InvalidArgument; };
+        unsafe { &mut *handle }.machine.set_parser_mode(mode, enabled != 0);
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_state_machine_process_utf16(handle: *mut StateMachineHandle, text: *const u16, text_len: usize) -> FfiStatus {
     ffi_guard(|| {
         if handle.is_null() || (text.is_null() && text_len != 0) { return FfiStatus::InvalidArgument; }
@@ -182,6 +203,33 @@ mod tests {
             if accept_dcs { assert_eq!(witness.dcs_data, "payload\u{1b}".encode_utf16().collect::<Vec<_>>()); } else { assert!(witness.dcs_data.is_empty()); }
             assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
         }
+    }
+
+    #[test]
+    fn stateful_ffi_exposes_accept_c1_without_changing_default_output_mode() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+        let csi_c1 = [0x009b, u16::from(b'H')];
+        assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, csi_c1.as_ptr(), csi_c1.len()), FfiStatus::Ok);
+        assert!(witness.csi.is_empty());
+        assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, PARSER_MODE_ACCEPT_C1, 1), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, csi_c1.as_ptr(), csi_c1.len()), FfiStatus::Ok);
+        assert_eq!(witness.csi, vec![(u64::from(b'H'), vec![])]);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_parser_modes_fail_closed_on_invalid_arguments() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, 99, 1), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, PARSER_MODE_ANSI, 2), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(ptr::null_mut(), PARSER_MODE_ACCEPT_C1, 1), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
     }
 
     #[test]
