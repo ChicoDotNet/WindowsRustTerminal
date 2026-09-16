@@ -84,6 +84,7 @@ typedef struct terminal_parser_ffi_state_machine_handle terminal_parser_ffi_stat
 typedef bool (*terminal_parser_ffi_state_machine_execute_callback)(void* user_data, uint16_t code_unit);
 typedef bool (*terminal_parser_ffi_state_machine_print_callback)(void* user_data, uint16_t code_unit);
 typedef bool (*terminal_parser_ffi_state_machine_print_string_callback)(void* user_data, const uint16_t* text, size_t text_len);
+typedef bool (*terminal_parser_ffi_state_machine_pass_through_callback)(void* user_data, const uint16_t* text, size_t text_len);
 typedef bool (*terminal_parser_ffi_state_machine_esc_callback)(void* user_data, uint64_t id);
 typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_osc_callback)(void* user_data, int32_t parameter, const uint16_t* text, size_t text_len);
@@ -120,7 +121,9 @@ terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(uint32_t p
 terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(uint16_t code_unit, terminal_parser_ffi_output_execute_result* out_plan);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_parser_mode(terminal_parser_ffi_state_machine_handle* handle, uint32_t mode, uint32_t enabled);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_pass_through_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_pass_through_callback callback);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(terminal_parser_ffi_state_machine_handle* handle, const uint16_t* text, size_t text_len);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_flush_to_terminal(terminal_parser_ffi_state_machine_handle* handle);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(terminal_parser_ffi_state_machine_handle* handle);
 
 #ifdef __cplusplus
