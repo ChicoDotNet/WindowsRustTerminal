@@ -14,6 +14,7 @@ use crate::{FfiStatus, ffi_guard};
 pub type ExecuteCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
 pub type PrintCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
 pub type PrintStringCallback = unsafe extern "C" fn(*mut c_void, *const u16, usize) -> bool;
+pub type PassThroughCallback = unsafe extern "C" fn(*mut c_void, *const u16, usize) -> bool;
 pub type EscCallback = unsafe extern "C" fn(*mut c_void, u64) -> bool;
 pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
 pub type OscCallback = unsafe extern "C" fn(*mut c_void, i32, *const u16, usize) -> bool;
@@ -58,6 +59,7 @@ fn raw_parameters(parameters: &Parameters) -> (Vec<i32>, Vec<u8>) {
 
 struct CallbackEngine {
     callbacks: StateMachineCallbacks,
+    pass_through: Option<PassThroughCallback>,
 }
 
 impl StateMachineEngine for CallbackEngine {
@@ -73,6 +75,11 @@ impl StateMachineEngine for CallbackEngine {
 
     fn action_print_string(&mut self, text: &[u16]) -> bool {
         let Some(callback) = self.callbacks.print_string else { return false; };
+        unsafe { callback(self.callbacks.user_data, text.as_ptr(), text.len()) }
+    }
+
+    fn action_pass_through_string(&mut self, text: &[u16]) -> bool {
+        let Some(callback) = self.pass_through else { return false; };
         unsafe { callback(self.callbacks.user_data, text.as_ptr(), text.len()) }
     }
 
@@ -113,7 +120,7 @@ pub extern "C" fn terminal_parser_ffi_state_machine_create(callbacks: *const Sta
     ffi_guard(|| {
         if callbacks.is_null() || out_handle.is_null() { return FfiStatus::InvalidArgument; }
         let callbacks = unsafe { ptr::read(callbacks) };
-        let handle = Box::new(StateMachineHandle { machine: StateMachine::new(CallbackEngine { callbacks }) });
+        let handle = Box::new(StateMachineHandle { machine: StateMachine::new(CallbackEngine { callbacks, pass_through: None }) });
         unsafe { ptr::write(out_handle, Box::into_raw(handle)) };
         FfiStatus::Ok
     })
@@ -130,11 +137,29 @@ pub extern "C" fn terminal_parser_ffi_state_machine_set_parser_mode(handle: *mut
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_pass_through_callback(handle: *mut StateMachineHandle, callback: Option<PassThroughCallback>) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        unsafe { &mut *handle }.machine.engine_mut().pass_through = callback;
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_state_machine_process_utf16(handle: *mut StateMachineHandle, text: *const u16, text_len: usize) -> FfiStatus {
     ffi_guard(|| {
         if handle.is_null() || (text.is_null() && text_len != 0) { return FfiStatus::InvalidArgument; }
         let text = if text_len == 0 { &[] } else { unsafe { slice::from_raw_parts(text, text_len) } };
         unsafe { &mut *handle }.machine.process_utf16(text);
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_flush_to_terminal(handle: *mut StateMachineHandle) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        let _ = unsafe { &mut *handle }.machine.flush_to_terminal();
         FfiStatus::Ok
     })
 }
@@ -161,11 +186,13 @@ mod tests {
         osc: Vec<(i32, Vec<u16>)>,
         dcs: Vec<(u64, Vec<Option<i32>>)>,
         dcs_data: Vec<u16>,
+        passed_through: Vec<u16>,
         accept_dcs: bool,
     }
 
     unsafe extern "C" fn execute(context: *mut c_void, code_unit: u16) -> bool { unsafe { &mut *context.cast::<Witness>() }.executed.push(code_unit); true }
     unsafe extern "C" fn print_string(context: *mut c_void, text: *const u16, len: usize) -> bool { let text = unsafe { slice::from_raw_parts(text, len) }; unsafe { &mut *context.cast::<Witness>() }.printed.extend_from_slice(text); true }
+    unsafe extern "C" fn pass_through(context: *mut c_void, text: *const u16, len: usize) -> bool { let text = unsafe { slice::from_raw_parts(text, len) }; unsafe { &mut *context.cast::<Witness>() }.passed_through.extend_from_slice(text); true }
     unsafe extern "C" fn esc(context: *mut c_void, id: u64) -> bool { unsafe { &mut *context.cast::<Witness>() }.esc.push(id); true }
     unsafe fn decode_parameters(values: *const i32, present: *const u8, len: usize) -> Vec<Option<i32>> { let values = unsafe { slice::from_raw_parts(values, len) }; let present = unsafe { slice::from_raw_parts(present, len) }; values.iter().zip(present).map(|(&value, &is_present)| (is_present != 0).then_some(value)).collect() }
     unsafe extern "C" fn csi(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool { let parameters = unsafe { decode_parameters(values, present, len) }; unsafe { &mut *context.cast::<Witness>() }.csi.push((id, parameters)); true }
@@ -203,6 +230,26 @@ mod tests {
             if accept_dcs { assert_eq!(witness.dcs_data, "payload\u{1b}".encode_utf16().collect::<Vec<_>>()); } else { assert!(witness.dcs_data.is_empty()); }
             assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
         }
+    }
+
+    #[test]
+    fn stateful_ffi_exposes_pass_through_recovery_without_changing_callback_layout() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_pass_through_callback(handle, Some(pass_through)), FfiStatus::Ok);
+        let fragment = "\u{1b}[12;".encode_utf16().collect::<Vec<_>>();
+        assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, fragment.as_ptr(), fragment.len()), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_flush_to_terminal(handle), FfiStatus::Ok);
+        assert_eq!(witness.passed_through, fragment);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_pass_through_operations_fail_closed_on_invalid_handles() {
+        assert_eq!(terminal_parser_ffi_state_machine_set_pass_through_callback(ptr::null_mut(), Some(pass_through)), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_flush_to_terminal(ptr::null_mut()), FfiStatus::InvalidArgument);
     }
 
     #[test]
