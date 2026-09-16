@@ -18,6 +18,12 @@ typedef enum terminal_parser_ffi_status
     TERMINAL_PARSER_FFI_PANIC = 255,
 } terminal_parser_ffi_status;
 
+typedef enum terminal_parser_ffi_parser_mode
+{
+    TERMINAL_PARSER_FFI_PARSER_MODE_ACCEPT_C1 = 0,
+    TERMINAL_PARSER_FFI_PARSER_MODE_ANSI = 1,
+} terminal_parser_ffi_parser_mode;
+
 typedef enum terminal_parser_ffi_control_character_kind
 {
     TERMINAL_PARSER_FFI_CONTROL_CHARACTER_PRINT = 0,
@@ -113,6 +119,7 @@ terminal_parser_ffi_status terminal_parser_ffi_input_sgr_mouse_plan(uint32_t pre
 terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(uint32_t present_mask, int32_t virtual_key, int32_t scan_code, int32_t unicode_char, int32_t key_down, int32_t control_key_state, int32_t repeat_count, terminal_parser_ffi_key_event* out_key);
 terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(uint16_t code_unit, terminal_parser_ffi_output_execute_result* out_plan);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_parser_mode(terminal_parser_ffi_state_machine_handle* handle, uint32_t mode, uint32_t enabled);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(terminal_parser_ffi_state_machine_handle* handle, const uint16_t* text, size_t text_len);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(terminal_parser_ffi_state_machine_handle* handle);
 
