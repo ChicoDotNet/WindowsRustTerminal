@@ -2,6 +2,7 @@ AAAAZ
 AAZZZ
 ABG
 ENH
+FINALTERM
 KLMNOPQRSTUVWXY
 KLMNOPQRSTY
 MNOPQRSTUVWXY
@@ -21,6 +22,7 @@ dececm
 decera
 decinvm
 decmac
+decps
 decrqtsr
 decsca
 decscusr
@@ -45,6 +47,7 @@ peekable
 preexisting
 problema
 psobject
+qpay
 retargeting
 rlib
 rposition
