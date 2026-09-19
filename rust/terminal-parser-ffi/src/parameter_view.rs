@@ -80,7 +80,7 @@ mod tests {
         }
     }
 
-    fn expected() -> ParameterView {
+    fn expected_lossless() -> ParameterView {
         ParameterView {
             values: vec![1, 4],
             present: vec![1, 1],
@@ -91,24 +91,43 @@ mod tests {
         }
     }
 
+    fn expected_flat() -> ParameterView {
+        ParameterView {
+            values: vec![1, 0, 4],
+            present: vec![1, 0, 1],
+            sub_values: vec![],
+            sub_present: vec![],
+            sub_offsets: vec![0, 0, 0],
+            sub_counts: vec![0, 0, 0],
+        }
+    }
+
     #[test]
     fn lossless_view_preserves_csi_subparameters_and_omissions() {
         let mut machine = StateMachine::new(Witness::default());
         machine.process_utf16(&"\u{1b}[1:2::3;4:5m".encode_utf16().collect::<Vec<_>>());
-        assert_eq!(machine.engine().csi.as_ref(), Some(&expected()));
+        assert_eq!(machine.engine().csi.as_ref(), Some(&expected_lossless()));
     }
 
     #[test]
-    fn lossless_view_preserves_dcs_subparameters_and_omissions() {
-        let mut machine = StateMachine::new(Witness::default());
-        machine.process_utf16(&"\u{1b}P1:2::3;4:5q".encode_utf16().collect::<Vec<_>>());
-        assert_eq!(machine.engine().dcs.as_ref(), Some(&expected()));
+    fn dcs_parser_rejects_subparameter_grammar_but_preserves_flat_omissions() {
+        let mut rejected = StateMachine::new(Witness::default());
+        rejected.process_utf16(&"\u{1b}P1:2::3;4:5q".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(rejected.engine().dcs, None);
+
+        let mut accepted = StateMachine::new(Witness::default());
+        accepted.process_utf16(&"\u{1b}P1;;4q".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(accepted.engine().dcs.as_ref(), Some(&expected_flat()));
     }
 
     #[test]
-    fn lossless_view_preserves_ss3_subparameters_and_omissions() {
-        let mut machine = StateMachine::new_input(Witness::default());
-        machine.process_utf16(&"\u{1b}O1:2::3;4:5A".encode_utf16().collect::<Vec<_>>());
-        assert_eq!(machine.engine().ss3.as_ref(), Some(&expected()));
+    fn ss3_parser_rejects_subparameter_grammar_but_preserves_flat_omissions() {
+        let mut rejected = StateMachine::new_input(Witness::default());
+        rejected.process_utf16(&"\u{1b}O1:2::3;4:5A".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(rejected.engine().ss3, None);
+
+        let mut accepted = StateMachine::new_input(Witness::default());
+        accepted.process_utf16(&"\u{1b}O1;;4A".encode_utf16().collect::<Vec<_>>());
+        assert_eq!(accepted.engine().ss3.as_ref(), Some(&expected_flat()));
     }
 }
