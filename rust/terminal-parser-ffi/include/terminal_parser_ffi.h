@@ -86,6 +86,9 @@ typedef bool (*terminal_parser_ffi_state_machine_print_callback)(void* user_data
 typedef bool (*terminal_parser_ffi_state_machine_print_string_callback)(void* user_data, const uint16_t* text, size_t text_len);
 typedef bool (*terminal_parser_ffi_state_machine_pass_through_callback)(void* user_data, const uint16_t* text, size_t text_len);
 typedef bool (*terminal_parser_ffi_state_machine_esc_callback)(void* user_data, uint64_t id);
+typedef bool (*terminal_parser_ffi_state_machine_execute_from_escape_callback)(void* user_data, uint16_t code_unit);
+typedef bool (*terminal_parser_ffi_state_machine_vt52_esc_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
+typedef bool (*terminal_parser_ffi_state_machine_ss3_callback)(void* user_data, uint16_t code_unit, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_osc_callback)(void* user_data, int32_t parameter, const uint16_t* text, size_t text_len);
 typedef bool (*terminal_parser_ffi_state_machine_dcs_dispatch_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
@@ -120,8 +123,12 @@ terminal_parser_ffi_status terminal_parser_ffi_input_sgr_mouse_plan(uint32_t pre
 terminal_parser_ffi_status terminal_parser_ffi_input_win32_key_fields(uint32_t present_mask, int32_t virtual_key, int32_t scan_code, int32_t unicode_char, int32_t key_down, int32_t control_key_state, int32_t repeat_count, terminal_parser_ffi_key_event* out_key);
 terminal_parser_ffi_status terminal_parser_ffi_output_execute_plan(uint16_t code_unit, terminal_parser_ffi_output_execute_result* out_plan);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_create_input(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_parser_mode(terminal_parser_ffi_state_machine_handle* handle, uint32_t mode, uint32_t enabled);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_pass_through_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_pass_through_callback callback);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_execute_from_escape_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_execute_from_escape_callback callback);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_vt52_esc_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_vt52_esc_callback callback);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_ss3_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_ss3_callback callback);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_process_utf16(terminal_parser_ffi_state_machine_handle* handle, const uint16_t* text, size_t text_len);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_flush_to_terminal(terminal_parser_ffi_state_machine_handle* handle);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_destroy(terminal_parser_ffi_state_machine_handle* handle);
