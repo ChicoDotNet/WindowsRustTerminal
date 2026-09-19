@@ -58,6 +58,7 @@ mod output_esc;
 mod output_execute;
 mod output_osc;
 mod output_vt52;
+mod parameter_view;
 mod pty_signal;
 mod render_attribute_colors;
 mod render_settings;
@@ -207,64 +208,30 @@ mod tests {
 
     #[test]
     fn decode_errors_have_stable_status_mapping() {
-        assert_eq!(
-            FfiStatus::from(DecodeError::InvalidBase64),
-            FfiStatus::InvalidBase64
-        );
-        assert_eq!(
-            FfiStatus::from(DecodeError::InvalidUtf8),
-            FfiStatus::InvalidUtf8
-        );
+        assert_eq!(FfiStatus::from(DecodeError::InvalidBase64), FfiStatus::InvalidBase64);
+        assert_eq!(FfiStatus::from(DecodeError::InvalidUtf8), FfiStatus::InvalidUtf8);
     }
 
     #[test]
     fn ffi_guard_returns_status_without_translation() {
         assert_eq!(ffi_guard(|| FfiStatus::Ok), FfiStatus::Ok);
-        assert_eq!(
-            ffi_guard(|| FfiStatus::InvalidArgument),
-            FfiStatus::InvalidArgument
-        );
+        assert_eq!(ffi_guard(|| FfiStatus::InvalidArgument), FfiStatus::InvalidArgument);
     }
 
     #[test]
     fn ffi_guard_contains_panics() {
-        assert_eq!(
-            ffi_guard(|| panic!("panic must not cross the C ABI")),
-            FfiStatus::Panic
-        );
+        assert_eq!(ffi_guard(|| panic!("panic must not cross the C ABI")), FfiStatus::Panic);
     }
 
     #[test]
     fn base64_ffi_uses_caller_owned_utf16_buffers() {
-        let encoded = "44Gr44G744KT44GU5rGJ6K+t7ZWc6rWt"
-            .encode_utf16()
-            .collect::<Vec<_>>();
+        let encoded = "44Gr44G744KT44GU5rGJ6K+t7ZWc6rWt".encode_utf16().collect::<Vec<_>>();
         let expected = "にほんご汉语한국";
         let mut required = 0usize;
-
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                encoded.as_ptr(),
-                encoded.len(),
-                std::ptr::null_mut(),
-                0,
-                &mut required,
-            ),
-            FfiStatus::BufferTooSmall
-        );
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(encoded.as_ptr(), encoded.len(), std::ptr::null_mut(), 0, &mut required), FfiStatus::BufferTooSmall);
         assert_eq!(required, expected.encode_utf16().count());
-
         let mut output = vec![0u16; required];
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                encoded.as_ptr(),
-                encoded.len(),
-                output.as_mut_ptr(),
-                output.len(),
-                &mut required,
-            ),
-            FfiStatus::Ok
-        );
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(encoded.as_ptr(), encoded.len(), output.as_mut_ptr(), output.len(), &mut required), FfiStatus::Ok);
         assert_eq!(String::from_utf16(&output).unwrap(), expected);
     }
 
@@ -272,52 +239,15 @@ mod tests {
     fn base64_ffi_preserves_error_classification_and_validates_pointers() {
         let invalid = "A".encode_utf16().collect::<Vec<_>>();
         let mut required = usize::MAX;
-
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                invalid.as_ptr(),
-                invalid.len(),
-                std::ptr::null_mut(),
-                0,
-                &mut required,
-            ),
-            FfiStatus::InvalidBase64
-        );
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                std::ptr::null(),
-                1,
-                std::ptr::null_mut(),
-                0,
-                &mut required,
-            ),
-            FfiStatus::InvalidArgument
-        );
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                std::ptr::null(),
-                0,
-                std::ptr::null_mut(),
-                0,
-                std::ptr::null_mut(),
-            ),
-            FfiStatus::InvalidArgument
-        );
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(invalid.as_ptr(), invalid.len(), std::ptr::null_mut(), 0, &mut required), FfiStatus::InvalidBase64);
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 1, std::ptr::null_mut(), 0, &mut required), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 0, std::ptr::null_mut(), 0, std::ptr::null_mut()), FfiStatus::InvalidArgument);
     }
 
     #[test]
     fn base64_ffi_handles_empty_output_without_requiring_a_buffer() {
         let mut required = usize::MAX;
-        assert_eq!(
-            terminal_parser_ffi_base64_decode_utf16(
-                std::ptr::null(),
-                0,
-                std::ptr::null_mut(),
-                0,
-                &mut required,
-            ),
-            FfiStatus::Ok
-        );
+        assert_eq!(terminal_parser_ffi_base64_decode_utf16(std::ptr::null(), 0, std::ptr::null_mut(), 0, &mut required), FfiStatus::Ok);
         assert_eq!(required, 0);
     }
 }
