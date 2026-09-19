@@ -16,6 +16,9 @@ pub type PrintCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
 pub type PrintStringCallback = unsafe extern "C" fn(*mut c_void, *const u16, usize) -> bool;
 pub type PassThroughCallback = unsafe extern "C" fn(*mut c_void, *const u16, usize) -> bool;
 pub type EscCallback = unsafe extern "C" fn(*mut c_void, u64) -> bool;
+pub type ExecuteFromEscapeCallback = unsafe extern "C" fn(*mut c_void, u16) -> bool;
+pub type Vt52EscCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
+pub type Ss3Callback = unsafe extern "C" fn(*mut c_void, u16, *const i32, *const u8, usize) -> bool;
 pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
 pub type OscCallback = unsafe extern "C" fn(*mut c_void, i32, *const u16, usize) -> bool;
 pub type DcsDispatchCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
@@ -60,11 +63,19 @@ fn raw_parameters(parameters: &Parameters) -> (Vec<i32>, Vec<u8>) {
 struct CallbackEngine {
     callbacks: StateMachineCallbacks,
     pass_through: Option<PassThroughCallback>,
+    execute_from_escape: Option<ExecuteFromEscapeCallback>,
+    vt52_esc: Option<Vt52EscCallback>,
+    ss3: Option<Ss3Callback>,
 }
 
 impl StateMachineEngine for CallbackEngine {
     fn action_execute(&mut self, code_unit: u16) -> bool {
         let Some(callback) = self.callbacks.execute else { return false; };
+        unsafe { callback(self.callbacks.user_data, code_unit) }
+    }
+
+    fn action_execute_from_escape(&mut self, code_unit: u16) -> bool {
+        let Some(callback) = self.execute_from_escape else { return false; };
         unsafe { callback(self.callbacks.user_data, code_unit) }
     }
 
@@ -88,6 +99,12 @@ impl StateMachineEngine for CallbackEngine {
         unsafe { callback(self.callbacks.user_data, id.value()) }
     }
 
+    fn action_vt52_esc_dispatch(&mut self, id: VtId, parameters: &Parameters) -> bool {
+        let Some(callback) = self.vt52_esc else { return false; };
+        let (raw_values, present) = raw_parameters(parameters);
+        unsafe { callback(self.callbacks.user_data, id.value(), raw_values.as_ptr(), present.as_ptr(), raw_values.len()) }
+    }
+
     fn action_csi_dispatch(&mut self, id: VtId, parameters: &Parameters) -> bool {
         let Some(callback) = self.callbacks.csi else { return false; };
         let (raw_values, present) = raw_parameters(parameters);
@@ -97,6 +114,12 @@ impl StateMachineEngine for CallbackEngine {
     fn action_osc_dispatch(&mut self, parameter: i32, text: &[u16]) -> bool {
         let Some(callback) = self.callbacks.osc else { return false; };
         unsafe { callback(self.callbacks.user_data, parameter, text.as_ptr(), text.len()) }
+    }
+
+    fn action_ss3_dispatch(&mut self, code_unit: u16, parameters: &Parameters) -> bool {
+        let Some(callback) = self.ss3 else { return false; };
+        let (raw_values, present) = raw_parameters(parameters);
+        unsafe { callback(self.callbacks.user_data, code_unit, raw_values.as_ptr(), present.as_ptr(), raw_values.len()) }
     }
 
     fn action_dcs_dispatch(&mut self, id: VtId, parameters: &Parameters) -> bool {
@@ -115,12 +138,27 @@ pub struct StateMachineHandle {
     machine: StateMachine<CallbackEngine>,
 }
 
+fn callback_engine(callbacks: StateMachineCallbacks) -> CallbackEngine {
+    CallbackEngine { callbacks, pass_through: None, execute_from_escape: None, vt52_esc: None, ss3: None }
+}
+
 #[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_state_machine_create(callbacks: *const StateMachineCallbacks, out_handle: *mut *mut StateMachineHandle) -> FfiStatus {
     ffi_guard(|| {
         if callbacks.is_null() || out_handle.is_null() { return FfiStatus::InvalidArgument; }
         let callbacks = unsafe { ptr::read(callbacks) };
-        let handle = Box::new(StateMachineHandle { machine: StateMachine::new(CallbackEngine { callbacks, pass_through: None }) });
+        let handle = Box::new(StateMachineHandle { machine: StateMachine::new(callback_engine(callbacks)) });
+        unsafe { ptr::write(out_handle, Box::into_raw(handle)) };
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_create_input(callbacks: *const StateMachineCallbacks, out_handle: *mut *mut StateMachineHandle) -> FfiStatus {
+    ffi_guard(|| {
+        if callbacks.is_null() || out_handle.is_null() { return FfiStatus::InvalidArgument; }
+        let callbacks = unsafe { ptr::read(callbacks) };
+        let handle = Box::new(StateMachineHandle { machine: StateMachine::new_input(callback_engine(callbacks)) });
         unsafe { ptr::write(out_handle, Box::into_raw(handle)) };
         FfiStatus::Ok
     })
@@ -141,6 +179,33 @@ pub extern "C" fn terminal_parser_ffi_state_machine_set_pass_through_callback(ha
     ffi_guard(|| {
         if handle.is_null() { return FfiStatus::InvalidArgument; }
         unsafe { &mut *handle }.machine.engine_mut().pass_through = callback;
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_execute_from_escape_callback(handle: *mut StateMachineHandle, callback: Option<ExecuteFromEscapeCallback>) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        unsafe { &mut *handle }.machine.engine_mut().execute_from_escape = callback;
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_vt52_esc_callback(handle: *mut StateMachineHandle, callback: Option<Vt52EscCallback>) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        unsafe { &mut *handle }.machine.engine_mut().vt52_esc = callback;
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_ss3_callback(handle: *mut StateMachineHandle, callback: Option<Ss3Callback>) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        unsafe { &mut *handle }.machine.engine_mut().ss3 = callback;
         FfiStatus::Ok
     })
 }
@@ -181,7 +246,10 @@ mod tests {
     struct Witness {
         printed: Vec<u16>,
         executed: Vec<u16>,
+        execute_from_escape: Vec<u16>,
         esc: Vec<u64>,
+        vt52: Vec<(u64, Vec<Option<i32>>)>,
+        ss3: Vec<(u16, Vec<Option<i32>>)>,
         csi: Vec<(u64, Vec<Option<i32>>)>,
         osc: Vec<(i32, Vec<u16>)>,
         dcs: Vec<(u64, Vec<Option<i32>>)>,
@@ -191,10 +259,13 @@ mod tests {
     }
 
     unsafe extern "C" fn execute(context: *mut c_void, code_unit: u16) -> bool { unsafe { &mut *context.cast::<Witness>() }.executed.push(code_unit); true }
+    unsafe extern "C" fn execute_from_escape(context: *mut c_void, code_unit: u16) -> bool { unsafe { &mut *context.cast::<Witness>() }.execute_from_escape.push(code_unit); true }
     unsafe extern "C" fn print_string(context: *mut c_void, text: *const u16, len: usize) -> bool { let text = unsafe { slice::from_raw_parts(text, len) }; unsafe { &mut *context.cast::<Witness>() }.printed.extend_from_slice(text); true }
     unsafe extern "C" fn pass_through(context: *mut c_void, text: *const u16, len: usize) -> bool { let text = unsafe { slice::from_raw_parts(text, len) }; unsafe { &mut *context.cast::<Witness>() }.passed_through.extend_from_slice(text); true }
     unsafe extern "C" fn esc(context: *mut c_void, id: u64) -> bool { unsafe { &mut *context.cast::<Witness>() }.esc.push(id); true }
     unsafe fn decode_parameters(values: *const i32, present: *const u8, len: usize) -> Vec<Option<i32>> { let values = unsafe { slice::from_raw_parts(values, len) }; let present = unsafe { slice::from_raw_parts(present, len) }; values.iter().zip(present).map(|(&value, &is_present)| (is_present != 0).then_some(value)).collect() }
+    unsafe extern "C" fn vt52(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool { let parameters = unsafe { decode_parameters(values, present, len) }; unsafe { &mut *context.cast::<Witness>() }.vt52.push((id, parameters)); true }
+    unsafe extern "C" fn ss3(context: *mut c_void, code_unit: u16, values: *const i32, present: *const u8, len: usize) -> bool { let parameters = unsafe { decode_parameters(values, present, len) }; unsafe { &mut *context.cast::<Witness>() }.ss3.push((code_unit, parameters)); true }
     unsafe extern "C" fn csi(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool { let parameters = unsafe { decode_parameters(values, present, len) }; unsafe { &mut *context.cast::<Witness>() }.csi.push((id, parameters)); true }
     unsafe extern "C" fn osc(context: *mut c_void, parameter: i32, text: *const u16, len: usize) -> bool { let text = unsafe { slice::from_raw_parts(text, len) }; unsafe { &mut *context.cast::<Witness>() }.osc.push((parameter, text.to_vec())); true }
     unsafe extern "C" fn dcs_dispatch(context: *mut c_void, id: u64, values: *const i32, present: *const u8, len: usize) -> bool { let parameters = unsafe { decode_parameters(values, present, len) }; let witness = unsafe { &mut *context.cast::<Witness>() }; witness.dcs.push((id, parameters)); witness.accept_dcs }
@@ -212,6 +283,44 @@ mod tests {
     #[test]
     fn stateful_ffi_routes_escape_dispatch() {
         let mut witness = Witness::default(); let callbacks = callbacks(&mut witness); let mut handle = ptr::null_mut(); assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok); let units = "\u{1b}7".encode_utf16().collect::<Vec<_>>(); assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, units.as_ptr(), units.len()), FfiStatus::Ok); assert_eq!(witness.esc, vec![u64::from(b'7')]); assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_routes_input_only_actions() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create_input(&callbacks, &mut handle), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_execute_from_escape_callback(handle, Some(execute_from_escape)), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_ss3_callback(handle, Some(ss3)), FfiStatus::Ok);
+        for sequence in [[0x1b, 0x18].as_slice(), [0x1b, u16::from(b'O'), u16::from(b'1'), u16::from(b';'), u16::from(b'2'), u16::from(b'A')].as_slice()] {
+            assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, sequence.as_ptr(), sequence.len()), FfiStatus::Ok);
+        }
+        assert_eq!(witness.execute_from_escape, vec![0x18]);
+        assert_eq!(witness.ss3, vec![(u16::from(b'A'), vec![Some(1), Some(2)])]);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_routes_vt52_dispatch_when_ansi_is_disabled() {
+        let mut witness = Witness::default();
+        let callbacks = callbacks(&mut witness);
+        let mut handle = ptr::null_mut();
+        assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_vt52_esc_callback(handle, Some(vt52)), FfiStatus::Ok);
+        assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, PARSER_MODE_ANSI, 0), FfiStatus::Ok);
+        let sequence = [0x1b, u16::from(b'A')];
+        assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, sequence.as_ptr(), sequence.len()), FfiStatus::Ok);
+        assert_eq!(witness.vt52, vec![(u64::from(b'A'), vec![])]);
+        assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+    }
+
+    #[test]
+    fn stateful_ffi_special_callbacks_fail_closed_on_invalid_handles() {
+        assert_eq!(terminal_parser_ffi_state_machine_create_input(ptr::null(), ptr::null_mut()), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_set_execute_from_escape_callback(ptr::null_mut(), Some(execute_from_escape)), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_set_vt52_esc_callback(ptr::null_mut(), Some(vt52)), FfiStatus::InvalidArgument);
+        assert_eq!(terminal_parser_ffi_state_machine_set_ss3_callback(ptr::null_mut(), Some(ss3)), FfiStatus::InvalidArgument);
     }
 
     #[test]
