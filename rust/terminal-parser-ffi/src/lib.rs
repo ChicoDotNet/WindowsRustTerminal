@@ -63,6 +63,8 @@ mod pty_signal;
 mod render_attribute_colors;
 mod render_settings;
 mod state_machine;
+#[cfg(test)]
+mod state_machine_tests;
 
 use std::{
     panic::{AssertUnwindSafe, catch_unwind},
