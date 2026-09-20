@@ -103,3 +103,24 @@ fn csi_v1_remains_the_fallback_and_lossless_setter_is_fail_closed() {
     assert_eq!(witness.legacy_calls, 1);
     assert_eq!(witness.lossless_calls, 0);
 }
+
+#[test]
+fn reset_state_returns_parser_to_ground_and_is_fail_closed() {
+    assert_eq!(terminal_parser_ffi_state_machine_reset_state(ptr::null_mut()), FfiStatus::InvalidArgument);
+
+    let mut witness = CsiWitness::default();
+    let callbacks = callbacks(&mut witness);
+    let mut handle = ptr::null_mut();
+    assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+
+    let incomplete = "\u{1b}[31".encode_utf16().collect::<Vec<_>>();
+    assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, incomplete.as_ptr(), incomplete.len()), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_reset_state(handle), FfiStatus::Ok);
+
+    let complete = "\u{1b}[32m".encode_utf16().collect::<Vec<_>>();
+    assert_eq!(terminal_parser_ffi_state_machine_process_utf16(handle, complete.as_ptr(), complete.len()), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+
+    assert_eq!(witness.legacy_calls, 1);
+    assert_eq!(witness.values, Vec::<i32>::new());
+}
