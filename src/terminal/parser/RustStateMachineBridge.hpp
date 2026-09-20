@@ -99,6 +99,16 @@ namespace Microsoft::Console::VirtualTerminal
                 text.size());
         }
 
+        terminal_parser_ffi_status Reset() noexcept
+        {
+            if (_handle == nullptr)
+            {
+                return TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            }
+            _dcsHandler = {};
+            return terminal_parser_ffi_state_machine_reset_state(_handle);
+        }
+
     private:
         static RustStateMachineBridge* _Self(void* userData) noexcept
         {
@@ -221,8 +231,7 @@ namespace Microsoft::Console::VirtualTerminal
             try
             {
                 auto* self = _Self(userData);
-                if (!self->_MaterializeFlat(values, present, parameterCount))
-                {
+                if (!self->_MaterializeFlat(values, present, parameterCount))n                {
                     return false;
                 }
                 const VTParameters parameters{ self->_parameters.data(), self->_parameters.size() };
