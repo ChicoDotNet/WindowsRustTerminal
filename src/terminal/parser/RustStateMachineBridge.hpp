@@ -231,7 +231,8 @@ namespace Microsoft::Console::VirtualTerminal
             try
             {
                 auto* self = _Self(userData);
-                if (!self->_MaterializeFlat(values, present, parameterCount))n                {
+                if (!self->_MaterializeFlat(values, present, parameterCount))
+                {
                     return false;
                 }
                 const VTParameters parameters{ self->_parameters.data(), self->_parameters.size() };
