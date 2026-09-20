@@ -24,6 +24,49 @@ namespace Microsoft::Console::VirtualTerminal
         {
         }
 
+        RustStateMachineBridge(const RustStateMachineBridge&) = delete;
+        RustStateMachineBridge& operator=(const RustStateMachineBridge&) = delete;
+        RustStateMachineBridge(RustStateMachineBridge&&) = delete;
+        RustStateMachineBridge& operator=(RustStateMachineBridge&&) = delete;
+
+        ~RustStateMachineBridge() noexcept
+        {
+            if (_handle != nullptr)
+            {
+                terminal_parser_ffi_state_machine_destroy(_handle);
+            }
+        }
+
+        // Acquire the Rust parser only after all callbacks needed by this bridge are
+        // represented. For now this lifecycle method is deliberately private to the
+        // integration seam: exposing Process before the remaining engine actions are
+        // wired would silently turn unsupported sequences into dropped product input.
+        terminal_parser_ffi_status InitializeCsiRoute() noexcept
+        {
+            if (_handle != nullptr)
+            {
+                return TERMINAL_PARSER_FFI_OK;
+            }
+
+            terminal_parser_ffi_state_machine_callbacks callbacks{};
+            callbacks.user_data = this;
+
+            auto status = terminal_parser_ffi_state_machine_create(&callbacks, &_handle);
+            if (status != TERMINAL_PARSER_FFI_OK)
+            {
+                _handle = nullptr;
+                return status;
+            }
+
+            status = terminal_parser_ffi_state_machine_set_csi_lossless_callback(_handle, &CsiLosslessCallback);
+            if (status != TERMINAL_PARSER_FFI_OK)
+            {
+                terminal_parser_ffi_state_machine_destroy(_handle);
+                _handle = nullptr;
+            }
+            return status;
+        }
+
         static bool CsiLosslessCallback(void* userData,
                                         const uint64_t id,
                                         const int32_t* values,
@@ -110,6 +153,7 @@ namespace Microsoft::Console::VirtualTerminal
         }
 
         IStateMachineEngine& _engine;
+        terminal_parser_ffi_state_machine_handle* _handle{ nullptr };
         std::vector<VTParameter> _parameters;
         std::vector<VTParameter> _subParameters;
         std::vector<std::pair<BYTE, BYTE>> _subParameterRanges;
