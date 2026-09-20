@@ -260,6 +260,15 @@ pub extern "C" fn terminal_parser_ffi_state_machine_process_utf16(handle: *mut S
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_reset_state(handle: *mut StateMachineHandle) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        unsafe { &mut *handle }.machine.reset_state();
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_state_machine_flush_to_terminal(handle: *mut StateMachineHandle) -> FfiStatus {
     ffi_guard(|| {
         if handle.is_null() { return FfiStatus::InvalidArgument; }
