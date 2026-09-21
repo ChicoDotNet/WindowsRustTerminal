@@ -6,6 +6,10 @@
 #include "OutputStateMachineEngine.hpp"
 #include "RustStateMachineBridge.hpp"
 
+#include <memory>
+#include <string_view>
+#include <utility>
+
 namespace Microsoft::Console::VirtualTerminal
 {
     // Product-facing owner for terminal output parsing.
