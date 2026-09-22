@@ -205,6 +205,17 @@ pub extern "C" fn terminal_parser_ffi_state_machine_set_parser_mode(handle: *mut
 }
 
 #[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_get_parser_mode(handle: *const StateMachineHandle, mode: u32, out_enabled: *mut u32) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() || out_enabled.is_null() { return FfiStatus::InvalidArgument; }
+        let Some(mode) = parser_mode(mode) else { return FfiStatus::InvalidArgument; };
+        let enabled = unsafe { &*handle }.machine.get_parser_mode(mode);
+        unsafe { ptr::write(out_enabled, u32::from(enabled)) };
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
 pub extern "C" fn terminal_parser_ffi_state_machine_set_pass_through_callback(handle: *mut StateMachineHandle, callback: Option<PassThroughCallback>) -> FfiStatus {
     ffi_guard(|| {
         if handle.is_null() { return FfiStatus::InvalidArgument; }
