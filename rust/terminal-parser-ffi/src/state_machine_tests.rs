@@ -147,3 +147,34 @@ fn parser_mode_setter_controls_accept_c1_and_rejects_invalid_contract_values() {
 
     assert_eq!(witness.legacy_calls, 1);
 }
+
+#[test]
+fn parser_mode_getter_replays_set_state_and_is_fail_closed() {
+    const ACCEPT_C1: u32 = 0;
+    const ANSI: u32 = 1;
+
+    let mut enabled = 7;
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(ptr::null(), ACCEPT_C1, &mut enabled), FfiStatus::InvalidArgument);
+
+    let mut witness = CsiWitness::default();
+    let callbacks = callbacks(&mut witness);
+    let mut handle = ptr::null_mut();
+    assert_eq!(terminal_parser_ffi_state_machine_create(&callbacks, &mut handle), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, ACCEPT_C1, ptr::null_mut()), FfiStatus::InvalidArgument);
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, 99, &mut enabled), FfiStatus::InvalidArgument);
+
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, ACCEPT_C1, &mut enabled), FfiStatus::Ok);
+    assert_eq!(enabled, 0);
+    assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, ACCEPT_C1, 1), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, ACCEPT_C1, &mut enabled), FfiStatus::Ok);
+    assert_eq!(enabled, 1);
+
+    assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, ANSI, 0), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, ANSI, &mut enabled), FfiStatus::Ok);
+    assert_eq!(enabled, 0);
+    assert_eq!(terminal_parser_ffi_state_machine_set_parser_mode(handle, ANSI, 1), FfiStatus::Ok);
+    assert_eq!(terminal_parser_ffi_state_machine_get_parser_mode(handle, ANSI, &mut enabled), FfiStatus::Ok);
+    assert_eq!(enabled, 1);
+
+    assert_eq!(terminal_parser_ffi_state_machine_destroy(handle), FfiStatus::Ok);
+}
