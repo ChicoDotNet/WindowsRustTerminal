@@ -1,4 +1,4 @@
-// Copyright (c) Microsoft Corporation.
+// Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT license.
 
 #pragma once
@@ -44,6 +44,16 @@ namespace Microsoft::Console::VirtualTerminal
         [[nodiscard]] bool Reset() noexcept
         {
             return _parser.Reset() == TERMINAL_PARSER_FFI_OK;
+        }
+
+        [[nodiscard]] bool SetParserMode(const terminal_parser_ffi_parser_mode mode, const bool enabled) noexcept
+        {
+            return _parser.SetParserMode(mode, enabled) == TERMINAL_PARSER_FFI_OK;
+        }
+
+        [[nodiscard]] bool GetParserMode(const terminal_parser_ffi_parser_mode mode, bool& enabled) const noexcept
+        {
+            return _parser.GetParserMode(mode, enabled) == TERMINAL_PARSER_FFI_OK;
         }
 
         ITermDispatch& Dispatch() noexcept
