@@ -109,6 +109,30 @@ namespace Microsoft::Console::VirtualTerminal
             return terminal_parser_ffi_state_machine_reset_state(_handle);
         }
 
+        terminal_parser_ffi_status SetParserMode(const terminal_parser_ffi_parser_mode mode, const bool enabled) noexcept
+        {
+            if (_handle == nullptr)
+            {
+                return TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            }
+            return terminal_parser_ffi_state_machine_set_parser_mode(_handle, static_cast<uint32_t>(mode), enabled ? 1u : 0u);
+        }
+
+        terminal_parser_ffi_status GetParserMode(const terminal_parser_ffi_parser_mode mode, bool& enabled) const noexcept
+        {
+            if (_handle == nullptr)
+            {
+                return TERMINAL_PARSER_FFI_INVALID_ARGUMENT;
+            }
+            uint32_t value = 0;
+            const auto status = terminal_parser_ffi_state_machine_get_parser_mode(_handle, static_cast<uint32_t>(mode), &value);
+            if (status == TERMINAL_PARSER_FFI_OK)
+            {
+                enabled = value != 0;
+            }
+            return status;
+        }
+
     private:
         static RustStateMachineBridge* _Self(void* userData) noexcept
         {
@@ -123,230 +147,103 @@ namespace Microsoft::Console::VirtualTerminal
 
         static bool ExecuteCallback(void* userData, const uint16_t codeUnit) noexcept
         {
-            try
-            {
-                return userData != nullptr && _Self(userData)->_engine.ActionExecute(static_cast<wchar_t>(codeUnit));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            try { return userData != nullptr && _Self(userData)->_engine.ActionExecute(static_cast<wchar_t>(codeUnit)); }
+            catch (...) { return false; }
         }
 
         static bool ExecuteFromEscapeCallback(void* userData, const uint16_t codeUnit) noexcept
         {
-            try
-            {
-                return userData != nullptr && _Self(userData)->_engine.ActionExecuteFromEscape(static_cast<wchar_t>(codeUnit));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            try { return userData != nullptr && _Self(userData)->_engine.ActionExecuteFromEscape(static_cast<wchar_t>(codeUnit)); }
+            catch (...) { return false; }
         }
 
         static bool PrintCallback(void* userData, const uint16_t codeUnit) noexcept
         {
-            try
-            {
-                return userData != nullptr && _Self(userData)->_engine.ActionPrint(static_cast<wchar_t>(codeUnit));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            try { return userData != nullptr && _Self(userData)->_engine.ActionPrint(static_cast<wchar_t>(codeUnit)); }
+            catch (...) { return false; }
         }
 
         static bool PrintStringCallback(void* userData, const uint16_t* text, const size_t textLen) noexcept
         {
-            if (userData == nullptr || (textLen != 0 && text == nullptr))
-            {
-                return false;
-            }
-            try
-            {
-                return _Self(userData)->_engine.ActionPrintString(_StringView(text, textLen));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            if (userData == nullptr || (textLen != 0 && text == nullptr)) { return false; }
+            try { return _Self(userData)->_engine.ActionPrintString(_StringView(text, textLen)); }
+            catch (...) { return false; }
         }
 
         static bool PassThroughCallback(void* userData, const uint16_t* text, const size_t textLen) noexcept
         {
-            if (userData == nullptr || (textLen != 0 && text == nullptr))
-            {
-                return false;
-            }
-            try
-            {
-                return _Self(userData)->_engine.ActionPassThroughString(_StringView(text, textLen));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            if (userData == nullptr || (textLen != 0 && text == nullptr)) { return false; }
+            try { return _Self(userData)->_engine.ActionPassThroughString(_StringView(text, textLen)); }
+            catch (...) { return false; }
         }
 
         static bool EscCallback(void* userData, const uint64_t id) noexcept
         {
-            try
-            {
-                return userData != nullptr && _Self(userData)->_engine.ActionEscDispatch(VTID{ id });
-            }
-            catch (...)
-            {
-                return false;
-            }
+            try { return userData != nullptr && _Self(userData)->_engine.ActionEscDispatch(VTID{ id }); }
+            catch (...) { return false; }
         }
 
-        static bool Vt52EscCallback(void* userData,
-                                    const uint64_t id,
-                                    const int32_t* values,
-                                    const uint8_t* present,
-                                    const size_t parameterCount) noexcept
+        static bool Vt52EscCallback(void* userData, const uint64_t id, const int32_t* values, const uint8_t* present, const size_t parameterCount) noexcept
         {
-            try
-            {
-                return userData != nullptr && _Self(userData)->_DispatchFlat(
-                    id, values, present, parameterCount, &IStateMachineEngine::ActionVt52EscDispatch);
-            }
-            catch (...)
-            {
-                return false;
-            }
+            try { return userData != nullptr && _Self(userData)->_DispatchFlat(id, values, present, parameterCount, &IStateMachineEngine::ActionVt52EscDispatch); }
+            catch (...) { return false; }
         }
 
-        static bool Ss3Callback(void* userData,
-                                const uint16_t codeUnit,
-                                const int32_t* values,
-                                const uint8_t* present,
-                                const size_t parameterCount) noexcept
+        static bool Ss3Callback(void* userData, const uint16_t codeUnit, const int32_t* values, const uint8_t* present, const size_t parameterCount) noexcept
         {
-            if (userData == nullptr)
-            {
-                return false;
-            }
+            if (userData == nullptr) { return false; }
             try
             {
                 auto* self = _Self(userData);
-                if (!self->_MaterializeFlat(values, present, parameterCount))
-                {
-                    return false;
-                }
+                if (!self->_MaterializeFlat(values, present, parameterCount)) { return false; }
                 const VTParameters parameters{ self->_parameters.data(), self->_parameters.size() };
                 return self->_engine.ActionSs3Dispatch(static_cast<wchar_t>(codeUnit), parameters);
             }
-            catch (...)
-            {
-                return false;
-            }
+            catch (...) { return false; }
         }
 
-        static bool CsiLosslessCallback(void* userData,
-                                        const uint64_t id,
-                                        const int32_t* values,
-                                        const uint8_t* present,
-                                        const size_t parameterCount,
-                                        const int32_t* subValues,
-                                        const uint8_t* subPresent,
-                                        const size_t subParameterCount,
-                                        const size_t* subOffsets,
-                                        const size_t* subCounts) noexcept
+        static bool CsiLosslessCallback(void* userData, const uint64_t id, const int32_t* values, const uint8_t* present, const size_t parameterCount, const int32_t* subValues, const uint8_t* subPresent, const size_t subParameterCount, const size_t* subOffsets, const size_t* subCounts) noexcept
         {
-            if (userData == nullptr)
-            {
-                return false;
-            }
-            try
-            {
-                return _Self(userData)->_DispatchCsi(
-                    id,
-                    values,
-                    present,
-                    parameterCount,
-                    subValues,
-                    subPresent,
-                    subParameterCount,
-                    subOffsets,
-                    subCounts);
-            }
-            catch (...)
-            {
-                return false;
-            }
+            if (userData == nullptr) { return false; }
+            try { return _Self(userData)->_DispatchCsi(id, values, present, parameterCount, subValues, subPresent, subParameterCount, subOffsets, subCounts); }
+            catch (...) { return false; }
         }
 
-        static bool OscCallback(void* userData,
-                                const int32_t parameter,
-                                const uint16_t* text,
-                                const size_t textLen) noexcept
+        static bool OscCallback(void* userData, const int32_t parameter, const uint16_t* text, const size_t textLen) noexcept
         {
-            if (userData == nullptr || parameter < 0 || (textLen != 0 && text == nullptr))
-            {
-                return false;
-            }
-            try
-            {
-                return _Self(userData)->_engine.ActionOscDispatch(static_cast<size_t>(parameter), _StringView(text, textLen));
-            }
-            catch (...)
-            {
-                return false;
-            }
+            if (userData == nullptr || parameter < 0 || (textLen != 0 && text == nullptr)) { return false; }
+            try { return _Self(userData)->_engine.ActionOscDispatch(static_cast<size_t>(parameter), _StringView(text, textLen)); }
+            catch (...) { return false; }
         }
 
-        static bool DcsDispatchCallback(void* userData,
-                                        const uint64_t id,
-                                        const int32_t* values,
-                                        const uint8_t* present,
-                                        const size_t parameterCount) noexcept
+        static bool DcsDispatchCallback(void* userData, const uint64_t id, const int32_t* values, const uint8_t* present, const size_t parameterCount) noexcept
         {
-            if (userData == nullptr)
-            {
-                return false;
-            }
+            if (userData == nullptr) { return false; }
             try
             {
                 auto* self = _Self(userData);
-                if (!self->_MaterializeFlat(values, present, parameterCount))
-                {
-                    return false;
-                }
+                if (!self->_MaterializeFlat(values, present, parameterCount)) { return false; }
                 const VTParameters parameters{ self->_parameters.data(), self->_parameters.size() };
                 self->_dcsHandler = self->_engine.ActionDcsDispatch(VTID{ id }, parameters);
                 return static_cast<bool>(self->_dcsHandler);
             }
-            catch (...)
-            {
-                return false;
-            }
+            catch (...) { return false; }
         }
 
         static bool DcsPutCallback(void* userData, const uint16_t codeUnit) noexcept
         {
-            if (userData == nullptr)
-            {
-                return false;
-            }
+            if (userData == nullptr) { return false; }
             try
             {
                 auto* self = _Self(userData);
                 return self->_dcsHandler && self->_dcsHandler(static_cast<wchar_t>(codeUnit));
             }
-            catch (...)
-            {
-                return false;
-            }
+            catch (...) { return false; }
         }
 
         bool _MaterializeFlat(const int32_t* values, const uint8_t* present, const size_t parameterCount)
         {
-            if (parameterCount != 0 && (values == nullptr || present == nullptr))
-            {
-                return false;
-            }
+            if (parameterCount != 0 && (values == nullptr || present == nullptr)) { return false; }
             _parameters.clear();
             _parameters.reserve(parameterCount);
             for (size_t i = 0; i < parameterCount; ++i)
@@ -356,35 +253,16 @@ namespace Microsoft::Console::VirtualTerminal
             return true;
         }
 
-        bool _DispatchFlat(const uint64_t id,
-                           const int32_t* values,
-                           const uint8_t* present,
-                           const size_t parameterCount,
-                           bool (IStateMachineEngine::*dispatch)(VTID, VTParameters))
+        bool _DispatchFlat(const uint64_t id, const int32_t* values, const uint8_t* present, const size_t parameterCount, bool (IStateMachineEngine::*dispatch)(VTID, VTParameters))
         {
-            if (!_MaterializeFlat(values, present, parameterCount))
-            {
-                return false;
-            }
+            if (!_MaterializeFlat(values, present, parameterCount)) { return false; }
             const VTParameters parameters{ _parameters.data(), _parameters.size() };
             return (_engine.*dispatch)(VTID{ id }, parameters);
         }
 
-        bool _DispatchCsi(const uint64_t id,
-                          const int32_t* values,
-                          const uint8_t* present,
-                          const size_t parameterCount,
-                          const int32_t* subValues,
-                          const uint8_t* subPresent,
-                          const size_t subParameterCount,
-                          const size_t* subOffsets,
-                          const size_t* subCounts)
+        bool _DispatchCsi(const uint64_t id, const int32_t* values, const uint8_t* present, const size_t parameterCount, const int32_t* subValues, const uint8_t* subPresent, const size_t subParameterCount, const size_t* subOffsets, const size_t* subCounts)
         {
-            if ((parameterCount != 0 && (values == nullptr || present == nullptr || subOffsets == nullptr || subCounts == nullptr)) ||
-                (subParameterCount != 0 && (subValues == nullptr || subPresent == nullptr)))
-            {
-                return false;
-            }
+            if ((parameterCount != 0 && (values == nullptr || present == nullptr || subOffsets == nullptr || subCounts == nullptr)) || (subParameterCount != 0 && (subValues == nullptr || subPresent == nullptr))) { return false; }
 
             _parameters.clear();
             _subParameters.clear();
@@ -396,20 +274,11 @@ namespace Microsoft::Console::VirtualTerminal
             for (size_t i = 0; i < parameterCount; ++i)
             {
                 _parameters.emplace_back(present[i] != 0 ? values[i] : -1);
-
                 const auto offset = subOffsets[i];
                 const auto count = subCounts[i];
-                if (offset > subParameterCount || count > subParameterCount - offset)
-                {
-                    return false;
-                }
-
+                if (offset > subParameterCount || count > subParameterCount - offset) { return false; }
                 const auto end = offset + count;
-                if (offset > std::numeric_limits<BYTE>::max() || end > std::numeric_limits<BYTE>::max())
-                {
-                    return false;
-                }
-
+                if (offset > std::numeric_limits<BYTE>::max() || end > std::numeric_limits<BYTE>::max()) { return false; }
                 _subParameterRanges.emplace_back(static_cast<BYTE>(offset), static_cast<BYTE>(end));
             }
 
