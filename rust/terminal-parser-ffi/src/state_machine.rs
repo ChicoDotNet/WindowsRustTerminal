@@ -20,6 +20,7 @@ pub type ExecuteFromEscapeCallback = unsafe extern "C" fn(*mut c_void, u16) -> b
 pub type Vt52EscCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
 pub type Ss3Callback = unsafe extern "C" fn(*mut c_void, u16, *const i32, *const u8, usize) -> bool;
 pub type CsiCallback = unsafe extern "C" fn(*mut c_void, u64, *const i32, *const u8, usize) -> bool;
+pub type CsiCompleteCallback = unsafe extern "C" fn(*mut c_void);
 pub type CsiLosslessCallback = unsafe extern "C" fn(
     *mut c_void,
     u64,
@@ -211,6 +212,17 @@ pub extern "C" fn terminal_parser_ffi_state_machine_get_parser_mode(handle: *con
         let Some(mode) = parser_mode(mode) else { return FfiStatus::InvalidArgument; };
         let enabled = unsafe { &*handle }.machine.get_parser_mode(mode);
         unsafe { ptr::write(out_enabled, u32::from(enabled)) };
+        FfiStatus::Ok
+    })
+}
+
+#[unsafe(no_mangle)]
+pub extern "C" fn terminal_parser_ffi_state_machine_set_csi_complete_callback(handle: *mut StateMachineHandle, callback: Option<CsiCompleteCallback>) -> FfiStatus {
+    ffi_guard(|| {
+        if handle.is_null() { return FfiStatus::InvalidArgument; }
+        let Some(callback) = callback else { return FfiStatus::InvalidArgument; };
+        let user_data = unsafe { &*handle }.machine.engine().callbacks.user_data;
+        unsafe { &mut *handle }.machine.on_csi_complete(move || unsafe { callback(user_data) });
         FfiStatus::Ok
     })
 }
