@@ -18,6 +18,7 @@ Author(s):
 #include "../../buffer/out/LineRendition.hpp"
 #include "../../buffer/out/textBuffer.hpp"
 #include "../../renderer/inc/RenderSettings.hpp"
+#include "DispatchTypes.hpp"
 
 #include <deque>
 #include <memory>
