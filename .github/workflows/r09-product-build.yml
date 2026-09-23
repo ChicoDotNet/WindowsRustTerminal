@@ -16,6 +16,7 @@ on:
       - "rust/terminal-settings/**"
       - "rust/terminal-settings-ffi/**"
       - "src/terminal/parser/**"
+      - "src/terminal/adapter/**"
       - "src/host/**"
       - "src/cascadia/fzf/**"
       - "src/cascadia/TerminalApp/**"
