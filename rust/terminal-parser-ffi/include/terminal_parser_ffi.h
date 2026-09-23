@@ -90,6 +90,7 @@ typedef bool (*terminal_parser_ffi_state_machine_execute_from_escape_callback)(v
 typedef bool (*terminal_parser_ffi_state_machine_vt52_esc_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_ss3_callback)(void* user_data, uint16_t code_unit, const int32_t* values, const uint8_t* present, size_t parameter_count);
 typedef bool (*terminal_parser_ffi_state_machine_csi_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
+typedef void (*terminal_parser_ffi_state_machine_csi_complete_callback)(void* user_data);
 typedef bool (*terminal_parser_ffi_state_machine_csi_lossless_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count, const int32_t* sub_values, const uint8_t* sub_present, size_t sub_parameter_count, const size_t* sub_offsets, const size_t* sub_counts);
 typedef bool (*terminal_parser_ffi_state_machine_osc_callback)(void* user_data, int32_t parameter, const uint16_t* text, size_t text_len);
 typedef bool (*terminal_parser_ffi_state_machine_dcs_dispatch_callback)(void* user_data, uint64_t id, const int32_t* values, const uint8_t* present, size_t parameter_count);
@@ -127,6 +128,7 @@ terminal_parser_ffi_status terminal_parser_ffi_state_machine_create(const termin
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_create_input(const terminal_parser_ffi_state_machine_callbacks* callbacks, terminal_parser_ffi_state_machine_handle** out_handle);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_parser_mode(terminal_parser_ffi_state_machine_handle* handle, uint32_t mode, uint32_t enabled);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_get_parser_mode(const terminal_parser_ffi_state_machine_handle* handle, uint32_t mode, uint32_t* out_enabled);
+terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_csi_complete_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_csi_complete_callback callback);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_pass_through_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_pass_through_callback callback);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_execute_from_escape_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_execute_from_escape_callback callback);
 terminal_parser_ffi_status terminal_parser_ffi_state_machine_set_vt52_esc_callback(terminal_parser_ffi_state_machine_handle* handle, terminal_parser_ffi_state_machine_vt52_esc_callback callback);
