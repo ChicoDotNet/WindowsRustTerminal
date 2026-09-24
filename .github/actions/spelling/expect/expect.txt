@@ -12,7 +12,6 @@ acp
 actctx
 ACTCTXW
 ADDALIAS
-ADDREF
 ADDSTRING
 ADDTOOL
 adml
@@ -29,7 +28,6 @@ allocing
 alpc
 ALTERNATENAME
 ALTF
-ALTGR
 ALTNUMPAD
 ALWAYSTIP
 ansicpg
@@ -74,13 +72,10 @@ automagically
 autopositioning
 AUTORADIOBUTTON
 autoscrolling
-Autowrap
 AVerify
 awch
-AZERTY
 azurecr
 backgrounded
-Backgrounder
 backgrounding
 backstory
 Bazz
@@ -340,7 +335,6 @@ DDESHARE
 DDevice
 DEADCHAR
 debugtype
-DECAC
 DECALN
 DECANM
 DECARM
@@ -352,7 +346,6 @@ DECCARA
 DECCIR
 DECCKM
 DECCKSR
-DECCOLM
 deccra
 DECCTR
 DECDC
@@ -360,9 +353,7 @@ DECDHL
 decdld
 DECDMAC
 DECDWL
-DECECM
 DECEKBD
-DECERA
 DECFI
 DECFNK
 decfra
@@ -373,7 +364,6 @@ DECGRA
 DECGRI
 DECIC
 DECID
-DECINVM
 DECKPAM
 DECKPM
 DECKPNM
@@ -385,7 +375,6 @@ DECOM
 decommit
 DECPCCM
 DECPCTERM
-DECPS
 DECRARA
 decrc
 DECREQTPARM
@@ -396,28 +385,22 @@ DECRQDE
 DECRQM
 DECRQPSR
 DECRQSS
-DECRQTSR
 DECRQUPSS
 DECRSPS
 decrst
-DECSACE
 DECSASD
 decsc
-DECSCA
 DECSCNM
 DECSCPP
-DECSCUSR
 DECSDM
 DECSED
 DECSEL
-DECSERA
 DECSET
 DECSLPP
 DECSLRM
 DECSMKR
 DECSR
 DECST
-DECSTBM
 DECSTGLT
 DECSTR
 DECSWL
@@ -738,7 +721,6 @@ hostlib
 HPA
 hpcon
 hpen
-HPR
 HProvider
 HREDRAW
 hresult
@@ -936,7 +918,6 @@ LPWINDOWPOS
 lpwpos
 lpwstr
 LRESULT
-LSBs
 lsconfig
 lstatus
 lstrcmp
@@ -998,7 +979,6 @@ MINMAXINFO
 minwin
 minwindef
 misprediction
-MMBB
 mmcc
 MMCPL
 MNC
@@ -1274,7 +1254,6 @@ pnm
 PNMLINK
 pntm
 POBJECT
-Podcast
 POINTERUPDATE
 POINTSLIST
 policheck
@@ -1337,7 +1316,6 @@ PSINGLE
 psl
 psldl
 PSNRET
-PSobject
 psp
 PSPCB
 psr
@@ -1754,7 +1732,6 @@ unhighlighting
 unhosted
 UNICODETEXT
 UNICRT
-Unintense
 Unittesting
 unittests
 unknwn
@@ -1812,7 +1789,6 @@ VPA
 vpack
 vpackdirectory
 VPACKMANIFESTDIRECTORY
-VPR
 VREDRAW
 vsc
 vsconfig
