@@ -1,0 +1,2 @@
+# Shell option sets
+\b(?:bash|(?<!\.)sh|set)(?:\s+[-+][abefimouxE]{1,2})*\s+[-+][abefimouxE]{3,}(?:\s+[-+][abefimouxE]+)*
