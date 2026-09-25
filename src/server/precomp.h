@@ -26,6 +26,7 @@ Abstract:
 // Windows Header Files:
 #define WIN32_NO_STATUS
 #include <windows.h>
+#include <evntrace.h>
 #undef WIN32_NO_STATUS
 
 #include <winternl.h>
