@@ -18,6 +18,7 @@ on:
       - "src/terminal/parser/**"
       - "src/terminal/adapter/**"
       - "src/host/**"
+      - "src/server/**"
       - "src/cascadia/fzf/**"
       - "src/cascadia/TerminalApp/**"
       - "src/cascadia/TerminalSettingsEditor/**"
