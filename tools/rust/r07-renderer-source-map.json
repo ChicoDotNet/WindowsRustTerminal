@@ -160,7 +160,7 @@
       "sourcePath": "src/renderer/base/RenderSettings.cpp",
       "sourceBlob": "dbd4867d8d65890d9af5437ee31ff92b777267d9",
       "ownership": "split",
-      "nativeBoundary": "C++ retains color-table lookup, ColorFix execution, underline lookup/default fallback and live renderer integration; Rust owns mode/reset/blink state, deterministic contrast-adjustment eligibility, faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
+      "nativeBoundary": "C++ retains color-table lookup, ColorFix execution, underline lookup and default/fallback handling plus live renderer integration; Rust owns mode/reset/blink state, deterministic contrast-adjustment eligibility, faint/blink dim selection, dim/reverse/invisible/alpha post-processing, and the portable explicit-underline invisibility rule.",
       "sourcePatterns": [
         "RenderSettings::SetRenderMode",
         "RenderSettings::GetRenderMode",
