@@ -66,7 +66,7 @@ public:
     void SetWorkingDirectory(const std::wstring_view uri) override;
     void PlayMidiNote(const int noteNumber, const int velocity, const std::chrono::microseconds duration) override;
 
-    bool IsVtInputEnabled() const noexcept override;
+    bool IsVtInputEnabled() const override;
 
     void NotifyBufferRotation(const int delta) override;
     void NotifyShellIntegrationMark() override;
