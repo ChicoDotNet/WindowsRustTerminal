@@ -15,6 +15,7 @@ Author:
 #pragma once
 
 #include "../terminal/adapter/ITerminalApi.hpp"
+#include "../terminal/parser/stateMachine.hpp"
 #include "../types/inc/IInputEvent.hpp"
 #include "../inc/conattrs.hpp"
 #include "IIoProvider.hpp"
@@ -65,7 +66,7 @@ public:
     void SetWorkingDirectory(const std::wstring_view uri) override;
     void PlayMidiNote(const int noteNumber, const int velocity, const std::chrono::microseconds duration) override;
 
-    bool IsVtInputEnabled() const override;
+    bool IsVtInputEnabled() const noexcept override;
 
     void NotifyBufferRotation(const int delta) override;
     void NotifyShellIntegrationMark() override;
