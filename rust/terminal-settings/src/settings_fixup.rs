@@ -12,6 +12,69 @@ const CMD_FULL_PATH: &str = "%SystemRoot%\\System32\\cmd.exe";
 const POWERSHELL_FULL_PATH: &str =
     "%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe";
 
+/// Native mutation required for Microsoft's built-in legacy shell commandline fixup.
+///
+/// This deliberately distinguishes clearing the user's short-name override from
+/// restoring a full-path override. Microsoft first clears the explicit setting
+/// and only restores the full path when the resulting inherited value differs.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CommandlineFixupPlan {
+    None,
+    ClearOverride,
+    RestoreCmdFullPath,
+    RestorePowershellFullPath,
+}
+
+/// Plans the portable portion of Microsoft's built-in commandline fixup.
+///
+/// `explicit_commandline` is `None` when the user did not explicitly configure
+/// the setting. `inherited_after_clear` is the effective value that the native
+/// inheritance graph would expose after clearing that explicit override.
+#[must_use]
+pub fn commandline_fixup_plan(
+    guid: &str,
+    explicit_commandline: Option<&str>,
+    inherited_after_clear: Option<&str>,
+) -> CommandlineFixupPlan {
+    let Some(explicit_commandline) = explicit_commandline else {
+        return CommandlineFixupPlan::None;
+    };
+
+    let target = if guid.eq_ignore_ascii_case(CMD_GUID)
+        && explicit_commandline.eq_ignore_ascii_case("cmd.exe")
+    {
+        (CMD_FULL_PATH, CommandlineFixupPlan::RestoreCmdFullPath)
+    } else if guid.eq_ignore_ascii_case(POWERSHELL_GUID)
+        && explicit_commandline.eq_ignore_ascii_case("powershell.exe")
+    {
+        (
+            POWERSHELL_FULL_PATH,
+            CommandlineFixupPlan::RestorePowershellFullPath,
+        )
+    } else {
+        return CommandlineFixupPlan::None;
+    };
+
+    if inherited_after_clear == Some(target.0) {
+        CommandlineFixupPlan::ClearOverride
+    } else {
+        target.1
+    }
+}
+
+/// Returns the Rust-owned full-path value for a restore decision.
+///
+/// Keeping this mapping beside [`commandline_fixup_plan`] prevents serialization
+/// and native seams from independently duplicating the canonical shell paths.
+#[must_use]
+pub const fn commandline_fixup_restore_value(plan: CommandlineFixupPlan) -> Option<&'static str> {
+    match plan {
+        CommandlineFixupPlan::RestoreCmdFullPath => Some(CMD_FULL_PATH),
+        CommandlineFixupPlan::RestorePowershellFullPath => Some(POWERSHELL_FULL_PATH),
+        CommandlineFixupPlan::None | CommandlineFixupPlan::ClearOverride => None,
+    }
+}
+
 /// Applies the portable profile-commandline patching portion of Microsoft's
 /// `SettingsLoader::FixupUserSettings`.
 ///
@@ -83,12 +146,9 @@ fn collect_commandline_patches(
             continue;
         };
 
-        if guid.eq_ignore_ascii_case(CMD_GUID) && commandline.eq_ignore_ascii_case("cmd.exe") {
-            patches.push((index, CMD_FULL_PATH));
-        } else if guid.eq_ignore_ascii_case(POWERSHELL_GUID)
-            && commandline.eq_ignore_ascii_case("powershell.exe")
-        {
-            patches.push((index, POWERSHELL_FULL_PATH));
+        let plan = commandline_fixup_plan(guid, Some(commandline), None);
+        if let Some(value) = commandline_fixup_restore_value(plan) {
+            patches.push((index, value));
         }
     }
 

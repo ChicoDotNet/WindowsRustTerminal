@@ -12,6 +12,7 @@ Abstract:
 #pragma once
 
 #include "../../buffer/out/TextAttribute.hpp"
+#include "../../../rust/terminal-parser-ffi/include/terminal_parser_ffi_render_settings.h"
 
 namespace Microsoft::Console::Render
 {
@@ -51,11 +52,10 @@ namespace Microsoft::Console::Render
         void ToggleBlinkRendition() noexcept;
 
     private:
-        til::enumset<Mode> _renderMode{ Mode::IntenseIsBright };
+        terminal_parser_ffi_render_settings_state _renderSettingsPolicy{};
         std::array<COLORREF, TextColor::TABLE_SIZE> _colorTable;
         std::array<size_t, static_cast<size_t>(ColorAlias::ENUM_COUNT)> _colorAliasIndices;
         std::array<COLORREF, TextColor::TABLE_SIZE> _defaultColorTable;
         std::array<size_t, static_cast<size_t>(ColorAlias::ENUM_COUNT)> _defaultColorAliasIndices;
-        bool _blinkShouldBeFaint = false;
     };
 }

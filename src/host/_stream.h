@@ -18,6 +18,7 @@ Revision History:
 #pragma once
 
 #include "writeData.hpp"
+#include "../terminal/parser/stateMachine.hpp"
 
 void WriteCharsLegacy(SCREEN_INFORMATION& screenInfo, const std::wstring_view& str, til::CoordType* psScrollY);
 void WriteCharsVT(SCREEN_INFORMATION& screenInfo, const std::wstring_view& str);

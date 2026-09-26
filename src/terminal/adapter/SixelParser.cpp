@@ -7,6 +7,7 @@
 #include "adaptDispatch.hpp"
 #include "../buffer/out/ImageSlice.hpp"
 #include "../parser/ascii.hpp"
+#include "../parser/stateMachine.hpp"
 #include "../renderer/base/renderer.hpp"
 #include "../types/inc/colorTable.hpp"
 #include "../types/inc/utils.hpp"

@@ -25,6 +25,7 @@
 #include "FolderEntry.h"
 #include "MatchProfilesEntry.h"
 #include "WtExeUtils.h"
+#include "terminal_settings_ffi.h"
 
 using namespace winrt::Windows::Foundation::Collections;
 using namespace winrt::Windows::ApplicationModel::AppExtensions;
@@ -631,18 +632,6 @@ bool winrt::Microsoft::Terminal::Settings::Model::implementation::SettingsLoader
 // the settings need to be saved to disk.
 bool SettingsLoader::FixupUserSettings()
 {
-    struct CommandlinePatch
-    {
-        winrt::guid guid{};
-        std::wstring_view before;
-        std::wstring_view after;
-    };
-
-    static constexpr std::array commandlinePatches{
-        CommandlinePatch{ DEFAULT_COMMAND_PROMPT_GUID, L"cmd.exe", L"%SystemRoot%\\System32\\cmd.exe" },
-        CommandlinePatch{ DEFAULT_WINDOWS_POWERSHELL_GUID, L"powershell.exe", L"%SystemRoot%\\System32\\WindowsPowerShell\\v1.0\\powershell.exe" },
-    };
-
     static constexpr std::array iconsToClearFromVisualStudioProfiles{
         std::wstring_view{ L"ms-appx:///ProfileIcons/{61c54bbd-c2c6-5271-96e7-009a87ff44bf}.png" },
         std::wstring_view{ L"ms-appx:///ProfileIcons/{0caa0dad-35be-5f56-a8ff-afceeeaa6101}.png" },
@@ -658,23 +647,62 @@ bool SettingsLoader::FixupUserSettings()
 
         if (profile->HasCommandline())
         {
-            for (const auto& patch : commandlinePatches)
+            const auto guid = profile->Guid();
+            const auto guidString = winrt::to_hstring(guid);
+            const auto explicitCommandline = profile->Commandline();
+            const auto guidUtf16 = reinterpret_cast<const uint16_t*>(guidString.c_str());
+            const auto explicitUtf16 = reinterpret_cast<const uint16_t*>(explicitCommandline.c_str());
+
+            uint8_t candidate{};
+            const auto candidateStatus = terminal_settings_ffi_commandline_fixup_candidate(
+                guidUtf16,
+                guidString.size(),
+                explicitUtf16,
+                explicitCommandline.size(),
+                &candidate);
+            if (candidateStatus == TERMINAL_SETTINGS_FFI_OK && candidate == 1)
             {
-                if (profile->Guid() == patch.guid && til::equals_insensitive_ascii(profile->Commandline(), patch.before))
+                profile->ClearCommandline();
+                const auto inheritedCommandline = profile->Commandline();
+                const auto inheritedUtf16 = reinterpret_cast<const uint16_t*>(inheritedCommandline.c_str());
+
+                uint32_t plan{};
+                const auto planStatus = terminal_settings_ffi_commandline_fixup_plan(
+                    guidUtf16,
+                    guidString.size(),
+                    explicitUtf16,
+                    explicitCommandline.size(),
+                    inheritedUtf16,
+                    inheritedCommandline.size(),
+                    &plan);
+                if (planStatus != TERMINAL_SETTINGS_FFI_OK)
                 {
-                    profile->ClearCommandline();
-
-                    // GH#12842:
-                    // With the commandline field on the user profile gone, it's actually unknown what
-                    // commandline it'll inherit, since a user profile can have multiple parents. We have to
-                    // make sure we restore the correct commandline in case we don't inherit the expected one.
-                    if (profile->Commandline() != patch.after)
+                    profile->Commandline(explicitCommandline);
+                }
+                else
+                {
+                    switch (plan)
                     {
-                        profile->Commandline(winrt::hstring{ patch.after });
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_CLEAR_OVERRIDE:
+                        fixedUp = true;
+                        break;
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_RESTORE_CMD_FULL_PATH:
+                    case TERMINAL_SETTINGS_FFI_COMMANDLINE_FIXUP_RESTORE_POWERSHELL_FULL_PATH:
+                        if (const auto inboxProfile = inboxSettings.profilesByGuid.find(guid);
+                            inboxProfile != inboxSettings.profilesByGuid.end() && inboxProfile->second->HasCommandline())
+                        {
+                            profile->Commandline(inboxProfile->second->Commandline());
+                            fixedUp = true;
+                        }
+                        else
+                        {
+                            profile->Commandline(explicitCommandline);
+                        }
+                        break;
+                    default:
+                        profile->Commandline(explicitCommandline);
+                        break;
                     }
-
-                    fixedUp = true;
-                    break;
                 }
             }
         }

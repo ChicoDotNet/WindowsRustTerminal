@@ -14,7 +14,8 @@ Author(s):
 --*/
 #pragma once
 
-#include "../terminal/parser/StateMachine.hpp"
+#include "../terminal/parser/InputStateMachineEngine.hpp"
+#include "../terminal/parser/RustStateMachineBridge.hpp"
 
 namespace Microsoft::Console
 {
@@ -40,6 +41,7 @@ namespace Microsoft::Console
         wil::unique_handle _hThread;
         DWORD _dwThreadId = 0;
 
-        std::unique_ptr<Microsoft::Console::VirtualTerminal::StateMachine> _pInputStateMachine;
+        std::unique_ptr<Microsoft::Console::VirtualTerminal::InputStateMachineEngine> _pInputEngine;
+        std::unique_ptr<Microsoft::Console::VirtualTerminal::RustStateMachineBridge> _pInputStateMachine;
     };
 }

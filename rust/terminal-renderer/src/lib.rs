@@ -11,6 +11,7 @@ mod rendition_blink;
 mod retry_policy;
 mod timer_policy;
 mod title_state;
+mod underline_color_policy;
 mod viewport_update;
 
 pub use attribute_color_policy::{
@@ -37,4 +38,5 @@ pub use timer_policy::{
     saturating_timer_sub, timer_to_millis,
 };
 pub use title_state::{TitleState, TitleUpdate};
+pub use underline_color_policy::apply_underline_invisibility;
 pub use viewport_update::{InclusiveRect, ScrollDelta, ViewportUpdate, plan_viewport_update};
