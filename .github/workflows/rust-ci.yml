@@ -11,6 +11,8 @@ on:
       - "rust/**"
       - "tools/rust/**"
       - "doc/rust-migration/**"
+      - "src/host/ConsoleArguments.cpp"
+      - "src/host/ConsoleArguments.hpp"
       - "src/cascadia/fzf/**"
       - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
@@ -23,6 +25,8 @@ on:
       - "rust/**"
       - "tools/rust/**"
       - "doc/rust-migration/**"
+      - "src/host/ConsoleArguments.cpp"
+      - "src/host/ConsoleArguments.hpp"
       - "src/cascadia/fzf/**"
       - "src/cascadia/ut_app/FzfTests.cpp"
       - ".github/workflows/rust-ci.yml"
@@ -109,3 +113,6 @@ jobs:
       - name: Validate H09 TerminalApp FZF seam
         shell: pwsh
         run: ./tools/rust/Test-RustTerminalAppFzfSourceMap.ps1
+      - name: Enforce R09 ConsoleArguments Rust ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09ConsoleArgumentsOwnership.ps1
