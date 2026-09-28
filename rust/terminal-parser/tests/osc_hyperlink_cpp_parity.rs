@@ -1,4 +1,6 @@
-use terminal_parser::output_engine::{OutputAction, OutputStateMachineEngine, TermDispatch};
+use terminal_parser::output_engine::{
+    MAX_URL_LENGTH, OutputAction, OutputStateMachineEngine, TermDispatch,
+};
 use terminal_parser::state_machine::StateMachine;
 
 #[derive(Debug, Default)]
@@ -44,4 +46,19 @@ fn osc8_matches_cpp_id_search_within_a_parameter_segment() {
             custom_id: "embedded".to_owned(),
         }
     );
+}
+
+#[test]
+fn osc8_cpp_uri_limit_is_measured_in_utf16_code_units() {
+    let mut uri = "a".repeat(MAX_URL_LENGTH - 1);
+    uri.push('😀');
+    uri.push('z');
+
+    let OutputAction::AddHyperlink { uri, custom_id } = hyperlink_action("id=utf16", &uri) else {
+        panic!("expected hyperlink action");
+    };
+
+    assert_eq!(custom_id, "utf16");
+    assert_eq!(uri.encode_utf16().count(), MAX_URL_LENGTH);
+    assert!(uri.ends_with('\u{fffd}'));
 }
