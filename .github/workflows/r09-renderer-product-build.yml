@@ -1,0 +1,52 @@
+name: R09 Renderer Product Build
+
+on:
+  push:
+    branches:
+      - "rust/r09-product-integration"
+    paths:
+      - "rust/terminal-renderer/**"
+      - "rust/terminal-parser-ffi/**"
+      - "src/renderer/**"
+      - "Directory.Build.targets"
+      - "tools/rust/R09ControlCharacterAbiProbe.cpp"
+      - "tools/rust/R09RenderSettingsAbiProbe.hpp"
+      - "tools/rust/Test-R09RenderSettingsContract.ps1"
+      - "tools/rust/Invoke-R09ProductBuild.ps1"
+      - ".github/workflows/r09-renderer-product-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: r09-renderer-product-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cascadia-package:
+    name: CascadiaPackage x64 Debug / renderer ownership
+    runs-on: windows-2025-vs2026
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          submodules: recursive
+          fetch-depth: 0
+      - name: Rust toolchain
+        run: rustup show
+      - name: Validate renderer settings ownership
+        shell: pwsh
+        run: ./tools/rust/Test-R09RenderSettingsContract.ps1
+      - name: Canonical product build
+        shell: pwsh
+        run: ./tools/rust/Invoke-R09ProductBuild.ps1 -Configuration Debug -Platform x64 -SkipSubmodules
+      - name: Preserve product build diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: r09-renderer-product-build-diagnostics
+          path: |
+            artifacts/r09-product-build.log
+            artifacts/r09-product-build.binlog
+          if-no-files-found: warn
+          retention-days: 7

@@ -1,7 +1,6 @@
 CHeader
 cloc
 dtxt
-euo
 halstead
 hotspots
 lloc

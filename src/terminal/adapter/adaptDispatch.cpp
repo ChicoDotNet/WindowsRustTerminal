@@ -11,6 +11,7 @@
 #include "../../types/inc/utils.hpp"
 #include "../../types/inc/Viewport.hpp"
 #include "../parser/ascii.hpp"
+#include "../parser/stateMachine.hpp"
 
 using namespace Microsoft::Console::Types;
 using namespace Microsoft::Console::Render;

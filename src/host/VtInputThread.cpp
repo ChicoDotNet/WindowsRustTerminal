@@ -9,7 +9,6 @@
 #include "server.h"
 #include "../interactivity/inc/ServiceLocator.hpp"
 #include "../terminal/adapter/InteractDispatch.hpp"
-#include "../terminal/parser/InputStateMachineEngine.hpp"
 #include "../types/inc/utils.hpp"
 
 using namespace Microsoft::Console;
@@ -27,8 +26,9 @@ VtInputThread::VtInputThread(_In_ wil::unique_hfile hPipe) :
     THROW_HR_IF(E_HANDLE, _hFile.get() == INVALID_HANDLE_VALUE);
 
     auto dispatch = std::make_unique<InteractDispatch>();
-    auto engine = std::make_unique<InputStateMachineEngine>(std::move(dispatch));
-    _pInputStateMachine = std::make_unique<StateMachine>(std::move(engine));
+    _pInputEngine = std::make_unique<InputStateMachineEngine>(std::move(dispatch));
+    _pInputStateMachine = std::make_unique<RustStateMachineBridge>(*_pInputEngine);
+    THROW_HR_IF(E_FAIL, _pInputStateMachine->Initialize() != TERMINAL_PARSER_FFI_OK);
 }
 
 // Function Description:
@@ -111,7 +111,7 @@ void VtInputThread::_InputThread()
                 LockConsole();
                 const auto unlock = wil::scope_exit([&] { UnlockConsole(); });
 
-                _pInputStateMachine->ProcessString(wstr);
+                THROW_HR_IF(E_FAIL, _pInputStateMachine->Process(wstr) != TERMINAL_PARSER_FFI_OK);
             }
             CATCH_LOG();
         }
@@ -139,7 +139,7 @@ void VtInputThread::_InputThread()
             }
         }
 
-        // winsock2 (WSA) handles of the \Device\Afd type are transparently compatible with
+        // winsock2 (WSA) handles of the \\Device\\Afd type are transparently compatible with
         // ReadFile() and the WSARecv() documentations contains this important information:
         // > For byte streams, zero bytes having been read [..] indicates graceful closure and that no more bytes will ever be read.
         // --> Exit if we've read 0 bytes.
@@ -190,12 +190,10 @@ void VtInputThread::_InputThread()
 
 void VtInputThread::CaptureNextCursorPositionReport() const noexcept
 {
-    auto& engine = static_cast<InputStateMachineEngine&>(_pInputStateMachine->Engine());
-    engine.CaptureNextCursorPositionReport();
+    _pInputEngine->CaptureNextCursorPositionReport();
 }
 
 til::enumset<DeviceAttribute, uint64_t> VtInputThread::WaitUntilDA1(DWORD timeout) const noexcept
 {
-    auto& engine = static_cast<InputStateMachineEngine&>(_pInputStateMachine->Engine());
-    return engine.WaitUntilDA1(timeout);
+    return _pInputEngine->WaitUntilDA1(timeout);
 }

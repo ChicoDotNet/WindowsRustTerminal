@@ -134,24 +134,6 @@ private:
     DWORD _signalHandle = 0;
     bool _inheritCursor = false;
 
-    [[nodiscard]] HRESULT _GetClientCommandline(_Inout_ std::vector<std::wstring>& args,
-                                                const size_t index,
-                                                const bool skipFirst);
-
-    static void s_ConsumeArg(_Inout_ std::vector<std::wstring>& args,
-                             _In_ size_t& index);
-    [[nodiscard]] static HRESULT s_GetArgumentValue(_Inout_ std::vector<std::wstring>& args,
-                                                    _Inout_ size_t& index,
-                                                    _Out_opt_ std::wstring* const pSetting);
-    [[nodiscard]] static HRESULT s_GetArgumentValue(_Inout_ std::vector<std::wstring>& args,
-                                                    _Inout_ size_t& index,
-                                                    _Out_opt_ short* const pSetting);
-    [[nodiscard]] static HRESULT s_HandleFeatureValue(_Inout_ std::vector<std::wstring>& args,
-                                                      _Inout_ size_t& index);
-
-    [[nodiscard]] static HRESULT s_ParseHandleArg(const std::wstring& handleAsText,
-                                                  _Inout_ DWORD& handleAsVal);
-
 #ifdef UNIT_TESTING
     friend class ConsoleArgumentsTests;
 #endif

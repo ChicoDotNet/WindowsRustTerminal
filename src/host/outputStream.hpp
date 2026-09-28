@@ -15,6 +15,7 @@ Author:
 #pragma once
 
 #include "../terminal/adapter/ITerminalApi.hpp"
+#include "../terminal/parser/stateMachine.hpp"
 #include "../types/inc/IInputEvent.hpp"
 #include "../inc/conattrs.hpp"
 #include "IIoProvider.hpp"

@@ -9,6 +9,7 @@
 #include "handle.h"
 #include "_stream.h"
 #include "../interactivity/inc/ServiceLocator.hpp"
+#include "terminal_parser_ffi_pty_signal.h"
 
 using namespace Microsoft::Console;
 using namespace Microsoft::Console::Interactivity;
@@ -109,11 +110,16 @@ try
             return S_OK;
         }
 
-        switch (signalId)
+        terminal_parser_ffi_pty_signal_read_plan_result plan{};
+        const auto planStatus = terminal_parser_ffi_pty_signal_read_plan(static_cast<uint16_t>(signalId), &plan);
+        THROW_HR_IF(E_UNEXPECTED, planStatus != TERMINAL_PARSER_FFI_OK);
+
+        switch (plan.kind)
         {
-        case PtySignal::ShowHideWindow:
+        case TERMINAL_PARSER_FFI_PTY_SIGNAL_SHOW_HIDE_WINDOW:
         {
             ShowHideData msg = { 0 };
+            THROW_HR_IF(E_UNEXPECTED, plan.payload_len != sizeof(msg));
             if (!_GetData(&msg, sizeof(msg)))
             {
                 return S_OK;
@@ -122,9 +128,10 @@ try
             _DoShowHide(msg);
             break;
         }
-        case PtySignal::ClearBuffer:
+        case TERMINAL_PARSER_FFI_PTY_SIGNAL_CLEAR_BUFFER:
         {
             ClearBufferData msg = { 0 };
+            THROW_HR_IF(E_UNEXPECTED, plan.payload_len != sizeof(msg));
             if (!_GetData(&msg, sizeof(msg)))
             {
                 return S_OK;
@@ -133,9 +140,10 @@ try
             _DoClearBuffer(msg.keepCursorRow != 0);
             break;
         }
-        case PtySignal::ResizeWindow:
+        case TERMINAL_PARSER_FFI_PTY_SIGNAL_RESIZE_WINDOW:
         {
             ResizeWindowData resizeMsg = { 0 };
+            THROW_HR_IF(E_UNEXPECTED, plan.payload_len != sizeof(resizeMsg));
             if (!_GetData(&resizeMsg, sizeof(resizeMsg)))
             {
                 return S_OK;
@@ -144,9 +152,10 @@ try
             _DoResizeWindow(resizeMsg);
             break;
         }
-        case PtySignal::SetParent:
+        case TERMINAL_PARSER_FFI_PTY_SIGNAL_SET_PARENT:
         {
             SetParentData reparentMessage = { 0 };
+            THROW_HR_IF(E_UNEXPECTED, plan.payload_len != sizeof(reparentMessage));
             if (!_GetData(&reparentMessage, sizeof(reparentMessage)))
             {
                 return S_OK;
